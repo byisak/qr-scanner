@@ -386,29 +386,60 @@ function ScannerScreen() {
         </Animated.View>
       ) : null}
 
-      {qrBounds && (
-        <Animated.View
-          style={[
-            styles.qrBorder,
-            {
-              left: qrBounds.x - 8,
-              top: qrBounds.y - 8,
-              width: qrBounds.width + 16,
-              height: qrBounds.height + 16,
-              opacity: opacityAnim,
-              transform: [{ scale: scaleAnim }],
-              borderRadius: qrBounds.width * 0.08,
-            },
-          ]}
-          pointerEvents="none"
-          accessibilityLabel="QR 코드 감지됨"
-        >
-          <View style={[styles.corner, styles.topLeft]} />
-          <View style={[styles.corner, styles.topRight]} />
-          <View style={[styles.corner, styles.bottomLeft]} />
-          <View style={[styles.corner, styles.bottomRight]} />
-        </Animated.View>
-      )}
+      {qrBounds && (() => {
+        // QR 코드 크기에 비례하는 코너 크기 계산
+        const cornerSize = Math.max(20, Math.min(qrBounds.width * 0.18, 40));
+        const borderWidth = Math.max(2, Math.min(cornerSize * 0.12, 4));
+        const offset = borderWidth * 0.7;
+
+        return (
+          <Animated.View
+            style={[
+              styles.qrBorder,
+              {
+                left: qrBounds.x - 8,
+                top: qrBounds.y - 8,
+                width: qrBounds.width + 16,
+                height: qrBounds.height + 16,
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+                borderRadius: qrBounds.width * 0.08,
+              },
+            ]}
+            pointerEvents="none"
+            accessibilityLabel="QR 코드 감지됨"
+          >
+            <View
+              style={[
+                styles.corner,
+                styles.topLeft,
+                { width: cornerSize, height: cornerSize, top: -offset, left: -offset },
+              ]}
+            />
+            <View
+              style={[
+                styles.corner,
+                styles.topRight,
+                { width: cornerSize, height: cornerSize, top: -offset, right: -offset },
+              ]}
+            />
+            <View
+              style={[
+                styles.corner,
+                styles.bottomLeft,
+                { width: cornerSize, height: cornerSize, bottom: -offset, left: -offset },
+              ]}
+            />
+            <View
+              style={[
+                styles.corner,
+                styles.bottomRight,
+                { width: cornerSize, height: cornerSize, bottom: -offset, right: -offset },
+              ]}
+            />
+          </Animated.View>
+        );
+      })()}
 
       <TouchableOpacity
         style={styles.torchButton}
@@ -480,22 +511,16 @@ const styles = StyleSheet.create({
   },
   corner: {
     position: 'absolute',
-    width: 30,
-    height: 30,
     borderColor: '#FFD60A',
   },
-  topLeft: { top: -2, left: -2, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 },
-  topRight: { top: -2, right: -2, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 },
+  topLeft: { borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 },
+  topRight: { borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 },
   bottomLeft: {
-    bottom: -2,
-    left: -2,
     borderBottomWidth: 3,
     borderLeftWidth: 3,
     borderBottomLeftRadius: 6,
   },
   bottomRight: {
-    bottom: -2,
-    right: -2,
     borderBottomWidth: 3,
     borderRightWidth: 3,
     borderBottomRightRadius: 6,
