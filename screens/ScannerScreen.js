@@ -94,7 +94,6 @@ function ScannerScreen() {
 
   const resetAll = useCallback(() => {
     setQrBounds(null);
-    setScannedData('');
     smoothBounds.current = null;
     lastScannedData.current = null;
     lastScannedTime.current = 0;
