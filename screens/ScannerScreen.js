@@ -300,7 +300,7 @@ function ScannerScreen() {
         } finally {
           navigationTimerRef.current = null;
         }
-      }, 150);
+      }, 50);
     },
     [isActive, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer],
   );
@@ -362,7 +362,7 @@ function ScannerScreen() {
       {qrBounds && (() => {
         // QR 코드 크기에 비례하는 코너 크기 계산
         const cornerSize = Math.max(20, Math.min(qrBounds.width * 0.18, 40));
-        const borderWidth = Math.max(2, Math.min(cornerSize * 0.12, 4));
+        const borderWidth = Math.max(1.5, Math.min(cornerSize * 0.08, 2.5));
         const offset = borderWidth * 0.7;
 
         return (
