@@ -50,7 +50,6 @@ function ScannerScreen() {
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const resultOpacity = useRef(new Animated.Value(0)).current;
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -59,7 +58,6 @@ function ScannerScreen() {
   const smoothBounds = useRef(null);
 
   const [qrBounds, setQrBounds] = useState(null);
-  const [scannedData, setScannedData] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -160,16 +158,6 @@ function ScannerScreen() {
     }
   }, [qrBounds, scaleAnim, opacityAnim]);
 
-  useEffect(() => {
-    if (scannedData) {
-      Animated.sequence([
-        Animated.timing(resultOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.delay(600),
-        Animated.timing(resultOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
-      ]).start(() => setScannedData(''));
-    }
-  }, [scannedData, resultOpacity]);
-
   const saveHistory = useCallback(async (code, url = null) => {
     try {
       const record = { code, timestamp: Date.now(), ...(url && { url }) };
@@ -264,7 +252,6 @@ function ScannerScreen() {
 
       lastScannedData.current = data;
       lastScannedTime.current = now;
-      setScannedData(data);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       const normalized = normalizeBounds(bounds);
@@ -373,19 +360,6 @@ function ScannerScreen() {
         )}
       </View>
 
-      {scannedData ? (
-        <Animated.View
-          style={[styles.resultContainer, { opacity: resultOpacity }]}
-          pointerEvents="none"
-          accessibilityLiveRegion="polite"
-        >
-          <View style={styles.resultBox}>
-            <Ionicons name="checkmark-circle" size={48} color="#00FF00" />
-            <Text style={styles.resultLabel}>스캔 완료!</Text>
-          </View>
-        </Animated.View>
-      ) : null}
-
       {qrBounds && (() => {
         // QR 코드 크기에 비례하는 코너 크기 계산
         const cornerSize = Math.max(20, Math.min(qrBounds.width * 0.18, 40));
@@ -476,32 +450,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#00FF00',
     backgroundColor: 'transparent',
-  },
-  resultContainer: {
-    position: 'absolute',
-    top: '15%',
-    alignSelf: 'center',
-    width: '88%',
-    maxWidth: 380,
-  },
-  resultBox: {
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    borderRadius: 22,
-    padding: 26,
-    alignItems: 'center',
-    borderWidth: 2.5,
-    borderColor: '#00FF00',
-    shadowColor: '#00FF00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  resultLabel: {
-    color: '#00FF00',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 10,
   },
   qrBorder: {
     position: 'absolute',
