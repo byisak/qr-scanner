@@ -282,6 +282,7 @@ function ScannerScreen() {
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
               await saveHistory(data, url);
+              setIsActive(false); // 결과 창 표시 시 스캔 비활성화
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -289,6 +290,7 @@ function ScannerScreen() {
           }
 
           await saveHistory(data);
+          setIsActive(false); // 결과 창 표시 시 스캔 비활성화
           router.push({ pathname: '/result', params: { code: data } });
           startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
