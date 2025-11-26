@@ -38,7 +38,15 @@ function ScannerScreen() {
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [isActive, setIsActive] = useState(false);
-  const [barcodeTypes, setBarcodeTypes] = useState(['qr']);
+  // 기본값: 자주 사용되는 바코드 타입들
+  const [barcodeTypes, setBarcodeTypes] = useState([
+    'qr',
+    'ean13',
+    'ean8',
+    'code128',
+    'upce',
+    'upca',
+  ]);
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -62,7 +70,11 @@ function ScannerScreen() {
         const saved = await AsyncStorage.getItem('selectedBarcodes');
         if (saved) {
           const parsed = JSON.parse(saved);
-          setBarcodeTypes(parsed.length > 0 ? parsed : ['qr']);
+          setBarcodeTypes(
+            parsed.length > 0
+              ? parsed
+              : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+          );
         }
       } catch (error) {
         console.error('Camera permission error:', error);
@@ -101,7 +113,11 @@ function ScannerScreen() {
           const saved = await AsyncStorage.getItem('selectedBarcodes');
           if (saved) {
             const parsed = JSON.parse(saved);
-            setBarcodeTypes(parsed.length > 0 ? parsed : ['qr']);
+            setBarcodeTypes(
+              parsed.length > 0
+                ? parsed
+                : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+            );
           }
         } catch (error) {
           console.error('Load barcode settings error:', error);

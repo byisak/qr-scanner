@@ -35,7 +35,15 @@ const BARCODE_TYPES = [
 export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
-  const [selectedBarcodes, setSelectedBarcodes] = useState(['qr']); // ✅ 선택된 바코드 타입들
+  // ✅ 기본값: 자주 사용되는 바코드 타입들을 기본 활성화
+  const [selectedBarcodes, setSelectedBarcodes] = useState([
+    'qr',
+    'ean13',
+    'ean8',
+    'code128',
+    'upce',
+    'upca',
+  ]);
 
   useEffect(() => {
     (async () => {
@@ -51,7 +59,11 @@ export default function SettingsScreen() {
 
         if (b) {
           const parsed = JSON.parse(b);
-          setSelectedBarcodes(parsed.length > 0 ? parsed : ['qr']);
+          setSelectedBarcodes(
+            parsed.length > 0
+              ? parsed
+              : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+          );
         }
       } catch (error) {
         console.error('Load settings error:', error);
