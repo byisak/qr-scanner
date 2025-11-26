@@ -14,7 +14,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 
-export default function HistoryScreen({ navigation }) {
+export default function HistoryScreen() {
+  const router = useRouter();
   const [all, setAll] = useState([]);
   const [list, setList] = useState([]);
   const [query, setQuery] = useState('');
@@ -32,11 +33,11 @@ export default function HistoryScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    const unsub = navigation.addListener('focus', load);
-    load();
-    return unsub;
-  }, [navigation]);
+  useFocusEffect(
+    React.useCallback(() => {
+      load();
+    }, [])
+  );
 
   useEffect(() => {
     if (!query) {
@@ -85,7 +86,7 @@ export default function HistoryScreen({ navigation }) {
   };
 
   const handleItemPress = (item) => {
-    navigation.navigate('결과', { code: item.code, url: item.url });
+    router.push({ pathname: '/result', params: { code: item.code, url: item.url } });
   };
 
   return (
