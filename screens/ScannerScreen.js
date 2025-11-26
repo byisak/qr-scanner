@@ -358,17 +358,19 @@ function ScannerScreen() {
             ? 'QR 코드를 사각형 안에 맞춰주세요'
             : '바코드를 사각형 안에 맞춰주세요'}
         </Text>
-        <View
-          style={[
-            styles.frame,
-            {
-              width: scanArea.width,
-              height: scanArea.height,
-              borderRadius: scanArea.width * 0.08,
-            },
-          ]}
-          accessibilityLabel="스캔 영역"
-        />
+        {!qrBounds && (
+          <View
+            style={[
+              styles.frame,
+              {
+                width: scanArea.width,
+                height: scanArea.height,
+                borderRadius: scanArea.width * 0.08,
+              },
+            ]}
+            accessibilityLabel="스캔 영역"
+          />
+        )}
       </View>
 
       {scannedData ? (
