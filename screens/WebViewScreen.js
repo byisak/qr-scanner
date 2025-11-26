@@ -10,7 +10,7 @@ export default function WebViewScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <WebView source={{ uri: url as string }} style={{ flex: 1 }} />
+      <WebView source={{ uri: url }} style={{ flex: 1 }} />
       <View style={s.close}>
         <Button title="닫기" onPress={() => router.back()} />
       </View>
