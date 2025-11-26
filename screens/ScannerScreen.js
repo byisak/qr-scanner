@@ -38,6 +38,7 @@ function ScannerScreen() {
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
@@ -103,6 +104,7 @@ function ScannerScreen() {
   useFocusEffect(
     useCallback(() => {
       setIsActive(true);
+      setCanScan(true); // 화면 복귀 시 스캔 허용
       resetAll();
 
       (async () => {
@@ -217,7 +219,7 @@ function ScannerScreen() {
 
   const handleBarCodeScanned = useCallback(
     async ({ data, bounds }) => {
-      if (!isActive) return;
+      if (!isActive || !canScan) return; // canScan 추가 확인
       if (!isQrInScanArea(bounds)) return;
 
       const now = Date.now();
@@ -282,7 +284,7 @@ function ScannerScreen() {
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
               await saveHistory(data, url);
-              setIsActive(false); // 결과 창 표시 시 스캔 비활성화
+              setCanScan(false); // 결과 창 표시 시 스캔만 비활성화 (카메라는 유지)
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -290,7 +292,7 @@ function ScannerScreen() {
           }
 
           await saveHistory(data);
-          setIsActive(false); // 결과 창 표시 시 스캔 비활성화
+          setCanScan(false); // 결과 창 표시 시 스캔만 비활성화 (카메라는 유지)
           router.push({ pathname: '/result', params: { code: data } });
           startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
@@ -302,7 +304,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
