@@ -122,9 +122,7 @@ function ScannerScreen() {
       })();
 
       return () => {
-        setIsActive(false);
         clearAllTimers();
-        resetAll();
       };
     }, [resetAll, clearAllTimers]),
   );
