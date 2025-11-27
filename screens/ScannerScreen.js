@@ -39,6 +39,7 @@ function ScannerScreen() {
   const [torchOn, setTorchOn] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
+  const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
@@ -74,6 +75,11 @@ function ScannerScreen() {
               ? parsed
               : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
           );
+        }
+
+        const haptic = await AsyncStorage.getItem('hapticEnabled');
+        if (haptic !== null) {
+          setHapticEnabled(haptic === 'true');
         }
       } catch (error) {
         console.error('Camera permission error:', error);
@@ -117,6 +123,11 @@ function ScannerScreen() {
                 ? parsed
                 : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
             );
+          }
+
+          const haptic = await AsyncStorage.getItem('hapticEnabled');
+          if (haptic !== null) {
+            setHapticEnabled(haptic === 'true');
           }
         } catch (error) {
           console.error('Load barcode settings error:', error);
@@ -251,7 +262,11 @@ function ScannerScreen() {
 
       lastScannedData.current = data;
       lastScannedTime.current = now;
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // 햅틱 설정이 활성화된 경우에만 진동
+      if (hapticEnabled) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
 
       const normalized = normalizeBounds(bounds);
       if (normalized) {
@@ -304,7 +319,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
