@@ -276,6 +276,12 @@ export default function HistoryScreen() {
                 <Text style={s.code} numberOfLines={1}>
                   {item.code}
                 </Text>
+                {item.count && item.count > 1 && (
+                  <View style={s.countBadge}>
+                    <Ionicons name="repeat" size={12} color="#FF9500" />
+                    <Text style={s.countBadgeText}>{item.count}</Text>
+                  </View>
+                )}
               </View>
               <Text style={s.time}>{formatDateTime(item.timestamp)}</Text>
               {item.url && (
@@ -432,6 +438,23 @@ const s = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
     color: '#000',
+  },
+  countBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: '#FF9500',
+  },
+  countBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF9500',
+    marginLeft: 4,
   },
   time: {
     fontSize: 13,

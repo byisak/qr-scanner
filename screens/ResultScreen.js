@@ -8,10 +8,11 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 export default function ResultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { code, url } = params;
+  const { code, url, isDuplicate, scanCount } = params;
   const displayText = code || url || '';
-
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
+  const showDuplicate = isDuplicate === 'true';
+  const count = parseInt(scanCount || '1', 10);
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(displayText);
@@ -53,6 +54,16 @@ export default function ResultScreen() {
             <Ionicons name="qr-code" size={64} color="#00FF00" />
           </View>
         </View>
+
+        {/* 중복 스캔 알림 */}
+        {showDuplicate && (
+          <View style={styles.duplicateBanner}>
+            <Ionicons name="repeat" size={20} color="#FF9500" />
+            <Text style={styles.duplicateText}>
+              중복 스캔 ({count}번째)
+            </Text>
+          </View>
+        )}
 
         <Text style={styles.label}>스캔된 데이터</Text>
         <View style={styles.dataBox}>
@@ -153,6 +164,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#00FF00',
+  },
+  duplicateBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+    borderWidth: 2,
+    borderColor: '#FF9500',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginVertical: 20,
+  },
+  duplicateText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF9500',
+    marginLeft: 8,
   },
   label: {
     fontSize: 16,

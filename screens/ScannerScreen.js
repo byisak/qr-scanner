@@ -193,8 +193,6 @@ function ScannerScreen() {
 
   const saveHistory = useCallback(async (code, url = null) => {
     try {
-      const record = { code, timestamp: Date.now(), ...(url && { url }) };
-
       // 선택된 그룹 ID 가져오기
       const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
 
@@ -207,13 +205,45 @@ function ScannerScreen() {
         historyByGroup[selectedGroupId] = [];
       }
 
-      // 선택된 그룹에 기록 추가
-      historyByGroup[selectedGroupId] = [record, ...historyByGroup[selectedGroupId]].slice(0, 1000);
+      const currentHistory = historyByGroup[selectedGroupId];
+
+      // 중복 체크 (같은 그룹 내에서 같은 코드 찾기)
+      const existingIndex = currentHistory.findIndex(item => item.code === code);
+
+      let isDuplicate = false;
+      if (existingIndex !== -1) {
+        // 중복 스캔 - 기존 항목 업데이트
+        isDuplicate = true;
+        const existingItem = currentHistory[existingIndex];
+        const updatedItem = {
+          ...existingItem,
+          timestamp: Date.now(), // 최신 스캔 시간으로 업데이트
+          count: (existingItem.count || 1) + 1, // 스캔 횟수 증가
+          ...(url && { url }), // URL이 있으면 업데이트
+        };
+
+        // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
+        currentHistory.splice(existingIndex, 1);
+        historyByGroup[selectedGroupId] = [updatedItem, ...currentHistory].slice(0, 1000);
+      } else {
+        // 새로운 스캔
+        const record = {
+          code,
+          timestamp: Date.now(),
+          count: 1,
+          ...(url && { url })
+        };
+        historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
+      }
 
       // 저장
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      // 중복 여부 반환 (ResultScreen에서 사용)
+      return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1 };
     } catch (e) {
       console.error('Save history error:', e);
+      return { isDuplicate: false, count: 1 };
     }
   }, []);
 
@@ -343,9 +373,16 @@ function ScannerScreen() {
             }
           }
 
-          await saveHistory(data);
+          const historyResult = await saveHistory(data);
           setCanScan(false); // 결과 창 표시 시 스캔만 비활성화 (카메라는 유지)
-          router.push({ pathname: '/result', params: { code: data } });
+          router.push({
+            pathname: '/result',
+            params: {
+              code: data,
+              isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
+              scanCount: historyResult.count.toString(),
+            }
+          });
           startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
