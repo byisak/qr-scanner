@@ -194,6 +194,7 @@ export default function HistoryScreen() {
         isDuplicate: item.count && item.count > 1 ? 'true' : 'false',
         scanCount: (item.count || 1).toString(),
         timestamp: item.timestamp.toString(),
+        scanTimes: item.scanTimes ? JSON.stringify(item.scanTimes) : JSON.stringify([item.timestamp]),
       }
     });
   };

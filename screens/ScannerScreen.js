@@ -211,14 +211,22 @@ function ScannerScreen() {
       const existingIndex = currentHistory.findIndex(item => item.code === code);
 
       let isDuplicate = false;
+      const now = Date.now();
+
       if (existingIndex !== -1) {
         // 중복 스캔 - 기존 항목 업데이트
         isDuplicate = true;
         const existingItem = currentHistory[existingIndex];
+
+        // 기존 스캔 시간 배열에 새 시간 추가
+        const scanTimes = existingItem.scanTimes || [existingItem.timestamp];
+        scanTimes.push(now);
+
         const updatedItem = {
           ...existingItem,
-          timestamp: Date.now(), // 최신 스캔 시간으로 업데이트
+          timestamp: now, // 최신 스캔 시간으로 업데이트
           count: (existingItem.count || 1) + 1, // 스캔 횟수 증가
+          scanTimes: scanTimes, // 모든 스캔 시간 저장
           ...(url && { url }), // URL이 있으면 업데이트
         };
 
@@ -229,8 +237,9 @@ function ScannerScreen() {
         // 새로운 스캔
         const record = {
           code,
-          timestamp: Date.now(),
+          timestamp: now,
           count: 1,
+          scanTimes: [now], // 첫 스캔 시간을 배열로 저장
           ...(url && { url })
         };
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);

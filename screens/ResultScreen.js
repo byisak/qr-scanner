@@ -1,6 +1,6 @@
 // screens/ResultScreen.js - Expo Router 버전
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -8,12 +8,20 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 export default function ResultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
   const count = parseInt(scanCount || '1', 10);
   const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
+
+  // 모든 스캔 시간 파싱
+  let allScanTimes = [];
+  try {
+    allScanTimes = scanTimes ? JSON.parse(scanTimes) : (scanTimestamp ? [scanTimestamp] : []);
+  } catch (e) {
+    allScanTimes = scanTimestamp ? [scanTimestamp] : [];
+  }
 
   // 시간 포맷팅 함수
   const formatDateTime = (ts) => {
@@ -78,10 +86,15 @@ export default function ResultScreen() {
                 중복 스캔 ({count}번째)
               </Text>
             </View>
-            {scanTimestamp && (
-              <Text style={styles.duplicateTime}>
-                마지막 스캔: {formatDateTime(scanTimestamp)}
-              </Text>
+            {allScanTimes.length > 0 && (
+              <View style={styles.scanTimesContainer}>
+                <Text style={styles.scanTimesTitle}>스캔 기록:</Text>
+                {allScanTimes.slice().reverse().map((time, index) => (
+                  <Text key={index} style={styles.scanTimeItem}>
+                    {allScanTimes.length - index}. {formatDateTime(time)}
+                  </Text>
+                ))}
+              </View>
             )}
           </View>
         )}
@@ -207,11 +220,22 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     marginLeft: 8,
   },
-  duplicateTime: {
+  scanTimesContainer: {
+    marginTop: 12,
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+  scanTimesTitle: {
     fontSize: 13,
+    fontWeight: '700',
     color: '#FF9500',
-    marginTop: 6,
-    fontWeight: '600',
+    marginBottom: 6,
+  },
+  scanTimeItem: {
+    fontSize: 12,
+    color: '#FF9500',
+    marginVertical: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   label: {
     fontSize: 16,
