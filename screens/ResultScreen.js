@@ -8,11 +8,25 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 export default function ResultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount } = params;
+  const { code, url, isDuplicate, scanCount, timestamp } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
   const count = parseInt(scanCount || '1', 10);
+  const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
+
+  // 시간 포맷팅 함수
+  const formatDateTime = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${year}.${month}.${day}  ${hours}:${minutes}:${seconds}`;
+  };
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(displayText);
@@ -58,10 +72,17 @@ export default function ResultScreen() {
         {/* 중복 스캔 알림 */}
         {showDuplicate && (
           <View style={styles.duplicateBanner}>
-            <Ionicons name="repeat" size={20} color="#FF9500" />
-            <Text style={styles.duplicateText}>
-              중복 스캔 ({count}번째)
-            </Text>
+            <View style={styles.duplicateHeader}>
+              <Ionicons name="repeat" size={20} color="#FF9500" />
+              <Text style={styles.duplicateText}>
+                중복 스캔 ({count}번째)
+              </Text>
+            </View>
+            {scanTimestamp && (
+              <Text style={styles.duplicateTime}>
+                마지막 스캔: {formatDateTime(scanTimestamp)}
+              </Text>
+            )}
           </View>
         )}
 
@@ -166,9 +187,6 @@ const styles = StyleSheet.create({
     borderColor: '#00FF00',
   },
   duplicateBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: 'rgba(255, 149, 0, 0.15)',
     borderWidth: 2,
     borderColor: '#FF9500',
@@ -176,12 +194,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     marginVertical: 20,
+    alignItems: 'center',
+  },
+  duplicateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   duplicateText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FF9500',
     marginLeft: 8,
+  },
+  duplicateTime: {
+    fontSize: 13,
+    color: '#FF9500',
+    marginTop: 6,
+    fontWeight: '600',
   },
   label: {
     fontSize: 16,

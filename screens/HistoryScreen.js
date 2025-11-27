@@ -186,7 +186,16 @@ export default function HistoryScreen() {
   };
 
   const handleItemPress = (item) => {
-    router.push({ pathname: '/result', params: { code: item.code, url: item.url } });
+    router.push({
+      pathname: '/result',
+      params: {
+        code: item.code,
+        url: item.url,
+        isDuplicate: item.count && item.count > 1 ? 'true' : 'false',
+        scanCount: (item.count || 1).toString(),
+        timestamp: item.timestamp.toString(),
+      }
+    });
   };
 
   const currentHistory = getCurrentHistory();
