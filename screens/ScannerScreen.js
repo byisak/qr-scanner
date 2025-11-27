@@ -171,10 +171,24 @@ function ScannerScreen() {
   const saveHistory = useCallback(async (code, url = null) => {
     try {
       const record = { code, timestamp: Date.now(), ...(url && { url }) };
-      const raw = await AsyncStorage.getItem('scanHistory');
-      let history = raw ? JSON.parse(raw) : [];
-      history = [record, ...history].slice(0, 1000);
-      await AsyncStorage.setItem('scanHistory', JSON.stringify(history));
+
+      // 선택된 그룹 ID 가져오기
+      const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+
+      // 그룹별 히스토리 가져오기
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+
+      // 선택된 그룹이 없으면 기본 그룹 사용
+      if (!historyByGroup[selectedGroupId]) {
+        historyByGroup[selectedGroupId] = [];
+      }
+
+      // 선택된 그룹에 기록 추가
+      historyByGroup[selectedGroupId] = [record, ...historyByGroup[selectedGroupId]].slice(0, 1000);
+
+      // 저장
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
     } catch (e) {
       console.error('Save history error:', e);
     }
