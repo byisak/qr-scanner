@@ -1,6 +1,6 @@
 // screens/ResultScreen.js - Expo Router 버전
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -8,10 +8,33 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 export default function ResultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { code, url } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes } = params;
   const displayText = code || url || '';
-
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
+  const showDuplicate = isDuplicate === 'true';
+  const count = parseInt(scanCount || '1', 10);
+  const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
+
+  // 모든 스캔 시간 파싱
+  let allScanTimes = [];
+  try {
+    allScanTimes = scanTimes ? JSON.parse(scanTimes) : (scanTimestamp ? [scanTimestamp] : []);
+  } catch (e) {
+    allScanTimes = scanTimestamp ? [scanTimestamp] : [];
+  }
+
+  // 시간 포맷팅 함수
+  const formatDateTime = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${year}.${month}.${day}  ${hours}:${minutes}:${seconds}`;
+  };
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(displayText);
@@ -53,6 +76,28 @@ export default function ResultScreen() {
             <Ionicons name="qr-code" size={64} color="#00FF00" />
           </View>
         </View>
+
+        {/* 중복 스캔 알림 */}
+        {showDuplicate && (
+          <View style={styles.duplicateBanner}>
+            <View style={styles.duplicateHeader}>
+              <Ionicons name="repeat" size={20} color="#FF9500" />
+              <Text style={styles.duplicateText}>
+                중복 스캔 ({count}번째)
+              </Text>
+            </View>
+            {allScanTimes.length > 0 && (
+              <View style={styles.scanTimesContainer}>
+                <Text style={styles.scanTimesTitle}>스캔 기록:</Text>
+                {allScanTimes.slice().reverse().map((time, index) => (
+                  <Text key={index} style={styles.scanTimeItem}>
+                    {allScanTimes.length - index}. {formatDateTime(time)}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         <Text style={styles.label}>스캔된 데이터</Text>
         <View style={styles.dataBox}>
@@ -153,6 +198,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#00FF00',
+  },
+  duplicateBanner: {
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+    borderWidth: 2,
+    borderColor: '#FF9500',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  duplicateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  duplicateText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FF9500',
+    marginLeft: 8,
+  },
+  scanTimesContainer: {
+    marginTop: 12,
+    width: '100%',
+    alignItems: 'flex-start',
+  },
+  scanTimesTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FF9500',
+    marginBottom: 6,
+  },
+  scanTimeItem: {
+    fontSize: 12,
+    color: '#FF9500',
+    marginVertical: 2,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   label: {
     fontSize: 16,
