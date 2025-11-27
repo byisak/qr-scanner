@@ -40,6 +40,7 @@ function ScannerScreen() {
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
+  const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
@@ -80,6 +81,17 @@ function ScannerScreen() {
         const haptic = await AsyncStorage.getItem('hapticEnabled');
         if (haptic !== null) {
           setHapticEnabled(haptic === 'true');
+        }
+
+        // 현재 선택된 그룹 이름 로드
+        const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+        const groupsData = await AsyncStorage.getItem('scanGroups');
+        if (groupsData) {
+          const groups = JSON.parse(groupsData);
+          const currentGroup = groups.find(g => g.id === selectedGroupId);
+          if (currentGroup) {
+            setCurrentGroupName(currentGroup.name);
+          }
         }
       } catch (error) {
         console.error('Camera permission error:', error);
@@ -128,6 +140,17 @@ function ScannerScreen() {
           const haptic = await AsyncStorage.getItem('hapticEnabled');
           if (haptic !== null) {
             setHapticEnabled(haptic === 'true');
+          }
+
+          // 현재 선택된 그룹 이름 로드
+          const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+          const groupsData = await AsyncStorage.getItem('scanGroups');
+          if (groupsData) {
+            const groups = JSON.parse(groupsData);
+            const currentGroup = groups.find(g => g.id === selectedGroupId);
+            if (currentGroup) {
+              setCurrentGroupName(currentGroup.name);
+            }
           }
         } catch (error) {
           console.error('Load barcode settings error:', error);
@@ -370,6 +393,12 @@ function ScannerScreen() {
       />
 
       <View style={styles.overlay} pointerEvents="box-none">
+        {/* 현재 그룹 표시 */}
+        <View style={styles.groupBadge}>
+          <Ionicons name="folder" size={16} color="#fff" />
+          <Text style={styles.groupBadgeText}>{currentGroupName}</Text>
+        </View>
+
         <Text style={styles.title} accessibilityLabel="바코드를 사각형 안에 맞춰주세요">
           {barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
             ? 'QR 코드를 사각형 안에 맞춰주세요'
@@ -464,6 +493,27 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  groupBadge: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  groupBadgeText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   title: {
     color: '#fff',
