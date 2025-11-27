@@ -326,10 +326,11 @@ function ScannerScreen() {
         await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
       }
 
-      // 사진 촬영
+      // 사진 촬영 (음소거)
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.7,
         skipProcessing: true,
+        mute: true,
       });
 
       // 파일명 생성 (타임스탬프 사용)
