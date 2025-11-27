@@ -195,12 +195,19 @@ export default function HistoryScreen() {
         scanCount: (item.count || 1).toString(),
         timestamp: item.timestamp.toString(),
         scanTimes: item.scanTimes ? JSON.stringify(item.scanTimes) : JSON.stringify([item.timestamp]),
+        photoUri: item.photos && item.photos.length > 0 ? item.photos[0] : '',
       }
     });
   };
 
   const currentHistory = getCurrentHistory();
   const currentGroup = groups.find(g => g.id === selectedGroupId);
+
+  // 각 그룹의 스캔 개수 계산
+  const getGroupScanCount = (groupId) => {
+    const history = scanHistory[groupId] || [];
+    return history.length;
+  };
 
   return (
     <View style={s.c}>
@@ -224,27 +231,37 @@ export default function HistoryScreen() {
       {/* 그룹 선택 탭 */}
       <View style={s.groupTabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.groupTabs}>
-          {groups.map((group) => (
-            <TouchableOpacity
-              key={group.id}
-              style={[s.groupTab, selectedGroupId === group.id && s.groupTabActive]}
-              onPress={() => selectGroup(group.id)}
-              onLongPress={() => group.id !== DEFAULT_GROUP_ID && deleteGroup(group.id)}
-            >
-              <Text style={[s.groupTabText, selectedGroupId === group.id && s.groupTabTextActive]}>
-                {group.name}
-              </Text>
-              {selectedGroupId === group.id && group.id !== DEFAULT_GROUP_ID && (
-                <TouchableOpacity
-                  onPress={() => deleteGroup(group.id)}
-                  style={s.groupDeleteBtn}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="close-circle" size={18} color="#007AFF" />
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-          ))}
+          {groups.map((group) => {
+            const scanCount = getGroupScanCount(group.id);
+            return (
+              <TouchableOpacity
+                key={group.id}
+                style={[s.groupTab, selectedGroupId === group.id && s.groupTabActive]}
+                onPress={() => selectGroup(group.id)}
+                onLongPress={() => group.id !== DEFAULT_GROUP_ID && deleteGroup(group.id)}
+              >
+                <Text style={[s.groupTabText, selectedGroupId === group.id && s.groupTabTextActive]}>
+                  {group.name}
+                </Text>
+                {scanCount > 0 && (
+                  <View style={[s.groupCountBadge, selectedGroupId === group.id && s.groupCountBadgeActive]}>
+                    <Text style={[s.groupCountBadgeText, selectedGroupId === group.id && s.groupCountBadgeTextActive]}>
+                      {scanCount}
+                    </Text>
+                  </View>
+                )}
+                {selectedGroupId === group.id && group.id !== DEFAULT_GROUP_ID && (
+                  <TouchableOpacity
+                    onPress={() => deleteGroup(group.id)}
+                    style={s.groupDeleteBtn}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#007AFF" />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            );
+          })}
           <TouchableOpacity style={s.addGroupTab} onPress={() => setShowGroupModal(true)}>
             <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
           </TouchableOpacity>
@@ -392,6 +409,27 @@ const s = StyleSheet.create({
   },
   groupTabTextActive: {
     color: '#fff',
+  },
+  groupCountBadge: {
+    backgroundColor: '#007AFF',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+    paddingHorizontal: 6,
+  },
+  groupCountBadgeActive: {
+    backgroundColor: '#fff',
+  },
+  groupCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  groupCountBadgeTextActive: {
+    color: '#007AFF',
   },
   groupDeleteBtn: {
     marginLeft: 6,

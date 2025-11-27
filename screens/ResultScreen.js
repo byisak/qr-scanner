@@ -1,6 +1,6 @@
 // screens/ResultScreen.js - Expo Router 버전
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -8,12 +8,13 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 export default function ResultScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
   const count = parseInt(scanCount || '1', 10);
   const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
+  const hasPhoto = photoUri && photoUri.length > 0;
 
   // 모든 스캔 시간 파싱
   let allScanTimes = [];
@@ -76,6 +77,18 @@ export default function ResultScreen() {
             <Ionicons name="qr-code" size={64} color="#00FF00" />
           </View>
         </View>
+
+        {/* 스캔 사진 */}
+        {hasPhoto && (
+          <View style={styles.photoContainer}>
+            <Text style={styles.photoLabel}>스캔 당시 사진</Text>
+            <Image
+              source={{ uri: photoUri }}
+              style={styles.scanPhoto}
+              resizeMode="cover"
+            />
+          </View>
+        )}
 
         {/* 중복 스캔 알림 */}
         {showDuplicate && (
@@ -198,6 +211,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#00FF00',
+  },
+  photoContainer: {
+    marginVertical: 20,
+    alignItems: 'center',
+  },
+  photoLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+  },
+  scanPhoto: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
   },
   duplicateBanner: {
     backgroundColor: 'rgba(255, 149, 0, 0.15)',
