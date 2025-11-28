@@ -42,6 +42,7 @@ function ScannerScreen() {
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
@@ -84,6 +85,11 @@ function ScannerScreen() {
         const haptic = await AsyncStorage.getItem('hapticEnabled');
         if (haptic !== null) {
           setHapticEnabled(haptic === 'true');
+        }
+
+        const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
+        if (photoSave !== null) {
+          setPhotoSaveEnabled(photoSave === 'true');
         }
 
         // 현재 선택된 그룹 이름 로드
@@ -143,6 +149,11 @@ function ScannerScreen() {
           const haptic = await AsyncStorage.getItem('hapticEnabled');
           if (haptic !== null) {
             setHapticEnabled(haptic === 'true');
+          }
+
+          const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
+          if (photoSave !== null) {
+            setPhotoSaveEnabled(photoSave === 'true');
           }
 
           // 현재 선택된 그룹 이름 로드
@@ -437,8 +448,8 @@ function ScannerScreen() {
 
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // 바코드 인식 시 사진 촬영
-          const photoUri = await capturePhoto();
+          // 바코드 인식 시 사진 촬영 (설정이 활성화된 경우에만)
+          const photoUri = photoSaveEnabled ? await capturePhoto() : null;
 
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
@@ -475,7 +486,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, capturePhoto],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, capturePhoto],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);

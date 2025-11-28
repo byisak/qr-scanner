@@ -22,6 +22,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
         const e = await SecureStore.getItemAsync('scanLinkEnabled');
         const u = await SecureStore.getItemAsync('baseUrl');
         const h = await AsyncStorage.getItem('hapticEnabled');
+        const p = await AsyncStorage.getItem('photoSaveEnabled');
         const b = await AsyncStorage.getItem('selectedBarcodes');
 
         if (e === 'true') {
@@ -39,6 +41,10 @@ export default function SettingsScreen() {
 
         if (h !== null) {
           setHapticEnabled(h === 'true');
+        }
+
+        if (p !== null) {
+          setPhotoSaveEnabled(p === 'true');
         }
 
         if (b) {
@@ -93,6 +99,16 @@ export default function SettingsScreen() {
     })();
   }, [hapticEnabled]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem('photoSaveEnabled', photoSaveEnabled.toString());
+      } catch (error) {
+        console.error('Save photo save settings error:', error);
+      }
+    })();
+  }, [photoSaveEnabled]);
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ScrollView style={s.c} contentContainerStyle={s.content}>
@@ -115,6 +131,22 @@ export default function SettingsScreen() {
               trackColor={{ true: '#34C759', false: '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel="햅틱 피드백 활성화"
+            />
+          </View>
+
+          {/* 사진 저장 */}
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>스캔 사진 저장</Text>
+              <Text style={s.desc}>QR 코드 스캔 시 사진 저장</Text>
+              {photoSaveEnabled && <Text style={s.ok}>활성화됨</Text>}
+            </View>
+            <Switch
+              value={photoSaveEnabled}
+              onValueChange={setPhotoSaveEnabled}
+              trackColor={{ true: '#34C759', false: '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel="사진 저장 활성화"
             />
           </View>
 
