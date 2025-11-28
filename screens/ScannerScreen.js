@@ -328,7 +328,11 @@ function ScannerScreen() {
 
   const capturePhoto = useCallback(async () => {
     try {
-      if (!cameraRef.current) return null;
+      // 카메라 ref와 활성 상태 체크
+      if (!cameraRef.current || !isActive) {
+        console.log('Camera not ready');
+        return null;
+      }
 
       // 사진 디렉토리 생성
       const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
@@ -337,11 +341,23 @@ function ScannerScreen() {
         await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
       }
 
+      // 사진 촬영 전 한번 더 체크
+      if (!cameraRef.current || !isActive) {
+        console.log('Camera unmounted before capture');
+        return null;
+      }
+
       // 사진 촬영
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.7,
         skipProcessing: true,
       });
+
+      // 사진 촬영 후에도 체크
+      if (!photo || !photo.uri) {
+        console.log('Photo capture failed');
+        return null;
+      }
 
       // 파일명 생성 (타임스탬프 사용)
       const fileName = `scan_${Date.now()}.jpg`;
@@ -353,12 +369,13 @@ function ScannerScreen() {
         to: newPath,
       });
 
+      console.log('Photo saved:', newPath);
       return newPath;
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
     }
-  }, []);
+  }, [isActive]);
 
   const handleBarCodeScanned = useCallback(
     async ({ data, bounds }) => {
@@ -424,8 +441,11 @@ function ScannerScreen() {
 
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // 바코드 인식 시 사진 촬영 (설정이 활성화된 경우에만)
-          const photoUri = photoSaveEnabled ? await capturePhoto() : null;
+          // 사진 촬영을 navigation 직전이 아닌 먼저 수행
+          let photoUri = null;
+          if (photoSaveEnabled && isActive) {
+            photoUri = await capturePhoto();
+          }
 
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
@@ -434,7 +454,7 @@ function ScannerScreen() {
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
               await saveHistory(data, url, photoUri);
-              setCanScan(false); // 결과 창 표시 시 스캔만 비활성화 (카메라는 유지)
+              setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -442,7 +462,7 @@ function ScannerScreen() {
           }
 
           const historyResult = await saveHistory(data, null, photoUri);
-          setCanScan(false); // 결과 창 표시 시 스캔만 비활성화 (카메라는 유지)
+          setCanScan(false);
           router.push({
             pathname: '/result',
             params: {
