@@ -435,17 +435,17 @@ function ScannerScreen() {
         setQrBounds({ ...smoothBounds.current });
       }
 
+      // 사진 촬영을 타이머 밖에서 먼저 시작 (비동기)
+      const photoPromise = (photoSaveEnabled && isActive) ? capturePhoto() : Promise.resolve(null);
+
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
       }
 
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // 사진 촬영을 navigation 직전이 아닌 먼저 수행
-          let photoUri = null;
-          if (photoSaveEnabled && isActive) {
-            photoUri = await capturePhoto();
-          }
+          // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
+          const photoUri = await photoPromise;
 
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
