@@ -509,15 +509,17 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFillObject}
-        onBarcodeScanned={isActive ? handleBarCodeScanned : undefined}
-        enableTorch={torchOn}
-        barcodeScannerSettings={{
-          barcodeTypes: barcodeTypes,
-        }}
-      />
+      {isActive && (
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFillObject}
+          onBarcodeScanned={handleBarCodeScanned}
+          enableTorch={torchOn}
+          barcodeScannerSettings={{
+            barcodeTypes: barcodeTypes,
+          }}
+        />
+      )}
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 */}
