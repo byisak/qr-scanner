@@ -42,6 +42,7 @@ function ScannerScreen() {
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
+  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
@@ -327,6 +328,7 @@ function ScannerScreen() {
   }, []);
 
   const capturePhoto = useCallback(async () => {
+    setIsCapturingPhoto(true);
     try {
       // 카메라 ref와 활성 상태 체크
       if (!cameraRef.current || !isActive) {
@@ -374,6 +376,8 @@ function ScannerScreen() {
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
+    } finally {
+      setIsCapturingPhoto(false);
     }
   }, [isActive]);
 
@@ -509,7 +513,7 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      {isActive && (
+      {(isActive || isCapturingPhoto) && (
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
