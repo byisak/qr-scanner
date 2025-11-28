@@ -22,6 +22,7 @@ export default function ExportHistoryScreen() {
   const [scanHistory, setScanHistory] = useState({});
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingTxt, setIsExportingTxt] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -96,7 +97,7 @@ export default function ExportHistoryScreen() {
     return csv;
   };
 
-  // 내보내기
+  // CSV 내보내기
   const handleExport = async () => {
     if (selectedGroups.length === 0) {
       Alert.alert('알림', '내보낼 그룹을 최소 1개 이상 선택해주세요.');
@@ -118,7 +119,7 @@ export default function ExportHistoryScreen() {
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: 'text/csv',
-          dialogTitle: '스캔 기록 내보내기',
+          dialogTitle: '스캔 기록 내보내기 (CSV)',
           UTI: 'public.comma-separated-values-text',
         });
       } else {
@@ -129,6 +130,78 @@ export default function ExportHistoryScreen() {
       Alert.alert('오류', '내보내기 중 오류가 발생했습니다.');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  // TXT 생성
+  const generateTXT = () => {
+    let txt = '';
+
+    selectedGroups.forEach((groupId, index) => {
+      const group = groups.find(g => g.id === groupId);
+      const groupName = group?.name || '알 수 없는 그룹';
+      const history = scanHistory[groupId] || [];
+
+      if (index > 0) {
+        txt += '\n\n';
+      }
+
+      txt += '==========================================\n';
+      txt += `그룹: ${groupName}\n`;
+      txt += '==========================================\n\n';
+
+      if (history.length === 0) {
+        txt += '(기록 없음)\n';
+      } else {
+        history.forEach((item, itemIndex) => {
+          if (itemIndex > 0) {
+            txt += '\n';
+          }
+          const date = new Date(item.timestamp).toLocaleString('ko-KR');
+          const scanCount = item.scanCount || 1;
+          txt += `코드값: ${item.code}\n`;
+          txt += `스캔일시: ${date}\n`;
+          txt += `중복횟수: ${scanCount}\n`;
+        });
+      }
+    });
+
+    return txt;
+  };
+
+  // TXT 내보내기
+  const handleExportTXT = async () => {
+    if (selectedGroups.length === 0) {
+      Alert.alert('알림', '내보낼 그룹을 최소 1개 이상 선택해주세요.');
+      return;
+    }
+
+    setIsExportingTxt(true);
+    try {
+      const txt = generateTXT();
+      const fileName = `scan_history_${Date.now()}.txt`;
+      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+
+      await FileSystem.writeAsStringAsync(fileUri, txt, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      // 공유
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'text/plain',
+          dialogTitle: '스캔 기록 내보내기 (TXT)',
+          UTI: 'public.plain-text',
+        });
+      } else {
+        Alert.alert('성공', `파일이 저장되었습니다:\n${fileUri}`);
+      }
+    } catch (error) {
+      console.error('Export TXT error:', error);
+      Alert.alert('오류', '내보내기 중 오류가 발생했습니다.');
+    } finally {
+      setIsExportingTxt(false);
     }
   };
 
@@ -204,6 +277,18 @@ export default function ExportHistoryScreen() {
           <Ionicons name="download-outline" size={20} color="#fff" />
           <Text style={s.exportButtonText}>
             {isExporting ? '내보내는 중...' : 'CSV 파일로 내보내기'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[s.exportButton, s.exportButtonTxt, isExportingTxt && s.exportButtonDisabled]}
+          onPress={handleExportTXT}
+          disabled={isExportingTxt}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="document-text-outline" size={20} color="#fff" />
+          <Text style={s.exportButtonText}>
+            {isExportingTxt ? '내보내는 중...' : 'TXT 파일로 내보내기'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -338,6 +423,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 8,
+  },
+  exportButtonTxt: {
+    backgroundColor: '#34C759',
   },
   exportButtonDisabled: {
     backgroundColor: '#ccc',
