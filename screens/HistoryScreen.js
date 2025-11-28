@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
-  Modal,
   ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,8 +24,6 @@ export default function HistoryScreen() {
   const [scanHistory, setScanHistory] = useState({ [DEFAULT_GROUP_ID]: [] });
   const [query, setQuery] = useState('');
   const [filteredList, setFilteredList] = useState([]);
-  const [showGroupModal, setShowGroupModal] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
 
   // 그룹 데이터 로드
   const loadGroups = async () => {
@@ -88,65 +85,6 @@ export default function HistoryScreen() {
       ),
     );
   }, [query, scanHistory, selectedGroupId]);
-
-  // 그룹 추가
-  const addGroup = async () => {
-    if (!newGroupName.trim()) {
-      Alert.alert('오류', '그룹 이름을 입력해주세요');
-      return;
-    }
-
-    const newGroup = {
-      id: Date.now().toString(),
-      name: newGroupName.trim(),
-      createdAt: Date.now(),
-    };
-
-    const updatedGroups = [...groups, newGroup];
-    setGroups(updatedGroups);
-    await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
-
-    // 새 그룹의 빈 히스토리 초기화
-    const updatedHistory = { ...scanHistory, [newGroup.id]: [] };
-    setScanHistory(updatedHistory);
-    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(updatedHistory));
-
-    setNewGroupName('');
-    setShowGroupModal(false);
-    setSelectedGroupId(newGroup.id);
-    await AsyncStorage.setItem('selectedGroupId', newGroup.id);
-  };
-
-  // 그룹 삭제
-  const deleteGroup = async (groupId) => {
-    if (groupId === DEFAULT_GROUP_ID) {
-      Alert.alert('오류', '기본 그룹은 삭제할 수 없습니다');
-      return;
-    }
-
-    Alert.alert('그룹 삭제', '이 그룹과 모든 스캔 기록을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: async () => {
-          const updatedGroups = groups.filter(g => g.id !== groupId);
-          setGroups(updatedGroups);
-          await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
-
-          const updatedHistory = { ...scanHistory };
-          delete updatedHistory[groupId];
-          setScanHistory(updatedHistory);
-          await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(updatedHistory));
-
-          if (selectedGroupId === groupId) {
-            setSelectedGroupId(DEFAULT_GROUP_ID);
-            await AsyncStorage.setItem('selectedGroupId', DEFAULT_GROUP_ID);
-          }
-        },
-      },
-    ]);
-  };
 
   // 그룹 선택
   const selectGroup = async (groupId) => {
@@ -238,7 +176,6 @@ export default function HistoryScreen() {
                 key={group.id}
                 style={[s.groupTab, selectedGroupId === group.id && s.groupTabActive]}
                 onPress={() => selectGroup(group.id)}
-                onLongPress={() => group.id !== DEFAULT_GROUP_ID && deleteGroup(group.id)}
               >
                 <Text style={[s.groupTabText, selectedGroupId === group.id && s.groupTabTextActive]}>
                   {group.name}
@@ -250,20 +187,12 @@ export default function HistoryScreen() {
                     </Text>
                   </View>
                 )}
-                {selectedGroupId === group.id && group.id !== DEFAULT_GROUP_ID && (
-                  <TouchableOpacity
-                    onPress={() => deleteGroup(group.id)}
-                    style={s.groupDeleteBtn}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="close-circle" size={18} color="#007AFF" />
-                  </TouchableOpacity>
-                )}
               </TouchableOpacity>
             );
           })}
-          <TouchableOpacity style={s.addGroupTab} onPress={() => setShowGroupModal(true)}>
-            <Ionicons name="add-circle-outline" size={24} color="#007AFF" />
+          <TouchableOpacity style={s.editGroupTab} onPress={() => router.push('/group-edit')}>
+            <Ionicons name="settings-outline" size={20} color="#007AFF" />
+            <Text style={s.editGroupTabText}>편집</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -321,44 +250,6 @@ export default function HistoryScreen() {
           contentContainerStyle={s.listContent}
         />
       )}
-
-      {/* 그룹 추가 모달 */}
-      <Modal
-        visible={showGroupModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowGroupModal(false)}
-      >
-        <View style={s.modalOverlay}>
-          <View style={s.modalContent}>
-            <Text style={s.modalTitle}>새 그룹 추가</Text>
-            <TextInput
-              style={s.modalInput}
-              placeholder="그룹 이름"
-              value={newGroupName}
-              onChangeText={setNewGroupName}
-              autoFocus
-            />
-            <View style={s.modalButtons}>
-              <TouchableOpacity
-                style={[s.modalButton, s.modalButtonCancel]}
-                onPress={() => {
-                  setShowGroupModal(false);
-                  setNewGroupName('');
-                }}
-              >
-                <Text style={s.modalButtonTextCancel}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.modalButton, s.modalButtonConfirm]}
-                onPress={addGroup}
-              >
-                <Text style={s.modalButtonTextConfirm}>추가</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -431,13 +322,20 @@ const s = StyleSheet.create({
   groupCountBadgeTextActive: {
     color: '#007AFF',
   },
-  groupDeleteBtn: {
-    marginLeft: 6,
-  },
-  addGroupTab: {
-    paddingHorizontal: 8,
-    justifyContent: 'center',
+  editGroupTab: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0F0F0',
+    gap: 4,
+  },
+  editGroupTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   header: {
     flexDirection: 'row',
@@ -514,60 +412,5 @@ const s = StyleSheet.create({
     fontSize: 12,
     color: '#007AFF',
     marginTop: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    width: '85%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#000',
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 20,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: '#F0F0F0',
-    marginRight: 8,
-  },
-  modalButtonConfirm: {
-    backgroundColor: '#007AFF',
-    marginLeft: 8,
-  },
-  modalButtonTextCancel: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalButtonTextConfirm: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
