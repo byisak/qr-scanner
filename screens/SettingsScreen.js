@@ -175,6 +175,19 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
           </TouchableOpacity>
+
+          {/* 카메라 선택 */}
+          <TouchableOpacity
+            style={s.menuItem}
+            onPress={() => router.push('/camera-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>카메라 선택</Text>
+              <Text style={s.desc}>스캔에 사용할 카메라 설정</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+          </TouchableOpacity>
         </View>
 
         {/* URL 연동 설정 */}

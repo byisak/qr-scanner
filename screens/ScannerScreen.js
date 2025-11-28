@@ -43,6 +43,7 @@ function ScannerScreen() {
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
+  const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
@@ -90,6 +91,11 @@ function ScannerScreen() {
         const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
         if (photoSave !== null) {
           setPhotoSaveEnabled(photoSave === 'true');
+        }
+
+        const camera = await AsyncStorage.getItem('selectedCamera');
+        if (camera) {
+          setCameraFacing(camera);
         }
 
         // 현재 선택된 그룹 이름 로드
@@ -517,6 +523,7 @@ function ScannerScreen() {
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
+          facing={cameraFacing}
           onBarcodeScanned={handleBarCodeScanned}
           enableTorch={torchOn}
           barcodeScannerSettings={{
