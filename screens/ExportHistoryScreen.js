@@ -77,7 +77,8 @@ export default function ExportHistoryScreen() {
 
   // CSV 생성
   const generateCSV = () => {
-    let csv = '그룹,코드값,스캔일시,중복횟수\n';
+    // UTF-8 BOM 추가 (한글 깨짐 방지)
+    let csv = '\uFEFF그룹,코드값,스캔일시,중복횟수\n';
 
     selectedGroups.forEach((groupId) => {
       const group = groups.find(g => g.id === groupId);
