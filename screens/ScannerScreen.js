@@ -14,6 +14,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 
 const SCAN_AREA_SIZE = 240;
@@ -40,6 +41,9 @@ function ScannerScreen() {
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
+  const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
+  const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
@@ -59,6 +63,7 @@ function ScannerScreen() {
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
   const smoothBounds = useRef(null);
+  const cameraRef = useRef(null);
 
   const [qrBounds, setQrBounds] = useState(null);
 
@@ -81,6 +86,16 @@ function ScannerScreen() {
         const haptic = await AsyncStorage.getItem('hapticEnabled');
         if (haptic !== null) {
           setHapticEnabled(haptic === 'true');
+        }
+
+        const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
+        if (photoSave !== null) {
+          setPhotoSaveEnabled(photoSave === 'true');
+        }
+
+        const camera = await AsyncStorage.getItem('selectedCamera');
+        if (camera) {
+          setCameraFacing(camera);
         }
 
         // 현재 선택된 그룹 이름 로드
@@ -142,6 +157,11 @@ function ScannerScreen() {
             setHapticEnabled(haptic === 'true');
           }
 
+          const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
+          if (photoSave !== null) {
+            setPhotoSaveEnabled(photoSave === 'true');
+          }
+
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
           const groupsData = await AsyncStorage.getItem('scanGroups');
@@ -191,7 +211,7 @@ function ScannerScreen() {
     }
   }, [qrBounds, scaleAnim, opacityAnim]);
 
-  const saveHistory = useCallback(async (code, url = null) => {
+  const saveHistory = useCallback(async (code, url = null, photoUri = null) => {
     try {
       // 선택된 그룹 ID 가져오기
       const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
@@ -222,11 +242,19 @@ function ScannerScreen() {
         const scanTimes = existingItem.scanTimes || [existingItem.timestamp];
         scanTimes.push(now);
 
+        // 기존 사진 배열에 새 사진 추가 (최대 10개까지 저장)
+        const photos = existingItem.photos || [];
+        if (photoUri) {
+          photos.unshift(photoUri); // 최신 사진을 앞에 추가
+          if (photos.length > 10) photos.pop(); // 10개 초과시 가장 오래된 사진 제거
+        }
+
         const updatedItem = {
           ...existingItem,
           timestamp: now, // 최신 스캔 시간으로 업데이트
           count: (existingItem.count || 1) + 1, // 스캔 횟수 증가
           scanTimes: scanTimes, // 모든 스캔 시간 저장
+          photos: photos, // 모든 사진 저장
           ...(url && { url }), // URL이 있으면 업데이트
         };
 
@@ -240,6 +268,7 @@ function ScannerScreen() {
           timestamp: now,
           count: 1,
           scanTimes: [now], // 첫 스캔 시간을 배열로 저장
+          photos: photoUri ? [photoUri] : [], // 사진 배열
           ...(url && { url })
         };
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
@@ -304,6 +333,60 @@ function ScannerScreen() {
     }, delay);
   }, []);
 
+  const capturePhoto = useCallback(async () => {
+    setIsCapturingPhoto(true);
+    try {
+      // 카메라 ref와 활성 상태 체크
+      if (!cameraRef.current || !isActive) {
+        console.log('Camera not ready');
+        return null;
+      }
+
+      // 사진 디렉토리 생성
+      const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
+      const dirInfo = await FileSystem.getInfoAsync(photoDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
+      }
+
+      // 사진 촬영 전 한번 더 체크
+      if (!cameraRef.current || !isActive) {
+        console.log('Camera unmounted before capture');
+        return null;
+      }
+
+      // 사진 촬영
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        skipProcessing: true,
+      });
+
+      // 사진 촬영 후에도 체크
+      if (!photo || !photo.uri) {
+        console.log('Photo capture failed');
+        return null;
+      }
+
+      // 파일명 생성 (타임스탬프 사용)
+      const fileName = `scan_${Date.now()}.jpg`;
+      const newPath = photoDir + fileName;
+
+      // 사진 이동
+      await FileSystem.moveAsync({
+        from: photo.uri,
+        to: newPath,
+      });
+
+      console.log('Photo saved:', newPath);
+      return newPath;
+    } catch (error) {
+      console.error('Photo capture error:', error);
+      return null;
+    } finally {
+      setIsCapturingPhoto(false);
+    }
+  }, [isActive]);
+
   const handleBarCodeScanned = useCallback(
     async ({ data, bounds }) => {
       if (!isActive || !canScan) return; // canScan 추가 확인
@@ -362,34 +445,41 @@ function ScannerScreen() {
         setQrBounds({ ...smoothBounds.current });
       }
 
+      // 사진 촬영을 타이머 밖에서 먼저 시작 (비동기)
+      const photoPromise = (photoSaveEnabled && isActive) ? capturePhoto() : Promise.resolve(null);
+
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
       }
 
       navigationTimerRef.current = setTimeout(async () => {
         try {
+          // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
+          const photoUri = await photoPromise;
+
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
           if (enabled === 'true') {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url);
-              setCanScan(false); // 결과 창 표시 시 스캔만 비활성화 (카메라는 유지)
+              await saveHistory(data, url, photoUri);
+              setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
             }
           }
 
-          const historyResult = await saveHistory(data);
-          setCanScan(false); // 결과 창 표시 시 스캔만 비활성화 (카메라는 유지)
+          const historyResult = await saveHistory(data, null, photoUri);
+          setCanScan(false);
           router.push({
             pathname: '/result',
             params: {
               code: data,
               isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
               scanCount: historyResult.count.toString(),
+              photoUri: photoUri || '',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);
@@ -402,7 +492,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, capturePhoto],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -429,14 +519,18 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView
-        style={StyleSheet.absoluteFillObject}
-        onBarcodeScanned={isActive ? handleBarCodeScanned : undefined}
-        enableTorch={torchOn}
-        barcodeScannerSettings={{
-          barcodeTypes: barcodeTypes,
-        }}
-      />
+      {(isActive || isCapturingPhoto) && (
+        <CameraView
+          ref={cameraRef}
+          style={StyleSheet.absoluteFillObject}
+          facing={cameraFacing}
+          onBarcodeScanned={handleBarCodeScanned}
+          enableTorch={torchOn}
+          barcodeScannerSettings={{
+            barcodeTypes: barcodeTypes,
+          }}
+        />
+      )}
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 */}

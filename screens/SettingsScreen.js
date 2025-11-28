@@ -22,6 +22,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
         const e = await SecureStore.getItemAsync('scanLinkEnabled');
         const u = await SecureStore.getItemAsync('baseUrl');
         const h = await AsyncStorage.getItem('hapticEnabled');
+        const p = await AsyncStorage.getItem('photoSaveEnabled');
         const b = await AsyncStorage.getItem('selectedBarcodes');
 
         if (e === 'true') {
@@ -39,6 +41,10 @@ export default function SettingsScreen() {
 
         if (h !== null) {
           setHapticEnabled(h === 'true');
+        }
+
+        if (p !== null) {
+          setPhotoSaveEnabled(p === 'true');
         }
 
         if (b) {
@@ -93,6 +99,16 @@ export default function SettingsScreen() {
     })();
   }, [hapticEnabled]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem('photoSaveEnabled', photoSaveEnabled.toString());
+      } catch (error) {
+        console.error('Save photo save settings error:', error);
+      }
+    })();
+  }, [photoSaveEnabled]);
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ScrollView style={s.c} contentContainerStyle={s.content}>
@@ -118,6 +134,22 @@ export default function SettingsScreen() {
             />
           </View>
 
+          {/* 사진 저장 */}
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>스캔 사진 저장</Text>
+              <Text style={s.desc}>QR 코드 스캔 시 사진 저장</Text>
+              {photoSaveEnabled && <Text style={s.ok}>활성화됨</Text>}
+            </View>
+            <Switch
+              value={photoSaveEnabled}
+              onValueChange={setPhotoSaveEnabled}
+              trackColor={{ true: '#34C759', false: '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel="사진 저장 활성화"
+            />
+          </View>
+
           {/* 바코드 선택 (클릭하면 새 페이지로) */}
           <TouchableOpacity
             style={s.menuItem}
@@ -127,6 +159,32 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={s.label}>인식할 바코드 선택</Text>
               <Text style={s.desc}>{selectedBarcodesCount}개 바코드 타입 선택됨</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+          </TouchableOpacity>
+
+          {/* 기록 내보내기 */}
+          <TouchableOpacity
+            style={s.menuItem}
+            onPress={() => router.push('/export-history')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>기록 내보내기</Text>
+              <Text style={s.desc}>그룹별 스캔 기록을 파일로 저장</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+          </TouchableOpacity>
+
+          {/* 카메라 선택 */}
+          <TouchableOpacity
+            style={s.menuItem}
+            onPress={() => router.push('/camera-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>카메라 선택</Text>
+              <Text style={s.desc}>스캔에 사용할 카메라 설정</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
           </TouchableOpacity>
