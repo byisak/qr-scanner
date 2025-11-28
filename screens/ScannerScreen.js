@@ -162,6 +162,11 @@ function ScannerScreen() {
             setPhotoSaveEnabled(photoSave === 'true');
           }
 
+          const camera = await AsyncStorage.getItem('selectedCamera');
+          if (camera) {
+            setCameraFacing(camera);
+          }
+
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
           const groupsData = await AsyncStorage.getItem('scanGroups');
