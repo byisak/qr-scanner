@@ -15,7 +15,6 @@ import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 
 const SCAN_AREA_SIZE = 240;
@@ -328,7 +327,6 @@ function ScannerScreen() {
   }, []);
 
   const capturePhoto = useCallback(async () => {
-    let previousAudioMode = null;
     try {
       if (!cameraRef.current) return null;
 
@@ -337,17 +335,6 @@ function ScannerScreen() {
       const dirInfo = await FileSystem.getInfoAsync(photoDir);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
-      }
-
-      // 오디오 음소거 (셔터음 끄기)
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          allowsRecordingIOS: false,
-          staysActiveInBackground: false,
-        });
-      } catch (audioError) {
-        console.log('Audio mode error (non-critical):', audioError);
       }
 
       // 사진 촬영
@@ -370,17 +357,6 @@ function ScannerScreen() {
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
-    } finally {
-      // 오디오 모드 복원
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: false,
-          allowsRecordingIOS: false,
-          staysActiveInBackground: false,
-        });
-      } catch (audioError) {
-        console.log('Audio restore error (non-critical):', audioError);
-      }
     }
   }, []);
 
