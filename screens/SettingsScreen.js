@@ -162,6 +162,19 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
           </TouchableOpacity>
+
+          {/* 기록 내보내기 */}
+          <TouchableOpacity
+            style={s.menuItem}
+            onPress={() => router.push('/export-history')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>기록 내보내기</Text>
+              <Text style={s.desc}>그룹별 스캔 기록을 파일로 저장</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+          </TouchableOpacity>
         </View>
 
         {/* URL 연동 설정 */}
