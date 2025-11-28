@@ -15,7 +15,7 @@ export default {
 
   // Scanner screen
   scanner: {
-    title: 'Scanner',
+    title: 'Scan',
     scanGuideQr: 'Align the QR code within the square',
     scanGuideBarcode: 'Align the barcode within the square',
     permissionRequest: 'Requesting camera permission...',
@@ -26,7 +26,7 @@ export default {
 
   // History screen
   history: {
-    title: 'Scan History',
+    title: 'History',
     searchPlaceholder: 'Search code or URL',
     clearSearch: 'Clear search',
     deleteAll: 'Delete All',

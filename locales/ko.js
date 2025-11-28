@@ -15,7 +15,7 @@ export default {
 
   // 스캔 화면
   scanner: {
-    title: '스캐너',
+    title: '스캔',
     scanGuideQr: 'QR 코드를 사각형 안에 맞춰주세요',
     scanGuideBarcode: '바코드를 사각형 안에 맞춰주세요',
     permissionRequest: '카메라 권한 요청 중...',
@@ -26,7 +26,7 @@ export default {
 
   // 히스토리 화면
   history: {
-    title: '스캔 기록',
+    title: '기록',
     searchPlaceholder: '코드 또는 URL 검색',
     clearSearch: '검색어 지우기',
     deleteAll: '전체 삭제',

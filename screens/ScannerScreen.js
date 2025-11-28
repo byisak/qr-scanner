@@ -16,6 +16,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const SCAN_AREA_SIZE = 240;
 const DEBOUNCE_DELAY = 500;
@@ -24,6 +25,7 @@ const RESET_DELAY_NORMAL = 800;
 
 function ScannerScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
 
   const scanArea = useMemo(() => {
@@ -505,8 +507,8 @@ function ScannerScreen() {
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
-        <Text style={styles.msg} accessibilityLabel="카메라 권한 요청 중">
-          카메라 권한 요청 중...
+        <Text style={styles.msg} accessibilityLabel={t('scanner.permissionRequest')}>
+          {t('scanner.permissionRequest')}
         </Text>
       </View>
     );
@@ -515,8 +517,8 @@ function ScannerScreen() {
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
-        <Text style={styles.msg} accessibilityLabel="카메라 권한이 필요합니다">
-          카메라 권한을 허용해 주세요
+        <Text style={styles.msg} accessibilityLabel={t('scanner.permissionDenied')}>
+          {t('scanner.permissionDenied')}
         </Text>
       </View>
     );
@@ -544,10 +546,10 @@ function ScannerScreen() {
           <Text style={styles.groupBadgeText}>{currentGroupName}</Text>
         </View>
 
-        <Text style={styles.title} accessibilityLabel="바코드를 사각형 안에 맞춰주세요">
+        <Text style={styles.title} accessibilityLabel={barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode')}>
           {barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
-            ? 'QR 코드를 사각형 안에 맞춰주세요'
-            : '바코드를 사각형 안에 맞춰주세요'}
+            ? t('scanner.scanGuideQr')
+            : t('scanner.scanGuideBarcode')}
         </Text>
         {!qrBounds && (
           <View
@@ -559,7 +561,7 @@ function ScannerScreen() {
                 borderRadius: scanArea.width * 0.08,
               },
             ]}
-            accessibilityLabel="스캔 영역"
+            accessibilityLabel={t('scanner.scanGuideBarcode')}
           />
         )}
       </View>
@@ -623,7 +625,7 @@ function ScannerScreen() {
         style={styles.torchButton}
         onPress={toggleTorch}
         activeOpacity={0.8}
-        accessibilityLabel={torchOn ? '손전등 끄기' : '손전등 켜기'}
+        accessibilityLabel={torchOn ? t('scanner.torchOn') : t('scanner.torchOff')}
         accessibilityRole="button"
       >
         <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={32} color="white" />

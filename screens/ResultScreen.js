@@ -5,9 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function ResultScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const params = useLocalSearchParams();
   const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory } = params;
   const displayText = code || url || '';
@@ -44,7 +46,7 @@ export default function ResultScreen() {
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(isEditing ? editedText : displayText);
-    Alert.alert('복사 완료', '클립보드에 복사되었습니다.');
+    Alert.alert(t('result.copySuccess'), t('result.copySuccessMessage'));
   };
 
   const handleShare = async () => {
@@ -65,19 +67,19 @@ export default function ResultScreen() {
   // 수정 저장
   const handleSaveEdit = async () => {
     if (!isFromHistory || !groupId) {
-      Alert.alert('오류', '히스토리에서만 수정할 수 있습니다.');
+      Alert.alert(t('result.error'), t('result.errorHistoryOnly'));
       return;
     }
 
     if (!editedText.trim()) {
-      Alert.alert('오류', '값을 입력해주세요.');
+      Alert.alert(t('result.error'), t('result.errorEmptyValue'));
       return;
     }
 
     try {
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
       if (!historyData) {
-        Alert.alert('오류', '히스토리를 찾을 수 없습니다.');
+        Alert.alert(t('result.error'), t('result.errorNotFound'));
         return;
       }
 
@@ -90,7 +92,7 @@ export default function ResultScreen() {
       );
 
       if (itemIndex === -1) {
-        Alert.alert('오류', '항목을 찾을 수 없습니다.');
+        Alert.alert(t('result.error'), t('result.errorItemNotFound'));
         return;
       }
 
@@ -103,9 +105,9 @@ export default function ResultScreen() {
       historyByGroup[groupId] = groupHistory;
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
 
-      Alert.alert('수정 완료', '스캔 결과가 수정되었습니다.', [
+      Alert.alert(t('result.editSuccess'), t('result.editSuccessMessage'), [
         {
-          text: '확인',
+          text: t('common.confirm'),
           onPress: () => {
             setIsEditing(false);
             router.back();
@@ -114,30 +116,30 @@ export default function ResultScreen() {
       ]);
     } catch (error) {
       console.error('Edit error:', error);
-      Alert.alert('오류', '수정 중 문제가 발생했습니다.');
+      Alert.alert(t('result.error'), t('result.errorOccurred'));
     }
   };
 
   // 삭제
   const handleDelete = () => {
     if (!isFromHistory || !groupId) {
-      Alert.alert('오류', '히스토리에서만 삭제할 수 있습니다.');
+      Alert.alert(t('result.error'), t('result.errorHistoryDeleteOnly'));
       return;
     }
 
     Alert.alert(
-      '삭제 확인',
-      '이 스캔 기록을 삭제하시겠습니까?',
+      t('result.deleteConfirmTitle'),
+      t('result.deleteConfirmMessage'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
               const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
               if (!historyData) {
-                Alert.alert('오류', '히스토리를 찾을 수 없습니다.');
+                Alert.alert(t('result.error'), t('result.errorNotFound'));
                 return;
               }
 
@@ -152,15 +154,15 @@ export default function ResultScreen() {
               historyByGroup[groupId] = filteredHistory;
               await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
 
-              Alert.alert('삭제 완료', '스캔 기록이 삭제되었습니다.', [
+              Alert.alert(t('result.deleteSuccess'), t('result.deleteSuccessMessage'), [
                 {
-                  text: '확인',
+                  text: t('common.confirm'),
                   onPress: () => router.back()
                 }
               ]);
             } catch (error) {
               console.error('Delete error:', error);
-              Alert.alert('오류', '삭제 중 문제가 발생했습니다.');
+              Alert.alert(t('result.error'), t('result.errorDeleteOccurred'));
             }
           }
         }
@@ -185,17 +187,17 @@ export default function ResultScreen() {
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => router.back()}
-          accessibilityLabel="닫기"
+          accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
           <Ionicons name="close" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>스캔 결과</Text>
+        <Text style={styles.headerTitle}>{t('result.title')}</Text>
         {isFromHistory && (
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={handleDelete}
-            accessibilityLabel="삭제"
+            accessibilityLabel={t('common.delete')}
             accessibilityRole="button"
           >
             <Ionicons name="trash-outline" size={24} color="#FF3B30" />
@@ -208,7 +210,7 @@ export default function ResultScreen() {
         {/* 스캔 사진 */}
         {hasPhoto && (
           <View style={styles.photoContainer}>
-            <Text style={styles.photoLabel}>스캔 당시 사진</Text>
+            <Text style={styles.photoLabel}>{t('result.scanPhoto')}</Text>
             <Image
               source={{ uri: photoUri }}
               style={styles.scanPhoto}
@@ -223,12 +225,12 @@ export default function ResultScreen() {
             <View style={styles.duplicateHeader}>
               <Ionicons name="repeat" size={20} color="#FF9500" />
               <Text style={styles.duplicateText}>
-                중복 스캔 ({count}번째)
+                {t('result.duplicateScan')} ({count}{t('result.duplicateCount')})
               </Text>
             </View>
             {allScanTimes.length > 0 && (
               <View style={styles.scanTimesContainer}>
-                <Text style={styles.scanTimesTitle}>스캔 기록:</Text>
+                <Text style={styles.scanTimesTitle}>{t('result.scanHistory')}</Text>
                 {allScanTimes.slice().reverse().map((time, index) => (
                   <Text key={index} style={styles.scanTimeItem}>
                     {allScanTimes.length - index}. {formatDateTime(time)}
@@ -240,7 +242,7 @@ export default function ResultScreen() {
         )}
 
         <View style={styles.labelRow}>
-          <Text style={styles.label}>스캔된 데이터</Text>
+          <Text style={styles.label}>{t('result.scannedData')}</Text>
           {isFromHistory && (
             <TouchableOpacity
               style={styles.editToggleButton}
@@ -252,7 +254,7 @@ export default function ResultScreen() {
                 color={isEditing ? "#FF3B30" : "#007AFF"}
               />
               <Text style={[styles.editToggleText, isEditing && styles.editToggleTextCancel]}>
-                {isEditing ? '취소' : '수정'}
+                {isEditing ? t('common.cancel') : t('common.edit')}
               </Text>
             </TouchableOpacity>
           )}
@@ -266,7 +268,7 @@ export default function ResultScreen() {
               onChangeText={setEditedText}
               multiline
               autoFocus
-              placeholder="데이터를 입력하세요"
+              placeholder={t('result.dataPlaceholder')}
             />
           </View>
         ) : (
@@ -285,7 +287,7 @@ export default function ResultScreen() {
             onPress={handleSaveEdit}
           >
             <Ionicons name="checkmark-circle" size={24} color="#fff" />
-            <Text style={styles.saveButtonText}>저장</Text>
+            <Text style={styles.saveButtonText}>{t('common.save')}</Text>
           </TouchableOpacity>
         )}
 
@@ -294,32 +296,32 @@ export default function ResultScreen() {
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleCopy}
-              accessibilityLabel="복사하기"
+              accessibilityLabel={t('result.copy')}
               accessibilityRole="button"
             >
               <Ionicons name="copy-outline" size={24} color="#007AFF" />
-              <Text style={styles.actionButtonText}>복사</Text>
+              <Text style={styles.actionButtonText}>{t('result.copy')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.actionButton}
               onPress={handleShare}
-              accessibilityLabel="공유하기"
+              accessibilityLabel={t('result.share')}
               accessibilityRole="button"
             >
               <Ionicons name="share-outline" size={24} color="#007AFF" />
-              <Text style={styles.actionButtonText}>공유</Text>
+              <Text style={styles.actionButtonText}>{t('result.share')}</Text>
             </TouchableOpacity>
 
             {(isUrl || editedText.startsWith('http://') || editedText.startsWith('https://')) && (
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={handleOpenUrl}
-                accessibilityLabel="링크 열기"
+                accessibilityLabel={t('result.open')}
                 accessibilityRole="button"
               >
                 <Ionicons name="open-outline" size={24} color="#007AFF" />
-                <Text style={styles.actionButtonText}>열기</Text>
+                <Text style={styles.actionButtonText}>{t('result.open')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -330,11 +332,11 @@ export default function ResultScreen() {
         <TouchableOpacity
           style={styles.scanAgainButton}
           onPress={() => router.back()}
-          accessibilityLabel="다시 스캔하기"
+          accessibilityLabel={t('result.scanAgain')}
           accessibilityRole="button"
         >
           <Ionicons name="scan" size={24} color="#fff" />
-          <Text style={styles.scanAgainText}>다시 스캔하기</Text>
+          <Text style={styles.scanAgainText}>{t('result.scanAgain')}</Text>
         </TouchableOpacity>
       )}
     </View>
