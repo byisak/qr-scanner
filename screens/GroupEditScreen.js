@@ -5,13 +5,12 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  FlatList,
   TextInput,
   Alert,
   Modal,
   Platform,
 } from 'react-native';
-import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -128,10 +127,26 @@ export default function GroupEditScreen() {
     setShowEditModal(false);
   };
 
-  // 드래그로 그룹 순서 변경
-  const onDragEnd = async ({ data }) => {
-    setGroups(data);
-    await AsyncStorage.setItem('scanGroups', JSON.stringify(data));
+  // 그룹 순서 변경 (위로)
+  const moveGroupUp = async (index) => {
+    if (index === 0) return;
+
+    const updatedGroups = [...groups];
+    [updatedGroups[index - 1], updatedGroups[index]] = [updatedGroups[index], updatedGroups[index - 1]];
+
+    setGroups(updatedGroups);
+    await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+  };
+
+  // 그룹 순서 변경 (아래로)
+  const moveGroupDown = async (index) => {
+    if (index === groups.length - 1) return;
+
+    const updatedGroups = [...groups];
+    [updatedGroups[index], updatedGroups[index + 1]] = [updatedGroups[index + 1], updatedGroups[index]];
+
+    setGroups(updatedGroups);
+    await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
   };
 
   // 그룹 이름 변경 모달 열기
@@ -141,58 +156,8 @@ export default function GroupEditScreen() {
     setShowEditModal(true);
   };
 
-  const renderItem = ({ item, drag, isActive }) => {
-    return (
-      <ScaleDecorator>
-        <TouchableOpacity
-          style={[s.groupItem, isActive && s.groupItemDragging]}
-          onLongPress={drag}
-          disabled={isActive}
-          delayLongPress={200}
-        >
-          <View style={s.groupInfo}>
-            {/* 드래그 핸들 */}
-            <TouchableOpacity onPressIn={drag} style={s.dragHandle}>
-              <Ionicons name="reorder-three" size={24} color="#999" />
-            </TouchableOpacity>
-
-            <View style={s.groupNameContainer}>
-              <Text style={s.groupName}>{item.name}</Text>
-              {item.id === DEFAULT_GROUP_ID && (
-                <Text style={s.defaultBadge}>기본</Text>
-              )}
-            </View>
-          </View>
-
-          <View style={s.groupActions}>
-            {/* 이름 변경 버튼 */}
-            <TouchableOpacity
-              style={s.iconButton}
-              onPress={() => openEditModal(item)}
-            >
-              <Ionicons name="create-outline" size={24} color="#007AFF" />
-            </TouchableOpacity>
-
-            {/* 삭제 버튼 */}
-            <TouchableOpacity
-              style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
-              onPress={() => deleteGroup(item.id)}
-              disabled={item.id === DEFAULT_GROUP_ID}
-            >
-              <Ionicons
-                name="trash-outline"
-                size={24}
-                color={item.id === DEFAULT_GROUP_ID ? '#ccc' : '#FF3B30'}
-              />
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </ScaleDecorator>
-    );
-  };
-
   return (
-    <GestureHandlerRootView style={s.container}>
+    <View style={s.container}>
       {/* 헤더 */}
       <View style={s.header}>
         <TouchableOpacity
@@ -206,13 +171,69 @@ export default function GroupEditScreen() {
         <View style={{ width: 28 }} />
       </View>
 
-      {/* 그룹 목록 - 드래그 가능 */}
-      <DraggableFlatList
+      {/* 그룹 목록 */}
+      <FlatList
         data={groups}
         keyExtractor={(item) => item.id}
-        onDragEnd={onDragEnd}
-        renderItem={renderItem}
         contentContainerStyle={s.listContent}
+        renderItem={({ item, index }) => (
+          <View style={s.groupItem}>
+            <View style={s.groupInfo}>
+              <Text style={s.groupName}>{item.name}</Text>
+              {item.id === DEFAULT_GROUP_ID && (
+                <Text style={s.defaultBadge}>기본</Text>
+              )}
+            </View>
+
+            <View style={s.groupActions}>
+              {/* 순서 변경 버튼 */}
+              <TouchableOpacity
+                style={[s.iconButton, index === 0 && s.iconButtonDisabled]}
+                onPress={() => moveGroupUp(index)}
+                disabled={index === 0}
+              >
+                <Ionicons
+                  name="chevron-up"
+                  size={24}
+                  color={index === 0 ? '#ccc' : '#666'}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.iconButton, index === groups.length - 1 && s.iconButtonDisabled]}
+                onPress={() => moveGroupDown(index)}
+                disabled={index === groups.length - 1}
+              >
+                <Ionicons
+                  name="chevron-down"
+                  size={24}
+                  color={index === groups.length - 1 ? '#ccc' : '#666'}
+                />
+              </TouchableOpacity>
+
+              {/* 이름 변경 버튼 */}
+              <TouchableOpacity
+                style={s.iconButton}
+                onPress={() => openEditModal(item)}
+              >
+                <Ionicons name="create-outline" size={24} color="#007AFF" />
+              </TouchableOpacity>
+
+              {/* 삭제 버튼 */}
+              <TouchableOpacity
+                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+                onPress={() => deleteGroup(item.id)}
+                disabled={item.id === DEFAULT_GROUP_ID}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={24}
+                  color={item.id === DEFAULT_GROUP_ID ? '#ccc' : '#FF3B30'}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       />
 
       {/* 그룹 추가 버튼 */}
@@ -300,7 +321,7 @@ export default function GroupEditScreen() {
           </View>
         </View>
       </Modal>
-    </GestureHandlerRootView>
+    </View>
   );
 }
 
@@ -346,23 +367,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
-  groupItemDragging: {
-    elevation: 8,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    backgroundColor: '#f0f8ff',
-  },
   groupInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dragHandle: {
-    padding: 8,
-    marginRight: 8,
-  },
-  groupNameContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
