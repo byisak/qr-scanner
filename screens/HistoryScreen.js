@@ -134,6 +134,8 @@ export default function HistoryScreen() {
         timestamp: item.timestamp.toString(),
         scanTimes: item.scanTimes ? JSON.stringify(item.scanTimes) : JSON.stringify([item.timestamp]),
         photoUri: item.photos && item.photos.length > 0 ? item.photos[0] : '',
+        groupId: selectedGroupId, // 그룹 ID 전달
+        fromHistory: 'true', // 히스토리에서 왔음을 표시
       }
     });
   };
