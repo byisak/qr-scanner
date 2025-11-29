@@ -138,6 +138,10 @@ export default {
     koreanName: 'Korean',
     english: 'English',
     englishName: 'English',
+    japanese: '日本語',
+    japaneseName: 'Japanese',
+    chinese: '中文',
+    chineseName: 'Chinese',
     selected: 'Selected',
   },
 
