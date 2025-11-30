@@ -3,6 +3,7 @@ import { Platform, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect } from 'react';
@@ -13,6 +14,7 @@ export default function TabLayout() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [hapticEnabled, setHapticEnabled] = useState(false);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function TabLayout() {
       </NativeTabs>
 
       {/* Floating Settings Button with Liquid Glass Effect */}
-      <View style={s.settingsButtonContainer}>
+      <View style={[s.settingsButtonContainer, { bottom: insets.bottom + 8 }]}>
         <TouchableOpacity
           style={s.settingsButton}
           onPress={handleSettingsPress}
@@ -89,7 +91,6 @@ export default function TabLayout() {
 const s = StyleSheet.create({
   settingsButtonContainer: {
     position: 'absolute',
-    bottom: 100,
     right: 16,
     zIndex: 1000,
   },
