@@ -192,4 +192,19 @@ export default {
     systemDesc: 'Follow device settings',
     selected: 'Selected',
   },
+
+  // QR code generator screen
+  generator: {
+    title: 'Generate',
+    inputLabel: 'Enter Text',
+    inputPlaceholder: 'Enter text to convert to QR code',
+    qrPreview: 'QR Code Preview',
+    share: 'Share',
+    saveImage: 'Save as Image',
+    emptyText: 'Enter text to generate QR code',
+    saveSuccess: 'Saved',
+    saveSuccessMessage: 'QR code saved to gallery.',
+    saveError: 'Save Failed',
+    saveErrorMessage: 'Failed to save QR code.',
+  },
 };

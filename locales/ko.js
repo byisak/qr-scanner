@@ -192,4 +192,19 @@ export default {
     systemDesc: '기기 설정 따르기',
     selected: '선택됨',
   },
+
+  // QR 코드 생성 화면
+  generator: {
+    title: '생성',
+    inputLabel: '텍스트 입력',
+    inputPlaceholder: 'QR 코드로 변환할 텍스트를 입력하세요',
+    qrPreview: 'QR 코드 미리보기',
+    share: '공유',
+    saveImage: '이미지로 저장',
+    emptyText: '텍스트를 입력하면 QR 코드가 생성됩니다',
+    saveSuccess: '저장 완료',
+    saveSuccessMessage: 'QR 코드가 갤러리에 저장되었습니다.',
+    saveError: '저장 실패',
+    saveErrorMessage: 'QR 코드 저장에 실패했습니다.',
+  },
 };

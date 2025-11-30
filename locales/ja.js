@@ -192,4 +192,19 @@ export default {
     systemDesc: 'デバイス設定に従う',
     selected: '選択済み',
   },
+
+  // QRコード生成画面
+  generator: {
+    title: '生成',
+    inputLabel: 'テキスト入力',
+    inputPlaceholder: 'QRコードに変換するテキストを入力してください',
+    qrPreview: 'QRコードプレビュー',
+    share: '共有',
+    saveImage: '画像として保存',
+    emptyText: 'テキストを入力するとQRコードが生成されます',
+    saveSuccess: '保存完了',
+    saveSuccessMessage: 'QRコードがギャラリーに保存されました。',
+    saveError: '保存失敗',
+    saveErrorMessage: 'QRコードの保存に失敗しました。',
+  },
 };

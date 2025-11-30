@@ -192,4 +192,19 @@ export default {
     systemDesc: '跟随设备设置',
     selected: '已选择',
   },
+
+  // 二维码生成界面
+  generator: {
+    title: '生成',
+    inputLabel: '输入文本',
+    inputPlaceholder: '请输入要转换为二维码的文本',
+    qrPreview: '二维码预览',
+    share: '分享',
+    saveImage: '保存为图片',
+    emptyText: '输入文本后将生成二维码',
+    saveSuccess: '保存成功',
+    saveSuccessMessage: '二维码已保存到相册。',
+    saveError: '保存失败',
+    saveErrorMessage: '二维码保存失败。',
+  },
 };

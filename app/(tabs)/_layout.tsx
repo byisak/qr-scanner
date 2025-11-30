@@ -1,33 +1,111 @@
 import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
-import { Platform } from 'react-native';
+import { Platform, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { BlurView } from 'expo-blur';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function TabLayout() {
   const { t } = useLanguage();
+  const { isDark } = useTheme();
+  const router = useRouter();
+
+  const handleSettingsPress = () => {
+    router.push('/settings');
+  };
 
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Label>{t('scanner.title')}</Label>
-        {Platform.select({
-          ios: <Icon sf="qrcode.viewfinder" />,
-          default: <Icon drawable="ic_menu_camera" />,
-        })}
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="history">
-        <Label>{t('history.title')}</Label>
-        {Platform.select({
-          ios: <Icon sf="clock" />,
-          default: <Icon drawable="ic_menu_recent_history" />,
-        })}
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <Label>{t('settings.title')}</Label>
-        {Platform.select({
-          ios: <Icon sf="gear" />,
-          default: <Icon drawable="ic_menu_settings" />,
-        })}
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <View style={{ flex: 1 }}>
+      <NativeTabs>
+        <NativeTabs.Trigger name="history">
+          <Label>{t('history.title')}</Label>
+          {Platform.select({
+            ios: <Icon sf="clock" />,
+            default: <Icon drawable="ic_menu_recent_history" />,
+          })}
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="generator">
+          <Label>{t('generator.title')}</Label>
+          {Platform.select({
+            ios: <Icon sf="qrcode" />,
+            default: <Icon drawable="ic_menu_add" />,
+          })}
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="index">
+          <Label>{t('scanner.title')}</Label>
+          {Platform.select({
+            ios: <Icon sf="qrcode.viewfinder" />,
+            default: <Icon drawable="ic_menu_camera" />,
+          })}
+        </NativeTabs.Trigger>
+      </NativeTabs>
+
+      {/* Floating Settings Button with Liquid Glass Effect */}
+      <View style={s.settingsButtonContainer}>
+        <TouchableOpacity
+          style={s.settingsButton}
+          onPress={handleSettingsPress}
+          activeOpacity={0.8}
+        >
+          <BlurView
+            intensity={isDark ? 60 : 80}
+            tint={isDark ? 'dark' : 'light'}
+            style={s.blurContainer}
+          >
+            <View style={[s.glassOverlay, isDark && s.glassOverlayDark]}>
+              <Ionicons
+                name="settings-outline"
+                size={24}
+                color={isDark ? '#fff' : '#000'}
+              />
+            </View>
+          </BlurView>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
+
+const s = StyleSheet.create({
+  settingsButtonContainer: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    zIndex: 1000,
+  },
+  settingsButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  blurContainer: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+  glassOverlay: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 28,
+  },
+  glassOverlayDark: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+});
