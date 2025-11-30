@@ -15,13 +15,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 const DEFAULT_GROUP_ID = 'default';
 
 export default function HistoryScreen() {
   const router = useRouter();
   const { t } = useLanguage();
-  const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: '기본 그룹', createdAt: Date.now() }]);
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
+  const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
   const [selectedGroupId, setSelectedGroupId] = useState(DEFAULT_GROUP_ID);
   const [scanHistory, setScanHistory] = useState({ [DEFAULT_GROUP_ID]: [] });
   const [query, setQuery] = useState('');
@@ -36,7 +40,7 @@ export default function HistoryScreen() {
 
       if (groupsData) {
         const parsed = JSON.parse(groupsData);
-        setGroups(parsed.length > 0 ? parsed : [{ id: DEFAULT_GROUP_ID, name: '기본 그룹', createdAt: Date.now() }]);
+        setGroups(parsed.length > 0 ? parsed : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
       }
 
       if (historyData) {
@@ -152,41 +156,47 @@ export default function HistoryScreen() {
   };
 
   return (
-    <View style={s.c}>
+    <View style={[s.c, { backgroundColor: colors.background }]}>
       {/* 검색 */}
-      <View style={s.search}>
-        <Ionicons name="search" size={20} color="#888" />
+      <View style={[s.search, { backgroundColor: colors.surface }]}>
+        <Ionicons name="search" size={20} color={colors.textTertiary} />
         <TextInput
-          style={s.input}
+          style={[s.input, { color: colors.text }]}
           placeholder={t('history.searchPlaceholder')}
+          placeholderTextColor={colors.textTertiary}
           value={query}
           onChangeText={setQuery}
           accessibilityLabel={t('common.search')}
         />
         {query ? (
           <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('history.clearSearch')}>
-            <Ionicons name="close-circle" size={22} color="#888" />
+            <Ionicons name="close-circle" size={22} color={colors.textTertiary} />
           </TouchableOpacity>
         ) : null}
       </View>
 
       {/* 그룹 선택 탭 */}
-      <View style={s.groupTabsContainer}>
+      <View style={[s.groupTabsContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.groupTabs}>
           {groups.map((group) => {
             const scanCount = getGroupScanCount(group.id);
+            const isActive = selectedGroupId === group.id;
             return (
               <TouchableOpacity
                 key={group.id}
-                style={[s.groupTab, selectedGroupId === group.id && s.groupTabActive]}
+                style={[
+                  s.groupTab,
+                  { backgroundColor: isActive ? colors.primary : colors.inputBackground },
+                  isActive && s.groupTabActive
+                ]}
                 onPress={() => selectGroup(group.id)}
               >
-                <Text style={[s.groupTabText, selectedGroupId === group.id && s.groupTabTextActive]}>
+                <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text }, isActive && s.groupTabTextActive]}>
                   {group.name}
                 </Text>
                 {scanCount > 0 && (
-                  <View style={[s.groupCountBadge, selectedGroupId === group.id && s.groupCountBadgeActive]}>
-                    <Text style={[s.groupCountBadgeText, selectedGroupId === group.id && s.groupCountBadgeTextActive]}>
+                  <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
+                    <Text style={[s.groupCountBadgeText, { color: isActive ? colors.primary : '#fff' }, isActive && s.groupCountBadgeTextActive]}>
                       {scanCount}
                     </Text>
                   </View>
@@ -194,21 +204,21 @@ export default function HistoryScreen() {
               </TouchableOpacity>
             );
           })}
-          <TouchableOpacity style={s.editGroupTab} onPress={() => router.push('/group-edit')}>
-            <Ionicons name="settings-outline" size={20} color="#007AFF" />
-            <Text style={s.editGroupTabText}>{t('history.editGroups')}</Text>
+          <TouchableOpacity style={[s.editGroupTab, { backgroundColor: colors.inputBackground }]} onPress={() => router.push('/group-edit')}>
+            <Ionicons name="settings-outline" size={20} color={colors.primary} />
+            <Text style={[s.editGroupTabText, { color: colors.primary }]}>{t('history.editGroups')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
       {/* 헤더 */}
       <View style={s.header}>
-        <Text style={s.title}>
+        <Text style={[s.title, { color: colors.text }]}>
           {currentGroup?.name || t('history.scanRecord')} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
-            <Text style={s.del}>{t('history.deleteAll')}</Text>
+            <Text style={[s.del, { color: colors.error }]}>{t('history.deleteAll')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -216,8 +226,8 @@ export default function HistoryScreen() {
       {/* 히스토리 목록 */}
       {filteredList.length === 0 ? (
         <View style={s.empty}>
-          <Ionicons name="file-tray-outline" size={64} color="#ccc" />
-          <Text style={s.emptyText}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
+          <Ionicons name="file-tray-outline" size={64} color={colors.borderLight} />
+          <Text style={[s.emptyText, { color: colors.textSecondary }]}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
         </View>
       ) : (
         <FlatList
@@ -225,27 +235,27 @@ export default function HistoryScreen() {
           keyExtractor={(_, i) => i.toString()}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={s.item}
+              style={[s.item, { backgroundColor: colors.surface }]}
               onPress={() => handleItemPress(item)}
               activeOpacity={0.7}
               accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
               accessibilityRole="button"
             >
               <View style={s.itemHeader}>
-                <Ionicons name="qr-code-outline" size={20} color="#007AFF" />
-                <Text style={s.code} numberOfLines={1}>
+                <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
+                <Text style={[s.code, { color: colors.text }]} numberOfLines={1}>
                   {item.code}
                 </Text>
                 {item.count && item.count > 1 && (
-                  <View style={s.countBadge}>
+                  <View style={[s.countBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: '#FF9500' }]}>
                     <Ionicons name="repeat" size={12} color="#FF9500" />
                     <Text style={s.countBadgeText}>{item.count}</Text>
                   </View>
                 )}
               </View>
-              <Text style={s.time}>{formatDateTime(item.timestamp)}</Text>
+              <Text style={[s.time, { color: colors.textSecondary }]}>{formatDateTime(item.timestamp)}</Text>
               {item.url && (
-                <Text style={s.url} numberOfLines={1}>
+                <Text style={[s.url, { color: colors.primary }]} numberOfLines={1}>
                   {item.url}
                 </Text>
               )}
@@ -259,13 +269,14 @@ export default function HistoryScreen() {
 }
 
 const s = StyleSheet.create({
-  c: { flex: 1, backgroundColor: '#f9f9f9' },
+  c: {
+    flex: 1,
+  },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
     margin: 15,
     marginTop: 50,
-    backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
@@ -275,11 +286,13 @@ const s = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  input: { flex: 1, marginLeft: 8, fontSize: 16 },
+  input: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
+  },
   groupTabsContainer: {
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
   },
   groupTabs: {
     paddingHorizontal: 15,
@@ -292,21 +305,18 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 8,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
   },
   groupTabActive: {
-    backgroundColor: '#007AFF',
+    // Handled inline
   },
   groupTabText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#666',
   },
   groupTabTextActive: {
-    color: '#fff',
+    // Handled inline
   },
   groupCountBadge: {
-    backgroundColor: '#007AFF',
     minWidth: 20,
     height: 20,
     borderRadius: 10,
@@ -316,15 +326,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 6,
   },
   groupCountBadgeActive: {
-    backgroundColor: '#fff',
+    // Handled inline
   },
   groupCountBadgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#fff',
   },
   groupCountBadgeTextActive: {
-    color: '#007AFF',
+    // Handled inline
   },
   editGroupTab: {
     flexDirection: 'row',
@@ -333,13 +342,11 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 8,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
     gap: 4,
   },
   editGroupTabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
   },
   header: {
     flexDirection: 'row',
@@ -349,8 +356,14 @@ const s = StyleSheet.create({
     paddingTop: 15,
     paddingBottom: 10,
   },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#000' },
-  del: { color: '#FF3B30', fontSize: 16, fontWeight: '600' },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  del: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
   empty: {
     flex: 1,
     justifyContent: 'center',
@@ -359,14 +372,12 @@ const s = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#888',
     marginTop: 16,
   },
   listContent: {
     paddingBottom: 20,
   },
   item: {
-    backgroundColor: '#fff',
     marginHorizontal: 15,
     marginVertical: 6,
     padding: 16,
@@ -387,18 +398,15 @@ const s = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
     flex: 1,
-    color: '#000',
   },
   countBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 149, 0, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     marginLeft: 8,
     borderWidth: 1,
-    borderColor: '#FF9500',
   },
   countBadgeText: {
     fontSize: 12,
@@ -408,13 +416,11 @@ const s = StyleSheet.create({
   },
   time: {
     fontSize: 13,
-    color: '#666',
     marginTop: 4,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   url: {
     fontSize: 12,
-    color: '#007AFF',
     marginTop: 8,
   },
 });
