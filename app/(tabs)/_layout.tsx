@@ -3,6 +3,9 @@ import { Platform, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -10,8 +13,24 @@ export default function TabLayout() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
   const router = useRouter();
+  const [hapticEnabled, setHapticEnabled] = useState(false);
 
-  const handleSettingsPress = () => {
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const haptic = await AsyncStorage.getItem('hapticEnabled');
+        setHapticEnabled(haptic === 'true');
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleSettingsPress = async () => {
+    if (hapticEnabled) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     router.push('/settings');
   };
 
@@ -70,7 +89,7 @@ export default function TabLayout() {
 const s = StyleSheet.create({
   settingsButtonContainer: {
     position: 'absolute',
-    top: 60,
+    bottom: 100,
     right: 16,
     zIndex: 1000,
   },

@@ -149,7 +149,7 @@ export default function GeneratorScreen() {
             ]}
           >
             {inputText.trim() ? (
-              <View ref={qrRef} style={s.qrWrapper}>
+              <View ref={qrRef} style={s.qrWrapper} collapsable={false}>
                 <View style={s.qrBackground}>
                   <QRCode
                     value={inputText}
