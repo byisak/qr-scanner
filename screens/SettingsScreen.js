@@ -130,7 +130,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.hapticFeedback')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.hapticDesc')}</Text>
-              {hapticEnabled && <Text style={s.ok}>{t('settings.enabled')}</Text>}
+              {hapticEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={hapticEnabled}
@@ -146,7 +146,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.photoSave')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.photoSaveDesc')}</Text>
-              {photoSaveEnabled && <Text style={s.ok}>{t('settings.enabled')}</Text>}
+              {photoSaveEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={photoSaveEnabled}
@@ -235,7 +235,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.useScanUrlDesc')}</Text>
-              {on && <Text style={s.ok}>{t('settings.enabled')}</Text>}
+              {on && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={on}
@@ -261,7 +261,7 @@ export default function SettingsScreen() {
                 keyboardType="url"
                 accessibilityLabel={t('settings.useScanUrl')}
               />
-              <Text style={s.save}>{t('settings.autoSaved')}</Text>
+              <Text style={[s.save, { color: colors.success }]}>{t('settings.autoSaved')}</Text>
 
               <View style={[s.exampleBox, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
                 <Text style={[s.exampleTitle, { color: colors.textSecondary }]}>{t('settings.exampleTitle')}</Text>
@@ -337,7 +337,6 @@ const s = StyleSheet.create({
   },
   ok: {
     fontSize: 12,
-    color: '#34C759',
     marginTop: 6,
     fontWeight: '600',
   },
@@ -356,7 +355,6 @@ const s = StyleSheet.create({
   save: {
     marginTop: 10,
     textAlign: 'center',
-    color: '#34C759',
     fontWeight: '600',
     fontSize: 12,
   },
