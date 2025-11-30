@@ -1,5 +1,5 @@
 // screens/GeneratorScreen.js - QR Code generator screen
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,20 +15,32 @@ import QRCode from 'react-native-qrcode-svg';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useSettings } from '../contexts/SettingsContext';
 import { Colors } from '../constants/Colors';
 
 export default function GeneratorScreen() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
-  const { settings } = useSettings();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [inputText, setInputText] = useState('');
+  const [hapticEnabled, setHapticEnabled] = useState(false);
   const qrRef = useRef(null);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const haptic = await AsyncStorage.getItem('hapticEnabled');
+        setHapticEnabled(haptic === 'true');
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const handleShare = async () => {
     if (!inputText.trim()) {
@@ -36,7 +48,7 @@ export default function GeneratorScreen() {
       return;
     }
 
-    if (settings.hapticFeedback) {
+    if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
@@ -63,7 +75,7 @@ export default function GeneratorScreen() {
       return;
     }
 
-    if (settings.hapticFeedback) {
+    if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
