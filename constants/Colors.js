@@ -1,0 +1,29 @@
+// constants/Colors.js - Theme colors
+export const Colors = {
+  light: {
+    background: '#f9f9f9',
+    surface: '#fff',
+    primary: '#007AFF',
+    text: '#000',
+    textSecondary: '#666',
+    textTertiary: '#8E8E93',
+    border: '#e0e0e0',
+    borderLight: '#F0F0F0',
+    inputBackground: '#F2F2F7',
+    success: '#34C759',
+    shadow: '#000',
+  },
+  dark: {
+    background: '#000',
+    surface: '#1c1c1e',
+    primary: '#0A84FF',
+    text: '#fff',
+    textSecondary: '#98989d',
+    textTertiary: '#636366',
+    border: '#38383a',
+    borderLight: '#2c2c2e',
+    inputBackground: '#2c2c2e',
+    success: '#30D158',
+    shadow: '#000',
+  },
+};

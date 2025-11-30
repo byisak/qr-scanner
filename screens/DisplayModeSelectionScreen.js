@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 const displayModes = [
   {
@@ -30,25 +31,26 @@ const displayModes = [
 export default function DisplayModeSelectionScreen() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { themeMode, changeTheme } = useTheme();
+  const { themeMode, changeTheme, isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
 
   const selectMode = async (mode) => {
     await changeTheme(mode);
   };
 
   return (
-    <View style={s.container}>
-      <View style={s.header}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>{t('displayModeSelection.title')}</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>{t('displayModeSelection.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
         <View style={s.section}>
-          <Text style={s.info}>
+          <Text style={[s.info, { color: colors.textSecondary }]}>
             {t('displayModeSelection.description')}
           </Text>
 
@@ -58,20 +60,24 @@ export default function DisplayModeSelectionScreen() {
             return (
               <TouchableOpacity
                 key={mode.id}
-                style={[s.modeItem, isSelected && s.modeItemSelected]}
+                style={[
+                  s.modeItem,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  isSelected && { borderColor: colors.primary, backgroundColor: isDark ? '#0A1929' : '#f0f8ff' }
+                ]}
                 onPress={() => selectMode(mode.id)}
                 activeOpacity={0.7}
               >
-                <View style={s.modeIcon}>
+                <View style={[s.modeIcon, { backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5' }]}>
                   <Ionicons
                     name={mode.icon}
                     size={32}
-                    color={isSelected ? '#007AFF' : '#666'}
+                    color={isSelected ? colors.primary : colors.textSecondary}
                   />
                 </View>
                 <View style={s.modeInfo}>
                   <View style={s.modeHeader}>
-                    <Text style={[s.modeName, isSelected && s.modeNameSelected]}>
+                    <Text style={[s.modeName, { color: isSelected ? colors.primary : colors.text }]}>
                       {t(`displayModeSelection.${mode.id}`)}
                     </Text>
                     {isSelected && (
@@ -82,12 +88,12 @@ export default function DisplayModeSelectionScreen() {
                       </View>
                     )}
                   </View>
-                  <Text style={s.modeDesc}>
+                  <Text style={[s.modeDesc, { color: colors.textSecondary }]}>
                     {t(`displayModeSelection.${mode.id}Desc`)}
                   </Text>
                 </View>
-                <View style={[s.radio, isSelected && s.radioSelected]}>
-                  {isSelected && <View style={s.radioDot} />}
+                <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
+                  {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
                 </View>
               </TouchableOpacity>
             );
@@ -101,7 +107,6 @@ export default function DisplayModeSelectionScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     flexDirection: 'row',
@@ -110,9 +115,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   backButton: {
     width: 40,
@@ -123,7 +126,6 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
   },
   content: {
     flex: 1,
@@ -136,7 +138,6 @@ const s = StyleSheet.create({
   },
   info: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -144,21 +145,14 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
-  },
-  modeItemSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
   },
   modeIcon: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -174,10 +168,6 @@ const s = StyleSheet.create({
   modeName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#333',
-  },
-  modeNameSelected: {
-    color: '#007AFF',
   },
   selectedBadge: {
     marginLeft: 8,
@@ -193,25 +183,19 @@ const s = StyleSheet.create({
   },
   modeDesc: {
     fontSize: 14,
-    color: '#666',
   },
   radio: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
-  },
-  radioSelected: {
-    borderColor: '#007AFF',
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#007AFF',
   },
 });

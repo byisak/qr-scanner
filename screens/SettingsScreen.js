@@ -19,11 +19,13 @@ import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
+import { Colors } from '../constants/Colors';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { language, t } = useLanguage();
-  const { themeMode } = useTheme();
+  const { themeMode, isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -116,24 +118,24 @@ export default function SettingsScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ScrollView style={s.c} contentContainerStyle={s.content}>
-        <Text style={s.title}>{t('settings.title')}</Text>
+      <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
+        <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
 
         {/* 바코드 인식 설정 */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>{t('settings.barcodeSettings')}</Text>
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.barcodeSettings')}</Text>
 
           {/* 햅틱 피드백 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.hapticFeedback')}</Text>
-              <Text style={s.desc}>{t('settings.hapticDesc')}</Text>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.hapticFeedback')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.hapticDesc')}</Text>
               {hapticEnabled && <Text style={s.ok}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={hapticEnabled}
               onValueChange={setHapticEnabled}
-              trackColor={{ true: '#34C759', false: '#E5E5EA' }}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel={t('settings.hapticFeedback')}
             />
@@ -142,14 +144,14 @@ export default function SettingsScreen() {
           {/* 사진 저장 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.photoSave')}</Text>
-              <Text style={s.desc}>{t('settings.photoSaveDesc')}</Text>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.photoSave')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.photoSaveDesc')}</Text>
               {photoSaveEnabled && <Text style={s.ok}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={photoSaveEnabled}
               onValueChange={setPhotoSaveEnabled}
-              trackColor={{ true: '#34C759', false: '#E5E5EA' }}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel={t('settings.photoSave')}
             />
@@ -157,88 +159,88 @@ export default function SettingsScreen() {
 
           {/* 바코드 선택 (클릭하면 새 페이지로) */}
           <TouchableOpacity
-            style={s.menuItem}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/barcode-selection')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.selectBarcodes')}</Text>
-              <Text style={s.desc}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.selectBarcodes')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
           {/* 기록 내보내기 */}
           <TouchableOpacity
-            style={s.menuItem}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/export-history')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.exportHistory')}</Text>
-              <Text style={s.desc}>{t('settings.exportHistoryDesc')}</Text>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.exportHistory')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.exportHistoryDesc')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
           {/* 카메라 선택 */}
           <TouchableOpacity
-            style={s.menuItem}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/camera-selection')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.cameraSelection')}</Text>
-              <Text style={s.desc}>{t('settings.cameraSelectionDesc')}</Text>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.cameraSelection')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.cameraSelectionDesc')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
           {/* 언어 선택 */}
           <TouchableOpacity
-            style={s.menuItem}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/language-selection')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.languageSelection')}</Text>
-              <Text style={s.desc}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.languageSelection')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>
                 {languages.find(lang => lang.code === language)?.name || '한국어'}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
           {/* 화면 모드 선택 */}
           <TouchableOpacity
-            style={s.menuItem}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/display-mode-selection')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.displayMode')}</Text>
-              <Text style={s.desc}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.displayMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>
                 {t(`displayModeSelection.${themeMode}`)}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
         </View>
 
         {/* URL 연동 설정 */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>{t('settings.autoMove')}</Text>
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text>
 
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>{t('settings.useScanUrl')}</Text>
-              <Text style={s.desc}>{t('settings.useScanUrlDesc')}</Text>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.useScanUrlDesc')}</Text>
               {on && <Text style={s.ok}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={on}
               onValueChange={setOn}
-              trackColor={{ true: '#34C759', false: '#E5E5EA' }}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel={t('settings.useScanUrl')}
             />
@@ -246,25 +248,25 @@ export default function SettingsScreen() {
 
           {on && (
             <>
-              <Text style={s.urlInfo}>
+              <Text style={[s.urlInfo, { color: colors.textSecondary }]}>
                 {t('settings.urlInfo')}
               </Text>
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
                 value={url}
                 onChangeText={setUrl}
                 placeholder={t('settings.urlPlaceholder')}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textTertiary}
                 autoCapitalize="none"
                 keyboardType="url"
                 accessibilityLabel={t('settings.useScanUrl')}
               />
               <Text style={s.save}>{t('settings.autoSaved')}</Text>
 
-              <View style={s.exampleBox}>
-                <Text style={s.exampleTitle}>{t('settings.exampleTitle')}</Text>
-                <Text style={s.exampleText}>{t('settings.exampleUrl')}</Text>
-                <Text style={s.exampleDesc}>
+              <View style={[s.exampleBox, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                <Text style={[s.exampleTitle, { color: colors.textSecondary }]}>{t('settings.exampleTitle')}</Text>
+                <Text style={[s.exampleText, { color: colors.primary }]}>{t('settings.exampleUrl')}</Text>
+                <Text style={[s.exampleDesc, { color: colors.textTertiary }]}>
                   {t('settings.exampleDesc')}
                 </Text>
               </View>
@@ -279,7 +281,6 @@ export default function SettingsScreen() {
 const s = StyleSheet.create({
   c: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   content: {
     padding: 20,
@@ -290,10 +291,8 @@ const s = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 40,
     marginBottom: 30,
-    color: '#000',
   },
   section: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
@@ -306,7 +305,6 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#666',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 15,
@@ -325,18 +323,15 @@ const s = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
     marginTop: 10,
   },
   label: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#000',
     marginBottom: 4,
   },
   desc: {
     fontSize: 13,
-    color: '#8E8E93',
     marginTop: 2,
     lineHeight: 18,
   },
@@ -348,19 +343,15 @@ const s = StyleSheet.create({
   },
   urlInfo: {
     fontSize: 14,
-    color: '#666',
     marginTop: 20,
     lineHeight: 20,
   },
   input: {
     marginTop: 15,
     padding: 16,
-    backgroundColor: '#F2F2F7',
     borderRadius: 12,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
-    color: '#000',
   },
   save: {
     marginTop: 10,
@@ -372,26 +363,21 @@ const s = StyleSheet.create({
   exampleBox: {
     marginTop: 20,
     padding: 16,
-    backgroundColor: '#F2F2F7',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
   },
   exampleTitle: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#666',
     marginBottom: 8,
   },
   exampleText: {
     fontSize: 13,
     fontFamily: 'monospace',
-    color: '#007AFF',
     marginBottom: 8,
   },
   exampleDesc: {
     fontSize: 12,
-    color: '#8E8E93',
     lineHeight: 18,
   },
 });

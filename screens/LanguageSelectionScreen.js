@@ -10,29 +10,33 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
+import { Colors } from '../constants/Colors';
 
 export default function LanguageSelectionScreen() {
   const router = useRouter();
   const { language, changeLanguage, t } = useLanguage();
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
 
   const selectLanguage = async (languageCode) => {
     await changeLanguage(languageCode);
   };
 
   return (
-    <View style={s.container}>
-      <View style={s.header}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>{t('languageSelection.title')}</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>{t('languageSelection.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
         <View style={s.section}>
-          <Text style={s.info}>
+          <Text style={[s.info, { color: colors.textSecondary }]}>
             {t('languageSelection.description')}
           </Text>
 
@@ -42,20 +46,24 @@ export default function LanguageSelectionScreen() {
             return (
               <TouchableOpacity
                 key={lang.code}
-                style={[s.languageItem, isSelected && s.languageItemSelected]}
+                style={[
+                  s.languageItem,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  isSelected && { borderColor: colors.primary, backgroundColor: isDark ? '#0A1929' : '#f0f8ff' }
+                ]}
                 onPress={() => selectLanguage(lang.code)}
                 activeOpacity={0.7}
               >
-                <View style={s.languageIcon}>
+                <View style={[s.languageIcon, { backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5' }]}>
                   <Ionicons
                     name="language"
                     size={32}
-                    color={isSelected ? '#007AFF' : '#666'}
+                    color={isSelected ? colors.primary : colors.textSecondary}
                   />
                 </View>
                 <View style={s.languageInfo}>
                   <View style={s.languageHeader}>
-                    <Text style={[s.languageName, isSelected && s.languageNameSelected]}>
+                    <Text style={[s.languageName, { color: isSelected ? colors.primary : colors.text }]}>
                       {lang.name}
                     </Text>
                     {isSelected && (
@@ -66,10 +74,10 @@ export default function LanguageSelectionScreen() {
                       </View>
                     )}
                   </View>
-                  <Text style={s.languageDesc}>{lang.nativeName}</Text>
+                  <Text style={[s.languageDesc, { color: colors.textSecondary }]}>{lang.nativeName}</Text>
                 </View>
-                <View style={[s.radio, isSelected && s.radioSelected]}>
-                  {isSelected && <View style={s.radioDot} />}
+                <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
+                  {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
                 </View>
               </TouchableOpacity>
             );
@@ -83,7 +91,6 @@ export default function LanguageSelectionScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     flexDirection: 'row',
@@ -92,9 +99,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   backButton: {
     width: 40,
@@ -105,7 +110,6 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
   },
   content: {
     flex: 1,
@@ -118,7 +122,6 @@ const s = StyleSheet.create({
   },
   info: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -126,21 +129,14 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
-  },
-  languageItemSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
   },
   languageIcon: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -156,10 +152,6 @@ const s = StyleSheet.create({
   languageName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#333',
-  },
-  languageNameSelected: {
-    color: '#007AFF',
   },
   selectedBadge: {
     marginLeft: 8,
@@ -175,25 +167,19 @@ const s = StyleSheet.create({
   },
   languageDesc: {
     fontSize: 14,
-    color: '#666',
   },
   radio: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
-  },
-  radioSelected: {
-    borderColor: '#007AFF',
   },
   radioDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#007AFF',
   },
 });
