@@ -25,10 +25,23 @@ export default function TabLayout() {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('tabPress', () => {
-      if (hapticEnabled) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const unsubscribe = navigation.addListener('tabPress', (e) => {
+      if (!hapticEnabled) return;
+
+      // iOS에서는 카메라 활성화 시 햅틱이 작동하지 않으므로
+      // 스캔 탭(index)과 관련된 전환에서는 햅틱을 실행하지 않음
+      if (Platform.OS === 'ios') {
+        const state = navigation.getState();
+        const currentRoute = state?.routes[state?.index];
+        const targetRoute = e.target;
+
+        // 현재 탭이나 이동할 탭이 'index'(스캔 탭)인 경우 햅틱 비활성화
+        if (currentRoute?.name === 'index' || targetRoute?.includes('index')) {
+          return;
+        }
       }
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     });
 
     return unsubscribe;
