@@ -185,6 +185,7 @@ function ScannerScreen() {
       })();
 
       return () => {
+        setIsActive(false); // 다른 탭으로 이동 시 카메라 비활성화
         clearAllTimers();
       };
     }, [resetAll, clearAllTimers]),
