@@ -1,20 +1,27 @@
 // screens/ResultScreen.js - Expo Router 버전
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function ResultScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
   const count = parseInt(scanCount || '1', 10);
   const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
   const hasPhoto = photoUri && photoUri.length > 0;
+  const isFromHistory = fromHistory === 'true';
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedText, setEditedText] = useState(displayText);
 
   // 모든 스캔 시간 파싱
   let allScanTimes = [];
@@ -38,21 +45,139 @@ export default function ResultScreen() {
   };
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(displayText);
-    Alert.alert('복사 완료', '클립보드에 복사되었습니다.');
+    await Clipboard.setStringAsync(isEditing ? editedText : displayText);
+    Alert.alert(t('result.copySuccess'), t('result.copySuccessMessage'));
   };
 
   const handleShare = async () => {
     try {
-      await Share.share({ message: displayText });
+      await Share.share({ message: isEditing ? editedText : displayText });
     } catch (error) {
       console.error('Share error:', error);
     }
   };
 
   const handleOpenUrl = () => {
-    if (isUrl) {
-      router.push({ pathname: '/webview', params: { url: displayText } });
+    const urlToOpen = isEditing ? editedText : displayText;
+    if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
+      router.push({ pathname: '/webview', params: { url: urlToOpen } });
+    }
+  };
+
+  // 수정 저장
+  const handleSaveEdit = async () => {
+    if (!isFromHistory || !groupId) {
+      Alert.alert(t('result.error'), t('result.errorHistoryOnly'));
+      return;
+    }
+
+    if (!editedText.trim()) {
+      Alert.alert(t('result.error'), t('result.errorEmptyValue'));
+      return;
+    }
+
+    try {
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      if (!historyData) {
+        Alert.alert(t('result.error'), t('result.errorNotFound'));
+        return;
+      }
+
+      const historyByGroup = JSON.parse(historyData);
+      const groupHistory = historyByGroup[groupId] || [];
+
+      // 원래 코드와 일치하는 항목 찾기
+      const itemIndex = groupHistory.findIndex(item =>
+        item.code === displayText && item.timestamp === scanTimestamp
+      );
+
+      if (itemIndex === -1) {
+        Alert.alert(t('result.error'), t('result.errorItemNotFound'));
+        return;
+      }
+
+      // 수정된 값으로 업데이트
+      groupHistory[itemIndex] = {
+        ...groupHistory[itemIndex],
+        code: editedText,
+      };
+
+      historyByGroup[groupId] = groupHistory;
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      Alert.alert(t('result.editSuccess'), t('result.editSuccessMessage'), [
+        {
+          text: t('common.confirm'),
+          onPress: () => {
+            setIsEditing(false);
+            router.back();
+          }
+        }
+      ]);
+    } catch (error) {
+      console.error('Edit error:', error);
+      Alert.alert(t('result.error'), t('result.errorOccurred'));
+    }
+  };
+
+  // 삭제
+  const handleDelete = () => {
+    if (!isFromHistory || !groupId) {
+      Alert.alert(t('result.error'), t('result.errorHistoryDeleteOnly'));
+      return;
+    }
+
+    Alert.alert(
+      t('result.deleteConfirmTitle'),
+      t('result.deleteConfirmMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+              if (!historyData) {
+                Alert.alert(t('result.error'), t('result.errorNotFound'));
+                return;
+              }
+
+              const historyByGroup = JSON.parse(historyData);
+              const groupHistory = historyByGroup[groupId] || [];
+
+              // 원래 코드와 일치하는 항목 찾기
+              const filteredHistory = groupHistory.filter(item =>
+                !(item.code === displayText && item.timestamp === scanTimestamp)
+              );
+
+              historyByGroup[groupId] = filteredHistory;
+              await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+              Alert.alert(t('result.deleteSuccess'), t('result.deleteSuccessMessage'), [
+                {
+                  text: t('common.confirm'),
+                  onPress: () => router.back()
+                }
+              ]);
+            } catch (error) {
+              console.error('Delete error:', error);
+              Alert.alert(t('result.error'), t('result.errorDeleteOccurred'));
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // 편집 취소
+      setEditedText(displayText);
+      setIsEditing(false);
+    } else {
+      // 편집 시작
+      setIsEditing(true);
     }
   };
 
@@ -62,26 +187,30 @@ export default function ResultScreen() {
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => router.back()}
-          accessibilityLabel="닫기"
+          accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
           <Ionicons name="close" size={28} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>스캔 결과</Text>
-        <View style={{ width: 28 }} />
+        <Text style={styles.headerTitle}>{t('result.title')}</Text>
+        {isFromHistory && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={handleDelete}
+            accessibilityLabel={t('common.delete')}
+            accessibilityRole="button"
+          >
+            <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+          </TouchableOpacity>
+        )}
+        {!isFromHistory && <View style={{ width: 28 }} />}
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.iconContainer}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="qr-code" size={64} color="#00FF00" />
-          </View>
-        </View>
-
         {/* 스캔 사진 */}
         {hasPhoto && (
           <View style={styles.photoContainer}>
-            <Text style={styles.photoLabel}>스캔 당시 사진</Text>
+            <Text style={styles.photoLabel}>{t('result.scanPhoto')}</Text>
             <Image
               source={{ uri: photoUri }}
               style={styles.scanPhoto}
@@ -96,12 +225,12 @@ export default function ResultScreen() {
             <View style={styles.duplicateHeader}>
               <Ionicons name="repeat" size={20} color="#FF9500" />
               <Text style={styles.duplicateText}>
-                중복 스캔 ({count}번째)
+                {t('result.duplicateScan')} ({count}{t('result.duplicateCount')})
               </Text>
             </View>
             {allScanTimes.length > 0 && (
               <View style={styles.scanTimesContainer}>
-                <Text style={styles.scanTimesTitle}>스캔 기록:</Text>
+                <Text style={styles.scanTimesTitle}>{t('result.scanHistory')}</Text>
                 {allScanTimes.slice().reverse().map((time, index) => (
                   <Text key={index} style={styles.scanTimeItem}>
                     {allScanTimes.length - index}. {formatDateTime(time)}
@@ -112,59 +241,104 @@ export default function ResultScreen() {
           </View>
         )}
 
-        <Text style={styles.label}>스캔된 데이터</Text>
-        <View style={styles.dataBox}>
-          <ScrollView style={styles.dataScrollView}>
-            <Text style={styles.dataText} selectable>
-              {displayText}
-            </Text>
-          </ScrollView>
-        </View>
-
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleCopy}
-            accessibilityLabel="복사하기"
-            accessibilityRole="button"
-          >
-            <Ionicons name="copy-outline" size={24} color="#007AFF" />
-            <Text style={styles.actionButtonText}>복사</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={handleShare}
-            accessibilityLabel="공유하기"
-            accessibilityRole="button"
-          >
-            <Ionicons name="share-outline" size={24} color="#007AFF" />
-            <Text style={styles.actionButtonText}>공유</Text>
-          </TouchableOpacity>
-
-          {isUrl && (
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>{t('result.scannedData')}</Text>
+          {isFromHistory && (
             <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleOpenUrl}
-              accessibilityLabel="링크 열기"
-              accessibilityRole="button"
+              style={styles.editToggleButton}
+              onPress={handleEditToggle}
             >
-              <Ionicons name="open-outline" size={24} color="#007AFF" />
-              <Text style={styles.actionButtonText}>열기</Text>
+              <Ionicons
+                name={isEditing ? "close-circle" : "pencil"}
+                size={20}
+                color={isEditing ? "#FF3B30" : "#007AFF"}
+              />
+              <Text style={[styles.editToggleText, isEditing && styles.editToggleTextCancel]}>
+                {isEditing ? t('common.cancel') : t('common.edit')}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
+
+        {isEditing ? (
+          <View style={styles.dataBox}>
+            <TextInput
+              style={styles.dataInput}
+              value={editedText}
+              onChangeText={setEditedText}
+              multiline
+              autoFocus
+              placeholder={t('result.dataPlaceholder')}
+            />
+          </View>
+        ) : (
+          <View style={styles.dataBox}>
+            <ScrollView style={styles.dataScrollView}>
+              <Text style={styles.dataText} selectable>
+                {displayText}
+              </Text>
+            </ScrollView>
+          </View>
+        )}
+
+        {isEditing && (
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSaveEdit}
+          >
+            <Ionicons name="checkmark-circle" size={24} color="#fff" />
+            <Text style={styles.saveButtonText}>{t('common.save')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {!isEditing && (
+          <View style={styles.buttonGroup}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleCopy}
+              accessibilityLabel={t('result.copy')}
+              accessibilityRole="button"
+            >
+              <Ionicons name="copy-outline" size={24} color="#007AFF" />
+              <Text style={styles.actionButtonText}>{t('result.copy')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleShare}
+              accessibilityLabel={t('result.share')}
+              accessibilityRole="button"
+            >
+              <Ionicons name="share-outline" size={24} color="#007AFF" />
+              <Text style={styles.actionButtonText}>{t('result.share')}</Text>
+            </TouchableOpacity>
+
+            {(isUrl || editedText.startsWith('http://') || editedText.startsWith('https://')) && (
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleOpenUrl}
+                accessibilityLabel={t('result.open')}
+                accessibilityRole="button"
+              >
+                <Ionicons name="open-outline" size={24} color="#007AFF" />
+                <Text style={styles.actionButtonText}>{t('result.open')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.scanAgainButton}
-        onPress={() => router.back()}
-        accessibilityLabel="다시 스캔하기"
-        accessibilityRole="button"
-      >
-        <Ionicons name="scan" size={24} color="#fff" />
-        <Text style={styles.scanAgainText}>다시 스캔하기</Text>
-      </TouchableOpacity>
+      {!isEditing && (
+        <TouchableOpacity
+          style={styles.scanAgainButton}
+          onPress={() => router.back()}
+          accessibilityLabel={t('result.scanAgain')}
+          accessibilityRole="button"
+        >
+          <Ionicons name="scan" size={24} color="#fff" />
+          <Text style={styles.scanAgainText}>{t('result.scanAgain')}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -188,6 +362,9 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  deleteButton: {
+    padding: 4,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -197,20 +374,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
-  },
-  iconContainer: {
-    alignItems: 'center',
-    marginVertical: 30,
-  },
-  iconCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(0, 255, 0, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#00FF00',
   },
   photoContainer: {
     marginVertical: 20,
@@ -268,11 +431,33 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
     color: '#666',
-    marginBottom: 12,
+  },
+  editToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 16,
+  },
+  editToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#007AFF',
+    marginLeft: 4,
+  },
+  editToggleTextCancel: {
+    color: '#FF3B30',
   },
   dataBox: {
     backgroundColor: '#fff',
@@ -295,6 +480,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#000',
+  },
+  dataInput: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#000',
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#34C759',
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
   buttonGroup: {
     flexDirection: 'row',

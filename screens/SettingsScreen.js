@@ -16,9 +16,12 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { languages } from '../locales';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { language, t } = useLanguage();
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -112,41 +115,41 @@ export default function SettingsScreen() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ScrollView style={s.c} contentContainerStyle={s.content}>
-        <Text style={s.title}>설정</Text>
+        <Text style={s.title}>{t('settings.title')}</Text>
 
         {/* 바코드 인식 설정 */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>바코드 설정</Text>
+          <Text style={s.sectionTitle}>{t('settings.barcodeSettings')}</Text>
 
           {/* 햅틱 피드백 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>햅틱 피드백</Text>
-              <Text style={s.desc}>스캔 시 진동으로 알림</Text>
-              {hapticEnabled && <Text style={s.ok}>활성화됨</Text>}
+              <Text style={s.label}>{t('settings.hapticFeedback')}</Text>
+              <Text style={s.desc}>{t('settings.hapticDesc')}</Text>
+              {hapticEnabled && <Text style={s.ok}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={hapticEnabled}
               onValueChange={setHapticEnabled}
               trackColor={{ true: '#34C759', false: '#E5E5EA' }}
               thumbColor="#fff"
-              accessibilityLabel="햅틱 피드백 활성화"
+              accessibilityLabel={t('settings.hapticFeedback')}
             />
           </View>
 
           {/* 사진 저장 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>스캔 사진 저장</Text>
-              <Text style={s.desc}>QR 코드 스캔 시 사진 저장</Text>
-              {photoSaveEnabled && <Text style={s.ok}>활성화됨</Text>}
+              <Text style={s.label}>{t('settings.photoSave')}</Text>
+              <Text style={s.desc}>{t('settings.photoSaveDesc')}</Text>
+              {photoSaveEnabled && <Text style={s.ok}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={photoSaveEnabled}
               onValueChange={setPhotoSaveEnabled}
               trackColor={{ true: '#34C759', false: '#E5E5EA' }}
               thumbColor="#fff"
-              accessibilityLabel="사진 저장 활성화"
+              accessibilityLabel={t('settings.photoSave')}
             />
           </View>
 
@@ -157,8 +160,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>인식할 바코드 선택</Text>
-              <Text style={s.desc}>{selectedBarcodesCount}개 바코드 타입 선택됨</Text>
+              <Text style={s.label}>{t('settings.selectBarcodes')}</Text>
+              <Text style={s.desc}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
           </TouchableOpacity>
@@ -170,8 +173,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>기록 내보내기</Text>
-              <Text style={s.desc}>그룹별 스캔 기록을 파일로 저장</Text>
+              <Text style={s.label}>{t('settings.exportHistory')}</Text>
+              <Text style={s.desc}>{t('settings.exportHistoryDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
           </TouchableOpacity>
@@ -183,8 +186,23 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>카메라 선택</Text>
-              <Text style={s.desc}>스캔에 사용할 카메라 설정</Text>
+              <Text style={s.label}>{t('settings.cameraSelection')}</Text>
+              <Text style={s.desc}>{t('settings.cameraSelectionDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+          </TouchableOpacity>
+
+          {/* 언어 선택 */}
+          <TouchableOpacity
+            style={s.menuItem}
+            onPress={() => router.push('/language-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>{t('settings.languageSelection')}</Text>
+              <Text style={s.desc}>
+                {languages.find(lang => lang.code === language)?.name || '한국어'}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
           </TouchableOpacity>
@@ -192,47 +210,45 @@ export default function SettingsScreen() {
 
         {/* URL 연동 설정 */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>자동 이동</Text>
+          <Text style={s.sectionTitle}>{t('settings.autoMove')}</Text>
 
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={s.label}>스캔 연동 URL 사용하기</Text>
-              <Text style={s.desc}>스캔 즉시 설정한 URL로 이동합니다</Text>
-              {on && <Text style={s.ok}>활성화됨</Text>}
+              <Text style={s.label}>{t('settings.useScanUrl')}</Text>
+              <Text style={s.desc}>{t('settings.useScanUrlDesc')}</Text>
+              {on && <Text style={s.ok}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={on}
               onValueChange={setOn}
               trackColor={{ true: '#34C759', false: '#E5E5EA' }}
               thumbColor="#fff"
-              accessibilityLabel="자동 URL 이동 활성화"
+              accessibilityLabel={t('settings.useScanUrl')}
             />
           </View>
 
           {on && (
             <>
               <Text style={s.urlInfo}>
-                스캔한 코드가 자동으로 아래 주소로 이동합니다
-                {'\n'}URL에 {'{code}'}를 넣으면 스캔 값으로 대체됩니다
+                {t('settings.urlInfo')}
               </Text>
               <TextInput
                 style={s.input}
                 value={url}
                 onChangeText={setUrl}
-                placeholder="https://example.com/search?q={code}"
+                placeholder={t('settings.urlPlaceholder')}
                 placeholderTextColor="#999"
                 autoCapitalize="none"
                 keyboardType="url"
-                accessibilityLabel="연동 URL 입력"
+                accessibilityLabel={t('settings.useScanUrl')}
               />
-              <Text style={s.save}>입력 즉시 자동 저장됨</Text>
+              <Text style={s.save}>{t('settings.autoSaved')}</Text>
 
               <View style={s.exampleBox}>
-                <Text style={s.exampleTitle}>예시:</Text>
-                <Text style={s.exampleText}>https://example.com/product/{'{code}'}</Text>
+                <Text style={s.exampleTitle}>{t('settings.exampleTitle')}</Text>
+                <Text style={s.exampleText}>{t('settings.exampleUrl')}</Text>
                 <Text style={s.exampleDesc}>
-                  → 스캔 값이 "ABC123"이면{'\n'}
-                  https://example.com/product/ABC123 로 이동
+                  {t('settings.exampleDesc')}
                 </Text>
               </View>
             </>

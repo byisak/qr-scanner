@@ -14,11 +14,13 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const DEFAULT_GROUP_ID = 'default';
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: '기본 그룹', createdAt: Date.now() }]);
   const [selectedGroupId, setSelectedGroupId] = useState(DEFAULT_GROUP_ID);
   const [scanHistory, setScanHistory] = useState({ [DEFAULT_GROUP_ID]: [] });
@@ -95,11 +97,11 @@ export default function HistoryScreen() {
 
   // 현재 그룹의 히스토리 삭제
   const clearCurrentGroupHistory = async () => {
-    const groupName = groups.find(g => g.id === selectedGroupId)?.name || '그룹';
-    Alert.alert('기록 삭제', `${groupName}의 모든 스캔 기록을 삭제하시겠습니까?`, [
-      { text: '취소', style: 'cancel' },
+    const groupName = groups.find(g => g.id === selectedGroupId)?.name || t('groupEdit.defaultGroup');
+    Alert.alert(t('history.deleteConfirmTitle'), `${groupName}${t('history.deleteConfirmMessage')}`, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
           const updatedHistory = { ...scanHistory, [selectedGroupId]: [] };
@@ -134,6 +136,8 @@ export default function HistoryScreen() {
         timestamp: item.timestamp.toString(),
         scanTimes: item.scanTimes ? JSON.stringify(item.scanTimes) : JSON.stringify([item.timestamp]),
         photoUri: item.photos && item.photos.length > 0 ? item.photos[0] : '',
+        groupId: selectedGroupId, // 그룹 ID 전달
+        fromHistory: 'true', // 히스토리에서 왔음을 표시
       }
     });
   };
@@ -154,13 +158,13 @@ export default function HistoryScreen() {
         <Ionicons name="search" size={20} color="#888" />
         <TextInput
           style={s.input}
-          placeholder="코드 또는 URL 검색"
+          placeholder={t('history.searchPlaceholder')}
           value={query}
           onChangeText={setQuery}
-          accessibilityLabel="검색 입력"
+          accessibilityLabel={t('common.search')}
         />
         {query ? (
-          <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel="검색어 지우기">
+          <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('history.clearSearch')}>
             <Ionicons name="close-circle" size={22} color="#888" />
           </TouchableOpacity>
         ) : null}
@@ -192,7 +196,7 @@ export default function HistoryScreen() {
           })}
           <TouchableOpacity style={s.editGroupTab} onPress={() => router.push('/group-edit')}>
             <Ionicons name="settings-outline" size={20} color="#007AFF" />
-            <Text style={s.editGroupTabText}>편집</Text>
+            <Text style={s.editGroupTabText}>{t('history.editGroups')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -200,11 +204,11 @@ export default function HistoryScreen() {
       {/* 헤더 */}
       <View style={s.header}>
         <Text style={s.title}>
-          {currentGroup?.name || '스캔 기록'} {filteredList.length > 0 && `(${filteredList.length})`}
+          {currentGroup?.name || t('history.scanRecord')} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
-          <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel="전체 삭제">
-            <Text style={s.del}>전체 삭제</Text>
+          <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
+            <Text style={s.del}>{t('history.deleteAll')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -213,7 +217,7 @@ export default function HistoryScreen() {
       {filteredList.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="file-tray-outline" size={64} color="#ccc" />
-          <Text style={s.emptyText}>{query ? '검색 결과 없음' : '기록이 없습니다'}</Text>
+          <Text style={s.emptyText}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
         </View>
       ) : (
         <FlatList
@@ -224,7 +228,7 @@ export default function HistoryScreen() {
               style={s.item}
               onPress={() => handleItemPress(item)}
               activeOpacity={0.7}
-              accessibilityLabel={`스캔 기록: ${item.code}`}
+              accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
               accessibilityRole="button"
             >
               <View style={s.itemHeader}>
