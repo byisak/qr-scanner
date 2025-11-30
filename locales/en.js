@@ -86,6 +86,8 @@ export default {
     cameraSelectionDesc: 'Set camera for scanning',
     languageSelection: 'Language',
     languageSelectionDesc: 'Set app language',
+    displayMode: 'Display Mode',
+    displayModeDesc: 'Light, dark, or system',
     autoMove: 'Auto Navigation',
     useScanUrl: 'Use Scan URL',
     useScanUrlDesc: 'Navigate to URL immediately after scan',
@@ -176,5 +178,18 @@ export default {
     exportSuccess: 'Export Complete',
     exportError: 'Export Failed',
     noData: 'No data to export.',
+  },
+
+  // Display mode selection screen
+  displayModeSelection: {
+    title: 'Display Mode',
+    description: 'Select the display mode for the app',
+    light: 'Light Mode',
+    lightDesc: 'Bright screen',
+    dark: 'Dark Mode',
+    darkDesc: 'Dark screen',
+    system: 'System',
+    systemDesc: 'Follow device settings',
+    selected: 'Selected',
   },
 };

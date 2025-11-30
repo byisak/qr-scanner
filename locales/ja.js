@@ -86,6 +86,8 @@ export default {
     cameraSelectionDesc: 'スキャンに使用するカメラを設定',
     languageSelection: '言語選択',
     languageSelectionDesc: 'アプリで使用する言語を設定',
+    displayMode: 'ディスプレイモード',
+    displayModeDesc: 'ライト、ダーク、システム',
     autoMove: '自動移動',
     useScanUrl: 'スキャン連動URLを使用',
     useScanUrlDesc: 'スキャン後すぐに設定したURLに移動します',
@@ -176,5 +178,18 @@ export default {
     exportSuccess: 'エクスポート完了',
     exportError: 'エクスポート失敗',
     noData: 'エクスポートするデータがありません。',
+  },
+
+  // ディスプレイモード選択画面
+  displayModeSelection: {
+    title: 'ディスプレイモード',
+    description: 'アプリで使用するディスプレイモードを選択してください',
+    light: 'ライトモード',
+    lightDesc: '明るい画面',
+    dark: 'ダークモード',
+    darkDesc: '暗い画面',
+    system: 'システム設定',
+    systemDesc: 'デバイス設定に従う',
+    selected: '選択済み',
   },
 };

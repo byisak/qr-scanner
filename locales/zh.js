@@ -86,6 +86,8 @@ export default {
     cameraSelectionDesc: '设置用于扫描的相机',
     languageSelection: '选择语言',
     languageSelectionDesc: '设置应用程序使用的语言',
+    displayMode: '显示模式',
+    displayModeDesc: '浅色、深色或系统',
     autoMove: '自动跳转',
     useScanUrl: '使用扫描联动URL',
     useScanUrlDesc: '扫描后立即跳转到设置的URL',
@@ -176,5 +178,18 @@ export default {
     exportSuccess: '导出成功',
     exportError: '导出失败',
     noData: '没有可导出的数据。',
+  },
+
+  // 显示模式选择界面
+  displayModeSelection: {
+    title: '显示模式',
+    description: '请选择应用程序使用的显示模式',
+    light: '浅色模式',
+    lightDesc: '明亮屏幕',
+    dark: '深色模式',
+    darkDesc: '暗色屏幕',
+    system: '系统设置',
+    systemDesc: '跟随设备设置',
+    selected: '已选择',
   },
 };

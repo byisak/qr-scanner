@@ -17,11 +17,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { language, t } = useLanguage();
+  const { themeMode } = useTheme();
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -202,6 +204,21 @@ export default function SettingsScreen() {
               <Text style={s.label}>{t('settings.languageSelection')}</Text>
               <Text style={s.desc}>
                 {languages.find(lang => lang.code === language)?.name || '한국어'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />
+          </TouchableOpacity>
+
+          {/* 화면 모드 선택 */}
+          <TouchableOpacity
+            style={s.menuItem}
+            onPress={() => router.push('/display-mode-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.label}>{t('settings.displayMode')}</Text>
+              <Text style={s.desc}>
+                {t(`displayModeSelection.${themeMode}`)}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#C7C7CC" />

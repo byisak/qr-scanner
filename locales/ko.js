@@ -86,6 +86,8 @@ export default {
     cameraSelectionDesc: '스캔에 사용할 카메라 설정',
     languageSelection: '언어 선택',
     languageSelectionDesc: '앱에서 사용할 언어 설정',
+    displayMode: '화면 모드',
+    displayModeDesc: '라이트, 다크, 시스템 설정',
     autoMove: '자동 이동',
     useScanUrl: '스캔 연동 URL 사용하기',
     useScanUrlDesc: '스캔 즉시 설정한 URL로 이동합니다',
@@ -176,5 +178,18 @@ export default {
     exportSuccess: '내보내기 완료',
     exportError: '내보내기 실패',
     noData: '내보낼 데이터가 없습니다.',
+  },
+
+  // 화면 모드 선택 화면
+  displayModeSelection: {
+    title: '화면 모드',
+    description: '앱에서 사용할 화면 모드를 선택하세요',
+    light: '라이트 모드',
+    lightDesc: '밝은 화면',
+    dark: '다크 모드',
+    darkDesc: '어두운 화면',
+    system: '시스템 설정',
+    systemDesc: '기기 설정 따르기',
+    selected: '선택됨',
   },
 };
