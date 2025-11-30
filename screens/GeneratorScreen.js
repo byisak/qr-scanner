@@ -1,4 +1,4 @@
-// screens/GeneratorScreen.js - QR Code generator screen
+// screens/GeneratorScreen.js - Enhanced QR Code generator screen
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -9,6 +9,7 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -23,16 +24,16 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 
 const QR_TYPES = [
-  { id: 'website', icon: 'globe-outline' },
-  { id: 'contact', icon: 'person-outline' },
-  { id: 'wifi', icon: 'wifi-outline' },
-  { id: 'text', icon: 'text-outline' },
-  { id: 'clipboard', icon: 'clipboard-outline' },
-  { id: 'email', icon: 'mail-outline' },
-  { id: 'sms', icon: 'chatbubble-outline' },
-  { id: 'phone', icon: 'call-outline' },
-  { id: 'event', icon: 'calendar-outline' },
-  { id: 'location', icon: 'location-outline' },
+  { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
+  { id: 'contact', icon: 'person-outline', gradient: ['#f093fb', '#f5576c'] },
+  { id: 'wifi', icon: 'wifi-outline', gradient: ['#4facfe', '#00f2fe'] },
+  { id: 'text', icon: 'text-outline', gradient: ['#43e97b', '#38f9d7'] },
+  { id: 'clipboard', icon: 'clipboard-outline', gradient: ['#fa709a', '#fee140'] },
+  { id: 'email', icon: 'mail-outline', gradient: ['#30cfd0', '#330867'] },
+  { id: 'sms', icon: 'chatbubble-outline', gradient: ['#a8edea', '#fed6e3'] },
+  { id: 'phone', icon: 'call-outline', gradient: ['#ff9a9e', '#fecfef'] },
+  { id: 'event', icon: 'calendar-outline', gradient: ['#ffecd2', '#fcb69f'] },
+  { id: 'location', icon: 'location-outline', gradient: ['#ff6e7f', '#bfe9ff'] },
 ];
 
 export default function GeneratorScreen() {
@@ -42,6 +43,7 @@ export default function GeneratorScreen() {
 
   const [selectedType, setSelectedType] = useState('website');
   const [hapticEnabled, setHapticEnabled] = useState(false);
+  const [qrSize, setQrSize] = useState(new Animated.Value(0));
   const qrRef = useRef(null);
 
   // Form data for each type
@@ -70,6 +72,16 @@ export default function GeneratorScreen() {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    // Animate QR code appearance
+    Animated.spring(qrSize, {
+      toValue: hasData ? 1 : 0,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  }, [generateQRData()]);
+
   const handleTypeSelect = async (typeId) => {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -85,9 +97,9 @@ export default function GeneratorScreen() {
             ...prev,
             clipboard: { text: clipboardText },
           }));
-          Alert.alert('', t('generator.clipboardPasted'));
+          Alert.alert('✓', t('generator.clipboardPasted'));
         } else {
-          Alert.alert('', t('generator.clipboardEmpty'));
+          Alert.alert('ℹ️', t('generator.clipboardEmpty'));
         }
       } catch (error) {
         console.error('Error reading clipboard:', error);
@@ -113,7 +125,6 @@ export default function GeneratorScreen() {
         return data.url.trim();
 
       case 'contact':
-        // vCard format
         const vcard = [
           'BEGIN:VCARD',
           'VERSION:3.0',
@@ -128,7 +139,6 @@ export default function GeneratorScreen() {
         return vcard;
 
       case 'wifi':
-        // WIFI:T:WPA;S:mynetwork;P:mypass;;
         return `WIFI:T:${data.security};S:${data.ssid};P:${data.password};;`;
 
       case 'text':
@@ -150,7 +160,6 @@ export default function GeneratorScreen() {
         return `tel:${data.phone}`;
 
       case 'event':
-        // iCal format (simplified)
         const event = [
           'BEGIN:VEVENT',
           data.title && `SUMMARY:${data.title}`,
@@ -225,7 +234,7 @@ export default function GeneratorScreen() {
       await MediaLibrary.saveToLibraryAsync(uri);
 
       Alert.alert(
-        t('generator.saveSuccess'),
+        '✓ ' + t('generator.saveSuccess'),
         t('generator.saveSuccessMessage')
       );
     } catch (error) {
@@ -243,102 +252,159 @@ export default function GeneratorScreen() {
     switch (selectedType) {
       case 'website':
         return (
-          <TextInput
-            style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder={t('generator.fields.urlPlaceholder')}
-            placeholderTextColor={colors.textTertiary}
-            value={data.url}
-            onChangeText={(text) => updateFormData('url', text)}
-            keyboardType="url"
-            autoCapitalize="none"
-          />
+          <View style={s.fieldContainer}>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+              {t('generator.fields.urlLabel')}
+            </Text>
+            <TextInput
+              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              placeholder={t('generator.fields.urlPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+              value={data.url}
+              onChangeText={(text) => updateFormData('url', text)}
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+          </View>
         );
 
       case 'contact':
         return (
           <>
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.namePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.name}
-              onChangeText={(text) => updateFormData('name', text)}
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.phonePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.phone}
-              onChangeText={(text) => updateFormData('phone', text)}
-              keyboardType="phone-pad"
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.emailPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.email}
-              onChangeText={(text) => updateFormData('email', text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.companyPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.company}
-              onChangeText={(text) => updateFormData('company', text)}
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.titlePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.title}
-              onChangeText={(text) => updateFormData('title', text)}
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.addressPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.address}
-              onChangeText={(text) => updateFormData('address', text)}
-            />
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.nameLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.namePlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.name}
+                onChangeText={(text) => updateFormData('name', text)}
+              />
+            </View>
+            <View style={s.fieldRow}>
+              <View style={[s.fieldContainer, { flex: 1 }]}>
+                <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                  {t('generator.fields.phoneLabel')}
+                </Text>
+                <TextInput
+                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  placeholder={t('generator.fields.phonePlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={data.phone}
+                  onChangeText={(text) => updateFormData('phone', text)}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View style={[s.fieldContainer, { flex: 1 }]}>
+                <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                  {t('generator.fields.emailLabel')}
+                </Text>
+                <TextInput
+                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  placeholder={t('generator.fields.emailPlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={data.email}
+                  onChangeText={(text) => updateFormData('email', text)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
+            <View style={s.fieldRow}>
+              <View style={[s.fieldContainer, { flex: 1 }]}>
+                <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                  {t('generator.fields.companyLabel')}
+                </Text>
+                <TextInput
+                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  placeholder={t('generator.fields.companyPlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={data.company}
+                  onChangeText={(text) => updateFormData('company', text)}
+                />
+              </View>
+              <View style={[s.fieldContainer, { flex: 1 }]}>
+                <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                  {t('generator.fields.titleLabel')}
+                </Text>
+                <TextInput
+                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  placeholder={t('generator.fields.titlePlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={data.title}
+                  onChangeText={(text) => updateFormData('title', text)}
+                />
+              </View>
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.addressLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.addressPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.address}
+                onChangeText={(text) => updateFormData('address', text)}
+              />
+            </View>
           </>
         );
 
       case 'wifi':
         return (
           <>
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.ssidPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.ssid}
-              onChangeText={(text) => updateFormData('ssid', text)}
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.passwordPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.password}
-              onChangeText={(text) => updateFormData('password', text)}
-              secureTextEntry
-            />
-            <View style={s.securityContainer}>
-              {['WPA', 'WEP', 'nopass'].map((sec) => (
-                <TouchableOpacity
-                  key={sec}
-                  style={[
-                    s.securityButton,
-                    { borderColor: colors.border },
-                    data.security === sec && { backgroundColor: colors.primary, borderColor: colors.primary },
-                  ]}
-                  onPress={() => updateFormData('security', sec)}
-                >
-                  <Text style={[s.securityText, { color: data.security === sec ? '#fff' : colors.text }]}>
-                    {t(`generator.securityTypes.${sec}`)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.ssidLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.ssidPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.ssid}
+                onChangeText={(text) => updateFormData('ssid', text)}
+              />
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.passwordLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.passwordPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.password}
+                onChangeText={(text) => updateFormData('password', text)}
+                secureTextEntry
+              />
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.securityLabel')}
+              </Text>
+              <View style={s.securityContainer}>
+                {['WPA', 'WEP', 'nopass'].map((sec) => (
+                  <TouchableOpacity
+                    key={sec}
+                    style={[
+                      s.securityButton,
+                      { 
+                        backgroundColor: data.security === sec ? colors.primary : colors.surface,
+                        borderColor: data.security === sec ? colors.primary : colors.border 
+                      },
+                    ]}
+                    onPress={() => updateFormData('security', sec)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.securityText, { color: data.security === sec ? '#fff' : colors.text }]}>
+                      {t(`generator.securityTypes.${sec}`)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </>
         );
@@ -346,53 +412,110 @@ export default function GeneratorScreen() {
       case 'text':
       case 'clipboard':
         return (
-          <TextInput
-            style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder={t('generator.fields.textPlaceholder')}
-            placeholderTextColor={colors.textTertiary}
-            value={data.text}
-            onChangeText={(text) => updateFormData('text', text)}
-            multiline
-            numberOfLines={6}
-            textAlignVertical="top"
-          />
+          <View style={s.fieldContainer}>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+              {t('generator.fields.textLabel')}
+            </Text>
+            <TextInput
+              style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              placeholder={t('generator.fields.textPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+              value={data.text}
+              onChangeText={(text) => updateFormData('text', text)}
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+          </View>
         );
 
       case 'email':
         return (
           <>
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.recipientPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.recipient}
-              onChangeText={(text) => updateFormData('recipient', text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.subjectPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.subject}
-              onChangeText={(text) => updateFormData('subject', text)}
-            />
-            <TextInput
-              style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.messagePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.message}
-              onChangeText={(text) => updateFormData('message', text)}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.recipientLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.recipientPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.recipient}
+                onChangeText={(text) => updateFormData('recipient', text)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.subjectLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.subjectPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.subject}
+                onChangeText={(text) => updateFormData('subject', text)}
+              />
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.messageLabel')}
+              </Text>
+              <TextInput
+                style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.messagePlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.message}
+                onChangeText={(text) => updateFormData('message', text)}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
           </>
         );
 
       case 'sms':
         return (
           <>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.phoneLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.phonePlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.phone}
+                onChangeText={(text) => updateFormData('phone', text)}
+                keyboardType="phone-pad"
+              />
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.messageLabel')}
+              </Text>
+              <TextInput
+                style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.messagePlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.message}
+                onChangeText={(text) => updateFormData('message', text)}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+          </>
+        );
+
+      case 'phone':
+        return (
+          <View style={s.fieldContainer}>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+              {t('generator.fields.phoneLabel')}
+            </Text>
             <TextInput
               style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder={t('generator.fields.phonePlaceholder')}
@@ -401,94 +524,109 @@ export default function GeneratorScreen() {
               onChangeText={(text) => updateFormData('phone', text)}
               keyboardType="phone-pad"
             />
-            <TextInput
-              style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.messagePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.message}
-              onChangeText={(text) => updateFormData('message', text)}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </>
-        );
-
-      case 'phone':
-        return (
-          <TextInput
-            style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-            placeholder={t('generator.fields.phonePlaceholder')}
-            placeholderTextColor={colors.textTertiary}
-            value={data.phone}
-            onChangeText={(text) => updateFormData('phone', text)}
-            keyboardType="phone-pad"
-          />
+          </View>
         );
 
       case 'event':
         return (
           <>
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.eventTitlePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.title}
-              onChangeText={(text) => updateFormData('title', text)}
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.eventLocationPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.location}
-              onChangeText={(text) => updateFormData('location', text)}
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.startDate')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.startDate}
-              onChangeText={(text) => updateFormData('startDate', text)}
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.endDate')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.endDate}
-              onChangeText={(text) => updateFormData('endDate', text)}
-            />
-            <TextInput
-              style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.descriptionPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.description}
-              onChangeText={(text) => updateFormData('description', text)}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.eventTitleLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.eventTitlePlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.title}
+                onChangeText={(text) => updateFormData('title', text)}
+              />
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.eventLocationLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.eventLocationPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.location}
+                onChangeText={(text) => updateFormData('location', text)}
+              />
+            </View>
+            <View style={s.fieldRow}>
+              <View style={[s.fieldContainer, { flex: 1 }]}>
+                <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                  {t('generator.fields.startDateLabel')}
+                </Text>
+                <TextInput
+                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  placeholder={t('generator.fields.startDate')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={data.startDate}
+                  onChangeText={(text) => updateFormData('startDate', text)}
+                />
+              </View>
+              <View style={[s.fieldContainer, { flex: 1 }]}>
+                <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                  {t('generator.fields.endDateLabel')}
+                </Text>
+                <TextInput
+                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  placeholder={t('generator.fields.endDate')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={data.endDate}
+                  onChangeText={(text) => updateFormData('endDate', text)}
+                />
+              </View>
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.descriptionLabel')}
+              </Text>
+              <TextInput
+                style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.descriptionPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.description}
+                onChangeText={(text) => updateFormData('description', text)}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
           </>
         );
 
       case 'location':
         return (
           <>
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.latitudePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.latitude}
-              onChangeText={(text) => updateFormData('latitude', text)}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder={t('generator.fields.longitudePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={data.longitude}
-              onChangeText={(text) => updateFormData('longitude', text)}
-              keyboardType="numeric"
-            />
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.latitudeLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.latitudePlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.latitude}
+                onChangeText={(text) => updateFormData('latitude', text)}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={s.fieldContainer}>
+              <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                {t('generator.fields.longitudeLabel')}
+              </Text>
+              <TextInput
+                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                placeholder={t('generator.fields.longitudePlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={data.longitude}
+                onChangeText={(text) => updateFormData('longitude', text)}
+                keyboardType="numeric"
+              />
+            </View>
           </>
         );
 
@@ -505,10 +643,17 @@ export default function GeneratorScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Title */}
-        <Text style={[s.title, { color: colors.text }]}>{t('generator.title')}</Text>
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={[s.title, { color: colors.text }]}>
+            {t('generator.title')}
+          </Text>
+          <Text style={[s.subtitle, { color: colors.textSecondary }]}>
+            {t('generator.subtitle')}
+          </Text>
+        </View>
 
-        {/* Type Selector - Horizontal Scroll */}
+        {/* Type Selector */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -520,77 +665,150 @@ export default function GeneratorScreen() {
               key={type.id}
               style={[
                 s.typeButton,
-                { backgroundColor: colors.surface, borderColor: colors.border },
-                selectedType === type.id && { backgroundColor: colors.primary, borderColor: colors.primary },
+                { 
+                  backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
+                  borderColor: selectedType === type.id ? colors.primary : colors.border,
+                },
               ]}
               onPress={() => handleTypeSelect(type.id)}
               activeOpacity={0.7}
             >
-              <Ionicons
-                name={type.icon}
-                size={24}
-                color={selectedType === type.id ? '#fff' : colors.text}
-              />
-              <Text style={[s.typeText, { color: selectedType === type.id ? '#fff' : colors.text }]}>
+              <View style={[
+                s.typeIconContainer,
+                { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
+              ]}>
+                <Ionicons
+                  name={type.icon}
+                  size={22}
+                  color={selectedType === type.id ? '#fff' : colors.text}
+                />
+              </View>
+              <Text style={[
+                s.typeText, 
+                { color: selectedType === type.id ? '#fff' : colors.text }
+              ]}>
                 {t(`generator.types.${type.id}`)}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* Form Fields */}
-        <View style={s.formContainer}>
-          {renderFormFields()}
+        {/* Form Section */}
+        <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+          <View style={s.formHeader}>
+            <Ionicons 
+              name="create-outline" 
+              size={20} 
+              color={colors.primary} 
+            />
+            <Text style={[s.formTitle, { color: colors.text }]}>
+              {t('generator.formTitle')}
+            </Text>
+          </View>
+          <View style={s.formContainer}>
+            {renderFormFields()}
+          </View>
         </View>
 
         {/* QR Code Preview */}
-        <View style={[s.qrContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {hasData ? (
-            <View ref={qrRef} style={s.qrWrapper} collapsable={false}>
-              <View style={s.qrBackground}>
-                <QRCode
-                  value={qrData}
-                  size={220}
-                  backgroundColor="white"
-                  color="black"
-                />
+        <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
+          <View style={s.qrHeader}>
+            <Ionicons 
+              name="qr-code-outline" 
+              size={20} 
+              color={colors.primary} 
+            />
+            <Text style={[s.qrTitle, { color: colors.text }]}>
+              {t('generator.qrPreview')}
+            </Text>
+          </View>
+          
+          <View style={[s.qrContainer, { borderColor: colors.border }]}>
+            {hasData ? (
+              <Animated.View 
+                ref={qrRef} 
+                style={[
+                  s.qrWrapper,
+                  {
+                    transform: [
+                      { scale: qrSize },
+                      {
+                        rotateZ: qrSize.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['180deg', '0deg'],
+                        }),
+                      },
+                    ],
+                    opacity: qrSize,
+                  },
+                ]} 
+                collapsable={false}
+              >
+                <View style={s.qrBackground}>
+                  <QRCode
+                    value={qrData}
+                    size={240}
+                    backgroundColor="white"
+                    color="black"
+                  />
+                </View>
+              </Animated.View>
+            ) : (
+              <View style={s.emptyState}>
+                <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
+                  <Ionicons
+                    name="qr-code-outline"
+                    size={48}
+                    color={colors.textTertiary}
+                  />
+                </View>
+                <Text style={[s.emptyTitle, { color: colors.text }]}>
+                  {t('generator.emptyTitle')}
+                </Text>
+                <Text style={[s.emptyText, { color: colors.textSecondary }]}>
+                  {t('generator.emptyText')}
+                </Text>
               </View>
-            </View>
-          ) : (
-            <View style={s.emptyState}>
-              <Ionicons
-                name="qr-code-outline"
-                size={80}
-                color={colors.textTertiary}
-              />
-              <Text style={[s.emptyText, { color: colors.textSecondary }]}>
-                {t('generator.emptyText')}
-              </Text>
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
         {/* Action Buttons */}
         {hasData && (
-          <View style={s.buttonContainer}>
+          <View style={s.actionsContainer}>
             <TouchableOpacity
-              style={[s.button, { backgroundColor: colors.primary }]}
+              style={[s.actionButton, s.primaryButton, { backgroundColor: colors.primary }]}
               onPress={handleSaveImage}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <Ionicons name="download-outline" size={20} color="#fff" />
-              <Text style={s.buttonText}>{t('generator.save')}</Text>
+              <View style={s.buttonIconContainer}>
+                <Ionicons name="download-outline" size={22} color="#fff" />
+              </View>
+              <View style={s.buttonContent}>
+                <Text style={s.buttonTitle}>{t('generator.save')}</Text>
+                <Text style={s.buttonSubtitle}>{t('generator.saveSubtitle')}</Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[s.button, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 2 }]}
+              style={[s.actionButton, s.secondaryButton, { 
+                backgroundColor: colors.surface, 
+                borderColor: colors.border 
+              }]}
               onPress={handleShare}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <Ionicons name="share-outline" size={20} color={colors.primary} />
-              <Text style={[s.buttonText, { color: colors.primary }]}>
-                {t('generator.share')}
-              </Text>
+              <View style={[s.buttonIconContainer, { backgroundColor: colors.background }]}>
+                <Ionicons name="share-outline" size={22} color={colors.primary} />
+              </View>
+              <View style={s.buttonContent}>
+                <Text style={[s.buttonTitle, { color: colors.text }]}>
+                  {t('generator.share')}
+                </Text>
+                <Text style={[s.buttonSubtitle, { color: colors.textSecondary }]}>
+                  {t('generator.shareSubtitle')}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         )}
@@ -607,79 +825,160 @@ const s = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 32,
+    paddingBottom: 40,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginTop: 40,
-    marginBottom: 20,
-    paddingHorizontal: 16,
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 16,
+    lineHeight: 22,
   },
   typesScroll: {
-    maxHeight: 100,
-  },
-  typesContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  typeButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    minWidth: 90,
-  },
-  typeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  formContainer: {
-    paddingHorizontal: 16,
-    gap: 12,
+    maxHeight: 110,
     marginBottom: 20,
   },
-  input: {
-    borderWidth: 1,
+  typesContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    gap: 10,
+  },
+  typeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minWidth: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  typeIconContainer: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  typeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  formSection: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  formHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  formTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+  formContainer: {
+    gap: 16,
+  },
+  fieldContainer: {
+    gap: 8,
+  },
+  fieldLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    marginLeft: 4,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  input: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 16,
     fontSize: 15,
+    fontWeight: '500',
   },
   textArea: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 16,
     fontSize: 15,
-    minHeight: 100,
+    fontWeight: '500',
+    minHeight: 120,
   },
   securityContainer: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 10,
   },
   securityButton: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 14,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1.5,
+    borderRadius: 12,
+    borderWidth: 2,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   securityText: {
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  qrSection: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  qrHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 20,
+  },
+  qrTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: -0.3,
   },
   qrContainer: {
-    marginHorizontal: 16,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 2,
+    borderStyle: 'dashed',
     padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 300,
+    minHeight: 340,
   },
   qrWrapper: {
     alignItems: 'center',
@@ -687,46 +986,81 @@ const s = StyleSheet.create({
   },
   qrBackground: {
     backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 16,
+    padding: 24,
+    borderRadius: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 40,
+    gap: 12,
+  },
+  emptyIconContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    letterSpacing: -0.3,
   },
   emptyText: {
     fontSize: 14,
-    marginTop: 16,
     textAlign: 'center',
+    lineHeight: 20,
     maxWidth: 240,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
+  actionsContainer: {
+    paddingHorizontal: 20,
     gap: 12,
-    marginTop: 20,
   },
-  button: {
-    flex: 1,
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
+    padding: 18,
+    borderRadius: 16,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  buttonText: {
+  primaryButton: {
+    // Primary button specific styles
+  },
+  secondaryButton: {
+    borderWidth: 2,
+  },
+  buttonIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  buttonContent: {
+    flex: 1,
+    gap: 2,
+  },
+  buttonTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+    letterSpacing: -0.3,
+  },
+  buttonSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
   },
 });
