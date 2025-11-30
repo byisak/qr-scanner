@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import * as Haptics from 'expo-haptics';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -64,6 +65,18 @@ export default function HistoryScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadGroups();
+
+      // 탭 포커스 시 햅틱 피드백
+      (async () => {
+        try {
+          const hapticEnabled = await AsyncStorage.getItem('hapticEnabled');
+          if (hapticEnabled !== 'false') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+        } catch (error) {
+          console.error('Haptic error:', error);
+        }
+      })();
     }, [])
   );
 

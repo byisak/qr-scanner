@@ -20,6 +20,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import * as Haptics from 'expo-haptics';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -73,6 +74,12 @@ export default function SettingsScreen() {
           if (b) {
             const parsed = JSON.parse(b);
             setSelectedBarcodesCount(parsed.length || 6);
+          }
+
+          // 탭 포커스 시 햅틱 피드백
+          const h = await AsyncStorage.getItem('hapticEnabled');
+          if (h !== 'false') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }
         } catch (error) {
           console.error('Load barcode count error:', error);
