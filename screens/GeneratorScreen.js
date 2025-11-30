@@ -505,6 +505,9 @@ export default function GeneratorScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Title */}
+        <Text style={[s.title, { color: colors.text }]}>{t('generator.title')}</Text>
+
         {/* Type Selector - Horizontal Scroll */}
         <ScrollView
           horizontal
@@ -606,12 +609,19 @@ const s = StyleSheet.create({
   scrollContent: {
     paddingBottom: 32,
   },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginTop: 40,
+    marginBottom: 20,
+    paddingHorizontal: 16,
+  },
   typesScroll: {
     maxHeight: 100,
   },
   typesContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
     gap: 12,
   },
   typeButton: {
