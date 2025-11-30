@@ -1,4 +1,4 @@
-// screens/LanguageSelectionScreen.js - 언어 선택 화면
+// screens/DisplayModeSelectionScreen.js - Display mode selection screen
 import React from 'react';
 import {
   View,
@@ -11,17 +11,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
 
-export default function LanguageSelectionScreen() {
+const displayModes = [
+  {
+    id: 'light',
+    icon: 'sunny',
+  },
+  {
+    id: 'dark',
+    icon: 'moon',
+  },
+  {
+    id: 'system',
+    icon: 'phone-portrait',
+  },
+];
+
+export default function DisplayModeSelectionScreen() {
   const router = useRouter();
-  const { language, changeLanguage, t } = useLanguage();
-  const { isDark } = useTheme();
+  const { t } = useLanguage();
+  const { themeMode, changeTheme, isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
-  const selectLanguage = async (languageCode) => {
-    await changeLanguage(languageCode);
+  const selectMode = async (mode) => {
+    await changeTheme(mode);
   };
 
   return (
@@ -30,51 +44,53 @@ export default function LanguageSelectionScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.text }]}>{t('languageSelection.title')}</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>{t('displayModeSelection.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
         <View style={s.section}>
           <Text style={[s.info, { color: colors.textSecondary }]}>
-            {t('languageSelection.description')}
+            {t('displayModeSelection.description')}
           </Text>
 
-          {languages.map((lang) => {
-            const isSelected = language === lang.code;
+          {displayModes.map((mode) => {
+            const isSelected = themeMode === mode.id;
 
             return (
               <TouchableOpacity
-                key={lang.code}
+                key={mode.id}
                 style={[
-                  s.languageItem,
+                  s.modeItem,
                   { backgroundColor: colors.surface, borderColor: colors.border },
                   isSelected && { borderColor: colors.primary, backgroundColor: isDark ? '#0A1929' : '#f0f8ff' }
                 ]}
-                onPress={() => selectLanguage(lang.code)}
+                onPress={() => selectMode(mode.id)}
                 activeOpacity={0.7}
               >
-                <View style={[s.languageIcon, { backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5' }]}>
+                <View style={[s.modeIcon, { backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5' }]}>
                   <Ionicons
-                    name="language"
+                    name={mode.icon}
                     size={32}
                     color={isSelected ? colors.primary : colors.textSecondary}
                   />
                 </View>
-                <View style={s.languageInfo}>
-                  <View style={s.languageHeader}>
-                    <Text style={[s.languageName, { color: isSelected ? colors.primary : colors.text }]}>
-                      {lang.name}
+                <View style={s.modeInfo}>
+                  <View style={s.modeHeader}>
+                    <Text style={[s.modeName, { color: isSelected ? colors.primary : colors.text }]}>
+                      {t(`displayModeSelection.${mode.id}`)}
                     </Text>
                     {isSelected && (
                       <View style={s.selectedBadge}>
                         <Text style={s.selectedBadgeText}>
-                          {t('languageSelection.selected')}
+                          {t('displayModeSelection.selected')}
                         </Text>
                       </View>
                     )}
                   </View>
-                  <Text style={[s.languageDesc, { color: colors.textSecondary }]}>{lang.nativeName}</Text>
+                  <Text style={[s.modeDesc, { color: colors.textSecondary }]}>
+                    {t(`displayModeSelection.${mode.id}Desc`)}
+                  </Text>
                 </View>
                 <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
                   {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
@@ -125,7 +141,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 20,
   },
-  languageItem: {
+  modeItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
@@ -133,7 +149,7 @@ const s = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
   },
-  languageIcon: {
+  modeIcon: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -141,15 +157,15 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
-  languageInfo: {
+  modeInfo: {
     flex: 1,
   },
-  languageHeader: {
+  modeHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
   },
-  languageName: {
+  modeName: {
     fontSize: 17,
     fontWeight: '600',
   },
@@ -165,7 +181,7 @@ const s = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
-  languageDesc: {
+  modeDesc: {
     fontSize: 14,
   },
   radio: {
