@@ -43,7 +43,7 @@ export default function GeneratorScreen() {
 
   const [selectedType, setSelectedType] = useState('website');
   const [hapticEnabled, setHapticEnabled] = useState(false);
-  const [qrSize, setQrSize] = useState(new Animated.Value(0));
+  const qrSize = useRef(new Animated.Value(0)).current;
   const qrRef = useRef(null);
 
   // Form data for each type
@@ -71,51 +71,6 @@ export default function GeneratorScreen() {
     };
     loadSettings();
   }, []);
-
-  useEffect(() => {
-    // Animate QR code appearance
-    Animated.spring(qrSize, {
-      toValue: hasData ? 1 : 0,
-      useNativeDriver: true,
-      tension: 50,
-      friction: 7,
-    }).start();
-  }, [generateQRData()]);
-
-  const handleTypeSelect = async (typeId) => {
-    if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setSelectedType(typeId);
-
-    // Load clipboard content if clipboard type is selected
-    if (typeId === 'clipboard') {
-      try {
-        const clipboardText = await Clipboard.getStringAsync();
-        if (clipboardText) {
-          setFormData((prev) => ({
-            ...prev,
-            clipboard: { text: clipboardText },
-          }));
-          Alert.alert('✓', t('generator.clipboardPasted'));
-        } else {
-          Alert.alert('ℹ️', t('generator.clipboardEmpty'));
-        }
-      } catch (error) {
-        console.error('Error reading clipboard:', error);
-      }
-    }
-  };
-
-  const updateFormData = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [selectedType]: {
-        ...prev[selectedType],
-        [field]: value,
-      },
-    }));
-  };
 
   const generateQRData = () => {
     const data = formData[selectedType];
@@ -181,6 +136,51 @@ export default function GeneratorScreen() {
 
   const qrData = generateQRData();
   const hasData = qrData.length > 0;
+
+  useEffect(() => {
+    // Animate QR code appearance
+    Animated.spring(qrSize, {
+      toValue: hasData ? 1 : 0,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  }, [hasData]);
+
+  const handleTypeSelect = async (typeId) => {
+    if (hapticEnabled) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedType(typeId);
+
+    // Load clipboard content if clipboard type is selected
+    if (typeId === 'clipboard') {
+      try {
+        const clipboardText = await Clipboard.getStringAsync();
+        if (clipboardText) {
+          setFormData((prev) => ({
+            ...prev,
+            clipboard: { text: clipboardText },
+          }));
+          Alert.alert('✓', t('generator.clipboardPasted'));
+        } else {
+          Alert.alert('ℹ️', t('generator.clipboardEmpty'));
+        }
+      } catch (error) {
+        console.error('Error reading clipboard:', error);
+      }
+    }
+  };
+
+  const updateFormData = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [selectedType]: {
+        ...prev[selectedType],
+        [field]: value,
+      },
+    }));
+  };
 
   const handleShare = async () => {
     if (!hasData) {
