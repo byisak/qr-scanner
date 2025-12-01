@@ -296,8 +296,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
+    <View style={{ flex: 1 }}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
         <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
 
         {/* 바코드 인식 설정 */}
@@ -569,7 +570,8 @@ export default function SettingsScreen() {
             </>
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </TouchableWithoutFeedback>
 
       {/* 비밀번호 입력 모달 */}
       <Modal
@@ -640,7 +642,7 @@ export default function SettingsScreen() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-    </TouchableWithoutFeedback>
+    </View>
   );
 }
 
