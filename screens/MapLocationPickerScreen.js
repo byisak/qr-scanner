@@ -1,239 +1,24 @@
-// screens/MapLocationPickerScreen.js - Map location picker with Expo Maps
-import React, { useState, useEffect, useRef } from 'react';
+// screens/MapLocationPickerScreen.js - Map location picker placeholder
+// TODO: Uncomment expo-maps code when using development build
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
-  Alert,
   Platform,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GoogleMaps, AppleMaps } from 'expo-maps';
-import * as Location from 'expo-location';
-import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 
 export default function MapLocationPickerScreen() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
-  const params = useLocalSearchParams();
-
-  const [hapticEnabled, setHapticEnabled] = useState(false);
-  const [markerLocation, setMarkerLocation] = useState({
-    latitude: params.latitude ? parseFloat(params.latitude) : 37.5665,
-    longitude: params.longitude ? parseFloat(params.longitude) : 126.9780,
-  });
-  const [latitudeInput, setLatitudeInput] = useState(
-    params.latitude || '37.5665'
-  );
-  const [longitudeInput, setLongitudeInput] = useState(
-    params.longitude || '126.9780'
-  );
-  const [cameraPosition, setCameraPosition] = useState({
-    coordinates: {
-      latitude: params.latitude ? parseFloat(params.latitude) : 37.5665,
-      longitude: params.longitude ? parseFloat(params.longitude) : 126.9780,
-    },
-    zoom: 15,
-  });
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const mapRef = useRef(null);
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const haptic = await AsyncStorage.getItem('hapticEnabled');
-        setHapticEnabled(haptic === 'true');
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    };
-    loadSettings();
-  }, []);
-
-  // Update marker when inputs change
-  const handleLatitudeChange = (text) => {
-    setLatitudeInput(text);
-    const lat = parseFloat(text);
-    if (!isNaN(lat) && lat >= -90 && lat <= 90) {
-      const newLocation = { ...markerLocation, latitude: lat };
-      setMarkerLocation(newLocation);
-      updateCamera(newLocation);
-    }
-  };
-
-  const handleLongitudeChange = (text) => {
-    setLongitudeInput(text);
-    const lng = parseFloat(text);
-    if (!isNaN(lng) && lng >= -180 && lng <= 180) {
-      const newLocation = { ...markerLocation, longitude: lng };
-      setMarkerLocation(newLocation);
-      updateCamera(newLocation);
-    }
-  };
-
-  const updateCamera = (coordinates) => {
-    const newCameraPosition = {
-      coordinates,
-      zoom: cameraPosition.zoom || 15,
-    };
-    setCameraPosition(newCameraPosition);
-
-    if (mapRef.current?.setCameraPosition) {
-      mapRef.current.setCameraPosition({
-        ...newCameraPosition,
-        duration: 500,
-      });
-    }
-  };
-
-  // Handle map click to update marker position
-  const handleMapClick = async (event) => {
-    if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-
-    const { coordinates } = event;
-    setMarkerLocation(coordinates);
-    setLatitudeInput(coordinates.latitude.toFixed(6));
-    setLongitudeInput(coordinates.longitude.toFixed(6));
-  };
-
-  // Get current location
-  const handleGetCurrentLocation = async () => {
-    if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-
-    setIsLoadingLocation(true);
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== 'granted') {
-        Alert.alert(
-          t('common.error'),
-          'Location permission is required to get your current location'
-        );
-        setIsLoadingLocation(false);
-        return;
-      }
-
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const { latitude, longitude } = currentLocation.coords;
-      const newLocation = { latitude, longitude };
-
-      setMarkerLocation(newLocation);
-      setLatitudeInput(latitude.toFixed(6));
-      setLongitudeInput(longitude.toFixed(6));
-
-      updateCamera(newLocation);
-
-      if (hapticEnabled) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert(
-        t('common.error'),
-        'Failed to get current location. Please try again.'
-      );
-    } finally {
-      setIsLoadingLocation(false);
-    }
-  };
-
-  // Save location and go back
-  const handleSave = async () => {
-    if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    }
-
-    // Validate coordinates
-    const lat = parseFloat(latitudeInput);
-    const lng = parseFloat(longitudeInput);
-
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      Alert.alert(t('common.error'), 'Latitude must be between -90 and 90');
-      return;
-    }
-
-    if (isNaN(lng) || lng < -180 || lng > 180) {
-      Alert.alert(t('common.error'), 'Longitude must be between -180 and 180');
-      return;
-    }
-
-    // Store the selected location for the generator screen to pick up
-    await AsyncStorage.setItem('selectedLocation', JSON.stringify({
-      latitude: lat.toFixed(6),
-      longitude: lng.toFixed(6),
-    }));
-
-    // Navigate back
-    router.back();
-  };
-
-  // Render the appropriate map based on platform
-  const renderMap = () => {
-    const markers = [
-      {
-        id: 'selected-location',
-        coordinates: markerLocation,
-        title: t('generator.selectedLocation') || 'Selected Location',
-      },
-    ];
-
-    const commonProps = {
-      ref: mapRef,
-      style: s.map,
-      cameraPosition: cameraPosition,
-      markers: markers,
-      onMapClick: handleMapClick,
-      onCameraMove: (event) => {
-        setCameraPosition({
-          coordinates: event.coordinates,
-          zoom: event.zoom,
-        });
-      },
-      properties: {
-        isMyLocationEnabled: true,
-      },
-      uiSettings: {
-        myLocationButtonEnabled: false, // We'll use our custom button
-        compassEnabled: true,
-        scaleBarEnabled: true,
-      },
-    };
-
-    if (Platform.OS === 'ios') {
-      return <AppleMaps.View {...commonProps} />;
-    } else if (Platform.OS === 'android') {
-      return (
-        <GoogleMaps.View
-          {...commonProps}
-          colorScheme={isDark ? 'DARK' : 'LIGHT'}
-        />
-      );
-    } else {
-      return (
-        <View style={[s.map, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text>Maps are only available on Android and iOS</Text>
-        </View>
-      );
-    }
-  };
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
@@ -249,71 +34,36 @@ export default function MapLocationPickerScreen() {
         <Text style={[s.headerTitle, { color: colors.text }]}>
           {t('generator.selectLocation') || 'Select Location'}
         </Text>
-        <TouchableOpacity
-          onPress={handleSave}
-          style={[s.saveButton, { backgroundColor: colors.primary }]}
-          activeOpacity={0.8}
-        >
-          <Text style={s.saveButtonText}>
-            {t('common.save') || 'Save'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ width: 60 }} />
       </View>
 
-      {/* Coordinate Inputs */}
-      <View style={[s.inputsContainer, { backgroundColor: colors.surface }]}>
-        <View style={s.inputWrapper}>
-          <Text style={[s.inputLabel, { color: colors.textSecondary }]}>
-            {t('generator.fields.latitudeLabel') || 'Latitude'}
-          </Text>
-          <TextInput
-            style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-            value={latitudeInput}
-            onChangeText={handleLatitudeChange}
-            keyboardType="numeric"
-            placeholder="37.5665"
-            placeholderTextColor={colors.textTertiary}
-          />
+      {/* Development Build Required Message */}
+      <View style={s.messageContainer}>
+        <View style={[s.iconContainer, { backgroundColor: colors.surface }]}>
+          <Ionicons name="map-outline" size={64} color={colors.primary} />
         </View>
-        <View style={s.inputWrapper}>
-          <Text style={[s.inputLabel, { color: colors.textSecondary }]}>
-            {t('generator.fields.longitudeLabel') || 'Longitude'}
+
+        <Text style={[s.title, { color: colors.text }]}>
+          개발 빌드 필요
+        </Text>
+
+        <Text style={[s.description, { color: colors.textSecondary }]}>
+          지도 기능은 Expo Go에서 사용할 수 없습니다.{'\n'}
+          개발 빌드가 필요합니다.
+        </Text>
+
+        <View style={[s.infoBox, { backgroundColor: colors.surface }]}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+          <Text style={[s.infoText, { color: colors.textSecondary }]}>
+            개발 빌드를 사용하려면:{'\n'}
+            <Text style={{ color: colors.text, fontWeight: '600' }}>npm run android</Text> 또는{' '}
+            <Text style={{ color: colors.text, fontWeight: '600' }}>npm run ios</Text>
           </Text>
-          <TextInput
-            style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-            value={longitudeInput}
-            onChangeText={handleLongitudeChange}
-            keyboardType="numeric"
-            placeholder="126.9780"
-            placeholderTextColor={colors.textTertiary}
-          />
         </View>
-      </View>
 
-      {/* Map */}
-      <View style={s.mapContainer}>
-        {renderMap()}
-
-        {/* Current Location Button */}
-        <TouchableOpacity
-          style={[s.currentLocationButton, { backgroundColor: colors.surface }]}
-          onPress={handleGetCurrentLocation}
-          activeOpacity={0.8}
-          disabled={isLoadingLocation}
-        >
-          {isLoadingLocation ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Ionicons name="locate" size={24} color={colors.primary} />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Instructions */}
-      <View style={[s.instructionsContainer, { backgroundColor: colors.surface }]}>
-        <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-        <Text style={[s.instructionsText, { color: colors.textSecondary }]}>
-          {t('generator.mapInstructions') || 'Tap on the map or enter coordinates to select a location'}
+        <Text style={[s.note, { color: colors.textTertiary }]}>
+          expo-maps는 네이티브 모듈이므로{'\n'}
+          Expo Go 앱에서는 지원되지 않습니다.
         </Text>
       </View>
     </View>
@@ -344,68 +94,66 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 16,
   },
-  saveButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  inputsContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    gap: 12,
-  },
-  inputWrapper: {
+  messageContainer: {
     flex: 1,
-    gap: 6,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  input: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  mapContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-  map: {
-    flex: 1,
-  },
-  currentLocationButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  instructionsContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 10,
+    padding: 32,
+    gap: 20,
   },
-  instructionsText: {
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    maxWidth: 300,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+    alignItems: 'flex-start',
+    marginTop: 8,
+  },
+  infoText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  note: {
+    fontSize: 12,
+    textAlign: 'center',
     lineHeight: 18,
+    marginTop: 8,
   },
 });
+
+/*
+==========================================================================
+EXPO-MAPS CODE (For Development Build)
+==========================================================================
+Uncomment the code below when using development build (npm run android/ios)
+
+import { GoogleMaps, AppleMaps } from 'expo-maps';
+import * as Location from 'expo-location';
+import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Add all the state management and map rendering code here
+// See git history for the full implementation
+
+==========================================================================
+*/

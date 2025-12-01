@@ -51,10 +51,9 @@
         }
       ],
       [
-        "expo-maps",
+        "expo-location",
         {
-          "requestLocationPermission": true,
-          "locationPermission": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
+          "locationWhenInUsePermission": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
         }
       ]
     ],
