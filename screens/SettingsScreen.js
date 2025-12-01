@@ -25,6 +25,18 @@ import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
 import websocketClient from '../utils/websocket';
 
+// 랜덤 세션 ID 생성 함수 (8자리)
+const generateSessionId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+const BASE_SERVER_URL = 'http://qrcode.com';
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { language, t } = useLanguage();
@@ -39,10 +51,8 @@ export default function SettingsScreen() {
 
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
-  const [serverUrl, setServerUrl] = useState('');
-  const [sessionId, setSessionId] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [sessionUrls, setSessionUrls] = useState([]); // 생성된 세션 URL 목록
+  const [activeSessionId, setActiveSessionId] = useState(''); // 현재 활성화된 세션 ID
 
   useEffect(() => {
     (async () => {
@@ -80,17 +90,18 @@ export default function SettingsScreen() {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
         if (realtimeSync === 'true') {
           setRealtimeSyncEnabled(true);
-          const savedServerUrl = await AsyncStorage.getItem('serverUrl');
-          const savedSessionId = await AsyncStorage.getItem('sessionId');
-          if (savedServerUrl) {
-            setServerUrl(savedServerUrl);
-            // 서버 연결
-            websocketClient.connect(savedServerUrl);
-          }
-          if (savedSessionId) {
-            setSessionId(savedSessionId);
-            websocketClient.setSessionId(savedSessionId);
-          }
+        }
+
+        // 생성된 세션 URL 목록 로드
+        const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+        if (savedSessionUrls) {
+          setSessionUrls(JSON.parse(savedSessionUrls));
+        }
+
+        // 활성화된 세션 ID 로드
+        const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+        if (savedActiveSessionId) {
+          setActiveSessionId(savedActiveSessionId);
         }
       } catch (error) {
         console.error('Load settings error:', error);
@@ -160,18 +171,18 @@ export default function SettingsScreen() {
     })();
   }, [batchScanEnabled]);
 
-  // 실시간 서버전송 설정 저장 및 연결 관리
+  // 실시간 서버전송 설정 저장
   useEffect(() => {
     (async () => {
       try {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
         if (!realtimeSyncEnabled) {
-          // 비활성화 시 연결 해제
-          websocketClient.disconnect();
-          setIsConnected(false);
-          setSessionId('');
-          await AsyncStorage.removeItem('sessionId');
+          // 비활성화 시 세션 URL 목록 및 활성 세션 초기화
+          setSessionUrls([]);
+          setActiveSessionId('');
+          await AsyncStorage.removeItem('sessionUrls');
+          await AsyncStorage.removeItem('activeSessionId');
         }
       } catch (error) {
         console.error('Save realtime sync settings error:', error);
@@ -179,82 +190,71 @@ export default function SettingsScreen() {
     })();
   }, [realtimeSyncEnabled]);
 
-  // 서버 URL 저장
+  // 세션 URL 목록 저장
   useEffect(() => {
-    if (realtimeSyncEnabled && serverUrl.trim()) {
-      const timer = setTimeout(async () => {
-        await AsyncStorage.setItem('serverUrl', serverUrl.trim());
-      }, 500);
-      return () => clearTimeout(timer);
+    if (sessionUrls.length > 0) {
+      AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
     }
-  }, [serverUrl, realtimeSyncEnabled]);
+  }, [sessionUrls]);
 
-  // 웹소켓 연결 상태 추적
+  // 활성 세션 ID 저장
   useEffect(() => {
-    const handleConnect = () => {
-      setIsConnected(true);
+    if (activeSessionId) {
+      AsyncStorage.setItem('activeSessionId', activeSessionId);
+    }
+  }, [activeSessionId]);
+
+  // 새 세션 URL 생성
+  const handleGenerateSessionUrl = () => {
+    const newSessionId = generateSessionId();
+    const newSessionUrl = {
+      id: newSessionId,
+      url: `${BASE_SERVER_URL}/${newSessionId}`,
+      createdAt: Date.now(),
     };
 
-    const handleDisconnect = () => {
-      setIsConnected(false);
-    };
+    setSessionUrls(prev => [newSessionUrl, ...prev]);
 
-    const handleSessionCreated = async (data) => {
-      setSessionId(data.sessionId);
-      setIsCreatingSession(false);
-      await AsyncStorage.setItem('sessionId', data.sessionId);
-      Alert.alert(t('settings.success'), t('settings.sessionCreated'));
-    };
-
-    const handleError = (error) => {
-      setIsCreatingSession(false);
-      Alert.alert(t('settings.error'), t('settings.connectionError'));
-    };
-
-    websocketClient.on('connect', handleConnect);
-    websocketClient.on('disconnect', handleDisconnect);
-    websocketClient.on('sessionCreated', handleSessionCreated);
-    websocketClient.on('error', handleError);
-
-    return () => {
-      websocketClient.off('connect', handleConnect);
-      websocketClient.off('disconnect', handleDisconnect);
-      websocketClient.off('sessionCreated', handleSessionCreated);
-      websocketClient.off('error', handleError);
-    };
-  }, [t]);
-
-  // 서버 연결
-  const handleConnectToServer = () => {
-    if (!serverUrl.trim()) {
-      Alert.alert(t('settings.error'), t('settings.enterServerUrl'));
-      return;
+    // 첫 번째 세션이면 자동으로 활성화
+    if (sessionUrls.length === 0) {
+      setActiveSessionId(newSessionId);
     }
 
-    websocketClient.connect(serverUrl.trim());
+    Alert.alert(t('settings.success'), t('settings.sessionCreated'));
   };
 
-  // 세션 생성
-  const handleCreateSession = () => {
-    if (!isConnected) {
-      Alert.alert(t('settings.error'), t('settings.notConnected'));
-      return;
-    }
+  // 세션 활성화
+  const handleActivateSession = (sessionId) => {
+    setActiveSessionId(sessionId);
+  };
 
-    setIsCreatingSession(true);
-    const success = websocketClient.createSession();
-    if (!success) {
-      setIsCreatingSession(false);
-      Alert.alert(t('settings.error'), t('settings.sessionCreateFailed'));
-    }
+  // 세션 삭제
+  const handleDeleteSession = (sessionId) => {
+    Alert.alert(
+      t('settings.deleteSession'),
+      t('settings.deleteSessionConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: () => {
+            setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
+
+            // 삭제된 세션이 활성 세션이면 초기화
+            if (activeSessionId === sessionId) {
+              const remaining = sessionUrls.filter(s => s.id !== sessionId);
+              setActiveSessionId(remaining.length > 0 ? remaining[0].id : '');
+            }
+          },
+        },
+      ]
+    );
   };
 
   // URL 복사
-  const handleCopyUrl = async () => {
-    if (!sessionId) return;
-
-    const fullUrl = `${serverUrl.trim()}/session/${sessionId}`;
-    await Clipboard.setStringAsync(fullUrl);
+  const handleCopyUrl = async (url) => {
+    await Clipboard.setStringAsync(url);
     Alert.alert(t('settings.success'), t('settings.urlCopied'));
   };
 
@@ -453,78 +453,70 @@ export default function SettingsScreen() {
 
           {realtimeSyncEnabled && (
             <>
-              {/* 서버 URL 입력 */}
-              <Text style={[s.urlInfo, { color: colors.textSecondary }]}>
-                {t('settings.serverUrlInfo')}
-              </Text>
-              <TextInput
-                style={[s.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
-                value={serverUrl}
-                onChangeText={setServerUrl}
-                placeholder={t('settings.serverUrlPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                autoCapitalize="none"
-                keyboardType="url"
-                accessibilityLabel={t('settings.serverUrl')}
-              />
+              {/* 주소 생성 버튼 */}
+              <TouchableOpacity
+                style={[s.generateButton, { backgroundColor: colors.success }]}
+                onPress={handleGenerateSessionUrl}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                <Text style={s.generateButtonText}>{t('settings.generateSessionUrl')}</Text>
+              </TouchableOpacity>
 
-              {/* 연결 버튼 */}
-              {!isConnected && serverUrl.trim() && (
-                <TouchableOpacity
-                  style={[s.connectButton, { backgroundColor: colors.primary }]}
-                  onPress={handleConnectToServer}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="cloud-outline" size={20} color="#fff" />
-                  <Text style={s.connectButtonText}>{t('settings.connectToServer')}</Text>
-                </TouchableOpacity>
-              )}
+              {/* 생성된 세션 URL 목록 */}
+              {sessionUrls.length > 0 && (
+                <View style={s.sessionListContainer}>
+                  <Text style={[s.sessionListTitle, { color: colors.text }]}>{t('settings.generatedUrls')}</Text>
+                  {sessionUrls.map((session) => (
+                    <View
+                      key={session.id}
+                      style={[
+                        s.sessionItem,
+                        {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: activeSessionId === session.id ? colors.success : colors.border
+                        },
+                        activeSessionId === session.id && s.sessionItemActive
+                      ]}
+                    >
+                      <TouchableOpacity
+                        style={s.sessionItemContent}
+                        onPress={() => handleActivateSession(session.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={s.sessionItemHeader}>
+                          <Ionicons
+                            name={activeSessionId === session.id ? "radio-button-on" : "radio-button-off"}
+                            size={20}
+                            color={activeSessionId === session.id ? colors.success : colors.textTertiary}
+                          />
+                          <Text style={[s.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
+                            {session.url}
+                          </Text>
+                        </View>
+                        {activeSessionId === session.id && (
+                          <Text style={[s.activeLabel, { color: colors.success }]}>{t('settings.active')}</Text>
+                        )}
+                      </TouchableOpacity>
 
-              {/* 연결 상태 */}
-              <View style={s.connectionStatus}>
-                <View style={[s.statusDot, { backgroundColor: isConnected ? colors.success : colors.error }]} />
-                <Text style={[s.statusText, { color: colors.text }]}>
-                  {isConnected ? t('settings.connected') : t('settings.disconnected')}
-                </Text>
-              </View>
-
-              {/* 세션 생성 버튼 */}
-              {isConnected && !sessionId && (
-                <TouchableOpacity
-                  style={[s.sessionButton, { backgroundColor: colors.success }, isCreatingSession && s.sessionButtonDisabled]}
-                  onPress={handleCreateSession}
-                  disabled={isCreatingSession}
-                  activeOpacity={0.8}
-                >
-                  {isCreatingSession ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                      <Text style={s.sessionButtonText}>{t('settings.generateSessionUrl')}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              {/* 생성된 세션 URL */}
-              {sessionId && (
-                <View style={[s.sessionUrlBox, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-                  <View style={s.sessionUrlHeader}>
-                    <Ionicons name="cloud-done" size={20} color={colors.success} />
-                    <Text style={[s.sessionUrlTitle, { color: colors.text }]}>{t('settings.sessionUrlGenerated')}</Text>
-                  </View>
-                  <Text style={[s.sessionUrl, { color: colors.primary }]}>
-                    {serverUrl.trim()}/session/{sessionId}
-                  </Text>
-                  <TouchableOpacity
-                    style={[s.copyButton, { backgroundColor: colors.primary }]}
-                    onPress={handleCopyUrl}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="copy-outline" size={18} color="#fff" />
-                    <Text style={s.copyButtonText}>{t('settings.copyUrl')}</Text>
-                  </TouchableOpacity>
+                      <View style={s.sessionItemActions}>
+                        <TouchableOpacity
+                          style={[s.iconButton, { backgroundColor: colors.primary }]}
+                          onPress={() => handleCopyUrl(session.url)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="copy-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[s.iconButton, { backgroundColor: colors.error }]}
+                          onPress={() => handleDeleteSession(session.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
                   <Text style={[s.sessionInfo, { color: colors.textTertiary }]}>
                     {t('settings.sessionInfo')}
                   </Text>
@@ -638,87 +630,69 @@ const s = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  connectButton: {
+  generateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 15,
-    padding: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  connectButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  connectionStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 15,
-    paddingVertical: 8,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  sessionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 15,
-    padding: 14,
-    borderRadius: 12,
-    gap: 8,
-  },
-  sessionButtonDisabled: {
-    opacity: 0.6,
-  },
-  sessionButtonText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  sessionUrlBox: {
     marginTop: 20,
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
-    borderWidth: 1,
+    gap: 8,
   },
-  sessionUrlHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
+  generateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
-  sessionUrlTitle: {
+  sessionListContainer: {
+    marginTop: 20,
+  },
+  sessionListTitle: {
     fontSize: 15,
     fontWeight: '700',
-    marginLeft: 8,
+    marginBottom: 12,
+  },
+  sessionItem: {
+    borderRadius: 12,
+    borderWidth: 2,
+    padding: 12,
+    marginBottom: 10,
+  },
+  sessionItemActive: {
+    borderWidth: 2,
+  },
+  sessionItemContent: {
+    flex: 1,
+  },
+  sessionItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
   },
   sessionUrl: {
     fontSize: 13,
     fontFamily: 'monospace',
-    marginBottom: 12,
     lineHeight: 20,
   },
-  copyButton: {
+  activeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  sessionItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  iconButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 10,
-    gap: 6,
-  },
-  copyButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    padding: 10,
+    borderRadius: 8,
+    flex: 1,
   },
   sessionInfo: {
     fontSize: 12,

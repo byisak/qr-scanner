@@ -62,7 +62,7 @@ function ScannerScreen() {
 
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
-  const [sessionId, setSessionId] = useState('');
+  const [activeSessionId, setActiveSessionId] = useState('');
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -127,9 +127,9 @@ function ScannerScreen() {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
         if (realtimeSync === 'true') {
           setRealtimeSyncEnabled(true);
-          const savedSessionId = await AsyncStorage.getItem('sessionId');
-          if (savedSessionId) {
-            setSessionId(savedSessionId);
+          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+          if (savedActiveSessionId) {
+            setActiveSessionId(savedActiveSessionId);
           }
         }
       } catch (error) {
@@ -211,13 +211,13 @@ function ScannerScreen() {
           const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
           if (realtimeSync === 'true') {
             setRealtimeSyncEnabled(true);
-            const savedSessionId = await AsyncStorage.getItem('sessionId');
-            if (savedSessionId) {
-              setSessionId(savedSessionId);
+            const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+            if (savedActiveSessionId) {
+              setActiveSessionId(savedActiveSessionId);
             }
           } else {
             setRealtimeSyncEnabled(false);
-            setSessionId('');
+            setActiveSessionId('');
           }
         } catch (error) {
           console.error('Load barcode settings error:', error);
@@ -263,20 +263,20 @@ function ScannerScreen() {
     try {
       let selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
 
-      // 실시간 서버전송이 활성화되어 있고 세션 ID가 있으면 해당 그룹에 저장
-      if (realtimeSyncEnabled && sessionId) {
+      // 실시간 서버전송이 활성화되어 있고 활성 세션 ID가 있으면 해당 그룹에 저장
+      if (realtimeSyncEnabled && activeSessionId) {
         // 세션 ID 그룹 자동 생성 또는 가져오기
         const groupsData = await AsyncStorage.getItem('scanGroups');
         let groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
 
         // 세션 ID 그룹이 이미 있는지 확인
-        let sessionGroup = groups.find(g => g.id === sessionId);
+        let sessionGroup = groups.find(g => g.id === activeSessionId);
 
         if (!sessionGroup) {
           // 세션 ID 그룹이 없으면 생성
           sessionGroup = {
-            id: sessionId,
-            name: sessionId,
+            id: activeSessionId,
+            name: activeSessionId,
             createdAt: Date.now(),
             isCloudSync: true, // 클라우드 동기화 그룹 표시
           };
@@ -285,9 +285,9 @@ function ScannerScreen() {
         }
 
         // 선택된 그룹을 세션 ID 그룹으로 변경
-        selectedGroupId = sessionId;
-        await AsyncStorage.setItem('selectedGroupId', sessionId);
-        setCurrentGroupName(sessionId);
+        selectedGroupId = activeSessionId;
+        await AsyncStorage.setItem('selectedGroupId', activeSessionId);
+        setCurrentGroupName(activeSessionId);
       }
 
       // 그룹별 히스토리 가져오기
@@ -357,7 +357,7 @@ function ScannerScreen() {
       console.error('Save history error:', e);
       return { isDuplicate: false, count: 1 };
     }
-  }, [realtimeSyncEnabled, sessionId]);
+  }, [realtimeSyncEnabled, activeSessionId]);
 
   const normalizeBounds = useCallback(
     (bounds) => {
@@ -532,7 +532,7 @@ function ScannerScreen() {
           const photoUri = await photoPromise;
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
-          if (realtimeSyncEnabled && sessionId) {
+          if (realtimeSyncEnabled && activeSessionId) {
             const success = websocketClient.sendScanData({
               code: data,
               timestamp: Date.now(),
@@ -598,7 +598,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, sessionId],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
