@@ -235,7 +235,7 @@ export default function SettingsScreen() {
   };
 
   // 세션 삭제
-  const handleDeleteSession = (sessionId) => {
+  const handleDeleteSession = async (sessionId) => {
     Alert.alert(
       t('settings.deleteSession'),
       t('settings.deleteSessionConfirm'),
@@ -244,13 +244,36 @@ export default function SettingsScreen() {
         {
           text: t('common.delete'),
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            // 세션 URL 삭제
             setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
 
             // 삭제된 세션이 활성 세션이면 초기화
             if (activeSessionId === sessionId) {
               const remaining = sessionUrls.filter(s => s.id !== sessionId);
-              setActiveSessionId(remaining.length > 0 ? remaining[0].id : '');
+              const newActiveId = remaining.length > 0 ? remaining[0].id : '';
+              setActiveSessionId(newActiveId);
+              await AsyncStorage.setItem('activeSessionId', newActiveId);
+            }
+
+            // 해당 세션 ID로 생성된 클라우드 동기화 그룹도 삭제
+            try {
+              const groupsJson = await AsyncStorage.getItem('scanGroups');
+              if (groupsJson) {
+                const groups = JSON.parse(groupsJson);
+                const updatedGroups = groups.filter(g => g.id !== sessionId);
+                await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+
+                // 해당 그룹의 히스토리도 삭제
+                const historyJson = await AsyncStorage.getItem('scanHistory');
+                if (historyJson) {
+                  const history = JSON.parse(historyJson);
+                  const updatedHistory = history.filter(item => item.groupId !== sessionId);
+                  await AsyncStorage.setItem('scanHistory', JSON.stringify(updatedHistory));
+                }
+              }
+            } catch (error) {
+              console.error('Failed to delete cloud sync group:', error);
             }
           },
         },
