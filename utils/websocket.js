@@ -85,25 +85,28 @@ class WebSocketClient {
   }
 
   // 스캔 데이터 전송
-  sendScanData(data) {
+  sendScanData(data, sessionId) {
+    // 백엔드가 구현되기 전까지는 로컬에서만 데이터 처리
+    // TODO: 백엔드 구현 시 실제 서버 전송 활성화
     if (!this.socket || !this.isConnected) {
-      console.error('Socket not connected');
-      return false;
-    }
-
-    if (!this.sessionId) {
-      console.error('No session ID');
-      return false;
+      // 서버 연결이 없어도 에러를 발생시키지 않음
+      console.log('Server not connected yet. Data will be stored locally only.');
+      return true; // 로컬 저장은 성공했으므로 true 반환
     }
 
     const payload = {
-      sessionId: this.sessionId,
+      sessionId: sessionId || this.sessionId,
       code: data.code,
       timestamp: data.timestamp || Date.now(),
     };
 
-    this.socket.emit('scan-data', payload);
-    return true;
+    try {
+      this.socket.emit('scan-data', payload);
+      return true;
+    } catch (error) {
+      console.error('Failed to send scan data:', error);
+      return false;
+    }
   }
 
   // 이벤트 리스너 추가

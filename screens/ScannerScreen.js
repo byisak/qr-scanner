@@ -536,7 +536,7 @@ function ScannerScreen() {
             const success = websocketClient.sendScanData({
               code: data,
               timestamp: Date.now(),
-            });
+            }, activeSessionId);
             if (!success) {
               console.warn('Failed to send scan data to server');
             }
