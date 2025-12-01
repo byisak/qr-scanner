@@ -27,6 +27,7 @@ export default {
     finishBatch: 'スキャン完了',
     clearBatch: 'クリア',
     viewBatchList: 'リストを表示',
+    sending: '送信中',
   },
 
   // 履歴画面
@@ -118,6 +119,11 @@ export default {
     urlCopied: 'URLがコピーされました',
     deleteSession: 'URL削除',
     deleteSessionConfirm: 'このURLを削除しますか？',
+    addPassword: 'パスワード追加',
+    passwordDescription: 'この送信URLにパスワードを設定してください',
+    passwordPlaceholder: 'パスワードを入力',
+    passwordRequired: 'パスワードを入力してください',
+    passwordSaved: 'パスワードが保存されました',
   },
 
   // バーコード選択画面

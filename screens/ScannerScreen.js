@@ -63,6 +63,7 @@ function ScannerScreen() {
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState('');
+  const [showSendMessage, setShowSendMessage] = useState(false); // "전송" 메시지 표시 여부
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -554,6 +555,12 @@ function ScannerScreen() {
                 timestamp: Date.now(),
                 photoUri: photoUri || null,
               }]);
+
+              // 배치 + 실시간 전송 모드: "전송" 메시지 표시
+              if (realtimeSyncEnabled && activeSessionId) {
+                setShowSendMessage(true);
+                setTimeout(() => setShowSendMessage(false), 1000);
+              }
             }
 
             // 스캔 재활성화 (계속 스캔 가능)
@@ -675,6 +682,14 @@ function ScannerScreen() {
           <View style={styles.batchModeBadge}>
             <Ionicons name="layers" size={16} color="#fff" />
             <Text style={styles.batchModeBadgeText}>{t('scanner.batchModeActive')}</Text>
+          </View>
+        )}
+
+        {/* 전송 메시지 (배치 + 실시간 전송 모드) */}
+        {showSendMessage && (
+          <View style={styles.sendMessageBadge}>
+            <Ionicons name="cloud-upload" size={20} color="#fff" />
+            <Text style={styles.sendMessageText}>{t('scanner.sending')}</Text>
           </View>
         )}
 
@@ -846,6 +861,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  sendMessageBadge: {
+    position: 'absolute',
+    top: '50%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.95)',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  sendMessageText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   batchControlPanel: {
     position: 'absolute',

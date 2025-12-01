@@ -27,6 +27,7 @@ export default {
     finishBatch: 'Finish',
     clearBatch: 'Clear',
     viewBatchList: 'View List',
+    sending: 'Sending',
   },
 
   // History screen
@@ -118,6 +119,11 @@ export default {
     urlCopied: 'URL copied to clipboard',
     deleteSession: 'Delete URL',
     deleteSessionConfirm: 'Do you want to delete this URL?',
+    addPassword: 'Add Password',
+    passwordDescription: 'Set a password for this transmission URL',
+    passwordPlaceholder: 'Enter password',
+    passwordRequired: 'Please enter a password',
+    passwordSaved: 'Password saved successfully',
   },
 
   // Barcode selection screen

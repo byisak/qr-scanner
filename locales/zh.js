@@ -27,6 +27,7 @@ export default {
     finishBatch: '完成扫描',
     clearBatch: '清空',
     viewBatchList: '查看列表',
+    sending: '发送中',
   },
 
   // 历史记录界面
@@ -118,6 +119,11 @@ export default {
     urlCopied: 'URL已复制到剪贴板',
     deleteSession: '删除URL',
     deleteSessionConfirm: '要删除此URL吗？',
+    addPassword: '添加密码',
+    passwordDescription: '为此传输URL设置密码',
+    passwordPlaceholder: '输入密码',
+    passwordRequired: '请输入密码',
+    passwordSaved: '密码已保存',
   },
 
   // 条形码选择界面

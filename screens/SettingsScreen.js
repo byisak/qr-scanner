@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Clipboard from 'expo-clipboard';
@@ -53,6 +54,11 @@ export default function SettingsScreen() {
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [sessionUrls, setSessionUrls] = useState([]); // 생성된 세션 URL 목록
   const [activeSessionId, setActiveSessionId] = useState(''); // 현재 활성화된 세션 ID
+
+  // 비밀번호 모달 상태
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -250,6 +256,37 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  // 비밀번호 추가 모달 열기
+  const handleOpenPasswordModal = (sessionId) => {
+    setSelectedSessionId(sessionId);
+    const session = sessionUrls.find(s => s.id === sessionId);
+    setPasswordInput(session?.password || '');
+    setPasswordModalVisible(true);
+  };
+
+  // 비밀번호 저장
+  const handleSavePassword = async () => {
+    if (!passwordInput.trim()) {
+      Alert.alert(t('settings.error'), t('settings.passwordRequired'));
+      return;
+    }
+
+    const updatedUrls = sessionUrls.map(session => {
+      if (session.id === selectedSessionId) {
+        return { ...session, password: passwordInput.trim() };
+      }
+      return session;
+    });
+
+    setSessionUrls(updatedUrls);
+    await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
+
+    Alert.alert(t('settings.success'), t('settings.passwordSaved'));
+    setPasswordModalVisible(false);
+    setPasswordInput('');
+    setSelectedSessionId('');
   };
 
   // URL 복사
@@ -501,6 +538,13 @@ export default function SettingsScreen() {
 
                       <View style={s.sessionItemActions}>
                         <TouchableOpacity
+                          style={[s.iconButton, { backgroundColor: session.password ? colors.success : colors.textTertiary }]}
+                          onPress={() => handleOpenPasswordModal(session.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name={session.password ? "lock-closed" : "lock-open-outline"} size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
                           style={[s.iconButton, { backgroundColor: colors.primary }]}
                           onPress={() => handleCopyUrl(session.url)}
                           activeOpacity={0.7}
@@ -526,6 +570,76 @@ export default function SettingsScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* 비밀번호 입력 모달 */}
+      <Modal
+        visible={passwordModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setPasswordModalVisible(false)}>
+          <View style={s.modalOverlay}>
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <View style={[s.modalContent, { backgroundColor: colors.background }]}>
+                <View style={s.modalHeader}>
+                  <Ionicons name="lock-closed" size={24} color={colors.primary} />
+                  <Text style={[s.modalTitle, { color: colors.text }]}>
+                    {t('settings.addPassword')}
+                  </Text>
+                </View>
+
+                <Text style={[s.modalDescription, { color: colors.textSecondary }]}>
+                  {t('settings.passwordDescription')}
+                </Text>
+
+                <TextInput
+                  style={[
+                    s.passwordInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border
+                    }
+                  ]}
+                  value={passwordInput}
+                  onChangeText={setPasswordInput}
+                  placeholder={t('settings.passwordPlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  secureTextEntry={true}
+                  autoFocus={true}
+                />
+
+                <View style={s.modalButtons}>
+                  <TouchableOpacity
+                    style={[s.modalButton, s.cancelButton, { backgroundColor: colors.inputBackground }]}
+                    onPress={() => {
+                      setPasswordModalVisible(false);
+                      setPasswordInput('');
+                      setSelectedSessionId('');
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.modalButtonText, { color: colors.text }]}>
+                      {t('common.cancel')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[s.modalButton, s.saveButton, { backgroundColor: colors.primary }]}
+                    onPress={handleSavePassword}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.modalButtonText, { color: '#fff' }]}>
+                      {t('common.save')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </TouchableWithoutFeedback>
   );
 }
@@ -698,5 +812,66 @@ const s = StyleSheet.create({
     fontSize: 12,
     marginTop: 12,
     lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  passwordInput: {
+    padding: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    borderWidth: 1,
+  },
+  saveButton: {
+    // backgroundColor is set dynamically
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

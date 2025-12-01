@@ -27,6 +27,7 @@ export default {
     finishBatch: '스캔 완료',
     clearBatch: '초기화',
     viewBatchList: '목록 보기',
+    sending: '전송',
   },
 
   // 히스토리 화면
@@ -118,6 +119,11 @@ export default {
     urlCopied: 'URL이 복사되었습니다',
     deleteSession: '주소 삭제',
     deleteSessionConfirm: '이 전송 주소를 삭제하시겠습니까?',
+    addPassword: '비밀번호 추가',
+    passwordDescription: '이 전송 주소에 비밀번호를 설정하세요',
+    passwordPlaceholder: '비밀번호 입력',
+    passwordRequired: '비밀번호를 입력해주세요',
+    passwordSaved: '비밀번호가 저장되었습니다',
   },
 
   // 바코드 선택 화면
