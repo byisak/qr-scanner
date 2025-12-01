@@ -1,4 +1,4 @@
-// screens/MapLocationPickerScreen.js - Map location picker with Google Maps
+// screens/MapLocationPickerScreen.js - Map location picker with Expo Maps
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { GoogleMaps, AppleMaps } from 'expo-maps';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,7 +28,7 @@ export default function MapLocationPickerScreen() {
   const params = useLocalSearchParams();
 
   const [hapticEnabled, setHapticEnabled] = useState(false);
-  const [location, setLocation] = useState({
+  const [markerLocation, setMarkerLocation] = useState({
     latitude: params.latitude ? parseFloat(params.latitude) : 37.5665,
     longitude: params.longitude ? parseFloat(params.longitude) : 126.9780,
   });
@@ -38,11 +38,12 @@ export default function MapLocationPickerScreen() {
   const [longitudeInput, setLongitudeInput] = useState(
     params.longitude || '126.9780'
   );
-  const [region, setRegion] = useState({
-    latitude: params.latitude ? parseFloat(params.latitude) : 37.5665,
-    longitude: params.longitude ? parseFloat(params.longitude) : 126.9780,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
+  const [cameraPosition, setCameraPosition] = useState({
+    coordinates: {
+      latitude: params.latitude ? parseFloat(params.latitude) : 37.5665,
+      longitude: params.longitude ? parseFloat(params.longitude) : 126.9780,
+    },
+    zoom: 15,
   });
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const mapRef = useRef(null);
@@ -64,14 +65,9 @@ export default function MapLocationPickerScreen() {
     setLatitudeInput(text);
     const lat = parseFloat(text);
     if (!isNaN(lat) && lat >= -90 && lat <= 90) {
-      setLocation((prev) => ({ ...prev, latitude: lat }));
-      setRegion((prev) => ({ ...prev, latitude: lat }));
-      if (mapRef.current) {
-        mapRef.current.animateToRegion({
-          ...region,
-          latitude: lat,
-        }, 500);
-      }
+      const newLocation = { ...markerLocation, latitude: lat };
+      setMarkerLocation(newLocation);
+      updateCamera(newLocation);
     }
   };
 
@@ -79,26 +75,37 @@ export default function MapLocationPickerScreen() {
     setLongitudeInput(text);
     const lng = parseFloat(text);
     if (!isNaN(lng) && lng >= -180 && lng <= 180) {
-      setLocation((prev) => ({ ...prev, longitude: lng }));
-      setRegion((prev) => ({ ...prev, longitude: lng }));
-      if (mapRef.current) {
-        mapRef.current.animateToRegion({
-          ...region,
-          longitude: lng,
-        }, 500);
-      }
+      const newLocation = { ...markerLocation, longitude: lng };
+      setMarkerLocation(newLocation);
+      updateCamera(newLocation);
     }
   };
 
-  // Update inputs when marker is dragged
-  const handleMarkerDragEnd = async (e) => {
+  const updateCamera = (coordinates) => {
+    const newCameraPosition = {
+      coordinates,
+      zoom: cameraPosition.zoom || 15,
+    };
+    setCameraPosition(newCameraPosition);
+
+    if (mapRef.current?.setCameraPosition) {
+      mapRef.current.setCameraPosition({
+        ...newCameraPosition,
+        duration: 500,
+      });
+    }
+  };
+
+  // Handle map click to update marker position
+  const handleMapClick = async (event) => {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    setLocation({ latitude, longitude });
-    setLatitudeInput(latitude.toFixed(6));
-    setLongitudeInput(longitude.toFixed(6));
+
+    const { coordinates } = event;
+    setMarkerLocation(coordinates);
+    setLatitudeInput(coordinates.latitude.toFixed(6));
+    setLongitudeInput(coordinates.longitude.toFixed(6));
   };
 
   // Get current location
@@ -126,23 +133,13 @@ export default function MapLocationPickerScreen() {
       });
 
       const { latitude, longitude } = currentLocation.coords;
+      const newLocation = { latitude, longitude };
 
-      setLocation({ latitude, longitude });
+      setMarkerLocation(newLocation);
       setLatitudeInput(latitude.toFixed(6));
       setLongitudeInput(longitude.toFixed(6));
 
-      const newRegion = {
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-
-      setRegion(newRegion);
-
-      if (mapRef.current) {
-        mapRef.current.animateToRegion(newRegion, 500);
-      }
+      updateCamera(newLocation);
 
       if (hapticEnabled) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -178,14 +175,64 @@ export default function MapLocationPickerScreen() {
       return;
     }
 
-    // Navigate back with the selected location
-    router.back();
-
     // Store the selected location for the generator screen to pick up
     await AsyncStorage.setItem('selectedLocation', JSON.stringify({
       latitude: lat.toFixed(6),
       longitude: lng.toFixed(6),
     }));
+
+    // Navigate back
+    router.back();
+  };
+
+  // Render the appropriate map based on platform
+  const renderMap = () => {
+    const markers = [
+      {
+        id: 'selected-location',
+        coordinates: markerLocation,
+        title: t('generator.selectedLocation') || 'Selected Location',
+      },
+    ];
+
+    const commonProps = {
+      ref: mapRef,
+      style: s.map,
+      cameraPosition: cameraPosition,
+      markers: markers,
+      onMapClick: handleMapClick,
+      onCameraMove: (event) => {
+        setCameraPosition({
+          coordinates: event.coordinates,
+          zoom: event.zoom,
+        });
+      },
+      properties: {
+        isMyLocationEnabled: true,
+      },
+      uiSettings: {
+        myLocationButtonEnabled: false, // We'll use our custom button
+        compassEnabled: true,
+        scaleBarEnabled: true,
+      },
+    };
+
+    if (Platform.OS === 'ios') {
+      return <AppleMaps.View {...commonProps} />;
+    } else if (Platform.OS === 'android') {
+      return (
+        <GoogleMaps.View
+          {...commonProps}
+          colorScheme={isDark ? 'DARK' : 'LIGHT'}
+        />
+      );
+    } else {
+      return (
+        <View style={[s.map, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text>Maps are only available on Android and iOS</Text>
+        </View>
+      );
+    }
   };
 
   return (
@@ -245,28 +292,7 @@ export default function MapLocationPickerScreen() {
 
       {/* Map */}
       <View style={s.mapContainer}>
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={s.map}
-          region={region}
-          onRegionChangeComplete={setRegion}
-          mapType={isDark ? 'standard' : 'standard'}
-        >
-          <Marker
-            coordinate={location}
-            draggable
-            onDragEnd={handleMarkerDragEnd}
-            title={t('generator.selectedLocation') || 'Selected Location'}
-            description={`${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
-          >
-            <View style={s.markerContainer}>
-              <View style={[s.markerDot, { backgroundColor: colors.primary }]}>
-                <Ionicons name="location" size={24} color="#fff" />
-              </View>
-            </View>
-          </Marker>
-        </MapView>
+        {renderMap()}
 
         {/* Current Location Button */}
         <TouchableOpacity
@@ -287,7 +313,7 @@ export default function MapLocationPickerScreen() {
       <View style={[s.instructionsContainer, { backgroundColor: colors.surface }]}>
         <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
         <Text style={[s.instructionsText, { color: colors.textSecondary }]}>
-          {t('generator.mapInstructions') || 'Drag the pin or enter coordinates to select a location'}
+          {t('generator.mapInstructions') || 'Tap on the map or enter coordinates to select a location'}
         </Text>
       </View>
     </View>
@@ -355,22 +381,6 @@ const s = StyleSheet.create({
   },
   map: {
     flex: 1,
-  },
-  markerContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markerDot: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
   },
   currentLocationButton: {
     position: 'absolute',
