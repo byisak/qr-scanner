@@ -467,6 +467,32 @@ function ScannerScreen() {
       if (!isActive || !canScan) return; // canScan 추가 확인
       if (!isQrInScanArea(bounds)) return;
 
+      // 배치 스캔 모드일 때는 QR 코드 중심이 화면 중앙 타겟에 있어야 스캔
+      if (batchScanEnabled && bounds) {
+        const normalized = normalizeBounds(bounds);
+        if (normalized) {
+          // QR 코드의 중심점 계산
+          const qrCenterX = normalized.x + normalized.width / 2;
+          const qrCenterY = normalized.y + normalized.height / 2;
+
+          // 화면 중앙점
+          const screenCenterX = winWidth / 2;
+          const screenCenterY = winHeight / 2;
+
+          // 타겟 영역 크기 (화면 중앙 ±50px 범위)
+          const targetRadius = 50;
+
+          // QR 코드 중심이 타겟 영역에 없으면 스캔하지 않음
+          const distanceFromCenter = Math.sqrt(
+            Math.pow(qrCenterX - screenCenterX, 2) + Math.pow(qrCenterY - screenCenterY, 2)
+          );
+
+          if (distanceFromCenter > targetRadius) {
+            return; // 타겟 영역 밖이면 스캔하지 않음
+          }
+        }
+      }
+
       const now = Date.now();
 
       if (lastScannedData.current === data && now - lastScannedTime.current < DEBOUNCE_DELAY) {
@@ -611,7 +637,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -716,6 +742,18 @@ function ScannerScreen() {
             ]}
             accessibilityLabel={t('scanner.scanGuideBarcode')}
           />
+        )}
+
+        {/* 배치 스캔 모드일 때 중앙 타겟 표시 */}
+        {batchScanEnabled && (
+          <View style={styles.centerTarget} pointerEvents="none">
+            {/* 수평선 */}
+            <View style={styles.targetLineHorizontal} />
+            {/* 수직선 */}
+            <View style={styles.targetLineVertical} />
+            {/* 중심 원 */}
+            <View style={styles.targetCenter} />
+          </View>
         )}
       </View>
 
@@ -1006,6 +1044,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     color: '#fff',
     padding: 20,
+  },
+  centerTarget: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 100,
+    height: 100,
+    marginLeft: -50,
+    marginTop: -50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  targetLineHorizontal: {
+    position: 'absolute',
+    width: 40,
+    height: 3,
+    backgroundColor: '#FFD60A',
+    borderRadius: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  targetLineVertical: {
+    position: 'absolute',
+    width: 3,
+    height: 40,
+    backgroundColor: '#FFD60A',
+    borderRadius: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  targetCenter: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFD60A',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
   },
 });
 
