@@ -30,6 +30,7 @@ export default function SettingsScreen() {
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
+  const [batchScanEnabled, setBatchScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function SettingsScreen() {
         const u = await SecureStore.getItemAsync('baseUrl');
         const h = await AsyncStorage.getItem('hapticEnabled');
         const p = await AsyncStorage.getItem('photoSaveEnabled');
+        const bs = await AsyncStorage.getItem('batchScanEnabled');
         const b = await AsyncStorage.getItem('selectedBarcodes');
 
         if (e === 'true') {
@@ -52,6 +54,10 @@ export default function SettingsScreen() {
 
         if (p !== null) {
           setPhotoSaveEnabled(p === 'true');
+        }
+
+        if (bs !== null) {
+          setBatchScanEnabled(bs === 'true');
         }
 
         if (b) {
@@ -116,6 +122,16 @@ export default function SettingsScreen() {
     })();
   }, [photoSaveEnabled]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem('batchScanEnabled', batchScanEnabled.toString());
+      } catch (error) {
+        console.error('Save batch scan settings error:', error);
+      }
+    })();
+  }, [batchScanEnabled]);
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
@@ -154,6 +170,22 @@ export default function SettingsScreen() {
               trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel={t('settings.photoSave')}
+            />
+          </View>
+
+          {/* 배치 스캔 모드 */}
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.batchScanMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.batchScanModeDesc')}</Text>
+              {batchScanEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
+            </View>
+            <Switch
+              value={batchScanEnabled}
+              onValueChange={setBatchScanEnabled}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.batchScanMode')}
             />
           </View>
 

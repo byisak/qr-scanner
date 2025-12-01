@@ -44,6 +44,8 @@ function ScannerScreen() {
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
+  const [batchScanEnabled, setBatchScanEnabled] = useState(false); // 배치 스캔 모드 활성화 여부
+  const [batchScannedItems, setBatchScannedItems] = useState([]); // 배치로 스캔된 항목들
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
   const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
@@ -93,6 +95,11 @@ function ScannerScreen() {
         const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
         if (photoSave !== null) {
           setPhotoSaveEnabled(photoSave === 'true');
+        }
+
+        const batchScan = await AsyncStorage.getItem('batchScanEnabled');
+        if (batchScan !== null) {
+          setBatchScanEnabled(batchScan === 'true');
         }
 
         const camera = await AsyncStorage.getItem('selectedCamera');
@@ -162,6 +169,11 @@ function ScannerScreen() {
           const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
           if (photoSave !== null) {
             setPhotoSaveEnabled(photoSave === 'true');
+          }
+
+          const batchScan = await AsyncStorage.getItem('batchScanEnabled');
+          if (batchScan !== null) {
+            setBatchScanEnabled(batchScan === 'true');
           }
 
           const camera = await AsyncStorage.getItem('selectedCamera');
@@ -465,6 +477,27 @@ function ScannerScreen() {
           // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
           const photoUri = await photoPromise;
 
+          // 배치 스캔 모드일 경우
+          if (batchScanEnabled) {
+            // 중복 체크 (같은 데이터가 이미 배치에 있는지)
+            const isDuplicate = batchScannedItems.some(item => item.code === data);
+
+            if (!isDuplicate) {
+              // 배치에 추가
+              setBatchScannedItems(prev => [...prev, {
+                code: data,
+                timestamp: Date.now(),
+                photoUri: photoUri || null,
+              }]);
+            }
+
+            // 스캔 재활성화 (계속 스캔 가능)
+            setTimeout(() => setCanScan(true), 500);
+            startResetTimer(RESET_DELAY_NORMAL);
+            return;
+          }
+
+          // 일반 모드 (기존 로직)
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
           if (enabled === 'true') {
@@ -500,10 +533,35 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, capturePhoto],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
+
+  // 배치 스캔 완료 - 모든 항목을 히스토리에 저장
+  const handleFinishBatch = useCallback(async () => {
+    if (batchScannedItems.length === 0) return;
+
+    try {
+      // 모든 배치 항목을 히스토리에 저장
+      for (const item of batchScannedItems) {
+        await saveHistory(item.code, null, item.photoUri);
+      }
+
+      // 배치 항목 초기화
+      setBatchScannedItems([]);
+
+      // 히스토리 화면으로 이동
+      router.push('/(tabs)/history');
+    } catch (error) {
+      console.error('Finish batch error:', error);
+    }
+  }, [batchScannedItems, saveHistory, router]);
+
+  // 배치 스캔 초기화
+  const handleClearBatch = useCallback(() => {
+    setBatchScannedItems([]);
+  }, []);
 
   if (hasPermission === null) {
     return (
@@ -546,6 +604,14 @@ function ScannerScreen() {
           <Ionicons name="folder" size={16} color="#fff" />
           <Text style={styles.groupBadgeText}>{currentGroupName}</Text>
         </View>
+
+        {/* 배치 모드 활성 표시 */}
+        {batchScanEnabled && (
+          <View style={styles.batchModeBadge}>
+            <Ionicons name="layers" size={16} color="#fff" />
+            <Text style={styles.batchModeBadgeText}>{t('scanner.batchModeActive')}</Text>
+          </View>
+        )}
 
         <Text style={styles.title} accessibilityLabel={barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode')}>
           {barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
@@ -622,6 +688,38 @@ function ScannerScreen() {
         );
       })()}
 
+      {/* 배치 스캔 컨트롤 패널 */}
+      {batchScanEnabled && batchScannedItems.length > 0 && (
+        <View style={styles.batchControlPanel}>
+          <View style={styles.batchCountContainer}>
+            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+            <Text style={styles.batchCountText}>
+              {t('scanner.scannedCount').replace('{count}', batchScannedItems.length.toString())}
+            </Text>
+          </View>
+          <View style={styles.batchButtons}>
+            <TouchableOpacity
+              style={[styles.batchButton, styles.batchButtonClear]}
+              onPress={handleClearBatch}
+              activeOpacity={0.8}
+              accessibilityLabel={t('scanner.clearBatch')}
+            >
+              <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+              <Text style={styles.batchButtonTextClear}>{t('scanner.clearBatch')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.batchButton, styles.batchButtonFinish]}
+              onPress={handleFinishBatch}
+              activeOpacity={0.8}
+              accessibilityLabel={t('scanner.finishBatch')}
+            >
+              <Ionicons name="checkmark-done" size={18} color="#fff" />
+              <Text style={styles.batchButtonTextFinish}>{t('scanner.finishBatch')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <TouchableOpacity
         style={styles.torchButton}
         onPress={toggleTorch}
@@ -662,6 +760,87 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  batchModeBadge: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 105 : 85,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(52, 199, 89, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  batchModeBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  batchControlPanel: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 200 : 180,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    minWidth: 300,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  batchCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  batchCountText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  batchButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  batchButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    gap: 6,
+  },
+  batchButtonClear: {
+    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  batchButtonFinish: {
+    backgroundColor: 'rgba(52, 199, 89, 0.9)',
+  },
+  batchButtonTextClear: {
+    color: '#FF3B30',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  batchButtonTextFinish: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   title: {
     color: '#fff',

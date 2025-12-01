@@ -22,6 +22,11 @@ export default {
     permissionDenied: 'カメラ権限を許可してください',
     torchOn: 'フラッシュオフ',
     torchOff: 'フラッシュオン',
+    batchModeActive: 'バッチモード有効',
+    scannedCount: 'スキャン済み: {count}個',
+    finishBatch: 'スキャン完了',
+    clearBatch: 'クリア',
+    viewBatchList: 'リストを表示',
   },
 
   // 履歴画面
@@ -78,6 +83,8 @@ export default {
     enabled: '有効',
     photoSave: 'スキャン写真を保存',
     photoSaveDesc: 'QRコードスキャン時に写真を保存',
+    batchScanMode: 'バッチスキャンモード',
+    batchScanModeDesc: '複数のQR/バーコードを連続してスキャンします',
     selectBarcodes: '認識するバーコードを選択',
     selectedCount: '個のバーコードタイプが選択されました',
     exportHistory: '履歴のエクスポート',
