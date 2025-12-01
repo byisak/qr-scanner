@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import websocketClient from '../utils/websocket';
 
 const SCAN_AREA_SIZE = 240;
 const DEBOUNCE_DELAY = 500;
@@ -58,6 +59,10 @@ function ScannerScreen() {
     'upce',
     'upca',
   ]);
+
+  // 실시간 서버전송 관련 상태
+  const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
+  const [sessionId, setSessionId] = useState('');
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -115,6 +120,16 @@ function ScannerScreen() {
           const currentGroup = groups.find(g => g.id === selectedGroupId);
           if (currentGroup) {
             setCurrentGroupName(currentGroup.name);
+          }
+        }
+
+        // 실시간 서버전송 설정 로드
+        const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+        if (realtimeSync === 'true') {
+          setRealtimeSyncEnabled(true);
+          const savedSessionId = await AsyncStorage.getItem('sessionId');
+          if (savedSessionId) {
+            setSessionId(savedSessionId);
           }
         }
       } catch (error) {
@@ -191,6 +206,19 @@ function ScannerScreen() {
               setCurrentGroupName(currentGroup.name);
             }
           }
+
+          // 실시간 서버전송 설정 로드
+          const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+          if (realtimeSync === 'true') {
+            setRealtimeSyncEnabled(true);
+            const savedSessionId = await AsyncStorage.getItem('sessionId');
+            if (savedSessionId) {
+              setSessionId(savedSessionId);
+            }
+          } else {
+            setRealtimeSyncEnabled(false);
+            setSessionId('');
+          }
         } catch (error) {
           console.error('Load barcode settings error:', error);
         }
@@ -233,8 +261,34 @@ function ScannerScreen() {
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null) => {
     try {
-      // 선택된 그룹 ID 가져오기
-      const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+      let selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+
+      // 실시간 서버전송이 활성화되어 있고 세션 ID가 있으면 해당 그룹에 저장
+      if (realtimeSyncEnabled && sessionId) {
+        // 세션 ID 그룹 자동 생성 또는 가져오기
+        const groupsData = await AsyncStorage.getItem('scanGroups');
+        let groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
+
+        // 세션 ID 그룹이 이미 있는지 확인
+        let sessionGroup = groups.find(g => g.id === sessionId);
+
+        if (!sessionGroup) {
+          // 세션 ID 그룹이 없으면 생성
+          sessionGroup = {
+            id: sessionId,
+            name: sessionId,
+            createdAt: Date.now(),
+            isCloudSync: true, // 클라우드 동기화 그룹 표시
+          };
+          groups.push(sessionGroup);
+          await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+        }
+
+        // 선택된 그룹을 세션 ID 그룹으로 변경
+        selectedGroupId = sessionId;
+        await AsyncStorage.setItem('selectedGroupId', sessionId);
+        setCurrentGroupName(sessionId);
+      }
 
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
@@ -303,7 +357,7 @@ function ScannerScreen() {
       console.error('Save history error:', e);
       return { isDuplicate: false, count: 1 };
     }
-  }, []);
+  }, [realtimeSyncEnabled, sessionId]);
 
   const normalizeBounds = useCallback(
     (bounds) => {
@@ -477,6 +531,17 @@ function ScannerScreen() {
           // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
           const photoUri = await photoPromise;
 
+          // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
+          if (realtimeSyncEnabled && sessionId) {
+            const success = websocketClient.sendScanData({
+              code: data,
+              timestamp: Date.now(),
+            });
+            if (!success) {
+              console.warn('Failed to send scan data to server');
+            }
+          }
+
           // 배치 스캔 모드일 경우
           if (batchScanEnabled) {
             // 중복 체크 (같은 데이터가 이미 배치에 있는지)
@@ -533,7 +598,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, sessionId],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);

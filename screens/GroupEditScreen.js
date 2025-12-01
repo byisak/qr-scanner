@@ -179,9 +179,15 @@ export default function GroupEditScreen() {
         renderItem={({ item, index }) => (
           <View style={s.groupItem}>
             <View style={s.groupInfo}>
+              {item.isCloudSync && (
+                <Ionicons name="cloud" size={18} color="#007AFF" style={{ marginRight: 8 }} />
+              )}
               <Text style={s.groupName}>{item.name}</Text>
               {item.id === DEFAULT_GROUP_ID && (
                 <Text style={s.defaultBadge}>기본</Text>
+              )}
+              {item.isCloudSync && (
+                <Text style={[s.defaultBadge, { backgroundColor: '#007AFF', marginLeft: 8 }]}>클라우드</Text>
               )}
             </View>
 
@@ -213,22 +219,23 @@ export default function GroupEditScreen() {
 
               {/* 이름 변경 버튼 */}
               <TouchableOpacity
-                style={s.iconButton}
+                style={[s.iconButton, item.isCloudSync && s.iconButtonDisabled]}
                 onPress={() => openEditModal(item)}
+                disabled={item.isCloudSync}
               >
-                <Ionicons name="create-outline" size={24} color="#007AFF" />
+                <Ionicons name="create-outline" size={24} color={item.isCloudSync ? '#ccc' : '#007AFF'} />
               </TouchableOpacity>
 
               {/* 삭제 버튼 */}
               <TouchableOpacity
-                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+                style={[s.iconButton, (item.id === DEFAULT_GROUP_ID || item.isCloudSync) && s.iconButtonDisabled]}
                 onPress={() => deleteGroup(item.id)}
-                disabled={item.id === DEFAULT_GROUP_ID}
+                disabled={item.id === DEFAULT_GROUP_ID || item.isCloudSync}
               >
                 <Ionicons
                   name="trash-outline"
                   size={24}
-                  color={item.id === DEFAULT_GROUP_ID ? '#ccc' : '#FF3B30'}
+                  color={item.id === DEFAULT_GROUP_ID || item.isCloudSync ? '#ccc' : '#FF3B30'}
                 />
               </TouchableOpacity>
             </View>
