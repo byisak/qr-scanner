@@ -13,11 +13,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 const DEFAULT_GROUP_ID = 'default';
 
 export default function ExportHistoryScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
+
   const [groups, setGroups] = useState([]);
   const [scanHistory, setScanHistory] = useState({});
   const [selectedGroups, setSelectedGroups] = useState([]);
@@ -32,11 +39,11 @@ export default function ExportHistoryScreen() {
 
         if (groupsData) {
           const parsed = JSON.parse(groupsData);
-          setGroups(parsed.length > 0 ? parsed : [{ id: DEFAULT_GROUP_ID, name: '기본 그룹', createdAt: Date.now() }]);
+          setGroups(parsed.length > 0 ? parsed : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
           // 기본적으로 모든 그룹 선택
           setSelectedGroups(parsed.map(g => g.id));
         } else {
-          setGroups([{ id: DEFAULT_GROUP_ID, name: '기본 그룹', createdAt: Date.now() }]);
+          setGroups([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
           setSelectedGroups([DEFAULT_GROUP_ID]);
         }
 
@@ -212,22 +219,22 @@ export default function ExportHistoryScreen() {
   };
 
   return (
-    <View style={s.container}>
-      <View style={s.header}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>기록 내보내기</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>기록 내보내기</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
         <View style={s.section}>
           <View style={s.sectionHeader}>
-            <Text style={s.info}>
+            <Text style={[s.info, { color: colors.textSecondary }]}>
               선택한 그룹의 기록을 내보냅니다 ({selectedGroups.length}개 선택)
             </Text>
-            <TouchableOpacity onPress={toggleAll} style={s.toggleAllBtn}>
+            <TouchableOpacity onPress={toggleAll} style={[s.toggleAllBtn, { backgroundColor: colors.primary }]}>
               <Text style={s.toggleAllText}>{allSelected ? '전체 해제' : '전체 선택'}</Text>
             </TouchableOpacity>
           </View>
@@ -240,27 +247,31 @@ export default function ExportHistoryScreen() {
             return (
               <TouchableOpacity
                 key={group.id}
-                style={[s.groupItem, isSelected && s.groupItemSelected]}
+                style={[
+                  s.groupItem,
+                  { backgroundColor: colors.surface, borderColor: isSelected ? colors.primary : colors.border },
+                  isSelected && { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : '#f0f8ff' }
+                ]}
                 onPress={() => toggleGroup(group.id)}
                 disabled={isOnlyOne}
                 activeOpacity={0.7}
               >
                 <View style={s.groupInfo}>
                   <View style={s.groupHeader}>
-                    <Text style={[s.groupName, isSelected && s.groupNameSelected]}>
+                    <Text style={[s.groupName, { color: isSelected ? colors.primary : colors.text }]}>
                       {group.name}
                     </Text>
                     {scanCount > 0 && (
-                      <View style={s.countBadge}>
+                      <View style={[s.countBadge, { backgroundColor: colors.success }]}>
                         <Text style={s.countBadgeText}>{scanCount}개</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={s.groupDesc}>
+                  <Text style={[s.groupDesc, { color: colors.textSecondary }]}>
                     {scanCount > 0 ? `${scanCount}개의 스캔 기록` : '기록 없음'}
                   </Text>
                 </View>
-                <View style={[s.checkbox, isSelected && s.checkboxSelected]}>
+                <View style={[s.checkbox, { borderColor: isSelected ? colors.primary : colors.borderLight, backgroundColor: isSelected ? colors.primary : 'transparent' }]}>
                   {isSelected && <Ionicons name="checkmark" size={18} color="#fff" />}
                 </View>
               </TouchableOpacity>
@@ -269,7 +280,7 @@ export default function ExportHistoryScreen() {
         </View>
 
         <TouchableOpacity
-          style={[s.exportButton, isExporting && s.exportButtonDisabled]}
+          style={[s.exportButton, { backgroundColor: isExporting ? colors.borderLight : colors.primary }]}
           onPress={handleExport}
           disabled={isExporting}
           activeOpacity={0.7}
@@ -281,7 +292,7 @@ export default function ExportHistoryScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[s.exportButton, s.exportButtonTxt, isExportingTxt && s.exportButtonDisabled]}
+          style={[s.exportButton, { backgroundColor: isExportingTxt ? colors.borderLight : colors.success }]}
           onPress={handleExportTXT}
           disabled={isExportingTxt}
           activeOpacity={0.7}
@@ -299,7 +310,6 @@ export default function ExportHistoryScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     flexDirection: 'row',
@@ -308,9 +318,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   backButton: {
     width: 40,
@@ -321,7 +329,6 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#000',
   },
   content: {
     flex: 1,
@@ -340,13 +347,11 @@ const s = StyleSheet.create({
   },
   info: {
     fontSize: 14,
-    color: '#666',
     flex: 1,
   },
   toggleAllBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#007AFF',
     borderRadius: 6,
   },
   toggleAllText: {
@@ -358,15 +363,9 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
-  },
-  groupItemSelected: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
   },
   groupInfo: {
     flex: 1,
@@ -379,16 +378,11 @@ const s = StyleSheet.create({
   groupName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-  },
-  groupNameSelected: {
-    color: '#007AFF',
   },
   countBadge: {
     marginLeft: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: '#34C759',
     borderRadius: 10,
   },
   countBadgeText: {
@@ -398,37 +392,24 @@ const s = StyleSheet.create({
   },
   groupDesc: {
     fontSize: 14,
-    color: '#666',
   },
   checkbox: {
     width: 28,
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
-  },
-  checkboxSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
   exportButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 8,
-  },
-  exportButtonTxt: {
-    backgroundColor: '#34C759',
-  },
-  exportButtonDisabled: {
-    backgroundColor: '#ccc',
   },
   exportButtonText: {
     fontSize: 16,

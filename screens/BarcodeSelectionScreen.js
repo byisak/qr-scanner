@@ -10,6 +10,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 // ✅ 지원되는 바코드 타입 목록
 const BARCODE_TYPES = [
@@ -30,6 +33,10 @@ const BARCODE_TYPES = [
 
 export default function BarcodeSelectionScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
+
   // ✅ 기본값: 자주 사용되는 바코드 타입들을 기본 활성화
   const [selectedBarcodes, setSelectedBarcodes] = useState([
     'qr',
@@ -96,22 +103,22 @@ export default function BarcodeSelectionScreen() {
   const allSelected = selectedBarcodes.length === BARCODE_TYPES.length;
 
   return (
-    <View style={s.container}>
-      <View style={s.header}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#000" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>인식할 바코드 선택</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>인식할 바코드 선택</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
-        <View style={s.section}>
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
           <View style={s.sectionHeader}>
-            <Text style={s.info}>
+            <Text style={[s.info, { color: colors.textSecondary }]}>
               선택한 바코드 타입만 인식됩니다 ({selectedBarcodes.length}개 선택)
             </Text>
-            <TouchableOpacity onPress={toggleAll} style={s.toggleAllBtn}>
+            <TouchableOpacity onPress={toggleAll} style={[s.toggleAllBtn, { backgroundColor: colors.primary }]}>
               <Text style={s.toggleAllText}>{allSelected ? '전체 해제' : '전체 선택'}</Text>
             </TouchableOpacity>
           </View>
@@ -123,25 +130,29 @@ export default function BarcodeSelectionScreen() {
             return (
               <TouchableOpacity
                 key={barcode.key}
-                style={[s.barcodeItem, isSelected && s.barcodeItemSelected]}
+                style={[
+                  s.barcodeItem,
+                  { backgroundColor: colors.inputBackground, borderColor: isSelected ? colors.primary : 'transparent' },
+                  isSelected && { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : '#E3F2FD' }
+                ]}
                 onPress={() => toggleBarcode(barcode.key)}
                 disabled={isQROnly}
                 activeOpacity={0.7}
               >
                 <View style={s.barcodeInfo}>
                   <View style={s.barcodeHeader}>
-                    <Text style={[s.barcodeName, isSelected && s.barcodeNameSelected]}>
+                    <Text style={[s.barcodeName, { color: isSelected ? colors.primary : colors.text }]}>
                       {barcode.name}
                     </Text>
                     {barcode.key === 'qr' && (
-                      <View style={s.defaultBadge}>
+                      <View style={[s.defaultBadge, { backgroundColor: colors.success }]}>
                         <Text style={s.defaultBadgeText}>기본</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={s.barcodeDesc}>{barcode.desc}</Text>
+                  <Text style={[s.barcodeDesc, { color: colors.textSecondary }]}>{barcode.desc}</Text>
                 </View>
-                <View style={[s.checkbox, isSelected && s.checkboxSelected]}>
+                <View style={[s.checkbox, { borderColor: isSelected ? colors.primary : colors.borderLight, backgroundColor: isSelected ? colors.primary : colors.surface }]}>
                   {isSelected && <Ionicons name="checkmark" size={18} color="#fff" />}
                 </View>
               </TouchableOpacity>
@@ -156,7 +167,6 @@ export default function BarcodeSelectionScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     flexDirection: 'row',
@@ -165,9 +175,7 @@ const s = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 15,
     paddingHorizontal: 20,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
   },
   backButton: {
     padding: 8,
@@ -175,7 +183,6 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#000',
   },
   content: {
     flex: 1,
@@ -185,7 +192,6 @@ const s = StyleSheet.create({
     paddingBottom: 40,
   },
   section: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     shadowColor: '#000',
@@ -202,14 +208,12 @@ const s = StyleSheet.create({
   },
   info: {
     fontSize: 13,
-    color: '#666',
     flex: 1,
     marginRight: 10,
   },
   toggleAllBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#007AFF',
     borderRadius: 8,
   },
   toggleAllText: {
@@ -223,15 +227,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#F9F9F9',
     borderRadius: 12,
     marginBottom: 10,
     borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  barcodeItemSelected: {
-    backgroundColor: '#E3F2FD',
-    borderColor: '#007AFF',
   },
   barcodeInfo: {
     flex: 1,
@@ -245,16 +243,11 @@ const s = StyleSheet.create({
   barcodeName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#000',
-  },
-  barcodeNameSelected: {
-    color: '#007AFF',
   },
   defaultBadge: {
     marginLeft: 8,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: '#34C759',
     borderRadius: 6,
   },
   defaultBadgeText: {
@@ -264,7 +257,6 @@ const s = StyleSheet.create({
   },
   barcodeDesc: {
     fontSize: 13,
-    color: '#666',
     marginTop: 2,
   },
   checkbox: {
@@ -272,13 +264,7 @@ const s = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    borderColor: '#ccc',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  checkboxSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
   },
 });
