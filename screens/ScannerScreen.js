@@ -497,6 +497,17 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
+      // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
+      if (batchScanEnabled) {
+        const isDuplicate = batchScannedItems.some(item => item.code === data);
+        if (isDuplicate) {
+          // 중복이면 아무 피드백 없이 스캔만 재활성화
+          setTimeout(() => setCanScan(true), 500);
+          startResetTimer(RESET_DELAY_NORMAL);
+          return;
+        }
+      }
+
       // 햅틱 설정이 활성화된 경우에만 진동
       if (hapticEnabled) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -545,22 +556,17 @@ function ScannerScreen() {
 
           // 배치 스캔 모드일 경우
           if (batchScanEnabled) {
-            // 중복 체크 (같은 데이터가 이미 배치에 있는지)
-            const isDuplicate = batchScannedItems.some(item => item.code === data);
+            // 중복은 이미 위에서 체크했으므로 바로 배치에 추가
+            setBatchScannedItems(prev => [...prev, {
+              code: data,
+              timestamp: Date.now(),
+              photoUri: photoUri || null,
+            }]);
 
-            if (!isDuplicate) {
-              // 배치에 추가
-              setBatchScannedItems(prev => [...prev, {
-                code: data,
-                timestamp: Date.now(),
-                photoUri: photoUri || null,
-              }]);
-
-              // 배치 + 실시간 전송 모드: "전송" 메시지 표시
-              if (realtimeSyncEnabled && activeSessionId) {
-                setShowSendMessage(true);
-                setTimeout(() => setShowSendMessage(false), 1000);
-              }
+            // 배치 + 실시간 전송 모드: "전송" 메시지 표시
+            if (realtimeSyncEnabled && activeSessionId) {
+              setShowSendMessage(true);
+              setTimeout(() => setShowSendMessage(false), 1000);
             }
 
             // 스캔 재활성화 (계속 스캔 가능)
