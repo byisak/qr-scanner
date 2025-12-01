@@ -22,6 +22,11 @@ export default {
     permissionDenied: '请允许使用相机权限',
     torchOn: '关闭闪光灯',
     torchOff: '打开闪光灯',
+    batchModeActive: '批量模式已启用',
+    scannedCount: '已扫描: {count}项',
+    finishBatch: '完成扫描',
+    clearBatch: '清空',
+    viewBatchList: '查看列表',
   },
 
   // 历史记录界面
@@ -78,6 +83,8 @@ export default {
     enabled: '已启用',
     photoSave: '保存扫描照片',
     photoSaveDesc: '扫描二维码时保存照片',
+    batchScanMode: '批量扫描模式',
+    batchScanModeDesc: '连续扫描多个二维码/条形码',
     selectBarcodes: '选择要识别的条形码',
     selectedCount: '个条形码类型已选择',
     exportHistory: '导出历史记录',

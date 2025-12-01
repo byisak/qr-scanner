@@ -22,6 +22,11 @@ export default {
     permissionDenied: '카메라 권한을 허용해 주세요',
     torchOn: '손전등 끄기',
     torchOff: '손전등 켜기',
+    batchModeActive: '배치 모드 활성',
+    scannedCount: '스캔된 항목: {count}개',
+    finishBatch: '스캔 완료',
+    clearBatch: '초기화',
+    viewBatchList: '목록 보기',
   },
 
   // 히스토리 화면
@@ -78,6 +83,8 @@ export default {
     enabled: '활성화됨',
     photoSave: '스캔 사진 저장',
     photoSaveDesc: 'QR 코드 스캔 시 사진 저장',
+    batchScanMode: '배치 스캔 모드',
+    batchScanModeDesc: '여러 QR/바코드를 연속으로 스캔합니다',
     selectBarcodes: '인식할 바코드 선택',
     selectedCount: '개 바코드 타입 선택됨',
     exportHistory: '기록 내보내기',

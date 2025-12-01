@@ -22,6 +22,11 @@ export default {
     permissionDenied: 'Please allow camera permission',
     torchOn: 'Turn off flashlight',
     torchOff: 'Turn on flashlight',
+    batchModeActive: 'Batch Mode Active',
+    scannedCount: 'Scanned: {count} items',
+    finishBatch: 'Finish',
+    clearBatch: 'Clear',
+    viewBatchList: 'View List',
   },
 
   // History screen
@@ -78,6 +83,8 @@ export default {
     enabled: 'Enabled',
     photoSave: 'Save Scan Photo',
     photoSaveDesc: 'Save photo when scanning QR code',
+    batchScanMode: 'Batch Scan Mode',
+    batchScanModeDesc: 'Scan multiple QR/barcodes continuously',
     selectBarcodes: 'Select Barcodes',
     selectedCount: ' barcode types selected',
     exportHistory: 'Export History',
