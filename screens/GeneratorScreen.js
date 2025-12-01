@@ -22,6 +22,7 @@ import { captureRef } from 'react-native-view-shot';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { useRouter } from 'expo-router';
 
 const QR_TYPES = [
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
@@ -40,6 +41,7 @@ export default function GeneratorScreen() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
+  const router = useRouter();
 
   const [selectedType, setSelectedType] = useState('website');
   const [hapticEnabled, setHapticEnabled] = useState(false);
@@ -70,6 +72,39 @@ export default function GeneratorScreen() {
       }
     };
     loadSettings();
+  }, []);
+
+  // Load selected location from map picker
+  useEffect(() => {
+    const loadSelectedLocation = async () => {
+      try {
+        const locationData = await AsyncStorage.getItem('selectedLocation');
+        if (locationData) {
+          const { latitude, longitude } = JSON.parse(locationData);
+          setFormData((prev) => ({
+            ...prev,
+            location: { latitude, longitude },
+          }));
+          // Clear the stored location
+          await AsyncStorage.removeItem('selectedLocation');
+        }
+      } catch (error) {
+        console.error('Error loading selected location:', error);
+      }
+    };
+
+    // Check for location updates when screen comes into focus
+    const unsubscribe = router.addListener?.('focus', () => {
+      loadSelectedLocation();
+    });
+
+    loadSelectedLocation();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const generateQRData = () => {
@@ -601,6 +636,29 @@ export default function GeneratorScreen() {
       case 'location':
         return (
           <>
+            <TouchableOpacity
+              style={[s.mapPickerButton, { backgroundColor: colors.primary }]}
+              onPress={async () => {
+                if (hapticEnabled) {
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }
+                router.push({
+                  pathname: '/map-location-picker',
+                  params: {
+                    latitude: data.latitude || '',
+                    longitude: data.longitude || '',
+                  },
+                });
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="map-outline" size={22} color="#fff" />
+              <Text style={s.mapPickerButtonText}>
+                {t('generator.selectFromMap') || 'Select from Map'}
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </TouchableOpacity>
+
             <View style={s.fieldContainer}>
               <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
                 {t('generator.fields.latitudeLabel')}
@@ -1062,5 +1120,27 @@ const s = StyleSheet.create({
   buttonSubtitle: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
+  },
+  mapPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 14,
+    gap: 10,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  mapPickerButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    letterSpacing: -0.2,
   },
 });

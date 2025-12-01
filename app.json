@@ -17,7 +17,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.yourcompany.qrscanner",
       "infoPlist": {
-        "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다."
+        "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
+        "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
       }
     },
     "android": {
@@ -26,7 +27,16 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.yourcompany.qrscanner",
-      "permissions": ["android.permission.CAMERA"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -38,6 +48,12 @@
         "expo-camera",
         {
           "cameraPermission": "QR 코드 스캔을 위해 카메라 접근이 필요합니다."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
         }
       ]
     ],
