@@ -28,6 +28,8 @@ export default {
     clearBatch: 'Clear',
     viewBatchList: 'View List',
     sending: 'Sending',
+    noSessionUrl: 'No Session URL',
+    pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
   },
 
   // History screen

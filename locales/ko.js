@@ -28,6 +28,8 @@ export default {
     clearBatch: '초기화',
     viewBatchList: '목록 보기',
     sending: '전송',
+    noSessionUrl: '전송 주소 없음',
+    pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
   },
 
   // 히스토리 화면

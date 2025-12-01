@@ -8,6 +8,7 @@ import {
   Animated,
   useWindowDimensions,
   Platform,
+  Alert,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -532,6 +533,23 @@ function ScannerScreen() {
           startResetTimer(RESET_DELAY_NORMAL);
           return;
         }
+      }
+
+      // 실시간 서버전송이 활성화되어 있는데 주소가 생성되지 않은 경우
+      if (realtimeSyncEnabled && !activeSessionId) {
+        Alert.alert(
+          t('scanner.noSessionUrl'),
+          t('scanner.pleaseGenerateUrl'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('settings.title'),
+              onPress: () => router.push('/settings')
+            }
+          ]
+        );
+        setTimeout(() => setCanScan(true), 500);
+        return;
       }
 
       // 햅틱 설정이 활성화된 경우에만 진동
