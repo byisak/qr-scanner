@@ -85,6 +85,10 @@ export default function GroupEditScreen() {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
+          // 삭제하려는 그룹이 클라우드 동기화 그룹인지 확인
+          const groupToDelete = groups.find(g => g.id === groupId);
+          const isCloudSyncGroup = groupToDelete?.isCloudSync;
+
           const updatedGroups = groups.filter(g => g.id !== groupId);
           setGroups(updatedGroups);
           await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
@@ -94,6 +98,39 @@ export default function GroupEditScreen() {
           const historyByGroup = historyData ? JSON.parse(historyData) : {};
           delete historyByGroup[groupId];
           await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+          // scanHistory에서도 삭제
+          try {
+            const historyJson = await AsyncStorage.getItem('scanHistory');
+            if (historyJson) {
+              const history = JSON.parse(historyJson);
+              const updatedHistory = history.filter(item => item.groupId !== groupId);
+              await AsyncStorage.setItem('scanHistory', JSON.stringify(updatedHistory));
+            }
+          } catch (error) {
+            console.error('Failed to delete history:', error);
+          }
+
+          // 클라우드 동기화 그룹이면 해당 세션 URL도 삭제
+          if (isCloudSyncGroup) {
+            try {
+              const sessionUrlsJson = await AsyncStorage.getItem('sessionUrls');
+              if (sessionUrlsJson) {
+                const sessionUrls = JSON.parse(sessionUrlsJson);
+                const updatedSessionUrls = sessionUrls.filter(s => s.id !== groupId);
+                await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedSessionUrls));
+
+                // 삭제된 세션이 활성 세션인 경우 초기화
+                const activeSessionId = await AsyncStorage.getItem('activeSessionId');
+                if (activeSessionId === groupId) {
+                  const newActiveId = updatedSessionUrls.length > 0 ? updatedSessionUrls[0].id : '';
+                  await AsyncStorage.setItem('activeSessionId', newActiveId);
+                }
+              }
+            } catch (error) {
+              console.error('Failed to delete session URL:', error);
+            }
+          }
 
           // 선택된 그룹이 삭제되는 경우 기본 그룹으로 변경
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId');
@@ -179,9 +216,15 @@ export default function GroupEditScreen() {
         renderItem={({ item, index }) => (
           <View style={s.groupItem}>
             <View style={s.groupInfo}>
+              {item.isCloudSync && (
+                <Ionicons name="cloud" size={18} color="#007AFF" style={{ marginRight: 8 }} />
+              )}
               <Text style={s.groupName}>{item.name}</Text>
               {item.id === DEFAULT_GROUP_ID && (
                 <Text style={s.defaultBadge}>기본</Text>
+              )}
+              {item.isCloudSync && (
+                <Text style={[s.defaultBadge, { backgroundColor: '#007AFF', marginLeft: 8 }]}>클라우드</Text>
               )}
             </View>
 
@@ -213,22 +256,23 @@ export default function GroupEditScreen() {
 
               {/* 이름 변경 버튼 */}
               <TouchableOpacity
-                style={s.iconButton}
+                style={[s.iconButton, item.isCloudSync && s.iconButtonDisabled]}
                 onPress={() => openEditModal(item)}
+                disabled={item.isCloudSync}
               >
-                <Ionicons name="create-outline" size={24} color="#007AFF" />
+                <Ionicons name="create-outline" size={24} color={item.isCloudSync ? '#ccc' : '#007AFF'} />
               </TouchableOpacity>
 
               {/* 삭제 버튼 */}
               <TouchableOpacity
-                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+                style={[s.iconButton, (item.id === DEFAULT_GROUP_ID || item.isCloudSync) && s.iconButtonDisabled]}
                 onPress={() => deleteGroup(item.id)}
-                disabled={item.id === DEFAULT_GROUP_ID}
+                disabled={item.id === DEFAULT_GROUP_ID || item.isCloudSync}
               >
                 <Ionicons
                   name="trash-outline"
                   size={24}
-                  color={item.id === DEFAULT_GROUP_ID ? '#ccc' : '#FF3B30'}
+                  color={item.id === DEFAULT_GROUP_ID || item.isCloudSync ? '#ccc' : '#FF3B30'}
                 />
               </TouchableOpacity>
             </View>

@@ -191,6 +191,9 @@ export default function HistoryScreen() {
                 ]}
                 onPress={() => selectGroup(group.id)}
               >
+                {group.isCloudSync && (
+                  <Ionicons name="cloud" size={16} color={isActive ? '#fff' : colors.primary} style={{ marginRight: 6 }} />
+                )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text }, isActive && s.groupTabTextActive]}>
                   {group.name}
                 </Text>

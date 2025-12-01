@@ -27,6 +27,9 @@ export default {
     finishBatch: 'スキャン完了',
     clearBatch: 'クリア',
     viewBatchList: 'リストを表示',
+    sending: '送信中',
+    noSessionUrl: '送信URLがありません',
+    pleaseGenerateUrl: 'リアルタイム送信を使用するには、設定でURLを生成してください。',
   },
 
   // 履歴画面
@@ -104,6 +107,25 @@ export default {
     exampleTitle: '例:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ スキャン値が「ABC123」の場合\nhttps://example.com/product/ABC123 に移動',
+    // リアルタイムサーバー送信
+    realtimeSync: 'リアルタイムサーバー送信',
+    enableRealtimeSync: 'リアルタイム送信を使用',
+    realtimeSyncDesc: 'スキャンしたデータをリアルタイムでサーバーに送信します',
+    generateSessionUrl: 'アドレスを生成',
+    generatedUrls: '生成されたURL一覧',
+    active: '有効',
+    sessionInfo: '有効なアドレスにスキャン値がリアルタイムで送信されます',
+    success: '成功',
+    error: 'エラー',
+    sessionCreated: 'URLが作成されました',
+    urlCopied: 'URLがコピーされました',
+    deleteSession: 'URL削除',
+    deleteSessionConfirm: 'このURLを削除しますか？',
+    addPassword: 'パスワード追加',
+    passwordDescription: 'この送信URLにパスワードを設定してください',
+    passwordPlaceholder: 'パスワードを入力',
+    passwordRequired: 'パスワードを入力してください',
+    passwordSaved: 'パスワードが保存されました',
   },
 
   // バーコード選択画面

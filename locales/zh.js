@@ -27,6 +27,9 @@ export default {
     finishBatch: '完成扫描',
     clearBatch: '清空',
     viewBatchList: '查看列表',
+    sending: '发送中',
+    noSessionUrl: '没有传输地址',
+    pleaseGenerateUrl: '要使用实时服务器传输，请先在设置中生成地址。',
   },
 
   // 历史记录界面
@@ -104,6 +107,25 @@ export default {
     exampleTitle: '示例:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ 扫描值为"ABC123"时\n将跳转到 https://example.com/product/ABC123',
+    // 实时服务器传输
+    realtimeSync: '实时服务器传输',
+    enableRealtimeSync: '启用实时传输',
+    realtimeSyncDesc: '实时将扫描数据发送到服务器',
+    generateSessionUrl: '生成地址',
+    generatedUrls: '生成的URL列表',
+    active: '已激活',
+    sessionInfo: '扫描值将实时发送到已激活的URL',
+    success: '成功',
+    error: '错误',
+    sessionCreated: 'URL创建成功',
+    urlCopied: 'URL已复制到剪贴板',
+    deleteSession: '删除URL',
+    deleteSessionConfirm: '要删除此URL吗？',
+    addPassword: '添加密码',
+    passwordDescription: '为此传输URL设置密码',
+    passwordPlaceholder: '输入密码',
+    passwordRequired: '请输入密码',
+    passwordSaved: '密码已保存',
   },
 
   // 条形码选择界面

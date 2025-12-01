@@ -10,8 +10,12 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Modal,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -20,6 +24,19 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import websocketClient from '../utils/websocket';
+
+// 랜덤 세션 ID 생성 함수 (8자리)
+const generateSessionId = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
+const BASE_SERVER_URL = 'http://qrcode.com';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -32,6 +49,16 @@ export default function SettingsScreen() {
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
   const [batchScanEnabled, setBatchScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
+
+  // 실시간 서버전송 관련 상태
+  const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
+  const [sessionUrls, setSessionUrls] = useState([]); // 생성된 세션 URL 목록
+  const [activeSessionId, setActiveSessionId] = useState(''); // 현재 활성화된 세션 ID
+
+  // 비밀번호 모달 상태
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -63,6 +90,24 @@ export default function SettingsScreen() {
         if (b) {
           const parsed = JSON.parse(b);
           setSelectedBarcodesCount(parsed.length || 6);
+        }
+
+        // 실시간 서버전송 설정 로드
+        const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+        if (realtimeSync === 'true') {
+          setRealtimeSyncEnabled(true);
+        }
+
+        // 생성된 세션 URL 목록 로드
+        const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+        if (savedSessionUrls) {
+          setSessionUrls(JSON.parse(savedSessionUrls));
+        }
+
+        // 활성화된 세션 ID 로드
+        const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+        if (savedActiveSessionId) {
+          setActiveSessionId(savedActiveSessionId);
         }
       } catch (error) {
         console.error('Load settings error:', error);
@@ -132,9 +177,151 @@ export default function SettingsScreen() {
     })();
   }, [batchScanEnabled]);
 
+  // 실시간 서버전송 설정 저장
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
+
+        if (!realtimeSyncEnabled) {
+          // 비활성화 시 세션 URL 목록 및 활성 세션 초기화
+          setSessionUrls([]);
+          setActiveSessionId('');
+          await AsyncStorage.removeItem('sessionUrls');
+          await AsyncStorage.removeItem('activeSessionId');
+        }
+      } catch (error) {
+        console.error('Save realtime sync settings error:', error);
+      }
+    })();
+  }, [realtimeSyncEnabled]);
+
+  // 세션 URL 목록 저장
+  useEffect(() => {
+    if (sessionUrls.length > 0) {
+      AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
+    }
+  }, [sessionUrls]);
+
+  // 활성 세션 ID 저장
+  useEffect(() => {
+    if (activeSessionId) {
+      AsyncStorage.setItem('activeSessionId', activeSessionId);
+    }
+  }, [activeSessionId]);
+
+  // 새 세션 URL 생성
+  const handleGenerateSessionUrl = () => {
+    const newSessionId = generateSessionId();
+    const newSessionUrl = {
+      id: newSessionId,
+      url: `${BASE_SERVER_URL}/${newSessionId}`,
+      createdAt: Date.now(),
+    };
+
+    setSessionUrls(prev => [newSessionUrl, ...prev]);
+
+    // 첫 번째 세션이면 자동으로 활성화
+    if (sessionUrls.length === 0) {
+      setActiveSessionId(newSessionId);
+    }
+
+    Alert.alert(t('settings.success'), t('settings.sessionCreated'));
+  };
+
+  // 세션 활성화
+  const handleActivateSession = (sessionId) => {
+    setActiveSessionId(sessionId);
+  };
+
+  // 세션 삭제
+  const handleDeleteSession = async (sessionId) => {
+    Alert.alert(
+      t('settings.deleteSession'),
+      t('settings.deleteSessionConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            // 세션 URL 삭제
+            setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
+
+            // 삭제된 세션이 활성 세션이면 초기화
+            if (activeSessionId === sessionId) {
+              const remaining = sessionUrls.filter(s => s.id !== sessionId);
+              const newActiveId = remaining.length > 0 ? remaining[0].id : '';
+              setActiveSessionId(newActiveId);
+              await AsyncStorage.setItem('activeSessionId', newActiveId);
+            }
+
+            // 해당 세션 ID로 생성된 클라우드 동기화 그룹도 삭제
+            try {
+              const groupsJson = await AsyncStorage.getItem('scanGroups');
+              if (groupsJson) {
+                const groups = JSON.parse(groupsJson);
+                const updatedGroups = groups.filter(g => g.id !== sessionId);
+                await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+
+                // 해당 그룹의 히스토리도 삭제
+                const historyJson = await AsyncStorage.getItem('scanHistory');
+                if (historyJson) {
+                  const history = JSON.parse(historyJson);
+                  const updatedHistory = history.filter(item => item.groupId !== sessionId);
+                  await AsyncStorage.setItem('scanHistory', JSON.stringify(updatedHistory));
+                }
+              }
+            } catch (error) {
+              console.error('Failed to delete cloud sync group:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // 비밀번호 추가 모달 열기
+  const handleOpenPasswordModal = (sessionId) => {
+    setSelectedSessionId(sessionId);
+    const session = sessionUrls.find(s => s.id === sessionId);
+    setPasswordInput(session?.password || '');
+    setPasswordModalVisible(true);
+  };
+
+  // 비밀번호 저장
+  const handleSavePassword = async () => {
+    if (!passwordInput.trim()) {
+      Alert.alert(t('settings.error'), t('settings.passwordRequired'));
+      return;
+    }
+
+    const updatedUrls = sessionUrls.map(session => {
+      if (session.id === selectedSessionId) {
+        return { ...session, password: passwordInput.trim() };
+      }
+      return session;
+    });
+
+    setSessionUrls(updatedUrls);
+    await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
+
+    Alert.alert(t('settings.success'), t('settings.passwordSaved'));
+    setPasswordModalVisible(false);
+    setPasswordInput('');
+    setSelectedSessionId('');
+  };
+
+  // URL 복사
+  const handleCopyUrl = async (url) => {
+    await Clipboard.setStringAsync(url);
+    Alert.alert(t('settings.success'), t('settings.urlCopied'));
+  };
+
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
+    <View style={{ flex: 1 }}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
         <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
 
         {/* 바코드 인식 설정 */}
@@ -305,8 +492,180 @@ export default function SettingsScreen() {
             </>
           )}
         </View>
-      </ScrollView>
-    </TouchableWithoutFeedback>
+
+        {/* 실시간 서버전송 설정 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.realtimeSync')}</Text>
+
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.enableRealtimeSync')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.realtimeSyncDesc')}</Text>
+              {realtimeSyncEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
+            </View>
+            <Switch
+              value={realtimeSyncEnabled}
+              onValueChange={setRealtimeSyncEnabled}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.enableRealtimeSync')}
+            />
+          </View>
+
+          {realtimeSyncEnabled && (
+            <>
+              {/* 주소 생성 버튼 */}
+              <TouchableOpacity
+                style={[s.generateButton, { backgroundColor: colors.success }]}
+                onPress={handleGenerateSessionUrl}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                <Text style={s.generateButtonText}>{t('settings.generateSessionUrl')}</Text>
+              </TouchableOpacity>
+
+              {/* 생성된 세션 URL 목록 */}
+              {sessionUrls.length > 0 && (
+                <View style={s.sessionListContainer}>
+                  <Text style={[s.sessionListTitle, { color: colors.text }]}>{t('settings.generatedUrls')}</Text>
+                  {sessionUrls.map((session) => (
+                    <View
+                      key={session.id}
+                      style={[
+                        s.sessionItem,
+                        {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: activeSessionId === session.id ? colors.success : colors.border
+                        },
+                        activeSessionId === session.id && s.sessionItemActive
+                      ]}
+                    >
+                      <TouchableOpacity
+                        style={s.sessionItemContent}
+                        onPress={() => handleActivateSession(session.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={s.sessionItemHeader}>
+                          <Ionicons
+                            name={activeSessionId === session.id ? "radio-button-on" : "radio-button-off"}
+                            size={20}
+                            color={activeSessionId === session.id ? colors.success : colors.textTertiary}
+                          />
+                          <Text style={[s.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
+                            {session.url}
+                          </Text>
+                        </View>
+                        {activeSessionId === session.id && (
+                          <Text style={[s.activeLabel, { color: colors.success }]}>{t('settings.active')}</Text>
+                        )}
+                      </TouchableOpacity>
+
+                      <View style={s.sessionItemActions}>
+                        <TouchableOpacity
+                          style={[s.iconButton, { backgroundColor: session.password ? colors.success : colors.textTertiary }]}
+                          onPress={() => handleOpenPasswordModal(session.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name={session.password ? "lock-closed" : "lock-open-outline"} size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[s.iconButton, { backgroundColor: colors.primary }]}
+                          onPress={() => handleCopyUrl(session.url)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="copy-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[s.iconButton, { backgroundColor: colors.error }]}
+                          onPress={() => handleDeleteSession(session.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                  <Text style={[s.sessionInfo, { color: colors.textTertiary }]}>
+                    {t('settings.sessionInfo')}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+        </ScrollView>
+      </TouchableWithoutFeedback>
+
+      {/* 비밀번호 입력 모달 */}
+      <Modal
+        visible={passwordModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPasswordModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setPasswordModalVisible(false)}>
+          <View style={s.modalOverlay}>
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <View style={[s.modalContent, { backgroundColor: colors.background }]}>
+                <View style={s.modalHeader}>
+                  <Ionicons name="lock-closed" size={24} color={colors.primary} />
+                  <Text style={[s.modalTitle, { color: colors.text }]}>
+                    {t('settings.addPassword')}
+                  </Text>
+                </View>
+
+                <Text style={[s.modalDescription, { color: colors.textSecondary }]}>
+                  {t('settings.passwordDescription')}
+                </Text>
+
+                <TextInput
+                  style={[
+                    s.passwordInput,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      color: colors.text,
+                      borderColor: colors.border
+                    }
+                  ]}
+                  value={passwordInput}
+                  onChangeText={setPasswordInput}
+                  placeholder={t('settings.passwordPlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  secureTextEntry={true}
+                  autoFocus={true}
+                />
+
+                <View style={s.modalButtons}>
+                  <TouchableOpacity
+                    style={[s.modalButton, s.cancelButton, { backgroundColor: colors.inputBackground }]}
+                    onPress={() => {
+                      setPasswordModalVisible(false);
+                      setPasswordInput('');
+                      setSelectedSessionId('');
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.modalButtonText, { color: colors.text }]}>
+                      {t('common.cancel')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[s.modalButton, s.saveButton, { backgroundColor: colors.primary }]}
+                    onPress={handleSavePassword}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.modalButtonText, { color: '#fff' }]}>
+                      {t('common.save')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </View>
   );
 }
 
@@ -409,5 +768,135 @@ const s = StyleSheet.create({
   exampleDesc: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  generateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    padding: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  generateButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  sessionListContainer: {
+    marginTop: 20,
+  },
+  sessionListTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  sessionItem: {
+    borderRadius: 12,
+    borderWidth: 2,
+    padding: 12,
+    marginBottom: 10,
+  },
+  sessionItemActive: {
+    borderWidth: 2,
+  },
+  sessionItemContent: {
+    flex: 1,
+  },
+  sessionItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  sessionUrl: {
+    fontSize: 13,
+    fontFamily: 'monospace',
+    lineHeight: 20,
+  },
+  activeLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  sessionItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  iconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    borderRadius: 8,
+    flex: 1,
+  },
+  sessionInfo: {
+    fontSize: 12,
+    marginTop: 12,
+    lineHeight: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  passwordInput: {
+    padding: 16,
+    borderRadius: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    borderWidth: 1,
+  },
+  saveButton: {
+    // backgroundColor is set dynamically
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

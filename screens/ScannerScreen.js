@@ -8,6 +8,7 @@ import {
   Animated,
   useWindowDimensions,
   Platform,
+  Alert,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -17,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import websocketClient from '../utils/websocket';
 
 const SCAN_AREA_SIZE = 240;
 const DEBOUNCE_DELAY = 500;
@@ -58,6 +60,11 @@ function ScannerScreen() {
     'upce',
     'upca',
   ]);
+
+  // 실시간 서버전송 관련 상태
+  const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
+  const [activeSessionId, setActiveSessionId] = useState('');
+  const [showSendMessage, setShowSendMessage] = useState(false); // "전송" 메시지 표시 여부
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -115,6 +122,16 @@ function ScannerScreen() {
           const currentGroup = groups.find(g => g.id === selectedGroupId);
           if (currentGroup) {
             setCurrentGroupName(currentGroup.name);
+          }
+        }
+
+        // 실시간 서버전송 설정 로드
+        const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+        if (realtimeSync === 'true') {
+          setRealtimeSyncEnabled(true);
+          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+          if (savedActiveSessionId) {
+            setActiveSessionId(savedActiveSessionId);
           }
         }
       } catch (error) {
@@ -191,6 +208,19 @@ function ScannerScreen() {
               setCurrentGroupName(currentGroup.name);
             }
           }
+
+          // 실시간 서버전송 설정 로드
+          const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+          if (realtimeSync === 'true') {
+            setRealtimeSyncEnabled(true);
+            const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+            if (savedActiveSessionId) {
+              setActiveSessionId(savedActiveSessionId);
+            }
+          } else {
+            setRealtimeSyncEnabled(false);
+            setActiveSessionId('');
+          }
         } catch (error) {
           console.error('Load barcode settings error:', error);
         }
@@ -233,8 +263,34 @@ function ScannerScreen() {
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null) => {
     try {
-      // 선택된 그룹 ID 가져오기
-      const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+      let selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+
+      // 실시간 서버전송이 활성화되어 있고 활성 세션 ID가 있으면 해당 그룹에 저장
+      if (realtimeSyncEnabled && activeSessionId) {
+        // 세션 ID 그룹 자동 생성 또는 가져오기
+        const groupsData = await AsyncStorage.getItem('scanGroups');
+        let groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
+
+        // 세션 ID 그룹이 이미 있는지 확인
+        let sessionGroup = groups.find(g => g.id === activeSessionId);
+
+        if (!sessionGroup) {
+          // 세션 ID 그룹이 없으면 생성
+          sessionGroup = {
+            id: activeSessionId,
+            name: activeSessionId,
+            createdAt: Date.now(),
+            isCloudSync: true, // 클라우드 동기화 그룹 표시
+          };
+          groups.push(sessionGroup);
+          await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+        }
+
+        // 선택된 그룹을 세션 ID 그룹으로 변경
+        selectedGroupId = activeSessionId;
+        await AsyncStorage.setItem('selectedGroupId', activeSessionId);
+        setCurrentGroupName(activeSessionId);
+      }
 
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
@@ -303,7 +359,7 @@ function ScannerScreen() {
       console.error('Save history error:', e);
       return { isDuplicate: false, count: 1 };
     }
-  }, []);
+  }, [realtimeSyncEnabled, activeSessionId]);
 
   const normalizeBounds = useCallback(
     (bounds) => {
@@ -412,6 +468,32 @@ function ScannerScreen() {
       if (!isActive || !canScan) return; // canScan 추가 확인
       if (!isQrInScanArea(bounds)) return;
 
+      // 배치 스캔 모드일 때는 QR 코드 중심이 화면 중앙 타겟에 있어야 스캔
+      if (batchScanEnabled && bounds) {
+        const normalized = normalizeBounds(bounds);
+        if (normalized) {
+          // QR 코드의 중심점 계산
+          const qrCenterX = normalized.x + normalized.width / 2;
+          const qrCenterY = normalized.y + normalized.height / 2;
+
+          // 화면 중앙점
+          const screenCenterX = winWidth / 2;
+          const screenCenterY = winHeight / 2;
+
+          // 타겟 영역 크기 (화면 중앙 ±50px 범위)
+          const targetRadius = 50;
+
+          // QR 코드 중심이 타겟 영역에 없으면 스캔하지 않음
+          const distanceFromCenter = Math.sqrt(
+            Math.pow(qrCenterX - screenCenterX, 2) + Math.pow(qrCenterY - screenCenterY, 2)
+          );
+
+          if (distanceFromCenter > targetRadius) {
+            return; // 타겟 영역 밖이면 스캔하지 않음
+          }
+        }
+      }
+
       const now = Date.now();
 
       if (lastScannedData.current === data && now - lastScannedTime.current < DEBOUNCE_DELAY) {
@@ -441,6 +523,34 @@ function ScannerScreen() {
 
       lastScannedData.current = data;
       lastScannedTime.current = now;
+
+      // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
+      if (batchScanEnabled) {
+        const isDuplicate = batchScannedItems.some(item => item.code === data);
+        if (isDuplicate) {
+          // 중복이면 아무 피드백 없이 스캔만 재활성화
+          setTimeout(() => setCanScan(true), 500);
+          startResetTimer(RESET_DELAY_NORMAL);
+          return;
+        }
+      }
+
+      // 실시간 서버전송이 활성화되어 있는데 주소가 생성되지 않은 경우
+      if (realtimeSyncEnabled && !activeSessionId) {
+        Alert.alert(
+          t('scanner.noSessionUrl'),
+          t('scanner.pleaseGenerateUrl'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('settings.title'),
+              onPress: () => router.push('/settings')
+            }
+          ]
+        );
+        setTimeout(() => setCanScan(true), 500);
+        return;
+      }
 
       // 햅틱 설정이 활성화된 경우에만 진동
       if (hapticEnabled) {
@@ -477,18 +587,30 @@ function ScannerScreen() {
           // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
           const photoUri = await photoPromise;
 
+          // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
+          if (realtimeSyncEnabled && activeSessionId) {
+            const success = websocketClient.sendScanData({
+              code: data,
+              timestamp: Date.now(),
+            }, activeSessionId);
+            if (!success) {
+              console.warn('Failed to send scan data to server');
+            }
+          }
+
           // 배치 스캔 모드일 경우
           if (batchScanEnabled) {
-            // 중복 체크 (같은 데이터가 이미 배치에 있는지)
-            const isDuplicate = batchScannedItems.some(item => item.code === data);
+            // 중복은 이미 위에서 체크했으므로 바로 배치에 추가
+            setBatchScannedItems(prev => [...prev, {
+              code: data,
+              timestamp: Date.now(),
+              photoUri: photoUri || null,
+            }]);
 
-            if (!isDuplicate) {
-              // 배치에 추가
-              setBatchScannedItems(prev => [...prev, {
-                code: data,
-                timestamp: Date.now(),
-                photoUri: photoUri || null,
-              }]);
+            // 배치 + 실시간 전송 모드: "전송" 메시지 표시
+            if (realtimeSyncEnabled && activeSessionId) {
+              setShowSendMessage(true);
+              setTimeout(() => setShowSendMessage(false), 1000);
             }
 
             // 스캔 재활성화 (계속 스캔 가능)
@@ -533,7 +655,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -613,6 +735,14 @@ function ScannerScreen() {
           </View>
         )}
 
+        {/* 전송 메시지 (배치 + 실시간 전송 모드) */}
+        {showSendMessage && (
+          <View style={styles.sendMessageBadge}>
+            <Ionicons name="cloud-upload" size={20} color="#fff" />
+            <Text style={styles.sendMessageText}>{t('scanner.sending')}</Text>
+          </View>
+        )}
+
         <Text style={styles.title} accessibilityLabel={barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode')}>
           {barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
             ? t('scanner.scanGuideQr')
@@ -630,6 +760,18 @@ function ScannerScreen() {
             ]}
             accessibilityLabel={t('scanner.scanGuideBarcode')}
           />
+        )}
+
+        {/* 배치 스캔 모드일 때 중앙 타겟 표시 */}
+        {batchScanEnabled && (
+          <View style={styles.centerTarget} pointerEvents="none">
+            {/* 수평선 */}
+            <View style={styles.targetLineHorizontal} />
+            {/* 수직선 */}
+            <View style={styles.targetLineVertical} />
+            {/* 중심 원 */}
+            <View style={styles.targetCenter} />
+          </View>
         )}
       </View>
 
@@ -782,6 +924,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
+  sendMessageBadge: {
+    position: 'absolute',
+    top: '50%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.95)',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  sendMessageText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
   batchControlPanel: {
     position: 'absolute',
     bottom: Platform.OS === 'ios' ? 200 : 180,
@@ -898,6 +1062,49 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     color: '#fff',
     padding: 20,
+  },
+  centerTarget: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 100,
+    height: 100,
+    marginLeft: -50,
+    marginTop: -50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  targetLineHorizontal: {
+    position: 'absolute',
+    width: 40,
+    height: 3,
+    backgroundColor: '#FFD60A',
+    borderRadius: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  targetLineVertical: {
+    position: 'absolute',
+    width: 3,
+    height: 40,
+    backgroundColor: '#FFD60A',
+    borderRadius: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+  },
+  targetCenter: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFD60A',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
   },
 });
 

@@ -27,6 +27,9 @@ export default {
     finishBatch: 'Finish',
     clearBatch: 'Clear',
     viewBatchList: 'View List',
+    sending: 'Sending',
+    noSessionUrl: 'No Session URL',
+    pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
   },
 
   // History screen
@@ -104,6 +107,25 @@ export default {
     exampleTitle: 'Example:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ If scanned value is "ABC123"\nNavigates to https://example.com/product/ABC123',
+    // Realtime Server Sync
+    realtimeSync: 'Realtime Server Sync',
+    enableRealtimeSync: 'Enable Realtime Sync',
+    realtimeSyncDesc: 'Send scanned data to server in realtime',
+    generateSessionUrl: 'Generate URL',
+    generatedUrls: 'Generated URLs',
+    active: 'Active',
+    sessionInfo: 'Scanned values will be sent to the active URL in realtime',
+    success: 'Success',
+    error: 'Error',
+    sessionCreated: 'URL created successfully',
+    urlCopied: 'URL copied to clipboard',
+    deleteSession: 'Delete URL',
+    deleteSessionConfirm: 'Do you want to delete this URL?',
+    addPassword: 'Add Password',
+    passwordDescription: 'Set a password for this transmission URL',
+    passwordPlaceholder: 'Enter password',
+    passwordRequired: 'Please enter a password',
+    passwordSaved: 'Password saved successfully',
   },
 
   // Barcode selection screen

@@ -27,6 +27,9 @@ export default {
     finishBatch: '스캔 완료',
     clearBatch: '초기화',
     viewBatchList: '목록 보기',
+    sending: '전송',
+    noSessionUrl: '전송 주소 없음',
+    pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
   },
 
   // 히스토리 화면
@@ -104,6 +107,25 @@ export default {
     exampleTitle: '예시:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ 스캔 값이 "ABC123"이면\nhttps://example.com/product/ABC123 로 이동',
+    // 실시간 서버전송
+    realtimeSync: '실시간 서버전송',
+    enableRealtimeSync: '실시간 서버전송 사용하기',
+    realtimeSyncDesc: '스캔한 데이터를 실시간으로 서버에 전송합니다',
+    generateSessionUrl: '주소 생성',
+    generatedUrls: '생성된 전송 주소 목록',
+    active: '활성화됨',
+    sessionInfo: '활성화된 주소로 스캔 값이 실시간으로 전송됩니다',
+    success: '성공',
+    error: '오류',
+    sessionCreated: '전송 주소가 생성되었습니다',
+    urlCopied: 'URL이 복사되었습니다',
+    deleteSession: '주소 삭제',
+    deleteSessionConfirm: '이 전송 주소를 삭제하시겠습니까?',
+    addPassword: '비밀번호 추가',
+    passwordDescription: '이 전송 주소에 비밀번호를 설정하세요',
+    passwordPlaceholder: '비밀번호 입력',
+    passwordRequired: '비밀번호를 입력해주세요',
+    passwordSaved: '비밀번호가 저장되었습니다',
   },
 
   // 바코드 선택 화면
