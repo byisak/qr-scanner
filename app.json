@@ -21,7 +21,7 @@
         "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
       },
       "config": {
-        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
+        "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
       }
     },
     "android": {
@@ -37,7 +37,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
+          "apiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
         }
       }
     },
