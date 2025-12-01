@@ -6,10 +6,14 @@ import * as Clipboard from 'expo-clipboard';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 export default function ResultScreen() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
   const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory } = params;
   const displayText = code || url || '';
@@ -182,17 +186,17 @@ export default function ResultScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => router.back()}
           accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={28} color="#000" />
+          <Ionicons name="close" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('result.title')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('result.title')}</Text>
         {isFromHistory && (
           <TouchableOpacity
             style={styles.deleteButton}
@@ -200,7 +204,7 @@ export default function ResultScreen() {
             accessibilityLabel={t('common.delete')}
             accessibilityRole="button"
           >
-            <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+            <Ionicons name="trash-outline" size={24} color={colors.error} />
           </TouchableOpacity>
         )}
         {!isFromHistory && <View style={{ width: 28 }} />}
@@ -210,10 +214,10 @@ export default function ResultScreen() {
         {/* 스캔 사진 */}
         {hasPhoto && (
           <View style={styles.photoContainer}>
-            <Text style={styles.photoLabel}>{t('result.scanPhoto')}</Text>
+            <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>{t('result.scanPhoto')}</Text>
             <Image
               source={{ uri: photoUri }}
-              style={styles.scanPhoto}
+              style={[styles.scanPhoto, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
               resizeMode="cover"
             />
           </View>
@@ -221,7 +225,10 @@ export default function ResultScreen() {
 
         {/* 중복 스캔 알림 */}
         {showDuplicate && (
-          <View style={styles.duplicateBanner}>
+          <View style={[styles.duplicateBanner, {
+            backgroundColor: isDark ? 'rgba(255, 149, 0, 0.25)' : 'rgba(255, 149, 0, 0.15)',
+            borderColor: '#FF9500'
+          }]}>
             <View style={styles.duplicateHeader}>
               <Ionicons name="repeat" size={20} color="#FF9500" />
               <Text style={styles.duplicateText}>
@@ -242,18 +249,18 @@ export default function ResultScreen() {
         )}
 
         <View style={styles.labelRow}>
-          <Text style={styles.label}>{t('result.scannedData')}</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
           {isFromHistory && (
             <TouchableOpacity
-              style={styles.editToggleButton}
+              style={[styles.editToggleButton, { backgroundColor: colors.inputBackground }]}
               onPress={handleEditToggle}
             >
               <Ionicons
                 name={isEditing ? "close-circle" : "pencil"}
                 size={20}
-                color={isEditing ? "#FF3B30" : "#007AFF"}
+                color={isEditing ? colors.error : colors.primary}
               />
-              <Text style={[styles.editToggleText, isEditing && styles.editToggleTextCancel]}>
+              <Text style={[styles.editToggleText, { color: isEditing ? colors.error : colors.primary }]}>
                 {isEditing ? t('common.cancel') : t('common.edit')}
               </Text>
             </TouchableOpacity>
@@ -261,20 +268,21 @@ export default function ResultScreen() {
         </View>
 
         {isEditing ? (
-          <View style={styles.dataBox}>
+          <View style={[styles.dataBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <TextInput
-              style={styles.dataInput}
+              style={[styles.dataInput, { color: colors.text }]}
               value={editedText}
               onChangeText={setEditedText}
               multiline
               autoFocus
               placeholder={t('result.dataPlaceholder')}
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
         ) : (
-          <View style={styles.dataBox}>
+          <View style={[styles.dataBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <ScrollView style={styles.dataScrollView}>
-              <Text style={styles.dataText} selectable>
+              <Text style={[styles.dataText, { color: colors.text }]} selectable>
                 {displayText}
               </Text>
             </ScrollView>
@@ -283,7 +291,7 @@ export default function ResultScreen() {
 
         {isEditing && (
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[styles.saveButton, { backgroundColor: colors.success }]}
             onPress={handleSaveEdit}
           >
             <Ionicons name="checkmark-circle" size={24} color="#fff" />
@@ -294,34 +302,34 @@ export default function ResultScreen() {
         {!isEditing && (
           <View style={styles.buttonGroup}>
             <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: colors.surface }]}
               onPress={handleCopy}
               accessibilityLabel={t('result.copy')}
               accessibilityRole="button"
             >
-              <Ionicons name="copy-outline" size={24} color="#007AFF" />
-              <Text style={styles.actionButtonText}>{t('result.copy')}</Text>
+              <Ionicons name="copy-outline" size={24} color={colors.primary} />
+              <Text style={[styles.actionButtonText, { color: colors.primary }]}>{t('result.copy')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: colors.surface }]}
               onPress={handleShare}
               accessibilityLabel={t('result.share')}
               accessibilityRole="button"
             >
-              <Ionicons name="share-outline" size={24} color="#007AFF" />
-              <Text style={styles.actionButtonText}>{t('result.share')}</Text>
+              <Ionicons name="share-outline" size={24} color={colors.primary} />
+              <Text style={[styles.actionButtonText, { color: colors.primary }]}>{t('result.share')}</Text>
             </TouchableOpacity>
 
             {(isUrl || editedText.startsWith('http://') || editedText.startsWith('https://')) && (
               <TouchableOpacity
-                style={styles.actionButton}
+                style={[styles.actionButton, { backgroundColor: colors.surface }]}
                 onPress={handleOpenUrl}
                 accessibilityLabel={t('result.open')}
                 accessibilityRole="button"
               >
-                <Ionicons name="open-outline" size={24} color="#007AFF" />
-                <Text style={styles.actionButtonText}>{t('result.open')}</Text>
+                <Ionicons name="open-outline" size={24} color={colors.primary} />
+                <Text style={[styles.actionButtonText, { color: colors.primary }]}>{t('result.open')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -330,7 +338,7 @@ export default function ResultScreen() {
 
       {!isEditing && (
         <TouchableOpacity
-          style={styles.scanAgainButton}
+          style={[styles.scanAgainButton, { backgroundColor: colors.success }]}
           onPress={() => router.back()}
           accessibilityLabel={t('result.scanAgain')}
           accessibilityRole="button"
@@ -346,7 +354,6 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     flexDirection: 'row',
@@ -355,9 +362,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   closeButton: {
     padding: 4,
@@ -382,21 +387,16 @@ const styles = StyleSheet.create({
   photoLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
     marginBottom: 12,
   },
   scanPhoto: {
     width: '100%',
     height: 200,
     borderRadius: 12,
-    backgroundColor: '#f0f0f0',
     borderWidth: 2,
-    borderColor: '#e0e0e0',
   },
   duplicateBanner: {
-    backgroundColor: 'rgba(255, 149, 0, 0.15)',
     borderWidth: 2,
-    borderColor: '#FF9500',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
@@ -440,33 +440,25 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
   },
   editToggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#f0f0f0',
     borderRadius: 16,
   },
   editToggleText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
     marginLeft: 4,
   },
-  editToggleTextCancel: {
-    color: '#FF3B30',
-  },
   dataBox: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     minHeight: 120,
     maxHeight: 300,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -479,12 +471,10 @@ const styles = StyleSheet.create({
   dataText: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#000',
   },
   dataInput: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#000',
     minHeight: 100,
     textAlignVertical: 'top',
   },
@@ -492,12 +482,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#34C759',
     marginTop: 20,
     paddingVertical: 14,
     borderRadius: 16,
     elevation: 2,
-    shadowColor: '#34C759',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -518,7 +507,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    backgroundColor: '#fff',
     borderRadius: 16,
     minWidth: 90,
     elevation: 2,
@@ -531,19 +519,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     fontWeight: '600',
-    color: '#007AFF',
   },
   scanAgainButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00FF00',
     marginHorizontal: 20,
     marginBottom: 40,
     paddingVertical: 16,
     borderRadius: 16,
     elevation: 4,
-    shadowColor: '#00FF00',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
