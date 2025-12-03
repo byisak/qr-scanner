@@ -503,10 +503,10 @@ const styles = StyleSheet.create({
   },
   sharePhotoButton: {
     width: 36,
-    height: 36,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   scanPhoto: {
     width: '100%',

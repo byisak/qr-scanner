@@ -76,6 +76,7 @@ function ScannerScreen() {
   const smoothBounds = useRef(null);
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
+  const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
 
   const [qrBounds, setQrBounds] = useState(null);
 
@@ -83,6 +84,11 @@ function ScannerScreen() {
   useEffect(() => {
     photoSaveEnabledRef.current = photoSaveEnabled;
   }, [photoSaveEnabled]);
+
+  // hapticEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    hapticEnabledRef.current = hapticEnabled;
+  }, [hapticEnabled]);
 
   useEffect(() => {
     (async () => {
@@ -591,7 +597,7 @@ function ScannerScreen() {
       }
 
       // 햅틱 설정이 활성화된 경우에만 진동
-      if (hapticEnabled) {
+      if (hapticEnabledRef.current) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
@@ -694,7 +700,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
