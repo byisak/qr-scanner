@@ -25,6 +25,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
 import websocketClient from '../utils/websocket';
+import config from '../config/config';
 
 // 랜덤 세션 ID 생성 함수 (8자리)
 const generateSessionId = () => {
@@ -35,8 +36,6 @@ const generateSessionId = () => {
   }
   return result;
 };
-
-const BASE_SERVER_URL = 'http://138.2.58.102:3000';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -215,7 +214,7 @@ export default function SettingsScreen() {
     const newSessionId = generateSessionId();
     const newSessionUrl = {
       id: newSessionId,
-      url: `${BASE_SERVER_URL}/${newSessionId}`,
+      url: `${config.serverUrl}/${newSessionId}`,
       createdAt: Date.now(),
     };
 
