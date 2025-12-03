@@ -276,9 +276,16 @@ export default function SettingsScreen() {
             // 삭제된 세션이 활성 세션이면 초기화
             if (activeSessionId === sessionId) {
               const remaining = sessionUrls.filter(s => s.id !== sessionId);
-              const newActiveId = remaining.length > 0 ? remaining[0].id : '';
-              setActiveSessionId(newActiveId);
-              await AsyncStorage.setItem('activeSessionId', newActiveId);
+              if (remaining.length > 0) {
+                const newActiveId = remaining[0].id;
+                setActiveSessionId(newActiveId);
+                await AsyncStorage.setItem('activeSessionId', newActiveId);
+                console.log(`Active session changed to: ${newActiveId}`);
+              } else {
+                setActiveSessionId('');
+                await AsyncStorage.removeItem('activeSessionId');
+                console.log('No remaining sessions, activeSessionId removed');
+              }
             }
 
             // 해당 세션 ID로 생성된 클라우드 동기화 그룹도 삭제
@@ -289,7 +296,17 @@ export default function SettingsScreen() {
                 const updatedGroups = groups.filter(g => g.id !== sessionId);
                 await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
 
-                // 해당 그룹의 히스토리도 삭제
+                console.log(`Deleted session URL and cloud sync group: ${sessionId}`);
+
+                // scanHistoryByGroup에서도 삭제
+                const historyByGroupJson = await AsyncStorage.getItem('scanHistoryByGroup');
+                if (historyByGroupJson) {
+                  const historyByGroup = JSON.parse(historyByGroupJson);
+                  delete historyByGroup[sessionId];
+                  await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+                }
+
+                // scanHistory에서도 삭제 (레거시)
                 const historyJson = await AsyncStorage.getItem('scanHistory');
                 if (historyJson) {
                   const history = JSON.parse(historyJson);

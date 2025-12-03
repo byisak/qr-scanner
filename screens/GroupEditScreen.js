@@ -120,11 +120,19 @@ export default function GroupEditScreen() {
                 const updatedSessionUrls = sessionUrls.filter(s => s.id !== groupId);
                 await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedSessionUrls));
 
+                console.log(`Deleted cloud sync group and session URL: ${groupId}`);
+
                 // 삭제된 세션이 활성 세션인 경우 초기화
                 const activeSessionId = await AsyncStorage.getItem('activeSessionId');
                 if (activeSessionId === groupId) {
-                  const newActiveId = updatedSessionUrls.length > 0 ? updatedSessionUrls[0].id : '';
-                  await AsyncStorage.setItem('activeSessionId', newActiveId);
+                  if (updatedSessionUrls.length > 0) {
+                    const newActiveId = updatedSessionUrls[0].id;
+                    await AsyncStorage.setItem('activeSessionId', newActiveId);
+                    console.log(`Active session changed to: ${newActiveId}`);
+                  } else {
+                    await AsyncStorage.removeItem('activeSessionId');
+                    console.log('No remaining sessions, activeSessionId removed');
+                  }
                 }
               }
             } catch (error) {
