@@ -265,14 +265,14 @@ export default function GroupEditScreen() {
 
               {/* 삭제 버튼 */}
               <TouchableOpacity
-                style={[s.iconButton, (item.id === DEFAULT_GROUP_ID || item.isCloudSync) && s.iconButtonDisabled]}
+                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
                 onPress={() => deleteGroup(item.id)}
-                disabled={item.id === DEFAULT_GROUP_ID || item.isCloudSync}
+                disabled={item.id === DEFAULT_GROUP_ID}
               >
                 <Ionicons
                   name="trash-outline"
                   size={24}
-                  color={item.id === DEFAULT_GROUP_ID || item.isCloudSync ? '#ccc' : '#FF3B30'}
+                  color={item.id === DEFAULT_GROUP_ID ? '#ccc' : '#FF3B30'}
                 />
               </TouchableOpacity>
             </View>
