@@ -75,8 +75,14 @@ function ScannerScreen() {
   const navigationTimerRef = useRef(null);
   const smoothBounds = useRef(null);
   const cameraRef = useRef(null);
+  const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
 
   const [qrBounds, setQrBounds] = useState(null);
+
+  // photoSaveEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    photoSaveEnabledRef.current = photoSaveEnabled;
+  }, [photoSaveEnabled]);
 
   useEffect(() => {
     (async () => {
@@ -608,7 +614,7 @@ function ScannerScreen() {
       }
 
       // 사진 촬영을 타이머 밖에서 먼저 시작 (비동기)
-      const photoPromise = (photoSaveEnabled && isActive) ? capturePhoto() : Promise.resolve(null);
+      const photoPromise = (photoSaveEnabledRef.current && isActive) ? capturePhoto() : Promise.resolve(null);
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
@@ -688,7 +694,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
