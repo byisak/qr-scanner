@@ -834,40 +834,29 @@ export default function GeneratorScreen() {
         {/* Action Buttons */}
         {hasData && (
           <View style={s.actionsContainer}>
-            <TouchableOpacity
-              style={[s.actionButton, s.primaryButton, { backgroundColor: colors.primary }]}
-              onPress={handleSaveImage}
-              activeOpacity={0.8}
-            >
-              <View style={s.buttonIconContainer}>
-                <Ionicons name="download-outline" size={22} color="#fff" />
-              </View>
-              <View style={s.buttonContent}>
-                <Text style={s.buttonTitle}>{t('generator.save')}</Text>
-                <Text style={s.buttonSubtitle}>{t('generator.saveSubtitle')}</Text>
-              </View>
-            </TouchableOpacity>
+            <View style={s.buttonRow}>
+              <TouchableOpacity
+                style={[s.actionButton, s.primaryButton, { backgroundColor: colors.primary, flex: 1 }]}
+                onPress={handleSaveImage}
+                activeOpacity={0.8}
+              >
+                <View style={s.buttonIconContainer}>
+                  <Ionicons name="download-outline" size={22} color="#fff" />
+                </View>
+                <View style={s.buttonContent}>
+                  <Text style={s.buttonTitle}>{t('generator.save')}</Text>
+                  <Text style={s.buttonSubtitle}>{t('generator.saveSubtitle')}</Text>
+                </View>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[s.actionButton, s.secondaryButton, { 
-                backgroundColor: colors.surface, 
-                borderColor: colors.border 
-              }]}
-              onPress={handleShare}
-              activeOpacity={0.8}
-            >
-              <View style={[s.buttonIconContainer, { backgroundColor: colors.background }]}>
-                <Ionicons name="share-outline" size={22} color={colors.primary} />
-              </View>
-              <View style={s.buttonContent}>
-                <Text style={[s.buttonTitle, { color: colors.text }]}>
-                  {t('generator.share')}
-                </Text>
-                <Text style={[s.buttonSubtitle, { color: colors.textSecondary }]}>
-                  {t('generator.shareSubtitle')}
-                </Text>
-              </View>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.shareIconButton, { backgroundColor: colors.primary }]}
+                onPress={handleShare}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="share-outline" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -883,7 +872,7 @@ const s = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   header: {
     paddingHorizontal: 20,
@@ -1081,12 +1070,29 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 12,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 18,
     borderRadius: 16,
     gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  shareIconButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
