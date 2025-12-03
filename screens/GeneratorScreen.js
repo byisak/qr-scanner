@@ -1089,10 +1089,10 @@ const s = StyleSheet.create({
   },
   shareIconButton: {
     width: 64,
-    height: 64,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
