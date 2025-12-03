@@ -16,6 +16,7 @@ import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
@@ -456,7 +457,7 @@ function ScannerScreen() {
     }, delay);
   }, []);
 
-  const capturePhoto = useCallback(async () => {
+  const capturePhoto = useCallback(async (bounds = null) => {
     isCapturingPhotoRef.current = true; // 동기적으로 즉시 설정
     setIsCapturingPhoto(true);
     try {
@@ -491,13 +492,58 @@ function ScannerScreen() {
         return null;
       }
 
+      let finalUri = photo.uri;
+
+      // QR 코드 bounds가 있으면 해당 영역만 crop
+      if (bounds) {
+        try {
+          const normalized = normalizeBounds(bounds);
+          if (normalized) {
+            // 여유 공간 추가 (QR 코드 주변 10% 여백)
+            const padding = Math.max(normalized.width, normalized.height) * 0.1;
+            const cropX = Math.max(0, normalized.x - padding);
+            const cropY = Math.max(0, normalized.y - padding);
+            const cropWidth = Math.min(
+              winWidth - cropX,
+              normalized.width + padding * 2
+            );
+            const cropHeight = Math.min(
+              winHeight - cropY,
+              normalized.height + padding * 2
+            );
+
+            // 이미지 crop
+            const croppedImage = await ImageManipulator.manipulateAsync(
+              photo.uri,
+              [
+                {
+                  crop: {
+                    originX: cropX,
+                    originY: cropY,
+                    width: cropWidth,
+                    height: cropHeight,
+                  },
+                },
+              ],
+              { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+            );
+
+            finalUri = croppedImage.uri;
+            console.log('QR code area cropped successfully');
+          }
+        } catch (cropError) {
+          console.error('Crop error, using full image:', cropError);
+          // crop 실패 시 원본 이미지 사용
+        }
+      }
+
       // 파일명 생성 (타임스탬프 사용)
       const fileName = `scan_${Date.now()}.jpg`;
       const newPath = photoDir + fileName;
 
       // 사진 이동
       await FileSystem.moveAsync({
-        from: photo.uri,
+        from: finalUri,
         to: newPath,
       });
 
@@ -510,7 +556,7 @@ function ScannerScreen() {
       isCapturingPhotoRef.current = false; // 동기적으로 즉시 해제
       setIsCapturingPhoto(false);
     }
-  }, []);
+  }, [normalizeBounds, winWidth, winHeight]);
 
   const handleBarCodeScanned = useCallback(
     async ({ data, bounds, type }) => {
@@ -626,7 +672,8 @@ function ScannerScreen() {
 
       // 사진 촬영을 타이머 밖에서 먼저 시작 (비동기)
       // isActive 체크 제거 - capturePhoto 내부에서 cameraRef 체크로 충분
-      const photoPromise = photoSaveEnabledRef.current ? capturePhoto() : Promise.resolve(null);
+      // QR 코드 bounds를 전달하여 해당 영역만 저장
+      const photoPromise = photoSaveEnabledRef.current ? capturePhoto(bounds) : Promise.resolve(null);
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
