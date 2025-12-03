@@ -199,11 +199,20 @@ export default function SettingsScreen() {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
         if (!realtimeSyncEnabled) {
-          // 비활성화 시 세션 URL 목록 및 활성 세션 초기화
+          // 비활성화 시 state만 초기화 (AsyncStorage는 유지하여 다시 켤 때 복원 가능)
           setSessionUrls([]);
           setActiveSessionId('');
-          await AsyncStorage.removeItem('sessionUrls');
-          await AsyncStorage.removeItem('activeSessionId');
+        } else {
+          // 활성화 시 저장된 세션 URL 복원
+          const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+          if (savedSessionUrls) {
+            setSessionUrls(JSON.parse(savedSessionUrls));
+          }
+
+          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+          if (savedActiveSessionId) {
+            setActiveSessionId(savedActiveSessionId);
+          }
         }
       } catch (error) {
         console.error('Save realtime sync settings error:', error);
