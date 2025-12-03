@@ -114,7 +114,7 @@ export default function SettingsScreen() {
     })();
   }, []);
 
-  // 화면이 포커스될 때마다 바코드 개수 업데이트
+  // 화면이 포커스될 때마다 바코드 개수 및 세션 URL 목록 업데이트
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -124,8 +124,24 @@ export default function SettingsScreen() {
             const parsed = JSON.parse(b);
             setSelectedBarcodesCount(parsed.length || 6);
           }
+
+          // 세션 URL 목록 다시 로드 (클라우드 그룹 삭제 시 동기화)
+          const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+          if (savedSessionUrls) {
+            setSessionUrls(JSON.parse(savedSessionUrls));
+          } else {
+            setSessionUrls([]);
+          }
+
+          // 활성화된 세션 ID 다시 로드
+          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+          if (savedActiveSessionId) {
+            setActiveSessionId(savedActiveSessionId);
+          } else {
+            setActiveSessionId('');
+          }
         } catch (error) {
-          console.error('Load barcode count error:', error);
+          console.error('Load settings error:', error);
         }
       })();
     }, [])
