@@ -484,21 +484,22 @@ function ScannerScreen() {
         return null;
       }
 
-      // QR 코드 뷰를 이미지로 캡처
-      const uri = await captureRef(qrCodeRef, {
+      // QR 코드 뷰를 이미지로 캡처 (base64 데이터로 받음)
+      const dataUri = await captureRef(qrCodeRef, {
         format: 'jpg',
         quality: 0.9,
-        result: 'tmpfile',
+        result: 'data-uri',
       });
 
       // 파일명 생성 (타임스탬프 사용)
       const fileName = `qr_${Date.now()}.jpg`;
       const newPath = photoDir + fileName;
 
-      // 이미지를 최종 위치로 이동
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newPath,
+      // base64 데이터를 파일로 저장
+      // data:image/jpeg;base64,/9j/4AAQ... 형식에서 base64 부분만 추출
+      const base64Data = dataUri.split(',')[1];
+      await FileSystem.writeAsStringAsync(newPath, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
       });
 
       console.log('QR code image saved:', newPath);
