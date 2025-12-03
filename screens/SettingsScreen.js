@@ -211,7 +211,7 @@ export default function SettingsScreen() {
   }, [activeSessionId]);
 
   // 새 세션 URL 생성
-  const handleGenerateSessionUrl = () => {
+  const handleGenerateSessionUrl = async () => {
     const newSessionId = generateSessionId();
     const newSessionUrl = {
       id: newSessionId,
@@ -224,6 +224,31 @@ export default function SettingsScreen() {
     // 첫 번째 세션이면 자동으로 활성화
     if (sessionUrls.length === 0) {
       setActiveSessionId(newSessionId);
+    }
+
+    // 자동으로 scanGroups에 클라우드 동기화 그룹 추가
+    try {
+      const groupsData = await AsyncStorage.getItem('scanGroups');
+      const groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
+
+      // 새 클라우드 동기화 그룹 생성
+      const newGroup = {
+        id: newSessionId,
+        name: `세션 ${newSessionId.substring(0, 4)}`,
+        createdAt: Date.now(),
+        isCloudSync: true,
+      };
+
+      const updatedGroups = [...groups, newGroup];
+      await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+
+      // scanHistoryByGroup에 빈 배열 초기화
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      historyByGroup[newSessionId] = [];
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+    } catch (error) {
+      console.error('Failed to create cloud sync group:', error);
     }
 
     Alert.alert(t('settings.success'), t('settings.sessionCreated'));
