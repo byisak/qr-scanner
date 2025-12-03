@@ -110,6 +110,23 @@ export default function ResultScreen() {
     }
   };
 
+  // 사진 공유
+  const handleSharePhoto = async () => {
+    if (!hasPhoto || !photoUri) {
+      Alert.alert(t('result.error'), t('result.errorNoPhoto'));
+      return;
+    }
+
+    try {
+      await Share.share({
+        url: photoUri,
+        message: t('result.scanPhoto'),
+      });
+    } catch (error) {
+      console.error('Share photo error:', error);
+    }
+  };
+
   // 수정 저장
   const handleSaveEdit = async () => {
     if (!isFromHistory || !groupId) {
@@ -258,15 +275,25 @@ export default function ResultScreen() {
           <View style={styles.photoContainer}>
             <View style={styles.photoHeader}>
               <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>{t('result.scanPhoto')}</Text>
-              <TouchableOpacity
-                style={[styles.savePhotoButton, { backgroundColor: colors.primary }]}
-                onPress={handleSavePhoto}
-                accessibilityLabel={t('result.savePhoto')}
-                accessibilityRole="button"
-              >
-                <Ionicons name="download-outline" size={20} color="#fff" />
-                <Text style={styles.savePhotoButtonText}>{t('result.savePhoto')}</Text>
-              </TouchableOpacity>
+              <View style={styles.photoButtonGroup}>
+                <TouchableOpacity
+                  style={[styles.savePhotoButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSavePhoto}
+                  accessibilityLabel={t('result.savePhoto')}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="download-outline" size={20} color="#fff" />
+                  <Text style={styles.savePhotoButtonText}>{t('result.savePhoto')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sharePhotoButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSharePhoto}
+                  accessibilityLabel={t('result.share')}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="share-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
             <Image
               source={{ uri: photoUri }}
@@ -439,6 +466,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 40,
   },
   photoContainer: {
     marginVertical: 20,
@@ -455,6 +483,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  photoButtonGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   savePhotoButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -467,6 +500,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  sharePhotoButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scanPhoto: {
     width: '100%',
@@ -619,7 +659,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 100,
     paddingVertical: 16,
     borderRadius: 16,
     elevation: 4,
