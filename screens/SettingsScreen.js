@@ -220,15 +220,18 @@ export default function SettingsScreen() {
     })();
   }, [realtimeSyncEnabled]);
 
-  // 세션 URL 목록 저장
+  // 세션 URL 목록 저장 (실시간 동기화가 활성화된 경우에만)
   useEffect(() => {
-    if (sessionUrls.length > 0) {
-      AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
-    } else {
-      // 빈 배열일 때는 AsyncStorage에서 제거
-      AsyncStorage.removeItem('sessionUrls');
+    if (realtimeSyncEnabled) {
+      if (sessionUrls.length > 0) {
+        AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
+      } else {
+        // 활성화 상태에서 빈 배열일 때는 AsyncStorage에서 제거
+        AsyncStorage.removeItem('sessionUrls');
+      }
     }
-  }, [sessionUrls]);
+    // 비활성화 상태에서는 AsyncStorage를 건드리지 않음 (데이터 보존)
+  }, [sessionUrls, realtimeSyncEnabled]);
 
   // 활성 세션 ID 저장
   useEffect(() => {
