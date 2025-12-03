@@ -224,6 +224,9 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (sessionUrls.length > 0) {
       AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
+    } else {
+      // 빈 배열일 때는 AsyncStorage에서 제거
+      AsyncStorage.removeItem('sessionUrls');
     }
   }, [sessionUrls]);
 
