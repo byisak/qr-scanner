@@ -77,6 +77,7 @@ function ScannerScreen() {
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
+  const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
 
   const [qrBounds, setQrBounds] = useState(null);
 
@@ -271,6 +272,8 @@ function ScannerScreen() {
       return () => {
         setIsActive(false); // 다른 탭으로 이동 시 카메라 비활성화
         clearAllTimers();
+        // 사진 촬영 중이라도 cleanup 시 ref 초기화 (다음 활성화 시 새로 시작)
+        isCapturingPhotoRef.current = false;
       };
     }, [resetAll, clearAllTimers]),
   );
@@ -454,10 +457,11 @@ function ScannerScreen() {
   }, []);
 
   const capturePhoto = useCallback(async () => {
+    isCapturingPhotoRef.current = true; // 동기적으로 즉시 설정
     setIsCapturingPhoto(true);
     try {
-      // 카메라 ref와 활성 상태 체크
-      if (!cameraRef.current || !isActive) {
+      // 카메라 ref 체크 (isActive 체크 제거 - ref로 관리)
+      if (!cameraRef.current) {
         console.log('Camera not ready');
         return null;
       }
@@ -470,7 +474,7 @@ function ScannerScreen() {
       }
 
       // 사진 촬영 전 한번 더 체크
-      if (!cameraRef.current || !isActive) {
+      if (!cameraRef.current) {
         console.log('Camera unmounted before capture');
         return null;
       }
@@ -503,9 +507,10 @@ function ScannerScreen() {
       console.error('Photo capture error:', error);
       return null;
     } finally {
+      isCapturingPhotoRef.current = false; // 동기적으로 즉시 해제
       setIsCapturingPhoto(false);
     }
-  }, [isActive]);
+  }, []);
 
   const handleBarCodeScanned = useCallback(
     async ({ data, bounds, type }) => {
@@ -620,7 +625,8 @@ function ScannerScreen() {
       }
 
       // 사진 촬영을 타이머 밖에서 먼저 시작 (비동기)
-      const photoPromise = (photoSaveEnabledRef.current && isActive) ? capturePhoto() : Promise.resolve(null);
+      // isActive 체크 제거 - capturePhoto 내부에서 cameraRef 체크로 충분
+      const photoPromise = photoSaveEnabledRef.current ? capturePhoto() : Promise.resolve(null);
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
@@ -752,7 +758,7 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      {(isActive || isCapturingPhoto) && (
+      {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
