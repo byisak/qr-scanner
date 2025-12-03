@@ -261,7 +261,7 @@ function ScannerScreen() {
     }
   }, [qrBounds, scaleAnim, opacityAnim]);
 
-  const saveHistory = useCallback(async (code, url = null, photoUri = null) => {
+  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr') => {
     try {
       let selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
 
@@ -332,6 +332,7 @@ function ScannerScreen() {
           scanTimes: scanTimes, // 모든 스캔 시간 저장
           photos: photos, // 모든 사진 저장
           ...(url && { url }), // URL이 있으면 업데이트
+          type: barcodeType, // 바코드 타입
         };
 
         // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
@@ -345,7 +346,8 @@ function ScannerScreen() {
           count: 1,
           scanTimes: [now], // 첫 스캔 시간을 배열로 저장
           photos: photoUri ? [photoUri] : [], // 사진 배열
-          ...(url && { url })
+          ...(url && { url }),
+          type: barcodeType, // 바코드 타입
         };
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
       }
@@ -464,7 +466,7 @@ function ScannerScreen() {
   }, [isActive]);
 
   const handleBarCodeScanned = useCallback(
-    async ({ data, bounds }) => {
+    async ({ data, bounds, type }) => {
       if (!isActive || !canScan) return; // canScan 추가 확인
       if (!isQrInScanArea(bounds)) return;
 
@@ -605,6 +607,7 @@ function ScannerScreen() {
               code: data,
               timestamp: Date.now(),
               photoUri: photoUri || null,
+              type: type,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -626,7 +629,7 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri);
+              await saveHistory(data, url, photoUri, type);
               setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
@@ -634,7 +637,7 @@ function ScannerScreen() {
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri);
+          const historyResult = await saveHistory(data, null, photoUri, type);
           setCanScan(false);
           router.push({
             pathname: '/result',
@@ -648,7 +651,7 @@ function ScannerScreen() {
           startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
-          await saveHistory(data);
+          await saveHistory(data, null, null, type);
           startResetTimer(RESET_DELAY_NORMAL);
         } finally {
           navigationTimerRef.current = null;
@@ -667,7 +670,7 @@ function ScannerScreen() {
     try {
       // 모든 배치 항목을 히스토리에 저장
       for (const item of batchScannedItems) {
-        await saveHistory(item.code, null, item.photoUri);
+        await saveHistory(item.code, null, item.photoUri, item.type);
       }
 
       // 배치 항목 초기화

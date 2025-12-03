@@ -15,7 +15,7 @@ export default function ResultScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
@@ -23,6 +23,7 @@ export default function ResultScreen() {
   const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
   const hasPhoto = photoUri && photoUri.length > 0;
   const isFromHistory = fromHistory === 'true';
+  const barcodeType = type || 'qr';
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
@@ -249,7 +250,14 @@ export default function ResultScreen() {
         )}
 
         <View style={styles.labelRow}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
+          <View style={styles.labelWithType}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
+            {barcodeType && barcodeType !== 'qr' && (
+              <View style={[styles.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+                <Text style={[styles.typeBadgeText, { color: colors.primary }]}>{barcodeType.toUpperCase()}</Text>
+              </View>
+            )}
+          </View>
           {isFromHistory && (
             <TouchableOpacity
               style={[styles.editToggleButton, { backgroundColor: colors.inputBackground }]}
@@ -437,9 +445,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  labelWithType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   editToggleButton: {
     flexDirection: 'row',
