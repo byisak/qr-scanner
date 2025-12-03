@@ -132,6 +132,20 @@ function ScannerScreen() {
           const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
           if (savedActiveSessionId) {
             setActiveSessionId(savedActiveSessionId);
+
+            // WebSocket 서버에 연결
+            const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+            if (sessionUrls) {
+              const urls = JSON.parse(sessionUrls);
+              const activeSession = urls.find(s => s.id === savedActiveSessionId);
+              if (activeSession) {
+                // URL에서 서버 주소 추출 (http://138.2.58.102:3000/sessionId -> http://138.2.58.102:3000)
+                const serverUrl = activeSession.url.substring(0, activeSession.url.lastIndexOf('/'));
+                websocketClient.connect(serverUrl);
+                websocketClient.setSessionId(savedActiveSessionId);
+                console.log('WebSocket connected to:', serverUrl);
+              }
+            }
           }
         }
       } catch (error) {
@@ -216,10 +230,26 @@ function ScannerScreen() {
             const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
             if (savedActiveSessionId) {
               setActiveSessionId(savedActiveSessionId);
+
+              // WebSocket 서버에 연결
+              const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+              if (sessionUrls) {
+                const urls = JSON.parse(sessionUrls);
+                const activeSession = urls.find(s => s.id === savedActiveSessionId);
+                if (activeSession) {
+                  // URL에서 서버 주소 추출 (http://138.2.58.102:3000/sessionId -> http://138.2.58.102:3000)
+                  const serverUrl = activeSession.url.substring(0, activeSession.url.lastIndexOf('/'));
+                  websocketClient.connect(serverUrl);
+                  websocketClient.setSessionId(savedActiveSessionId);
+                  console.log('WebSocket connected to:', serverUrl);
+                }
+              }
             }
           } else {
             setRealtimeSyncEnabled(false);
             setActiveSessionId('');
+            // WebSocket 연결 해제
+            websocketClient.disconnect();
           }
         } catch (error) {
           console.error('Load barcode settings error:', error);

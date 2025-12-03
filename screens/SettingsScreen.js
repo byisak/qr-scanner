@@ -36,7 +36,7 @@ const generateSessionId = () => {
   return result;
 };
 
-const BASE_SERVER_URL = 'http://qrcode.com';
+const BASE_SERVER_URL = 'http://138.2.58.102:3000';
 
 export default function SettingsScreen() {
   const router = useRouter();
