@@ -75,6 +75,13 @@ export default {
     errorOccurred: 'An error occurred while editing.',
     errorDeleteOccurred: 'An error occurred while deleting.',
     dataPlaceholder: 'Enter data',
+    savePhoto: 'Save Photo',
+    savePhotoSuccess: 'Photo Saved',
+    savePhotoSuccessMessage: 'Photo has been saved to album.',
+    errorNoPhoto: 'No photo to save.',
+    errorSavePhoto: 'An error occurred while saving photo.',
+    permissionDenied: 'Permission Denied',
+    permissionDeniedMessage: 'Photo library permission is required to save photos.',
   },
 
   // Settings screen

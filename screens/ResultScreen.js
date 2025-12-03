@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as MediaLibrary from 'expo-media-library';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -66,6 +67,46 @@ export default function ResultScreen() {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
       router.push({ pathname: '/webview', params: { url: urlToOpen } });
+    }
+  };
+
+  // 사진 앨범에 저장
+  const handleSavePhoto = async () => {
+    if (!hasPhoto || !photoUri) {
+      Alert.alert(t('result.error'), t('result.errorNoPhoto'));
+      return;
+    }
+
+    try {
+      // 권한 요청
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          t('result.permissionDenied'),
+          t('result.permissionDeniedMessage')
+        );
+        return;
+      }
+
+      // 사진 저장
+      const asset = await MediaLibrary.createAssetAsync(photoUri);
+
+      // 앨범에 추가 (QR Scanner 앨범 생성 또는 기존 앨범 사용)
+      const album = await MediaLibrary.getAlbumAsync('QR Scanner');
+      if (album == null) {
+        await MediaLibrary.createAlbumAsync('QR Scanner', asset, false);
+      } else {
+        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      }
+
+      Alert.alert(
+        t('result.savePhotoSuccess'),
+        t('result.savePhotoSuccessMessage')
+      );
+    } catch (error) {
+      console.error('Save photo error:', error);
+      Alert.alert(t('result.error'), t('result.errorSavePhoto'));
     }
   };
 
@@ -215,7 +256,18 @@ export default function ResultScreen() {
         {/* 스캔 사진 */}
         {hasPhoto && (
           <View style={styles.photoContainer}>
-            <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>{t('result.scanPhoto')}</Text>
+            <View style={styles.photoHeader}>
+              <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>{t('result.scanPhoto')}</Text>
+              <TouchableOpacity
+                style={[styles.savePhotoButton, { backgroundColor: colors.primary }]}
+                onPress={handleSavePhoto}
+                accessibilityLabel={t('result.savePhoto')}
+                accessibilityRole="button"
+              >
+                <Ionicons name="download-outline" size={20} color="#fff" />
+                <Text style={styles.savePhotoButtonText}>{t('result.savePhoto')}</Text>
+              </TouchableOpacity>
+            </View>
             <Image
               source={{ uri: photoUri }}
               style={[styles.scanPhoto, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -390,12 +442,31 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     marginVertical: 20,
+    width: '100%',
+  },
+  photoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
   },
   photoLabel: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
+  },
+  savePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+  },
+  savePhotoButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scanPhoto: {
     width: '100%',

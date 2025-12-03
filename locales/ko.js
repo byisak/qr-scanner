@@ -75,6 +75,13 @@ export default {
     errorOccurred: '수정 중 문제가 발생했습니다.',
     errorDeleteOccurred: '삭제 중 문제가 발생했습니다.',
     dataPlaceholder: '데이터를 입력하세요',
+    savePhoto: '사진 저장',
+    savePhotoSuccess: '사진 저장 완료',
+    savePhotoSuccessMessage: '사진이 앨범에 저장되었습니다.',
+    errorNoPhoto: '저장할 사진이 없습니다.',
+    errorSavePhoto: '사진 저장 중 문제가 발생했습니다.',
+    permissionDenied: '권한 거부됨',
+    permissionDeniedMessage: '사진을 저장하려면 사진 라이브러리 권한이 필요합니다.',
   },
 
   // 설정 화면
