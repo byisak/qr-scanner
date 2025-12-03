@@ -75,6 +75,13 @@ export default {
     errorOccurred: '编辑时出现问题。',
     errorDeleteOccurred: '删除时出现问题。',
     dataPlaceholder: '请输入数据',
+    savePhoto: '保存照片',
+    savePhotoSuccess: '照片保存成功',
+    savePhotoSuccessMessage: '照片已保存到相册。',
+    errorNoPhoto: '没有要保存的照片。',
+    errorSavePhoto: '保存照片时出现问题。',
+    permissionDenied: '权限被拒绝',
+    permissionDeniedMessage: '保存照片需要相册权限。',
   },
 
   // 设置界面

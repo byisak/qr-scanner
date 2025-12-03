@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as MediaLibrary from 'expo-media-library';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -15,7 +16,7 @@ export default function ResultScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
@@ -23,6 +24,7 @@ export default function ResultScreen() {
   const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
   const hasPhoto = photoUri && photoUri.length > 0;
   const isFromHistory = fromHistory === 'true';
+  const barcodeType = type || 'qr';
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
@@ -65,6 +67,63 @@ export default function ResultScreen() {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
       router.push({ pathname: '/webview', params: { url: urlToOpen } });
+    }
+  };
+
+  // 사진 앨범에 저장
+  const handleSavePhoto = async () => {
+    if (!hasPhoto || !photoUri) {
+      Alert.alert(t('result.error'), t('result.errorNoPhoto'));
+      return;
+    }
+
+    try {
+      // 권한 요청
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert(
+          t('result.permissionDenied'),
+          t('result.permissionDeniedMessage')
+        );
+        return;
+      }
+
+      // 사진 저장
+      const asset = await MediaLibrary.createAssetAsync(photoUri);
+
+      // 앨범에 추가 (QR Scanner 앨범 생성 또는 기존 앨범 사용)
+      const album = await MediaLibrary.getAlbumAsync('QR Scanner');
+      if (album == null) {
+        await MediaLibrary.createAlbumAsync('QR Scanner', asset, false);
+      } else {
+        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      }
+
+      Alert.alert(
+        t('result.savePhotoSuccess'),
+        t('result.savePhotoSuccessMessage')
+      );
+    } catch (error) {
+      console.error('Save photo error:', error);
+      Alert.alert(t('result.error'), t('result.errorSavePhoto'));
+    }
+  };
+
+  // 사진 공유
+  const handleSharePhoto = async () => {
+    if (!hasPhoto || !photoUri) {
+      Alert.alert(t('result.error'), t('result.errorNoPhoto'));
+      return;
+    }
+
+    try {
+      await Share.share({
+        url: photoUri,
+        message: t('result.scanPhoto'),
+      });
+    } catch (error) {
+      console.error('Share photo error:', error);
     }
   };
 
@@ -214,7 +273,28 @@ export default function ResultScreen() {
         {/* 스캔 사진 */}
         {hasPhoto && (
           <View style={styles.photoContainer}>
-            <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>{t('result.scanPhoto')}</Text>
+            <View style={styles.photoHeader}>
+              <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>{t('result.scanPhoto')}</Text>
+              <View style={styles.photoButtonGroup}>
+                <TouchableOpacity
+                  style={[styles.savePhotoButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSavePhoto}
+                  accessibilityLabel={t('result.savePhoto')}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="download-outline" size={20} color="#fff" />
+                  <Text style={styles.savePhotoButtonText}>{t('result.savePhoto')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sharePhotoButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSharePhoto}
+                  accessibilityLabel={t('result.share')}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="share-outline" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
             <Image
               source={{ uri: photoUri }}
               style={[styles.scanPhoto, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -249,7 +329,14 @@ export default function ResultScreen() {
         )}
 
         <View style={styles.labelRow}>
-          <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
+          <View style={styles.labelWithType}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
+            {barcodeType && barcodeType !== 'qr' && (
+              <View style={[styles.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+                <Text style={[styles.typeBadgeText, { color: colors.primary }]}>{barcodeType.toUpperCase()}</Text>
+              </View>
+            )}
+          </View>
           {isFromHistory && (
             <TouchableOpacity
               style={[styles.editToggleButton, { backgroundColor: colors.inputBackground }]}
@@ -379,15 +466,47 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+    paddingBottom: 40,
   },
   photoContainer: {
     marginVertical: 20,
+    width: '100%',
+  },
+  photoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
+    width: '100%',
   },
   photoLabel: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
+  },
+  photoButtonGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  savePhotoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    gap: 6,
+  },
+  savePhotoButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sharePhotoButton: {
+    width: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   scanPhoto: {
     width: '100%',
@@ -437,9 +556,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  labelWithType: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   label: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   editToggleButton: {
     flexDirection: 'row',
@@ -525,7 +659,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 20,
-    marginBottom: 40,
+    marginBottom: 100,
     paddingVertical: 16,
     borderRadius: 16,
     elevation: 4,

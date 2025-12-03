@@ -75,6 +75,13 @@ export default {
     errorOccurred: '編集中に問題が発生しました。',
     errorDeleteOccurred: '削除中に問題が発生しました。',
     dataPlaceholder: 'データを入力してください',
+    savePhoto: '写真を保存',
+    savePhotoSuccess: '写真保存完了',
+    savePhotoSuccessMessage: '写真がアルバムに保存されました。',
+    errorNoPhoto: '保存する写真がありません。',
+    errorSavePhoto: '写真の保存中に問題が発生しました。',
+    permissionDenied: '権限が拒否されました',
+    permissionDeniedMessage: '写真を保存するにはフォトライブラリの権限が必要です。',
   },
 
   // 設定画面

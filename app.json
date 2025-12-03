@@ -59,6 +59,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "serverUrl": "http://138.2.58.102:3000"
     }
   }
 }

@@ -142,6 +142,7 @@ export default function HistoryScreen() {
         photoUri: item.photos && item.photos.length > 0 ? item.photos[0] : '',
         groupId: selectedGroupId, // 그룹 ID 전달
         fromHistory: 'true', // 히스토리에서 왔음을 표시
+        type: item.type || 'qr', // 바코드 타입 전달
       }
     });
   };
@@ -249,6 +250,11 @@ export default function HistoryScreen() {
                 <Text style={[s.code, { color: colors.text }]} numberOfLines={1}>
                   {item.code}
                 </Text>
+                {item.type && item.type !== 'qr' && (
+                  <View style={[s.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+                    <Text style={[s.typeBadgeText, { color: colors.primary }]}>{item.type.toUpperCase()}</Text>
+                  </View>
+                )}
                 {item.count && item.count > 1 && (
                   <View style={[s.countBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: '#FF9500' }]}>
                     <Ionicons name="repeat" size={12} color="#FF9500" />
@@ -416,6 +422,17 @@ const s = StyleSheet.create({
     fontWeight: '700',
     color: '#FF9500',
     marginLeft: 4,
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginLeft: 8,
+    borderWidth: 1,
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
   time: {
     fontSize: 13,

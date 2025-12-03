@@ -75,8 +75,20 @@ function ScannerScreen() {
   const navigationTimerRef = useRef(null);
   const smoothBounds = useRef(null);
   const cameraRef = useRef(null);
+  const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
+  const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
 
   const [qrBounds, setQrBounds] = useState(null);
+
+  // photoSaveEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    photoSaveEnabledRef.current = photoSaveEnabled;
+  }, [photoSaveEnabled]);
+
+  // hapticEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    hapticEnabledRef.current = hapticEnabled;
+  }, [hapticEnabled]);
 
   useEffect(() => {
     (async () => {
@@ -132,6 +144,20 @@ function ScannerScreen() {
           const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
           if (savedActiveSessionId) {
             setActiveSessionId(savedActiveSessionId);
+
+            // WebSocket 서버에 연결
+            const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+            if (sessionUrls) {
+              const urls = JSON.parse(sessionUrls);
+              const activeSession = urls.find(s => s.id === savedActiveSessionId);
+              if (activeSession) {
+                // URL에서 서버 주소 추출 (http://138.2.58.102:3000/sessionId -> http://138.2.58.102:3000)
+                const serverUrl = activeSession.url.substring(0, activeSession.url.lastIndexOf('/'));
+                websocketClient.connect(serverUrl);
+                websocketClient.setSessionId(savedActiveSessionId);
+                console.log('WebSocket connected to:', serverUrl);
+              }
+            }
           }
         }
       } catch (error) {
@@ -216,10 +242,26 @@ function ScannerScreen() {
             const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
             if (savedActiveSessionId) {
               setActiveSessionId(savedActiveSessionId);
+
+              // WebSocket 서버에 연결
+              const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+              if (sessionUrls) {
+                const urls = JSON.parse(sessionUrls);
+                const activeSession = urls.find(s => s.id === savedActiveSessionId);
+                if (activeSession) {
+                  // URL에서 서버 주소 추출 (http://138.2.58.102:3000/sessionId -> http://138.2.58.102:3000)
+                  const serverUrl = activeSession.url.substring(0, activeSession.url.lastIndexOf('/'));
+                  websocketClient.connect(serverUrl);
+                  websocketClient.setSessionId(savedActiveSessionId);
+                  console.log('WebSocket connected to:', serverUrl);
+                }
+              }
             }
           } else {
             setRealtimeSyncEnabled(false);
             setActiveSessionId('');
+            // WebSocket 연결 해제
+            websocketClient.disconnect();
           }
         } catch (error) {
           console.error('Load barcode settings error:', error);
@@ -261,7 +303,7 @@ function ScannerScreen() {
     }
   }, [qrBounds, scaleAnim, opacityAnim]);
 
-  const saveHistory = useCallback(async (code, url = null, photoUri = null) => {
+  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr') => {
     try {
       let selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
 
@@ -332,6 +374,7 @@ function ScannerScreen() {
           scanTimes: scanTimes, // 모든 스캔 시간 저장
           photos: photos, // 모든 사진 저장
           ...(url && { url }), // URL이 있으면 업데이트
+          type: barcodeType, // 바코드 타입
         };
 
         // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
@@ -345,7 +388,8 @@ function ScannerScreen() {
           count: 1,
           scanTimes: [now], // 첫 스캔 시간을 배열로 저장
           photos: photoUri ? [photoUri] : [], // 사진 배열
-          ...(url && { url })
+          ...(url && { url }),
+          type: barcodeType, // 바코드 타입
         };
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
       }
@@ -464,7 +508,7 @@ function ScannerScreen() {
   }, [isActive]);
 
   const handleBarCodeScanned = useCallback(
-    async ({ data, bounds }) => {
+    async ({ data, bounds, type }) => {
       if (!isActive || !canScan) return; // canScan 추가 확인
       if (!isQrInScanArea(bounds)) return;
 
@@ -553,7 +597,7 @@ function ScannerScreen() {
       }
 
       // 햅틱 설정이 활성화된 경우에만 진동
-      if (hapticEnabled) {
+      if (hapticEnabledRef.current) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
@@ -576,7 +620,7 @@ function ScannerScreen() {
       }
 
       // 사진 촬영을 타이머 밖에서 먼저 시작 (비동기)
-      const photoPromise = (photoSaveEnabled && isActive) ? capturePhoto() : Promise.resolve(null);
+      const photoPromise = (photoSaveEnabledRef.current && isActive) ? capturePhoto() : Promise.resolve(null);
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
@@ -605,6 +649,7 @@ function ScannerScreen() {
               code: data,
               timestamp: Date.now(),
               photoUri: photoUri || null,
+              type: type,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -626,7 +671,7 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri);
+              await saveHistory(data, url, photoUri, type);
               setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
@@ -634,7 +679,7 @@ function ScannerScreen() {
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri);
+          const historyResult = await saveHistory(data, null, photoUri, type);
           setCanScan(false);
           router.push({
             pathname: '/result',
@@ -648,14 +693,14 @@ function ScannerScreen() {
           startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
-          await saveHistory(data);
+          await saveHistory(data, null, null, type);
           startResetTimer(RESET_DELAY_NORMAL);
         } finally {
           navigationTimerRef.current = null;
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, hapticEnabled, photoSaveEnabled, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -667,7 +712,7 @@ function ScannerScreen() {
     try {
       // 모든 배치 항목을 히스토리에 저장
       for (const item of batchScannedItems) {
-        await saveHistory(item.code, null, item.photoUri);
+        await saveHistory(item.code, null, item.photoUri, item.type);
       }
 
       // 배치 항목 초기화
