@@ -422,19 +422,59 @@ function ScannerScreen() {
 
   const normalizeBounds = useCallback(
     (bounds) => {
-      if (!bounds?.origin) return null;
-      const { origin, size } = bounds;
-      const isPixel = origin.x > 1 || origin.y > 1;
+      // bounds 형식 확인 및 로깅
+      if (!bounds) {
+        console.log('No bounds provided');
+        return null;
+      }
 
-      const scaleX = isPixel ? 1 : winWidth;
-      const scaleY = isPixel ? 1 : winHeight;
+      // 형식 1: { origin: { x, y }, size: { width, height } }
+      if (bounds.origin && bounds.size) {
+        const { origin, size } = bounds;
+        const isPixel = origin.x > 1 || origin.y > 1;
 
-      return {
-        x: origin.x * scaleX,
-        y: origin.y * scaleY,
-        width: size.width * scaleX,
-        height: size.height * scaleY,
-      };
+        const scaleX = isPixel ? 1 : winWidth;
+        const scaleY = isPixel ? 1 : winHeight;
+
+        return {
+          x: origin.x * scaleX,
+          y: origin.y * scaleY,
+          width: size.width * scaleX,
+          height: size.height * scaleY,
+        };
+      }
+
+      // 형식 2: { x, y, width, height } (일부 1차원 바코드)
+      if (bounds.x !== undefined && bounds.y !== undefined && bounds.width && bounds.height) {
+        const isPixel = bounds.x > 1 || bounds.y > 1;
+        const scaleX = isPixel ? 1 : winWidth;
+        const scaleY = isPixel ? 1 : winHeight;
+
+        return {
+          x: bounds.x * scaleX,
+          y: bounds.y * scaleY,
+          width: bounds.width * scaleX,
+          height: bounds.height * scaleY,
+        };
+      }
+
+      // 형식 3: { boundingBox: { x, y, width, height } }
+      if (bounds.boundingBox) {
+        const box = bounds.boundingBox;
+        const isPixel = box.x > 1 || box.y > 1;
+        const scaleX = isPixel ? 1 : winWidth;
+        const scaleY = isPixel ? 1 : winHeight;
+
+        return {
+          x: box.x * scaleX,
+          y: box.y * scaleY,
+          width: box.width * scaleX,
+          height: box.height * scaleY,
+        };
+      }
+
+      console.log('Unknown bounds format:', JSON.stringify(bounds));
+      return null;
     },
     [winWidth, winHeight],
   );
