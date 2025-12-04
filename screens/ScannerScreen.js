@@ -420,6 +420,30 @@ function ScannerScreen() {
     }
   }, [realtimeSyncEnabled, activeSessionId]);
 
+  // cornerPoints에서 bounds 생성
+  const boundsFromCornerPoints = useCallback(
+    (cornerPoints) => {
+      if (!cornerPoints || cornerPoints.length < 3) return null;
+
+      // cornerPoints는 [{x, y}, {x, y}, ...] 형식
+      const xCoords = cornerPoints.map(p => p.x);
+      const yCoords = cornerPoints.map(p => p.y);
+
+      const minX = Math.min(...xCoords);
+      const maxX = Math.max(...xCoords);
+      const minY = Math.min(...yCoords);
+      const maxY = Math.max(...yCoords);
+
+      return {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+      };
+    },
+    []
+  );
+
   const normalizeBounds = useCallback(
     (bounds) => {
       // bounds 형식 확인 및 로깅
@@ -669,11 +693,14 @@ function ScannerScreen() {
   }, [normalizeBounds, winWidth, winHeight]);
 
   const handleBarCodeScanned = useCallback(
-    async ({ data, bounds, type }) => {
+    async ({ data, bounds, type, cornerPoints }) => {
       if (!isActive || !canScan) return; // canScan 추가 확인
 
       // bounds 정보 로깅 (디버깅용)
-      console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}`);
+      console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
+      if (cornerPoints) {
+        console.log(`Corner points:`, cornerPoints);
+      }
 
       // 전체 화면 스캔 모드가 아닐 때만 스캔 영역 체크
       if (!fullScreenScanMode && !isQrInScanArea(bounds)) return;
@@ -767,10 +794,17 @@ function ScannerScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      let normalized = normalizeBounds(bounds);
+      // bounds가 없으면 cornerPoints에서 생성 시도
+      let effectiveBounds = bounds;
+      if (!bounds && cornerPoints) {
+        console.log('Creating bounds from corner points');
+        effectiveBounds = boundsFromCornerPoints(cornerPoints);
+      }
 
-      // bounds가 없는 경우 (일부 1차원 바코드), 합성 bounds 생성
-      if (!normalized && !bounds) {
+      let normalized = normalizeBounds(effectiveBounds);
+
+      // bounds와 cornerPoints 모두 없는 경우, 합성 bounds 생성
+      if (!normalized && !bounds && !cornerPoints) {
         console.log(`Creating synthetic bounds for barcode type: ${type}`);
 
         // 바코드 타입을 소문자로 변환하고 org.iso. 등의 prefix 제거
