@@ -688,8 +688,8 @@ function ScannerScreen() {
           const screenCenterX = winWidth / 2;
           const screenCenterY = winHeight / 2;
 
-          // 타겟 영역 크기 (화면 중앙 ±80px 범위 - 조금 더 넓게)
-          const targetRadius = 80;
+          // 타겟 영역 크기 (화면 중앙 ±50px 범위)
+          const targetRadius = 50;
 
           // 바코드 중심이 타겟 영역에 없으면 스캔하지 않음
           const distanceFromCenter = Math.sqrt(
