@@ -23,8 +23,8 @@ import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
 
-const SCAN_AREA_SIZE = 240;
 const DEBOUNCE_DELAY = 500;
+const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
 const RESET_DELAY_LINK = 1200;
 const RESET_DELAY_NORMAL = 800;
 
@@ -32,16 +32,6 @@ function ScannerScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
-
-  const scanArea = useMemo(() => {
-    const size = Math.min(winWidth * 0.7, winHeight * 0.5, SCAN_AREA_SIZE);
-    return {
-      width: size,
-      height: size,
-      x: (winWidth - size) / 2,
-      y: (winHeight - size) / 2,
-    };
-  }, [winWidth, winHeight]);
 
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
@@ -92,7 +82,6 @@ function ScannerScreen() {
 
   const [qrBounds, setQrBounds] = useState(null);
   const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
-  const [showFlash, setShowFlash] = useState(false); // 위치 정보 없는 바코드용 플래시 효과
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -504,26 +493,6 @@ function ScannerScreen() {
     [winWidth, winHeight],
   );
 
-  const isQrInScanArea = useCallback(
-    (bounds) => {
-      const b = normalizeBounds(bounds);
-      if (!b) return false;
-
-      const areaLeft = scanArea.x;
-      const areaRight = scanArea.x + scanArea.width;
-      const areaTop = scanArea.y;
-      const areaBottom = scanArea.y + scanArea.height;
-
-      const overlapX = Math.max(0, Math.min(b.x + b.width, areaRight) - Math.max(b.x, areaLeft));
-      const overlapY = Math.max(0, Math.min(b.y + b.height, areaBottom) - Math.max(b.y, areaTop));
-      const overlapArea = overlapX * overlapY;
-      const qrArea = b.width * b.height;
-
-      return overlapArea > qrArea * 0.7;
-    },
-    [normalizeBounds, scanArea],
-  );
-
   const startResetTimer = useCallback((delay) => {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
@@ -699,6 +668,9 @@ function ScannerScreen() {
 
       // bounds 정보 로깅 (디버깅용)
       console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
+      if (bounds) {
+        console.log(`Bounds data:`, JSON.stringify(bounds));
+      }
       if (cornerPoints) {
         console.log(`Corner points:`, cornerPoints);
       }
@@ -707,16 +679,14 @@ function ScannerScreen() {
       const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
       console.log(`Normalized type: ${normalizedType}`);
 
-      // 전체 화면 스캔 모드가 아닐 때만 스캔 영역 체크
-      if (!fullScreenScanMode && !isQrInScanArea(bounds)) return;
-
-      // 배치 스캔 모드일 때는 QR 코드 중심이 화면 중앙 타겟에 있어야 스캔
-      if (batchScanEnabled && bounds) {
+      // 바코드가 화면 중앙 십자가 근처에 있을 때만 스캔
+      // bounds가 없거나 정규화할 수 없으면 디바운스만 적용 (위치 확인 불가능)
+      if (bounds) {
         const normalized = normalizeBounds(bounds);
         if (normalized) {
-          // QR 코드의 중심점 계산
-          const qrCenterX = normalized.x + normalized.width / 2;
-          const qrCenterY = normalized.y + normalized.height / 2;
+          // 바코드의 중심점 계산
+          const barcodeCenterX = normalized.x + normalized.width / 2;
+          const barcodeCenterY = normalized.y + normalized.height / 2;
 
           // 화면 중앙점
           const screenCenterX = winWidth / 2;
@@ -725,20 +695,29 @@ function ScannerScreen() {
           // 타겟 영역 크기 (화면 중앙 ±50px 범위)
           const targetRadius = 50;
 
-          // QR 코드 중심이 타겟 영역에 없으면 스캔하지 않음
+          // 바코드 중심이 타겟 영역에 없으면 스캔하지 않음
           const distanceFromCenter = Math.sqrt(
-            Math.pow(qrCenterX - screenCenterX, 2) + Math.pow(qrCenterY - screenCenterY, 2)
+            Math.pow(barcodeCenterX - screenCenterX, 2) + Math.pow(barcodeCenterY - screenCenterY, 2)
           );
 
           if (distanceFromCenter > targetRadius) {
             return; // 타겟 영역 밖이면 스캔하지 않음
           }
+        } else {
+          // bounds는 있지만 정규화 실패 - 위치 확인 불가능하므로 스캔 거부
+          console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
+          return;
         }
+      } else {
+        // bounds가 없는 경우 - 위치 확인 불가능하므로 디바운스로만 제어
+        console.log(`No bounds for ${normalizedType}, relying on debounce only`);
       }
 
       const now = Date.now();
 
-      if (lastScannedData.current === data && now - lastScannedTime.current < DEBOUNCE_DELAY) {
+      // bounds 유무에 따라 다른 디바운스 적용
+      const debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
+      if (lastScannedData.current === data && now - lastScannedTime.current < debounceDelay) {
         return;
       }
 
@@ -808,16 +787,9 @@ function ScannerScreen() {
 
       let normalized = normalizeBounds(effectiveBounds);
 
-      // bounds와 cornerPoints 모두 없는 경우, 플래시 효과 표시
+      // bounds와 cornerPoints 모두 없는 경우, 코너 라인 없이 스캔 (십자가만 표시)
       if (!normalized && !bounds && !cornerPoints) {
-        console.log(`No position data available for barcode type: ${normalizedType}, showing flash effect`);
-
-        // 테두리 대신 플래시 효과 표시
-        setShowFlash(true);
-        setTimeout(() => setShowFlash(false), 200);
-
-        // bounds는 설정하지 않음 (테두리 없음)
-        normalized = null;
+        console.log(`No position data available for barcode type: ${normalizedType}, scanning without corner lines`);
       }
 
       if (normalized) {
@@ -918,7 +890,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
+    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -983,21 +955,6 @@ function ScannerScreen() {
         />
       )}
 
-      {/* 플래시 효과 (위치 정보 없는 바코드용) */}
-      {showFlash && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 255, 100, 0.3)',
-          }}
-          pointerEvents="none"
-        />
-      )}
-
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 */}
         <View style={styles.groupBadge}>
@@ -1021,30 +978,8 @@ function ScannerScreen() {
           </View>
         )}
 
-        <Text style={styles.title} accessibilityLabel={fullScreenScanMode ? t('scanner.scanGuideFullScreen') : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode'))}>
-          {fullScreenScanMode
-            ? t('scanner.scanGuideFullScreen')
-            : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
-              ? t('scanner.scanGuideQr')
-              : t('scanner.scanGuideBarcode'))}
-        </Text>
-        {/* 전체 화면 스캔 모드가 아닐 때만 녹색 테두리 표시 */}
-        {!fullScreenScanMode && !qrBounds && (
-          <View
-            style={[
-              styles.frame,
-              {
-                width: scanArea.width,
-                height: scanArea.height,
-                borderRadius: scanArea.width * 0.08,
-              },
-            ]}
-            accessibilityLabel={t('scanner.scanGuideBarcode')}
-          />
-        )}
-
-        {/* 배치 스캔 모드일 때 중앙 타겟 표시 */}
-        {batchScanEnabled && (
+        {/* 중앙 십자가 타겟 (항상 표시) */}
+        {!qrBounds && (
           <View style={styles.centerTarget} pointerEvents="none">
             {/* 수평선 */}
             <View style={styles.targetLineHorizontal} />
