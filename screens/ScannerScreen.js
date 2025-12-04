@@ -9,6 +9,9 @@ import {
   useWindowDimensions,
   Platform,
   Alert,
+  Modal,
+  FlatList,
+  ScrollView,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -44,6 +47,9 @@ function ScannerScreen() {
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
   const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
+  const [isGroupModalVisible, setIsGroupModalVisible] = useState(false); // 그룹 선택 모달 표시 여부
+  const [allGroups, setAllGroups] = useState([]); // 모든 그룹 목록
+  const [selectedGroupId, setSelectedGroupId] = useState('default'); // 현재 선택된 그룹 ID
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
@@ -130,11 +136,13 @@ function ScannerScreen() {
         }
 
         // 현재 선택된 그룹 이름 로드
-        const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+        const loadedSelectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+        setSelectedGroupId(loadedSelectedGroupId);
         const groupsData = await AsyncStorage.getItem('scanGroups');
         if (groupsData) {
           const groups = JSON.parse(groupsData);
-          const currentGroup = groups.find(g => g.id === selectedGroupId);
+          setAllGroups(groups);
+          const currentGroup = groups.find(g => g.id === loadedSelectedGroupId);
           if (currentGroup) {
             setCurrentGroupName(currentGroup.name);
           }
@@ -228,11 +236,13 @@ function ScannerScreen() {
           }
 
           // 현재 선택된 그룹 이름 로드
-          const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+          const loadedSelectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+          setSelectedGroupId(loadedSelectedGroupId);
           const groupsData = await AsyncStorage.getItem('scanGroups');
           if (groupsData) {
             const groups = JSON.parse(groupsData);
-            const currentGroup = groups.find(g => g.id === selectedGroupId);
+            setAllGroups(groups);
+            const currentGroup = groups.find(g => g.id === loadedSelectedGroupId);
             if (currentGroup) {
               setCurrentGroupName(currentGroup.name);
             }
@@ -310,45 +320,19 @@ function ScannerScreen() {
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr') => {
     try {
-      let selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
-
-      // 실시간 서버전송이 활성화되어 있고 활성 세션 ID가 있으면 해당 그룹에 저장
-      if (realtimeSyncEnabled && activeSessionId) {
-        // 세션 ID 그룹 자동 생성 또는 가져오기
-        const groupsData = await AsyncStorage.getItem('scanGroups');
-        let groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
-
-        // 세션 ID 그룹이 이미 있는지 확인
-        let sessionGroup = groups.find(g => g.id === activeSessionId);
-
-        if (!sessionGroup) {
-          // 세션 ID 그룹이 없으면 생성
-          sessionGroup = {
-            id: activeSessionId,
-            name: activeSessionId,
-            createdAt: Date.now(),
-            isCloudSync: true, // 클라우드 동기화 그룹 표시
-          };
-          groups.push(sessionGroup);
-          await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
-        }
-
-        // 선택된 그룹을 세션 ID 그룹으로 변경
-        selectedGroupId = activeSessionId;
-        await AsyncStorage.setItem('selectedGroupId', activeSessionId);
-        setCurrentGroupName(activeSessionId);
-      }
+      // 현재 선택된 그룹 ID를 state에서 가져오기 (사용자가 선택한 그룹 사용)
+      let currentSelectedGroupId = selectedGroupId;
 
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
       let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
 
       // 선택된 그룹이 없으면 기본 그룹 사용
-      if (!historyByGroup[selectedGroupId]) {
-        historyByGroup[selectedGroupId] = [];
+      if (!historyByGroup[currentSelectedGroupId]) {
+        historyByGroup[currentSelectedGroupId] = [];
       }
 
-      const currentHistory = historyByGroup[selectedGroupId];
+      const currentHistory = historyByGroup[currentSelectedGroupId];
 
       // 중복 체크 (같은 그룹 내에서 같은 코드 찾기)
       const existingIndex = currentHistory.findIndex(item => item.code === code);
@@ -384,7 +368,7 @@ function ScannerScreen() {
 
         // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
         currentHistory.splice(existingIndex, 1);
-        historyByGroup[selectedGroupId] = [updatedItem, ...currentHistory].slice(0, 1000);
+        historyByGroup[currentSelectedGroupId] = [updatedItem, ...currentHistory].slice(0, 1000);
       } else {
         // 새로운 스캔
         const record = {
@@ -396,19 +380,19 @@ function ScannerScreen() {
           ...(url && { url }),
           type: barcodeType, // 바코드 타입
         };
-        historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
+        historyByGroup[currentSelectedGroupId] = [record, ...currentHistory].slice(0, 1000);
       }
 
       // 저장
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
 
       // 중복 여부 반환 (ResultScreen에서 사용)
-      return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1 };
+      return { isDuplicate, count: isDuplicate ? historyByGroup[currentSelectedGroupId][0].count : 1 };
     } catch (e) {
       console.error('Save history error:', e);
       return { isDuplicate: false, count: 1 };
     }
-  }, [realtimeSyncEnabled, activeSessionId]);
+  }, [selectedGroupId]);
 
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(
@@ -756,23 +740,6 @@ function ScannerScreen() {
         }
       }
 
-      // 실시간 서버전송이 활성화되어 있는데 주소가 생성되지 않은 경우
-      if (realtimeSyncEnabled && !activeSessionId) {
-        Alert.alert(
-          t('scanner.noSessionUrl'),
-          t('scanner.pleaseGenerateUrl'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('settings.title'),
-              onPress: () => router.push('/settings')
-            }
-          ]
-        );
-        setTimeout(() => setCanScan(true), 500);
-        return;
-      }
-
       // 햅틱 설정이 활성화된 경우에만 진동
       if (hapticEnabledRef.current) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -920,6 +887,48 @@ function ScannerScreen() {
     setBatchScannedItems([]);
   }, []);
 
+  // 그룹 선택 핸들러
+  const handleGroupSelect = useCallback(async (group) => {
+    try {
+      // selectedGroupId 업데이트
+      setSelectedGroupId(group.id);
+      await AsyncStorage.setItem('selectedGroupId', group.id);
+
+      // 그룹 이름 업데이트
+      setCurrentGroupName(group.name);
+
+      // 선택한 그룹이 클라우드 그룹인지 확인
+      if (group.isCloudSync && group.sessionId) {
+        // 클라우드 그룹인 경우: activeSessionId 업데이트
+        setActiveSessionId(group.sessionId);
+        await AsyncStorage.setItem('activeSessionId', group.sessionId);
+
+        // WebSocket 서버에 연결
+        const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+        if (sessionUrls) {
+          const urls = JSON.parse(sessionUrls);
+          const activeSession = urls.find(s => s.id === group.sessionId);
+          if (activeSession) {
+            const serverUrl = activeSession.url.substring(0, activeSession.url.lastIndexOf('/'));
+            websocketClient.connect(serverUrl);
+            websocketClient.setSessionId(group.sessionId);
+            console.log('WebSocket connected to:', serverUrl, 'with session:', group.sessionId);
+          }
+        }
+      } else {
+        // 일반 그룹인 경우: activeSessionId 제거
+        setActiveSessionId('');
+        await AsyncStorage.removeItem('activeSessionId');
+        // WebSocket 연결 해제는 하지 않음 (설정에서 계속 활성화되어 있을 수 있음)
+      }
+
+      // 모달 닫기
+      setIsGroupModalVisible(false);
+    } catch (error) {
+      console.error('Group selection error:', error);
+    }
+  }, []);
+
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
@@ -956,11 +965,21 @@ function ScannerScreen() {
       )}
 
       <View style={styles.overlay} pointerEvents="box-none">
-        {/* 현재 그룹 표시 */}
-        <View style={styles.groupBadge}>
-          <Ionicons name="folder" size={16} color="#fff" />
+        {/* 현재 그룹 표시 (터치 가능) */}
+        <TouchableOpacity
+          style={styles.groupBadge}
+          onPress={() => setIsGroupModalVisible(true)}
+          activeOpacity={0.8}
+          accessibilityLabel="그룹 선택"
+        >
+          <Ionicons
+            name={allGroups.find(g => g.id === selectedGroupId)?.isCloudSync ? "cloud" : "folder"}
+            size={16}
+            color="#fff"
+          />
           <Text style={styles.groupBadgeText}>{currentGroupName}</Text>
-        </View>
+          <Ionicons name="chevron-down" size={14} color="#fff" style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
 
         {/* 배치 모드 활성 표시 */}
         {batchScanEnabled && (
@@ -1109,6 +1128,71 @@ function ScannerScreen() {
           />
         </View>
       )}
+
+      {/* 그룹 선택 모달 */}
+      <Modal
+        visible={isGroupModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsGroupModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* 모달 헤더 */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>스캔 그룹 선택</Text>
+              <TouchableOpacity
+                onPress={() => setIsGroupModalVisible(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="close" size={28} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            {/* 그룹 목록 */}
+            <ScrollView style={styles.modalContent}>
+              {allGroups.map((group) => (
+                <TouchableOpacity
+                  key={group.id}
+                  style={[
+                    styles.groupItem,
+                    selectedGroupId === group.id && styles.groupItemSelected,
+                  ]}
+                  onPress={() => handleGroupSelect(group)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.groupItemLeft}>
+                    <Ionicons
+                      name={group.isCloudSync ? "cloud" : "folder"}
+                      size={24}
+                      color={selectedGroupId === group.id ? "#007AFF" : "#666"}
+                    />
+                    <View style={styles.groupItemTextContainer}>
+                      <Text
+                        style={[
+                          styles.groupItemName,
+                          selectedGroupId === group.id && styles.groupItemNameSelected,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {group.name}
+                      </Text>
+                      {group.isCloudSync && (
+                        <View style={styles.cloudBadge}>
+                          <Text style={styles.cloudBadgeText}>클라우드</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  {selectedGroupId === group.id && (
+                    <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1343,6 +1427,82 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
+  },
+  // 그룹 선택 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5E5',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333',
+  },
+  modalContent: {
+    paddingHorizontal: 16,
+  },
+  groupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginTop: 8,
+    backgroundColor: '#F8F8F8',
+  },
+  groupItemSelected: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  groupItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  groupItemTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  groupItemName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  groupItemNameSelected: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  cloudBadge: {
+    backgroundColor: 'rgba(147, 51, 234, 0.15)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  cloudBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9333EA',
   },
 });
 

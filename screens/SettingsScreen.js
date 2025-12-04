@@ -280,6 +280,7 @@ export default function SettingsScreen() {
         name: `세션 ${newSessionId.substring(0, 4)}`,
         createdAt: Date.now(),
         isCloudSync: true,
+        sessionId: newSessionId, // 세션 ID 저장 (그룹 선택 시 실시간 전송용)
       };
 
       const updatedGroups = [...groups, newGroup];
