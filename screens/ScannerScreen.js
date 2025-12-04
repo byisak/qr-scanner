@@ -16,9 +16,12 @@ import * as Haptics from 'expo-haptics';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
+import QRCode from 'react-native-qrcode-svg';
+import { captureRef } from 'react-native-view-shot';
 
 const SCAN_AREA_SIZE = 240;
 const DEBOUNCE_DELAY = 500;
@@ -61,6 +64,13 @@ function ScannerScreen() {
     'upca',
   ]);
 
+  // 1차원 바코드 선택 시 전체 화면 스캔 모드 활성화 (QR만 선택 시 기존 스캔 방식 유지)
+  const fullScreenScanMode = useMemo(() => {
+    // QR 이외의 모든 바코드: 1차원 바코드 + 기타 2D 바코드
+    const fullScreenBarcodes = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar', 'pdf417', 'aztec', 'datamatrix'];
+    return barcodeTypes.some(type => fullScreenBarcodes.includes(type));
+  }, [barcodeTypes]);
+
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState('');
@@ -77,8 +87,12 @@ function ScannerScreen() {
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
+  const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
+  const qrCodeRef = useRef(null); // QR 코드 생성용 ref
 
   const [qrBounds, setQrBounds] = useState(null);
+  const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
+  const [showFlash, setShowFlash] = useState(false); // 위치 정보 없는 바코드용 플래시 효과
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -271,6 +285,8 @@ function ScannerScreen() {
       return () => {
         setIsActive(false); // 다른 탭으로 이동 시 카메라 비활성화
         clearAllTimers();
+        // 사진 촬영 중이라도 cleanup 시 ref 초기화 (다음 활성화 시 새로 시작)
+        isCapturingPhotoRef.current = false;
       };
     }, [resetAll, clearAllTimers]),
   );
@@ -405,21 +421,85 @@ function ScannerScreen() {
     }
   }, [realtimeSyncEnabled, activeSessionId]);
 
-  const normalizeBounds = useCallback(
-    (bounds) => {
-      if (!bounds?.origin) return null;
-      const { origin, size } = bounds;
-      const isPixel = origin.x > 1 || origin.y > 1;
+  // cornerPoints에서 bounds 생성
+  const boundsFromCornerPoints = useCallback(
+    (cornerPoints) => {
+      if (!cornerPoints || cornerPoints.length < 3) return null;
 
-      const scaleX = isPixel ? 1 : winWidth;
-      const scaleY = isPixel ? 1 : winHeight;
+      // cornerPoints는 [{x, y}, {x, y}, ...] 형식
+      const xCoords = cornerPoints.map(p => p.x);
+      const yCoords = cornerPoints.map(p => p.y);
+
+      const minX = Math.min(...xCoords);
+      const maxX = Math.max(...xCoords);
+      const minY = Math.min(...yCoords);
+      const maxY = Math.max(...yCoords);
 
       return {
-        x: origin.x * scaleX,
-        y: origin.y * scaleY,
-        width: size.width * scaleX,
-        height: size.height * scaleY,
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
       };
+    },
+    []
+  );
+
+  const normalizeBounds = useCallback(
+    (bounds) => {
+      // bounds 형식 확인 및 로깅
+      if (!bounds) {
+        console.log('No bounds provided');
+        return null;
+      }
+
+      // 형식 1: { origin: { x, y }, size: { width, height } }
+      if (bounds.origin && bounds.size) {
+        const { origin, size } = bounds;
+        const isPixel = origin.x > 1 || origin.y > 1;
+
+        const scaleX = isPixel ? 1 : winWidth;
+        const scaleY = isPixel ? 1 : winHeight;
+
+        return {
+          x: origin.x * scaleX,
+          y: origin.y * scaleY,
+          width: size.width * scaleX,
+          height: size.height * scaleY,
+        };
+      }
+
+      // 형식 2: { x, y, width, height } (일부 1차원 바코드)
+      if (bounds.x !== undefined && bounds.y !== undefined && bounds.width && bounds.height) {
+        const isPixel = bounds.x > 1 || bounds.y > 1;
+        const scaleX = isPixel ? 1 : winWidth;
+        const scaleY = isPixel ? 1 : winHeight;
+
+        return {
+          x: bounds.x * scaleX,
+          y: bounds.y * scaleY,
+          width: bounds.width * scaleX,
+          height: bounds.height * scaleY,
+        };
+      }
+
+      // 형식 3: { boundingBox: { x, y, width, height } }
+      if (bounds.boundingBox) {
+        const box = bounds.boundingBox;
+        const isPixel = box.x > 1 || box.y > 1;
+        const scaleX = isPixel ? 1 : winWidth;
+        const scaleY = isPixel ? 1 : winHeight;
+
+        return {
+          x: box.x * scaleX,
+          y: box.y * scaleY,
+          width: box.width * scaleX,
+          height: box.height * scaleY,
+        };
+      }
+
+      console.log('Unknown bounds format:', JSON.stringify(bounds));
+      return null;
     },
     [winWidth, winHeight],
   );
@@ -453,11 +533,71 @@ function ScannerScreen() {
     }, delay);
   }, []);
 
-  const capturePhoto = useCallback(async () => {
-    setIsCapturingPhoto(true);
+  // QR 코드 재생성 방식으로 이미지 저장
+  const generateQRCodeImage = useCallback(async (qrData, barcodeType = 'qr') => {
     try {
-      // 카메라 ref와 활성 상태 체크
-      if (!cameraRef.current || !isActive) {
+      // 사진 디렉토리 생성
+      const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
+      const dirInfo = await FileSystem.getInfoAsync(photoDir);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
+      }
+
+      // QR 코드 렌더링 트리거
+      setQrCodeToCapture({ data: qrData, type: barcodeType });
+
+      // 렌더링 완료 대기
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // QR 코드 뷰가 준비되었는지 확인
+      if (!qrCodeRef.current) {
+        console.log('QR code view not ready');
+        setQrCodeToCapture(null);
+        return null;
+      }
+
+      // QR 코드 뷰를 이미지로 캡처 (base64 데이터로 받음)
+      const dataUri = await captureRef(qrCodeRef, {
+        format: 'jpg',
+        quality: 0.9,
+        result: 'data-uri',
+      });
+
+      // 파일명 생성 (타임스탬프 사용)
+      const fileName = `qr_${Date.now()}.jpg`;
+      const newPath = photoDir + fileName;
+
+      // base64 데이터를 파일로 저장
+      // data:image/jpeg;base64,/9j/4AAQ... 형식에서 base64 부분만 추출
+      const base64Data = dataUri.split(',')[1];
+      await FileSystem.writeAsStringAsync(newPath, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      console.log('QR code image saved:', newPath);
+
+      // 초기화
+      setQrCodeToCapture(null);
+
+      return newPath;
+    } catch (error) {
+      console.error('QR code generation error:', error);
+      setQrCodeToCapture(null);
+      return null;
+    }
+  }, []);
+
+  const capturePhoto = useCallback(async (bounds = null) => {
+    isCapturingPhotoRef.current = true; // 동기적으로 즉시 설정
+    setIsCapturingPhoto(true);
+
+    // React state 업데이트가 렌더링에 반영될 시간 제공
+    // 이렇게 하면 카메라가 마운트 상태를 유지하도록 보장
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    try {
+      // 카메라 ref 체크 (isActive 체크 제거 - ref로 관리)
+      if (!cameraRef.current) {
         console.log('Camera not ready');
         return null;
       }
@@ -470,7 +610,7 @@ function ScannerScreen() {
       }
 
       // 사진 촬영 전 한번 더 체크
-      if (!cameraRef.current || !isActive) {
+      if (!cameraRef.current) {
         console.log('Camera unmounted before capture');
         return null;
       }
@@ -487,13 +627,58 @@ function ScannerScreen() {
         return null;
       }
 
+      let finalUri = photo.uri;
+
+      // QR 코드 bounds가 있으면 해당 영역만 crop
+      if (bounds) {
+        try {
+          const normalized = normalizeBounds(bounds);
+          if (normalized) {
+            // 여유 공간 추가 (QR 코드 주변 10% 여백)
+            const padding = Math.max(normalized.width, normalized.height) * 0.1;
+            const cropX = Math.max(0, normalized.x - padding);
+            const cropY = Math.max(0, normalized.y - padding);
+            const cropWidth = Math.min(
+              winWidth - cropX,
+              normalized.width + padding * 2
+            );
+            const cropHeight = Math.min(
+              winHeight - cropY,
+              normalized.height + padding * 2
+            );
+
+            // 이미지 crop
+            const croppedImage = await ImageManipulator.manipulateAsync(
+              photo.uri,
+              [
+                {
+                  crop: {
+                    originX: cropX,
+                    originY: cropY,
+                    width: cropWidth,
+                    height: cropHeight,
+                  },
+                },
+              ],
+              { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+            );
+
+            finalUri = croppedImage.uri;
+            console.log('QR code area cropped successfully');
+          }
+        } catch (cropError) {
+          console.error('Crop error, using full image:', cropError);
+          // crop 실패 시 원본 이미지 사용
+        }
+      }
+
       // 파일명 생성 (타임스탬프 사용)
       const fileName = `scan_${Date.now()}.jpg`;
       const newPath = photoDir + fileName;
 
       // 사진 이동
       await FileSystem.moveAsync({
-        from: photo.uri,
+        from: finalUri,
         to: newPath,
       });
 
@@ -503,14 +688,27 @@ function ScannerScreen() {
       console.error('Photo capture error:', error);
       return null;
     } finally {
+      isCapturingPhotoRef.current = false; // 동기적으로 즉시 해제
       setIsCapturingPhoto(false);
     }
-  }, [isActive]);
+  }, [normalizeBounds, winWidth, winHeight]);
 
   const handleBarCodeScanned = useCallback(
-    async ({ data, bounds, type }) => {
+    async ({ data, bounds, type, cornerPoints }) => {
       if (!isActive || !canScan) return; // canScan 추가 확인
-      if (!isQrInScanArea(bounds)) return;
+
+      // bounds 정보 로깅 (디버깅용)
+      console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
+      if (cornerPoints) {
+        console.log(`Corner points:`, cornerPoints);
+      }
+
+      // 바코드 타입 정규화 (org.iso.Code39 -> code39)
+      const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
+      console.log(`Normalized type: ${normalizedType}`);
+
+      // 전체 화면 스캔 모드가 아닐 때만 스캔 영역 체크
+      if (!fullScreenScanMode && !isQrInScanArea(bounds)) return;
 
       // 배치 스캔 모드일 때는 QR 코드 중심이 화면 중앙 타겟에 있어야 스캔
       if (batchScanEnabled && bounds) {
@@ -601,7 +799,27 @@ function ScannerScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      const normalized = normalizeBounds(bounds);
+      // bounds가 없으면 cornerPoints에서 생성 시도
+      let effectiveBounds = bounds;
+      if (!bounds && cornerPoints) {
+        console.log('Creating bounds from corner points');
+        effectiveBounds = boundsFromCornerPoints(cornerPoints);
+      }
+
+      let normalized = normalizeBounds(effectiveBounds);
+
+      // bounds와 cornerPoints 모두 없는 경우, 플래시 효과 표시
+      if (!normalized && !bounds && !cornerPoints) {
+        console.log(`No position data available for barcode type: ${normalizedType}, showing flash effect`);
+
+        // 테두리 대신 플래시 효과 표시
+        setShowFlash(true);
+        setTimeout(() => setShowFlash(false), 200);
+
+        // bounds는 설정하지 않음 (테두리 없음)
+        normalized = null;
+      }
+
       if (normalized) {
         if (!smoothBounds.current) {
           smoothBounds.current = normalized;
@@ -619,8 +837,8 @@ function ScannerScreen() {
         setQrBounds({ ...smoothBounds.current });
       }
 
-      // 사진 촬영을 타이머 밖에서 먼저 시작 (비동기)
-      const photoPromise = (photoSaveEnabledRef.current && isActive) ? capturePhoto() : Promise.resolve(null);
+      // QR 코드 이미지 생성 (카메라 사진 대신 깨끗한 QR 코드 생성)
+      const photoPromise = photoSaveEnabledRef.current ? generateQRCodeImage(data, type) : Promise.resolve(null);
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
@@ -649,7 +867,7 @@ function ScannerScreen() {
               code: data,
               timestamp: Date.now(),
               photoUri: photoUri || null,
-              type: type,
+              type: normalizedType,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -671,7 +889,7 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri, type);
+              await saveHistory(data, url, photoUri, normalizedType);
               setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
@@ -679,7 +897,7 @@ function ScannerScreen() {
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri, type);
+          const historyResult = await saveHistory(data, null, photoUri, normalizedType);
           setCanScan(false);
           router.push({
             pathname: '/result',
@@ -700,7 +918,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -752,7 +970,7 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      {(isActive || isCapturingPhoto) && (
+      {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFillObject}
@@ -762,6 +980,21 @@ function ScannerScreen() {
           barcodeScannerSettings={{
             barcodeTypes: barcodeTypes,
           }}
+        />
+      )}
+
+      {/* 플래시 효과 (위치 정보 없는 바코드용) */}
+      {showFlash && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 255, 100, 0.3)',
+          }}
+          pointerEvents="none"
         />
       )}
 
@@ -788,12 +1021,15 @@ function ScannerScreen() {
           </View>
         )}
 
-        <Text style={styles.title} accessibilityLabel={barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode')}>
-          {barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
-            ? t('scanner.scanGuideQr')
-            : t('scanner.scanGuideBarcode')}
+        <Text style={styles.title} accessibilityLabel={fullScreenScanMode ? t('scanner.scanGuideFullScreen') : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode'))}>
+          {fullScreenScanMode
+            ? t('scanner.scanGuideFullScreen')
+            : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
+              ? t('scanner.scanGuideQr')
+              : t('scanner.scanGuideBarcode'))}
         </Text>
-        {!qrBounds && (
+        {/* 전체 화면 스캔 모드가 아닐 때만 녹색 테두리 표시 */}
+        {!fullScreenScanMode && !qrBounds && (
           <View
             style={[
               styles.frame,
@@ -916,6 +1152,28 @@ function ScannerScreen() {
       >
         <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={32} color="white" />
       </TouchableOpacity>
+
+      {/* 숨겨진 QR 코드 생성용 View */}
+      {qrCodeToCapture && (
+        <View
+          ref={qrCodeRef}
+          style={{
+            position: 'absolute',
+            left: -9999, // 화면 밖으로 숨김
+            top: 0,
+            backgroundColor: 'white',
+            padding: 20,
+          }}
+          collapsable={false}
+        >
+          <QRCode
+            value={qrCodeToCapture.data}
+            size={300}
+            backgroundColor="white"
+            color="black"
+          />
+        </View>
+      )}
     </View>
   );
 }

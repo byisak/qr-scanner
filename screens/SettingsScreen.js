@@ -114,7 +114,7 @@ export default function SettingsScreen() {
     })();
   }, []);
 
-  // 화면이 포커스될 때마다 바코드 개수 업데이트
+  // 화면이 포커스될 때마다 바코드 개수 및 세션 URL 목록 업데이트
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -124,8 +124,24 @@ export default function SettingsScreen() {
             const parsed = JSON.parse(b);
             setSelectedBarcodesCount(parsed.length || 6);
           }
+
+          // 세션 URL 목록 다시 로드 (클라우드 그룹 삭제 시 동기화)
+          const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+          if (savedSessionUrls) {
+            setSessionUrls(JSON.parse(savedSessionUrls));
+          } else {
+            setSessionUrls([]);
+          }
+
+          // 활성화된 세션 ID 다시 로드
+          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+          if (savedActiveSessionId) {
+            setActiveSessionId(savedActiveSessionId);
+          } else {
+            setActiveSessionId('');
+          }
         } catch (error) {
-          console.error('Load barcode count error:', error);
+          console.error('Load settings error:', error);
         }
       })();
     }, [])
@@ -183,11 +199,20 @@ export default function SettingsScreen() {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
         if (!realtimeSyncEnabled) {
-          // 비활성화 시 세션 URL 목록 및 활성 세션 초기화
+          // 비활성화 시 state만 초기화 (AsyncStorage는 유지하여 다시 켤 때 복원 가능)
           setSessionUrls([]);
           setActiveSessionId('');
-          await AsyncStorage.removeItem('sessionUrls');
-          await AsyncStorage.removeItem('activeSessionId');
+        } else {
+          // 활성화 시 저장된 세션 URL 복원
+          const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+          if (savedSessionUrls) {
+            setSessionUrls(JSON.parse(savedSessionUrls));
+          }
+
+          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
+          if (savedActiveSessionId) {
+            setActiveSessionId(savedActiveSessionId);
+          }
         }
       } catch (error) {
         console.error('Save realtime sync settings error:', error);
@@ -195,11 +220,17 @@ export default function SettingsScreen() {
     })();
   }, [realtimeSyncEnabled]);
 
-  // 세션 URL 목록 저장
+  // 세션 URL 목록 저장 (실시간 동기화가 활성화된 경우에만)
   useEffect(() => {
-    if (sessionUrls.length > 0) {
-      AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
+    if (realtimeSyncEnabled) {
+      if (sessionUrls.length > 0) {
+        AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
+      } else {
+        // 활성화 상태에서 빈 배열일 때는 AsyncStorage에서 제거
+        AsyncStorage.removeItem('sessionUrls');
+      }
     }
+    // 비활성화 상태에서는 AsyncStorage를 건드리지 않음 (데이터 보존)
   }, [sessionUrls]);
 
   // 활성 세션 ID 저장
@@ -223,6 +254,19 @@ export default function SettingsScreen() {
     // 첫 번째 세션이면 자동으로 활성화
     if (sessionUrls.length === 0) {
       setActiveSessionId(newSessionId);
+    }
+
+    // 서버에 세션 생성 알림
+    try {
+      // 서버 URL 설정 (config에서 가져오기)
+      if (!websocketClient.getConnectionStatus()) {
+        websocketClient.connect(config.serverUrl);
+      }
+      await websocketClient.createSession(newSessionId);
+      console.log('서버에 세션 생성 요청:', newSessionId);
+    } catch (error) {
+      console.error('서버 세션 생성 실패:', error);
+      // 에러가 나도 로컬에는 저장되므로 계속 진행
     }
 
     // 자동으로 scanGroups에 클라우드 동기화 그룹 추가

@@ -74,14 +74,34 @@ class WebSocketClient {
   }
 
   // 세션 생성 요청
-  createSession() {
+  createSession(sessionId = null) {
     if (!this.socket || !this.isConnected) {
       console.error('Socket not connected');
-      return false;
+      // 연결되지 않았어도 Promise 반환 (연결 시도)
+      return new Promise((resolve, reject) => {
+        if (!this.serverUrl) {
+          reject(new Error('Server URL not set'));
+          return;
+        }
+
+        // 연결 시도
+        this.connect(this.serverUrl);
+
+        // 연결 대기
+        const timeout = setTimeout(() => {
+          reject(new Error('Connection timeout'));
+        }, 5000);
+
+        this.on('connect', () => {
+          clearTimeout(timeout);
+          this.socket.emit('create-session', { sessionId });
+          resolve(true);
+        });
+      });
     }
 
-    this.socket.emit('create-session');
-    return true;
+    this.socket.emit('create-session', { sessionId });
+    return Promise.resolve(true);
   }
 
   // 스캔 데이터 전송

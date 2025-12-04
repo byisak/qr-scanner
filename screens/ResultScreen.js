@@ -298,7 +298,7 @@ export default function ResultScreen() {
             <Image
               source={{ uri: photoUri }}
               style={[styles.scanPhoto, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-              resizeMode="cover"
+              resizeMode="contain"
             />
           </View>
         )}
@@ -509,8 +509,9 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   scanPhoto: {
-    width: '100%',
-    height: 200,
+    width: '70%',
+    aspectRatio: 1, // 정사각형 유지
+    alignSelf: 'center',
     borderRadius: 12,
     borderWidth: 2,
   },
