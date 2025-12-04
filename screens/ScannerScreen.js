@@ -64,10 +64,11 @@ function ScannerScreen() {
     'upca',
   ]);
 
-  // 2D 바코드 선택 시 전체 화면 스캔 모드 활성화
+  // 1차원 바코드 선택 시 전체 화면 스캔 모드 활성화 (QR만 선택 시 기존 스캔 방식 유지)
   const fullScreenScanMode = useMemo(() => {
-    const twoDimensionalBarcodes = ['pdf417', 'aztec', 'datamatrix'];
-    return barcodeTypes.some(type => twoDimensionalBarcodes.includes(type));
+    // QR 이외의 모든 바코드: 1차원 바코드 + 기타 2D 바코드
+    const fullScreenBarcodes = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar', 'pdf417', 'aztec', 'datamatrix'];
+    return barcodeTypes.some(type => fullScreenBarcodes.includes(type));
   }, [barcodeTypes]);
 
   // 실시간 서버전송 관련 상태
