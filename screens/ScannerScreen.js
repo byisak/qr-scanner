@@ -965,14 +965,6 @@ function ScannerScreen() {
           </View>
         )}
 
-        <Text style={styles.title} accessibilityLabel={fullScreenScanMode ? t('scanner.scanGuideFullScreen') : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode'))}>
-          {fullScreenScanMode
-            ? t('scanner.scanGuideFullScreen')
-            : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
-              ? t('scanner.scanGuideQr')
-              : t('scanner.scanGuideBarcode'))}
-        </Text>
-
         {/* 중앙 십자가 타겟 (항상 표시) */}
         {!qrBounds && (
           <View style={styles.centerTarget} pointerEvents="none">
