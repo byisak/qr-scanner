@@ -251,11 +251,6 @@ export default function SettingsScreen() {
 
     setSessionUrls(prev => [newSessionUrl, ...prev]);
 
-    // 첫 번째 세션이면 자동으로 활성화
-    if (sessionUrls.length === 0) {
-      setActiveSessionId(newSessionId);
-    }
-
     // 서버에 세션 생성 알림
     try {
       // 서버 URL 설정 (config에서 가져오기)
@@ -298,11 +293,6 @@ export default function SettingsScreen() {
     Alert.alert(t('settings.success'), t('settings.sessionCreated'));
   };
 
-  // 세션 활성화
-  const handleActivateSession = (sessionId) => {
-    setActiveSessionId(sessionId);
-  };
-
   // 세션 삭제
   const handleDeleteSession = async (sessionId) => {
     Alert.alert(
@@ -317,19 +307,11 @@ export default function SettingsScreen() {
             // 세션 URL 삭제
             setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
 
-            // 삭제된 세션이 활성 세션이면 초기화
+            // 삭제된 세션이 활성 세션이면 activeSessionId 제거
             if (activeSessionId === sessionId) {
-              const remaining = sessionUrls.filter(s => s.id !== sessionId);
-              if (remaining.length > 0) {
-                const newActiveId = remaining[0].id;
-                setActiveSessionId(newActiveId);
-                await AsyncStorage.setItem('activeSessionId', newActiveId);
-                console.log(`Active session changed to: ${newActiveId}`);
-              } else {
-                setActiveSessionId('');
-                await AsyncStorage.removeItem('activeSessionId');
-                console.log('No remaining sessions, activeSessionId removed');
-              }
+              setActiveSessionId('');
+              await AsyncStorage.removeItem('activeSessionId');
+              console.log('Active session removed');
             }
 
             // 해당 세션 ID로 생성된 클라우드 동기화 그룹도 삭제
@@ -621,30 +603,15 @@ export default function SettingsScreen() {
                         s.sessionItem,
                         {
                           backgroundColor: colors.inputBackground,
-                          borderColor: activeSessionId === session.id ? colors.success : colors.border
-                        },
-                        activeSessionId === session.id && s.sessionItemActive
+                          borderColor: colors.border
+                        }
                       ]}
                     >
-                      <TouchableOpacity
-                        style={s.sessionItemContent}
-                        onPress={() => handleActivateSession(session.id)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={s.sessionItemHeader}>
-                          <Ionicons
-                            name={activeSessionId === session.id ? "radio-button-on" : "radio-button-off"}
-                            size={20}
-                            color={activeSessionId === session.id ? colors.success : colors.textTertiary}
-                          />
-                          <Text style={[s.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
-                            {session.url}
-                          </Text>
-                        </View>
-                        {activeSessionId === session.id && (
-                          <Text style={[s.activeLabel, { color: colors.success }]}>{t('settings.active')}</Text>
-                        )}
-                      </TouchableOpacity>
+                      <View style={s.sessionItemContent}>
+                        <Text style={[s.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
+                          {session.url}
+                        </Text>
+                      </View>
 
                       <View style={s.sessionItemActions}>
                         <TouchableOpacity
@@ -672,7 +639,7 @@ export default function SettingsScreen() {
                     </View>
                   ))}
                   <Text style={[s.sessionInfo, { color: colors.textTertiary }]}>
-                    {t('settings.sessionInfo')}
+                    스캔 화면에서 그룹을 선택하여 세션으로 데이터를 전송하세요.
                   </Text>
                 </View>
               )}
