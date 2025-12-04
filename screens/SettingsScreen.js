@@ -256,6 +256,19 @@ export default function SettingsScreen() {
       setActiveSessionId(newSessionId);
     }
 
+    // 서버에 세션 생성 알림
+    try {
+      // 서버 URL 설정 (config에서 가져오기)
+      if (!websocketClient.getConnectionStatus()) {
+        websocketClient.connect(config.serverUrl);
+      }
+      await websocketClient.createSession(newSessionId);
+      console.log('서버에 세션 생성 요청:', newSessionId);
+    } catch (error) {
+      console.error('서버 세션 생성 실패:', error);
+      // 에러가 나도 로컬에는 저장되므로 계속 진행
+    }
+
     // 자동으로 scanGroups에 클라우드 동기화 그룹 추가
     try {
       const groupsData = await AsyncStorage.getItem('scanGroups');
