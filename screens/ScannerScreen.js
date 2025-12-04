@@ -772,16 +772,20 @@ function ScannerScreen() {
       // bounds가 없는 경우 (일부 1차원 바코드), 합성 bounds 생성
       if (!normalized && !bounds) {
         console.log(`Creating synthetic bounds for barcode type: ${type}`);
-        // 1차원 바코드는 일반적으로 가로로 긴 형태
-        const oneDimensionalTypes = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar'];
 
-        if (oneDimensionalTypes.includes(type)) {
-          // 화면 중앙에 가로로 긴 사각형 생성
+        // 바코드 타입을 소문자로 변환하고 org.iso. 등의 prefix 제거
+        const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
+
+        // 1차원 바코드는 일반적으로 가로로 긴 형태
+        const oneDimensionalTypes = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar', 'pdf417'];
+
+        if (oneDimensionalTypes.includes(normalizedType)) {
+          // 화면 중앙에 가로로 긴 사각형 생성 (더 작고 정확하게)
           normalized = {
-            x: winWidth * 0.1,
-            y: winHeight * 0.45,
-            width: winWidth * 0.8,
-            height: winHeight * 0.1,
+            x: winWidth * 0.05,
+            y: winHeight * 0.46,
+            width: winWidth * 0.9,
+            height: winHeight * 0.08,
           };
         } else {
           // 2차원 바코드는 정사각형 형태
