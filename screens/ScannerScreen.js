@@ -24,6 +24,7 @@ import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
 
 const DEBOUNCE_DELAY = 500;
+const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
 const RESET_DELAY_LINK = 1200;
 const RESET_DELAY_NORMAL = 800;
 
@@ -714,7 +715,9 @@ function ScannerScreen() {
 
       const now = Date.now();
 
-      if (lastScannedData.current === data && now - lastScannedTime.current < DEBOUNCE_DELAY) {
+      // bounds 유무에 따라 다른 디바운스 적용
+      const debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
+      if (lastScannedData.current === data && now - lastScannedTime.current < debounceDelay) {
         return;
       }
 
