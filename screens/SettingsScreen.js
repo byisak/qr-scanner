@@ -231,7 +231,7 @@ export default function SettingsScreen() {
       }
     }
     // 비활성화 상태에서는 AsyncStorage를 건드리지 않음 (데이터 보존)
-  }, [sessionUrls, realtimeSyncEnabled]);
+  }, [sessionUrls]);
 
   // 활성 세션 ID 저장
   useEffect(() => {
