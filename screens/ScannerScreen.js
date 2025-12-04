@@ -671,6 +671,10 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async ({ data, bounds, type }) => {
       if (!isActive || !canScan) return; // canScan 추가 확인
+
+      // bounds 정보 로깅 (디버깅용)
+      console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}`);
+
       // 전체 화면 스캔 모드가 아닐 때만 스캔 영역 체크
       if (!fullScreenScanMode && !isQrInScanArea(bounds)) return;
 
@@ -763,7 +767,33 @@ function ScannerScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      const normalized = normalizeBounds(bounds);
+      let normalized = normalizeBounds(bounds);
+
+      // bounds가 없는 경우 (일부 1차원 바코드), 합성 bounds 생성
+      if (!normalized && !bounds) {
+        console.log(`Creating synthetic bounds for barcode type: ${type}`);
+        // 1차원 바코드는 일반적으로 가로로 긴 형태
+        const oneDimensionalTypes = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar'];
+
+        if (oneDimensionalTypes.includes(type)) {
+          // 화면 중앙에 가로로 긴 사각형 생성
+          normalized = {
+            x: winWidth * 0.1,
+            y: winHeight * 0.45,
+            width: winWidth * 0.8,
+            height: winHeight * 0.1,
+          };
+        } else {
+          // 2차원 바코드는 정사각형 형태
+          normalized = {
+            x: winWidth * 0.2,
+            y: winHeight * 0.35,
+            width: winWidth * 0.6,
+            height: winWidth * 0.6,
+          };
+        }
+      }
+
       if (normalized) {
         if (!smoothBounds.current) {
           smoothBounds.current = normalized;
