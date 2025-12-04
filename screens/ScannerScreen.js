@@ -43,12 +43,6 @@ function ScannerScreen() {
     };
   }, [winWidth, winHeight]);
 
-  // 2D 바코드 선택 시 전체 화면 스캔 모드 활성화
-  const fullScreenScanMode = useMemo(() => {
-    const twoDimensionalBarcodes = ['pdf417', 'aztec', 'datamatrix'];
-    return barcodeTypes.some(type => twoDimensionalBarcodes.includes(type));
-  }, [barcodeTypes]);
-
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [isActive, setIsActive] = useState(false);
@@ -69,6 +63,12 @@ function ScannerScreen() {
     'upce',
     'upca',
   ]);
+
+  // 2D 바코드 선택 시 전체 화면 스캔 모드 활성화
+  const fullScreenScanMode = useMemo(() => {
+    const twoDimensionalBarcodes = ['pdf417', 'aztec', 'datamatrix'];
+    return barcodeTypes.some(type => twoDimensionalBarcodes.includes(type));
+  }, [barcodeTypes]);
 
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
