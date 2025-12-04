@@ -43,6 +43,12 @@ function ScannerScreen() {
     };
   }, [winWidth, winHeight]);
 
+  // 2D 바코드 선택 시 전체 화면 스캔 모드 활성화
+  const fullScreenScanMode = useMemo(() => {
+    const twoDimensionalBarcodes = ['pdf417', 'aztec', 'datamatrix'];
+    return barcodeTypes.some(type => twoDimensionalBarcodes.includes(type));
+  }, [barcodeTypes]);
+
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
   const [isActive, setIsActive] = useState(false);
@@ -624,7 +630,8 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async ({ data, bounds, type }) => {
       if (!isActive || !canScan) return; // canScan 추가 확인
-      if (!isQrInScanArea(bounds)) return;
+      // 전체 화면 스캔 모드가 아닐 때만 스캔 영역 체크
+      if (!fullScreenScanMode && !isQrInScanArea(bounds)) return;
 
       // 배치 스캔 모드일 때는 QR 코드 중심이 화면 중앙 타겟에 있어야 스캔
       if (batchScanEnabled && bounds) {
@@ -814,7 +821,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight],
+    [isActive, canScan, isQrInScanArea, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -907,7 +914,8 @@ function ScannerScreen() {
             ? t('scanner.scanGuideQr')
             : t('scanner.scanGuideBarcode')}
         </Text>
-        {!qrBounds && (
+        {/* 전체 화면 스캔 모드가 아닐 때만 녹색 테두리 표시 */}
+        {!fullScreenScanMode && !qrBounds && (
           <View
             style={[
               styles.frame,
