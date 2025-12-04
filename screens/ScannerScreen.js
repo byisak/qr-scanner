@@ -667,6 +667,9 @@ function ScannerScreen() {
 
       // bounds 정보 로깅 (디버깅용)
       console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
+      if (bounds) {
+        console.log(`Bounds data:`, JSON.stringify(bounds));
+      }
       if (cornerPoints) {
         console.log(`Corner points:`, cornerPoints);
       }
@@ -676,7 +679,7 @@ function ScannerScreen() {
       console.log(`Normalized type: ${normalizedType}`);
 
       // 바코드가 화면 중앙 십자가 근처에 있을 때만 스캔
-      // bounds가 있는 경우에만 위치 체크, 없으면 스캔 허용 (중앙에 있다고 가정)
+      // bounds가 없거나 정규화할 수 없으면 디바운스만 적용 (위치 확인 불가능)
       if (bounds) {
         const normalized = normalizeBounds(bounds);
         if (normalized) {
@@ -699,7 +702,14 @@ function ScannerScreen() {
           if (distanceFromCenter > targetRadius) {
             return; // 타겟 영역 밖이면 스캔하지 않음
           }
+        } else {
+          // bounds는 있지만 정규화 실패 - 위치 확인 불가능하므로 스캔 거부
+          console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
+          return;
         }
+      } else {
+        // bounds가 없는 경우 - 위치 확인 불가능하므로 디바운스로만 제어
+        console.log(`No bounds for ${normalizedType}, relying on debounce only`);
       }
 
       const now = Date.now();
