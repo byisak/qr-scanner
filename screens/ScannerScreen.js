@@ -910,10 +910,12 @@ function ScannerScreen() {
           </View>
         )}
 
-        <Text style={styles.title} accessibilityLabel={barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode')}>
-          {barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
-            ? t('scanner.scanGuideQr')
-            : t('scanner.scanGuideBarcode')}
+        <Text style={styles.title} accessibilityLabel={fullScreenScanMode ? t('scanner.scanGuideFullScreen') : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr' ? t('scanner.scanGuideQr') : t('scanner.scanGuideBarcode'))}>
+          {fullScreenScanMode
+            ? t('scanner.scanGuideFullScreen')
+            : (barcodeTypes.length === 1 && barcodeTypes[0] === 'qr'
+              ? t('scanner.scanGuideQr')
+              : t('scanner.scanGuideBarcode'))}
         </Text>
         {/* 전체 화면 스캔 모드가 아닐 때만 녹색 테두리 표시 */}
         {!fullScreenScanMode && !qrBounds && (

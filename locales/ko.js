@@ -18,6 +18,7 @@ export default {
     title: '스캔',
     scanGuideQr: 'QR 코드를 사각형 안에 맞춰주세요',
     scanGuideBarcode: '바코드를 사각형 안에 맞춰주세요',
+    scanGuideFullScreen: '바코드를 카메라에 비춰주세요',
     permissionRequest: '카메라 권한 요청 중...',
     permissionDenied: '카메라 권한을 허용해 주세요',
     torchOn: '손전등 끄기',

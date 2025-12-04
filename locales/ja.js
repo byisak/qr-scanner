@@ -18,6 +18,7 @@ export default {
     title: 'スキャン',
     scanGuideQr: 'QRコードを四角の中に合わせてください',
     scanGuideBarcode: 'バーコードを四角の中に合わせてください',
+    scanGuideFullScreen: 'バーコードをカメラに向けてください',
     permissionRequest: 'カメラ権限を要求中...',
     permissionDenied: 'カメラ権限を許可してください',
     torchOn: 'フラッシュオフ',

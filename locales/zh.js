@@ -18,6 +18,7 @@ export default {
     title: '扫描',
     scanGuideQr: '请将二维码对准方框内',
     scanGuideBarcode: '请将条形码对准方框内',
+    scanGuideFullScreen: '请将条形码对准相机',
     permissionRequest: '正在请求相机权限...',
     permissionDenied: '请允许使用相机权限',
     torchOn: '关闭闪光灯',

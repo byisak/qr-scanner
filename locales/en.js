@@ -18,6 +18,7 @@ export default {
     title: 'Scan',
     scanGuideQr: 'Align the QR code within the square',
     scanGuideBarcode: 'Align the barcode within the square',
+    scanGuideFullScreen: 'Point the barcode at the camera',
     permissionRequest: 'Requesting camera permission...',
     permissionDenied: 'Please allow camera permission',
     torchOn: 'Turn off flashlight',
