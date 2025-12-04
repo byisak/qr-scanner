@@ -92,6 +92,7 @@ function ScannerScreen() {
 
   const [qrBounds, setQrBounds] = useState(null);
   const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
+  const [showFlash, setShowFlash] = useState(false); // 위치 정보 없는 바코드용 플래시 효과
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -702,6 +703,10 @@ function ScannerScreen() {
         console.log(`Corner points:`, cornerPoints);
       }
 
+      // 바코드 타입 정규화 (org.iso.Code39 -> code39)
+      const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
+      console.log(`Normalized type: ${normalizedType}`);
+
       // 전체 화면 스캔 모드가 아닐 때만 스캔 영역 체크
       if (!fullScreenScanMode && !isQrInScanArea(bounds)) return;
 
@@ -803,33 +808,16 @@ function ScannerScreen() {
 
       let normalized = normalizeBounds(effectiveBounds);
 
-      // bounds와 cornerPoints 모두 없는 경우, 합성 bounds 생성
+      // bounds와 cornerPoints 모두 없는 경우, 플래시 효과 표시
       if (!normalized && !bounds && !cornerPoints) {
-        console.log(`Creating synthetic bounds for barcode type: ${type}`);
+        console.log(`No position data available for barcode type: ${normalizedType}, showing flash effect`);
 
-        // 바코드 타입을 소문자로 변환하고 org.iso. 등의 prefix 제거
-        const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
+        // 테두리 대신 플래시 효과 표시
+        setShowFlash(true);
+        setTimeout(() => setShowFlash(false), 200);
 
-        // 1차원 바코드는 일반적으로 가로로 긴 형태
-        const oneDimensionalTypes = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar', 'pdf417'];
-
-        if (oneDimensionalTypes.includes(normalizedType)) {
-          // 화면 중앙에 가로로 긴 사각형 생성 (더 작고 정확하게)
-          normalized = {
-            x: winWidth * 0.05,
-            y: winHeight * 0.46,
-            width: winWidth * 0.9,
-            height: winHeight * 0.08,
-          };
-        } else {
-          // 2차원 바코드는 정사각형 형태
-          normalized = {
-            x: winWidth * 0.2,
-            y: winHeight * 0.35,
-            width: winWidth * 0.6,
-            height: winWidth * 0.6,
-          };
-        }
+        // bounds는 설정하지 않음 (테두리 없음)
+        normalized = null;
       }
 
       if (normalized) {
@@ -879,7 +867,7 @@ function ScannerScreen() {
               code: data,
               timestamp: Date.now(),
               photoUri: photoUri || null,
-              type: type,
+              type: normalizedType,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -901,7 +889,7 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri, type);
+              await saveHistory(data, url, photoUri, normalizedType);
               setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
@@ -909,7 +897,7 @@ function ScannerScreen() {
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri, type);
+          const historyResult = await saveHistory(data, null, photoUri, normalizedType);
           setCanScan(false);
           router.push({
             pathname: '/result',
@@ -992,6 +980,21 @@ function ScannerScreen() {
           barcodeScannerSettings={{
             barcodeTypes: barcodeTypes,
           }}
+        />
+      )}
+
+      {/* 플래시 효과 (위치 정보 없는 바코드용) */}
+      {showFlash && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 255, 100, 0.3)',
+          }}
+          pointerEvents="none"
         />
       )}
 
