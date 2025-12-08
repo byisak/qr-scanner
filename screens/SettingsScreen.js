@@ -13,6 +13,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Clipboard from 'expo-clipboard';
@@ -689,6 +690,72 @@ export default function SettingsScreen() {
             </>
           )}
         </View>
+
+        {/* 앱 정보 및 지원 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.appInfo')}</Text>
+
+          {/* 개선제안하기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => Alert.alert(t('settings.suggestImprovement'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.suggestImprovement')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.suggestImprovementDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 1:1 문의하기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => Alert.alert(t('settings.oneOnOneInquiry'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.oneOnOneInquiry')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.oneOnOneInquiryDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 서비스 이용약관 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => Alert.alert(t('settings.termsOfService'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.termsOfService')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.termsOfServiceDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 개인정보 처리방침 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => Alert.alert(t('settings.privacyPolicy'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.privacyPolicy')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.privacyPolicyDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 버전정보 */}
+          <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.versionInfo')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.currentVersion')}</Text>
+            </View>
+            <Text style={[s.versionText, { color: colors.textSecondary }]}>0.1.0</Text>
+          </View>
+        </View>
         </ScrollView>
       </TouchableWithoutFeedback>
 
@@ -993,6 +1060,10 @@ const s = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  versionText: {
+    fontSize: 15,
     fontWeight: '600',
   },
 });
