@@ -15,7 +15,7 @@ import {
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -87,6 +87,7 @@ function ScannerScreen() {
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const qrCodeRef = useRef(null); // QR 코드 생성용 ref
+  const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
 
   const [qrBounds, setQrBounds] = useState(null);
   const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
@@ -105,6 +106,23 @@ function ScannerScreen() {
   useEffect(() => {
     scanSoundEnabledRef.current = scanSoundEnabled;
   }, [scanSoundEnabled]);
+
+  // 스캔 소리 플레이어 초기화
+  useEffect(() => {
+    try {
+      beepSoundPlayerRef.current = createAudioPlayer(require('../assets/sounds/beep.mp3'));
+      beepSoundPlayerRef.current.volume = 0.5;
+    } catch (error) {
+      console.log('Failed to initialize beep sound player:', error);
+    }
+
+    // 컴포넌트 언마운트 시 플레이어 해제
+    return () => {
+      if (beepSoundPlayerRef.current) {
+        beepSoundPlayerRef.current.remove();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -806,18 +824,11 @@ function ScannerScreen() {
       }
 
       // 스캔 소리 설정이 활성화된 경우에만 소리 재생
-      if (scanSoundEnabledRef.current) {
+      if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
         try {
-          const { sound } = await Audio.Sound.createAsync(
-            require('../assets/sounds/beep.mp3'),
-            { shouldPlay: true, volume: 0.5 }
-          );
-          // 소리 재생 후 자동으로 언로드
-          sound.setOnPlaybackStatusUpdate((status) => {
-            if (status.didJustFinish) {
-              sound.unloadAsync();
-            }
-          });
+          // 처음부터 재생하도록 위치 초기화
+          beepSoundPlayerRef.current.seekTo(0);
+          beepSoundPlayerRef.current.play();
         } catch (error) {
           console.log('Scan sound playback error:', error);
         }
