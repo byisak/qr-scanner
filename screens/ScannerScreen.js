@@ -15,6 +15,7 @@ import {
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -40,6 +41,7 @@ function ScannerScreen() {
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
+  const [scanSoundEnabled, setScanSoundEnabled] = useState(true); // 스캔 소리 활성화 여부
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
   const [batchScanEnabled, setBatchScanEnabled] = useState(false); // 배치 스캔 모드 활성화 여부
   const [batchScannedItems, setBatchScannedItems] = useState([]); // 배치로 스캔된 항목들
@@ -82,6 +84,7 @@ function ScannerScreen() {
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
+  const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const qrCodeRef = useRef(null); // QR 코드 생성용 ref
 
@@ -97,6 +100,11 @@ function ScannerScreen() {
   useEffect(() => {
     hapticEnabledRef.current = hapticEnabled;
   }, [hapticEnabled]);
+
+  // scanSoundEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    scanSoundEnabledRef.current = scanSoundEnabled;
+  }, [scanSoundEnabled]);
 
   useEffect(() => {
     (async () => {
@@ -117,6 +125,11 @@ function ScannerScreen() {
         const haptic = await AsyncStorage.getItem('hapticEnabled');
         if (haptic !== null) {
           setHapticEnabled(haptic === 'true');
+        }
+
+        const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
+        if (scanSound !== null) {
+          setScanSoundEnabled(scanSound === 'true');
         }
 
         const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
@@ -790,6 +803,24 @@ function ScannerScreen() {
       // 햅틱 설정이 활성화된 경우에만 진동
       if (hapticEnabledRef.current) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+
+      // 스캔 소리 설정이 활성화된 경우에만 소리 재생
+      if (scanSoundEnabledRef.current) {
+        try {
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: 'https://www.soundjay.com/buttons/sounds/beep-07a.mp3' },
+            { shouldPlay: true, volume: 0.5 }
+          );
+          // 소리 재생 후 자동으로 언로드
+          sound.setOnPlaybackStatusUpdate((status) => {
+            if (status.didJustFinish) {
+              sound.unloadAsync();
+            }
+          });
+        } catch (error) {
+          console.log('Scan sound playback error:', error);
+        }
       }
 
       // bounds가 없으면 cornerPoints에서 생성 시도

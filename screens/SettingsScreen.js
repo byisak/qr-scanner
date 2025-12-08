@@ -46,6 +46,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
   const [batchScanEnabled, setBatchScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
@@ -66,6 +67,7 @@ export default function SettingsScreen() {
         const e = await SecureStore.getItemAsync('scanLinkEnabled');
         const u = await SecureStore.getItemAsync('baseUrl');
         const h = await AsyncStorage.getItem('hapticEnabled');
+        const ss = await AsyncStorage.getItem('scanSoundEnabled');
         const p = await AsyncStorage.getItem('photoSaveEnabled');
         const bs = await AsyncStorage.getItem('batchScanEnabled');
         const b = await AsyncStorage.getItem('selectedBarcodes');
@@ -77,6 +79,10 @@ export default function SettingsScreen() {
 
         if (h !== null) {
           setHapticEnabled(h === 'true');
+        }
+
+        if (ss !== null) {
+          setScanSoundEnabled(ss === 'true');
         }
 
         if (p !== null) {
@@ -172,6 +178,16 @@ export default function SettingsScreen() {
       }
     })();
   }, [hapticEnabled]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem('scanSoundEnabled', scanSoundEnabled.toString());
+      } catch (error) {
+        console.error('Save scan sound settings error:', error);
+      }
+    })();
+  }, [scanSoundEnabled]);
 
   useEffect(() => {
     (async () => {
@@ -442,6 +458,21 @@ export default function SettingsScreen() {
               trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel={t('settings.hapticFeedback')}
+            />
+          </View>
+
+          {/* 스캔 소리 */}
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.scanSound')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.scanSoundDesc')}</Text>
+            </View>
+            <Switch
+              value={scanSoundEnabled}
+              onValueChange={setScanSoundEnabled}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.scanSound')}
             />
           </View>
 

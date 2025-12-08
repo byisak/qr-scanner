@@ -91,6 +91,8 @@ export default {
     barcodeSettings: '바코드 설정',
     hapticFeedback: '햅틱 피드백',
     hapticDesc: '스캔 시 진동으로 알림',
+    scanSound: '스캔 소리',
+    scanSoundDesc: '스캔 시 소리로 알림',
     enabled: '활성화됨',
     photoSave: '스캔 사진 저장',
     photoSaveDesc: 'QR 코드 스캔 시 사진 저장',
