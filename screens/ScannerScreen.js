@@ -809,7 +809,7 @@ function ScannerScreen() {
       if (scanSoundEnabledRef.current) {
         try {
           const { sound } = await Audio.Sound.createAsync(
-            { uri: 'https://www.soundjay.com/buttons/sounds/beep-07a.mp3' },
+            require('../assets/sounds/beep.mp3'),
             { shouldPlay: true, volume: 0.5 }
           );
           // 소리 재생 후 자동으로 언로드
