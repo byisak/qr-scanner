@@ -54,7 +54,6 @@ export default function SettingsScreen() {
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [sessionUrls, setSessionUrls] = useState([]); // 생성된 세션 URL 목록
-  const [activeSessionId, setActiveSessionId] = useState(''); // 현재 활성화된 세션 ID
 
   // 비밀번호 모달 상태
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
@@ -109,12 +108,6 @@ export default function SettingsScreen() {
         if (savedSessionUrls) {
           setSessionUrls(JSON.parse(savedSessionUrls));
         }
-
-        // 활성화된 세션 ID 로드
-        const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
-        if (savedActiveSessionId) {
-          setActiveSessionId(savedActiveSessionId);
-        }
       } catch (error) {
         console.error('Load settings error:', error);
       }
@@ -138,14 +131,6 @@ export default function SettingsScreen() {
             setSessionUrls(JSON.parse(savedSessionUrls));
           } else {
             setSessionUrls([]);
-          }
-
-          // 활성화된 세션 ID 다시 로드
-          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
-          if (savedActiveSessionId) {
-            setActiveSessionId(savedActiveSessionId);
-          } else {
-            setActiveSessionId('');
           }
         } catch (error) {
           console.error('Load settings error:', error);
@@ -218,7 +203,6 @@ export default function SettingsScreen() {
         if (!realtimeSyncEnabled) {
           // 비활성화 시 state만 초기화 (AsyncStorage는 유지하여 다시 켤 때 복원 가능)
           setSessionUrls([]);
-          setActiveSessionId('');
 
           // 현재 선택된 그룹이 세션 그룹(클라우드 동기화)인지 확인
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId');
@@ -241,11 +225,6 @@ export default function SettingsScreen() {
           if (savedSessionUrls) {
             setSessionUrls(JSON.parse(savedSessionUrls));
           }
-
-          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
-          if (savedActiveSessionId) {
-            setActiveSessionId(savedActiveSessionId);
-          }
         }
       } catch (error) {
         console.error('Save realtime sync settings error:', error);
@@ -266,13 +245,6 @@ export default function SettingsScreen() {
     // 비활성화 상태에서는 AsyncStorage를 건드리지 않음 (데이터 보존)
   }, [sessionUrls]);
 
-  // 활성 세션 ID 저장
-  useEffect(() => {
-    if (activeSessionId) {
-      AsyncStorage.setItem('activeSessionId', activeSessionId);
-    }
-  }, [activeSessionId]);
-
   // 새 세션 URL 생성
   const handleGenerateSessionUrl = async () => {
     const newSessionId = generateSessionId();
@@ -283,11 +255,6 @@ export default function SettingsScreen() {
     };
 
     setSessionUrls(prev => [newSessionUrl, ...prev]);
-
-    // 첫 번째 세션이면 자동으로 활성화
-    if (sessionUrls.length === 0) {
-      setActiveSessionId(newSessionId);
-    }
 
     // 서버에 세션 생성 알림
     try {
@@ -330,10 +297,6 @@ export default function SettingsScreen() {
     Alert.alert(t('settings.success'), t('settings.sessionCreated'));
   };
 
-  // 세션 활성화
-  const handleActivateSession = (sessionId) => {
-    setActiveSessionId(sessionId);
-  };
 
   // 세션 삭제
   const handleDeleteSession = async (sessionId) => {
@@ -348,21 +311,6 @@ export default function SettingsScreen() {
           onPress: async () => {
             // 세션 URL 삭제
             setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
-
-            // 삭제된 세션이 활성 세션이면 초기화
-            if (activeSessionId === sessionId) {
-              const remaining = sessionUrls.filter(s => s.id !== sessionId);
-              if (remaining.length > 0) {
-                const newActiveId = remaining[0].id;
-                setActiveSessionId(newActiveId);
-                await AsyncStorage.setItem('activeSessionId', newActiveId);
-                console.log(`Active session changed to: ${newActiveId}`);
-              } else {
-                setActiveSessionId('');
-                await AsyncStorage.removeItem('activeSessionId');
-                console.log('No remaining sessions, activeSessionId removed');
-              }
-            }
 
             // 해당 세션 ID로 생성된 클라우드 동기화 그룹도 삭제
             try {
@@ -663,30 +611,25 @@ export default function SettingsScreen() {
                         s.sessionItem,
                         {
                           backgroundColor: colors.inputBackground,
-                          borderColor: activeSessionId === session.id ? colors.success : colors.border
-                        },
-                        activeSessionId === session.id && s.sessionItemActive
+                          borderColor: colors.border
+                        }
                       ]}
                     >
-                      <TouchableOpacity
-                        style={s.sessionItemContent}
-                        onPress={() => handleActivateSession(session.id)}
-                        activeOpacity={0.7}
-                      >
+                      <View style={s.sessionItemContent}>
                         <View style={s.sessionItemHeader}>
                           <Ionicons
-                            name={activeSessionId === session.id ? "radio-button-on" : "radio-button-off"}
-                            size={20}
-                            color={activeSessionId === session.id ? colors.success : colors.textTertiary}
+                            name="link"
+                            size={18}
+                            color={colors.primary}
                           />
                           <Text style={[s.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
                             {session.url}
                           </Text>
                         </View>
-                        {activeSessionId === session.id && (
-                          <Text style={[s.activeLabel, { color: colors.success }]}>{t('settings.active')}</Text>
-                        )}
-                      </TouchableOpacity>
+                        <Text style={[s.sessionGroupName, { color: colors.textSecondary }]}>
+                          세션 {session.id.substring(0, 4)}
+                        </Text>
+                      </View>
 
                       <View style={s.sessionItemActions}>
                         <TouchableOpacity
@@ -714,7 +657,7 @@ export default function SettingsScreen() {
                     </View>
                   ))}
                   <Text style={[s.sessionInfo, { color: colors.textTertiary }]}>
-                    {t('settings.sessionInfo')}
+                    {t('settings.sessionInfoNew')}
                   </Text>
                 </View>
               )}
@@ -987,12 +930,9 @@ const s = StyleSheet.create({
   },
   sessionItem: {
     borderRadius: 12,
-    borderWidth: 2,
+    borderWidth: 1,
     padding: 12,
     marginBottom: 10,
-  },
-  sessionItemActive: {
-    borderWidth: 2,
   },
   sessionItemContent: {
     flex: 1,
@@ -1008,9 +948,8 @@ const s = StyleSheet.create({
     fontFamily: 'monospace',
     lineHeight: 20,
   },
-  activeLabel: {
+  sessionGroupName: {
     fontSize: 12,
-    fontWeight: '600',
     marginTop: 4,
   },
   sessionItemActions: {

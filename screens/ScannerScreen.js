@@ -187,21 +187,24 @@ function ScannerScreen() {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
         if (realtimeSync === 'true') {
           setRealtimeSyncEnabled(true);
-          const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
-          if (savedActiveSessionId) {
-            setActiveSessionId(savedActiveSessionId);
 
-            // WebSocket 서버에 연결
-            const sessionUrls = await AsyncStorage.getItem('sessionUrls');
-            if (sessionUrls) {
-              const urls = JSON.parse(sessionUrls);
-              const activeSession = urls.find(s => s.id === savedActiveSessionId);
-              if (activeSession) {
-                // URL에서 서버 주소 추출 (http://138.2.58.102:3000/sessionId -> http://138.2.58.102:3000)
-                const serverUrl = activeSession.url.substring(0, activeSession.url.lastIndexOf('/'));
-                websocketClient.connect(serverUrl);
-                websocketClient.setSessionId(savedActiveSessionId);
-                console.log('WebSocket connected to:', serverUrl);
+          // 현재 선택된 그룹이 세션 그룹인지 확인하여 WebSocket 연결
+          if (groupsData) {
+            const selectedGroup = groups.find(g => g.id === selectedGroupId);
+            if (selectedGroup && selectedGroup.isCloudSync) {
+              setActiveSessionId(selectedGroupId);
+
+              // WebSocket 서버에 연결
+              const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+              if (sessionUrls) {
+                const urls = JSON.parse(sessionUrls);
+                const session = urls.find(s => s.id === selectedGroupId);
+                if (session) {
+                  const serverUrl = session.url.substring(0, session.url.lastIndexOf('/'));
+                  websocketClient.connect(serverUrl);
+                  websocketClient.setSessionId(selectedGroupId);
+                  console.log('WebSocket connected for session group:', selectedGroupId);
+                }
               }
             }
           }
@@ -296,22 +299,30 @@ function ScannerScreen() {
           const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
           if (realtimeSync === 'true') {
             setRealtimeSyncEnabled(true);
-            const savedActiveSessionId = await AsyncStorage.getItem('activeSessionId');
-            if (savedActiveSessionId) {
-              setActiveSessionId(savedActiveSessionId);
 
-              // WebSocket 서버에 연결
-              const sessionUrls = await AsyncStorage.getItem('sessionUrls');
-              if (sessionUrls) {
-                const urls = JSON.parse(sessionUrls);
-                const activeSession = urls.find(s => s.id === savedActiveSessionId);
-                if (activeSession) {
-                  // URL에서 서버 주소 추출 (http://138.2.58.102:3000/sessionId -> http://138.2.58.102:3000)
-                  const serverUrl = activeSession.url.substring(0, activeSession.url.lastIndexOf('/'));
-                  websocketClient.connect(serverUrl);
-                  websocketClient.setSessionId(savedActiveSessionId);
-                  console.log('WebSocket connected to:', serverUrl);
+            // 현재 선택된 그룹이 세션 그룹인지 확인하여 WebSocket 연결
+            const groupsData2 = await AsyncStorage.getItem('scanGroups');
+            if (groupsData2) {
+              const groups2 = JSON.parse(groupsData2);
+              const selectedGroup = groups2.find(g => g.id === selectedGroupId);
+
+              if (selectedGroup && selectedGroup.isCloudSync) {
+                setActiveSessionId(selectedGroupId);
+
+                // WebSocket 서버에 연결
+                const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+                if (sessionUrls) {
+                  const urls = JSON.parse(sessionUrls);
+                  const session = urls.find(s => s.id === selectedGroupId);
+                  if (session) {
+                    const serverUrl = session.url.substring(0, session.url.lastIndexOf('/'));
+                    websocketClient.connect(serverUrl);
+                    websocketClient.setSessionId(selectedGroupId);
+                    console.log('WebSocket connected for session group:', selectedGroupId);
+                  }
                 }
+              } else {
+                setActiveSessionId('');
               }
             }
           } else {
@@ -364,37 +375,8 @@ function ScannerScreen() {
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr') => {
     try {
+      // 현재 선택된 그룹에 저장 (세션 그룹이면 세션 그룹에, 일반 그룹이면 일반 그룹에)
       let selectedGroupId = currentGroupId;
-
-      // 실시간 서버전송이 활성화되어 있고 활성 세션 ID가 있으면 해당 그룹에 저장
-      if (realtimeSyncEnabled && activeSessionId) {
-        // 세션 ID 그룹 자동 생성 또는 가져오기
-        const groupsData = await AsyncStorage.getItem('scanGroups');
-        let groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
-
-        // 세션 ID 그룹이 이미 있는지 확인
-        let sessionGroup = groups.find(g => g.id === activeSessionId);
-
-        if (!sessionGroup) {
-          // 세션 ID 그룹이 없으면 생성
-          sessionGroup = {
-            id: activeSessionId,
-            name: activeSessionId,
-            createdAt: Date.now(),
-            isCloudSync: true, // 클라우드 동기화 그룹 표시
-          };
-          groups.push(sessionGroup);
-          await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
-        }
-
-        // 선택된 그룹을 세션 ID 그룹으로 변경
-        selectedGroupId = activeSessionId;
-        await AsyncStorage.setItem('selectedGroupId', activeSessionId);
-        setCurrentGroupId(activeSessionId);
-        setCurrentGroupName(sessionGroup.name);
-        // availableGroups 업데이트
-        setAvailableGroups(groups);
-      }
 
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
@@ -465,7 +447,7 @@ function ScannerScreen() {
       console.error('Save history error:', e);
       return { isDuplicate: false, count: 1 };
     }
-  }, [realtimeSyncEnabled, activeSessionId, currentGroupId]);
+  }, [currentGroupId]);
 
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(
@@ -813,23 +795,6 @@ function ScannerScreen() {
         }
       }
 
-      // 실시간 서버전송이 활성화되어 있는데 주소가 생성되지 않은 경우
-      if (realtimeSyncEnabled && !activeSessionId) {
-        Alert.alert(
-          t('scanner.noSessionUrl'),
-          t('scanner.pleaseGenerateUrl'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-              text: t('settings.title'),
-              onPress: () => router.push('/settings')
-            }
-          ]
-        );
-        setTimeout(() => setCanScan(true), 500);
-        return;
-      }
-
       // 햅틱 설정이 활성화된 경우에만 진동
       if (hapticEnabledRef.current) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -993,16 +958,41 @@ function ScannerScreen() {
   }, []);
 
   // 그룹 선택 핸들러
-  const handleSelectGroup = useCallback(async (groupId, groupName) => {
+  const handleSelectGroup = useCallback(async (groupId, groupName, isCloudSync = false) => {
     try {
       setCurrentGroupId(groupId);
       setCurrentGroupName(groupName);
       await AsyncStorage.setItem('selectedGroupId', groupId);
       setGroupModalVisible(false);
+
+      // 세션 그룹(클라우드 동기화 그룹) 선택 시 WebSocket 연결
+      if (isCloudSync && realtimeSyncEnabled) {
+        setActiveSessionId(groupId);
+
+        // WebSocket 연결
+        const sessionUrls = await AsyncStorage.getItem('sessionUrls');
+        if (sessionUrls) {
+          const urls = JSON.parse(sessionUrls);
+          const session = urls.find(s => s.id === groupId);
+          if (session) {
+            const serverUrl = session.url.substring(0, session.url.lastIndexOf('/'));
+            websocketClient.connect(serverUrl);
+            websocketClient.setSessionId(groupId);
+            console.log('WebSocket connected for session group:', groupId);
+          }
+        }
+      } else {
+        // 일반 그룹 선택 시 WebSocket 연결 해제
+        setActiveSessionId('');
+        if (websocketClient.getConnectionStatus()) {
+          websocketClient.disconnect();
+          console.log('WebSocket disconnected - selected non-session group');
+        }
+      }
     } catch (error) {
       console.error('Failed to select group:', error);
     }
-  }, []);
+  }, [realtimeSyncEnabled]);
 
   // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링)
   const displayGroups = useMemo(() => {
@@ -1238,7 +1228,7 @@ function ScannerScreen() {
                     styles.groupItem,
                     currentGroupId === group.id && styles.groupItemActive
                   ]}
-                  onPress={() => handleSelectGroup(group.id, group.name)}
+                  onPress={() => handleSelectGroup(group.id, group.name, group.isCloudSync)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.groupItemContent}>

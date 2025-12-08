@@ -123,6 +123,7 @@ export default {
     generatedUrls: 'Generated URLs',
     active: 'Active',
     sessionInfo: 'Scanned values will be sent to the active URL in realtime',
+    sessionInfoNew: 'Select a session group on the scan screen to send to that URL',
     success: 'Success',
     error: 'Error',
     sessionCreated: 'URL created successfully',

@@ -125,6 +125,7 @@ export default {
     generatedUrls: '생성된 전송 주소 목록',
     active: '활성화됨',
     sessionInfo: '활성화된 주소로 스캔 값이 실시간으로 전송됩니다',
+    sessionInfoNew: '스캔 화면에서 세션 그룹을 선택하면 해당 주소로 전송됩니다',
     success: '성공',
     error: '오류',
     sessionCreated: '전송 주소가 생성되었습니다',
