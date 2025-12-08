@@ -418,7 +418,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.hapticFeedback')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.hapticDesc')}</Text>
-              {hapticEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={hapticEnabled}
@@ -434,7 +433,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.photoSave')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.photoSaveDesc')}</Text>
-              {photoSaveEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={photoSaveEnabled}
@@ -450,7 +448,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.batchScanMode')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.batchScanModeDesc')}</Text>
-              {batchScanEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={batchScanEnabled}
@@ -539,7 +536,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.useScanUrlDesc')}</Text>
-              {on && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={on}
@@ -586,7 +582,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.enableRealtimeSync')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.realtimeSyncDesc')}</Text>
-              {realtimeSyncEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={realtimeSyncEnabled}
