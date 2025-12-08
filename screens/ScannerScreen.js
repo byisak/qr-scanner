@@ -251,6 +251,11 @@ function ScannerScreen() {
             setHapticEnabled(haptic === 'true');
           }
 
+          const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
+          if (scanSound !== null) {
+            setScanSoundEnabled(scanSound === 'true');
+          }
+
           const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
           if (photoSave !== null) {
             setPhotoSaveEnabled(photoSave === 'true');
