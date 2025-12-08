@@ -124,6 +124,8 @@ export default {
     active: '有効',
     sessionInfo: '有効なアドレスにスキャン値がリアルタイムで送信されます',
     sessionInfoNew: 'スキャン画面でセッショングループを選択すると、そのアドレスに送信されます',
+    statusOn: 'オン',
+    statusOff: 'オフ',
     success: '成功',
     error: 'エラー',
     sessionCreated: 'URLが作成されました',

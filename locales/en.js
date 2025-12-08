@@ -124,6 +124,8 @@ export default {
     active: 'Active',
     sessionInfo: 'Scanned values will be sent to the active URL in realtime',
     sessionInfoNew: 'Select a session group on the scan screen to send to that URL',
+    statusOn: 'On',
+    statusOff: 'Off',
     success: 'Success',
     error: 'Error',
     sessionCreated: 'URL created successfully',

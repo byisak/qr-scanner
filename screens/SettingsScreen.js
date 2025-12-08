@@ -139,20 +139,19 @@ export default function SettingsScreen() {
     }, [])
   );
 
-  useEffect(() => {
-    SecureStore.setItemAsync('scanLinkEnabled', on.toString());
-    if (!on) {
-      SecureStore.deleteItemAsync('baseUrl');
-      setUrl('');
-    }
-  }, [on]);
-
-  useEffect(() => {
-    if (on && url.trim()) {
-      const t = setTimeout(() => SecureStore.setItemAsync('baseUrl', url.trim()), 500);
-      return () => clearTimeout(t);
-    }
-  }, [url, on]);
+  // 화면이 포커스될 때마다 스캔 연동 URL 상태 업데이트
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const e = await SecureStore.getItemAsync('scanLinkEnabled');
+          setOn(e === 'true');
+        } catch (error) {
+          console.error('Load scan URL settings error:', error);
+        }
+      })();
+    }, [])
+  );
 
   useEffect(() => {
     (async () => {
@@ -528,46 +527,22 @@ export default function SettingsScreen() {
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text>
 
-          <View style={s.row}>
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/scan-url-settings')}
+            activeOpacity={0.7}
+          >
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.useScanUrlDesc')}</Text>
             </View>
-            <Switch
-              value={on}
-              onValueChange={setOn}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.useScanUrl')}
-            />
-          </View>
-
-          {on && (
-            <>
-              <Text style={[s.urlInfo, { color: colors.textSecondary }]}>
-                {t('settings.urlInfo')}
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary }]}>
+                {on ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
-              <TextInput
-                style={[s.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
-                value={url}
-                onChangeText={setUrl}
-                placeholder={t('settings.urlPlaceholder')}
-                placeholderTextColor={colors.textTertiary}
-                autoCapitalize="none"
-                keyboardType="url"
-                accessibilityLabel={t('settings.useScanUrl')}
-              />
-              <Text style={[s.save, { color: colors.success }]}>{t('settings.autoSaved')}</Text>
-
-              <View style={[s.exampleBox, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-                <Text style={[s.exampleTitle, { color: colors.textSecondary }]}>{t('settings.exampleTitle')}</Text>
-                <Text style={[s.exampleText, { color: colors.primary }]}>{t('settings.exampleUrl')}</Text>
-                <Text style={[s.exampleDesc, { color: colors.textTertiary }]}>
-                  {t('settings.exampleDesc')}
-                </Text>
-              </View>
-            </>
-          )}
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* 실시간 서버전송 설정 */}
@@ -852,6 +827,15 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
     borderTopWidth: 1,
     marginTop: 10,
+  },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusText: {
+    fontSize: 15,
+    fontWeight: '500',
   },
   label: {
     fontSize: 17,

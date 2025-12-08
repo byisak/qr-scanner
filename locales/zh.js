@@ -124,6 +124,8 @@ export default {
     active: '已激活',
     sessionInfo: '扫描值将实时发送到已激活的URL',
     sessionInfoNew: '在扫描界面选择会话组后，将发送到该地址',
+    statusOn: '开启',
+    statusOff: '关闭',
     success: '成功',
     error: '错误',
     sessionCreated: 'URL创建成功',
