@@ -30,6 +30,7 @@ export default function HistoryScreen() {
   const [scanHistory, setScanHistory] = useState({ [DEFAULT_GROUP_ID]: [] });
   const [query, setQuery] = useState('');
   const [filteredList, setFilteredList] = useState([]);
+  const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
 
   // 그룹 데이터 로드
   const loadGroups = async () => {
@@ -37,10 +38,19 @@ export default function HistoryScreen() {
       const groupsData = await AsyncStorage.getItem('scanGroups');
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
       const selectedId = await AsyncStorage.getItem('selectedGroupId');
+      const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+
+      // 실시간 서버전송 설정 로드
+      const isRealtimeSyncEnabled = realtimeSync === 'true';
+      setRealtimeSyncEnabled(isRealtimeSyncEnabled);
 
       if (groupsData) {
         const parsed = JSON.parse(groupsData);
-        setGroups(parsed.length > 0 ? parsed : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
+        // 실시간 서버전송이 꺼져있으면 세션 그룹(isCloudSync: true) 필터링
+        const filteredGroups = isRealtimeSyncEnabled
+          ? parsed
+          : parsed.filter(g => !g.isCloudSync);
+        setGroups(filteredGroups.length > 0 ? filteredGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
       }
 
       if (historyData) {
