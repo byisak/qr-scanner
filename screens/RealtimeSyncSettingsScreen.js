@@ -222,13 +222,33 @@ export default function RealtimeSyncSettingsScreen() {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
-            // 세션 상태를 DELETED로 변경
+            const deletedAt = Date.now();
+
+            // 서버 API 호출 (Soft Delete)
+            try {
+              const response = await fetch(`${config.serverUrl}/api/sessions/${sessionId}`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                console.warn('Server soft delete failed:', response.status);
+              } else {
+                console.log('Server soft delete success:', sessionId);
+              }
+            } catch (error) {
+              console.warn('Server soft delete error (continuing locally):', error);
+            }
+
+            // 로컬 상태 업데이트 (서버 실패해도 진행)
             setSessionUrls(prev => prev.map(session => {
               if (session.id === sessionId) {
                 return {
                   ...session,
                   status: 'DELETED',
-                  deletedAt: Date.now(),
+                  deletedAt,
                 };
               }
               return session;
@@ -260,7 +280,25 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 복구
   const handleRestore = async (sessionId) => {
-    // 세션 상태를 ACTIVE로 복원
+    // 서버 API 호출 (Restore)
+    try {
+      const response = await fetch(`${config.serverUrl}/api/sessions/${sessionId}/restore`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('Server restore failed:', response.status);
+      } else {
+        console.log('Server restore success:', sessionId);
+      }
+    } catch (error) {
+      console.warn('Server restore error (continuing locally):', error);
+    }
+
+    // 로컬 상태 업데이트 (서버 실패해도 진행)
     setSessionUrls(prev => prev.map(session => {
       if (session.id === sessionId) {
         return {
@@ -303,7 +341,25 @@ export default function RealtimeSyncSettingsScreen() {
           text: t('settings.permanentDeleteButton'),
           style: 'destructive',
           onPress: async () => {
-            // 세션 완전 삭제
+            // 서버 API 호출 (Permanent Delete)
+            try {
+              const response = await fetch(`${config.serverUrl}/api/sessions/${sessionId}/permanent`, {
+                method: 'DELETE',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+
+              if (!response.ok) {
+                console.warn('Server permanent delete failed:', response.status);
+              } else {
+                console.log('Server permanent delete success:', sessionId);
+              }
+            } catch (error) {
+              console.warn('Server permanent delete error (continuing locally):', error);
+            }
+
+            // 로컬 상태 업데이트 (서버 실패해도 진행)
             setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
 
             // scanGroups, scanHistoryByGroup에서도 완전 삭제
