@@ -46,10 +46,13 @@ export default function HistoryScreen() {
 
       if (groupsData) {
         const parsed = JSON.parse(groupsData);
-        // 실시간 서버전송이 꺼져있으면 세션 그룹(isCloudSync: true) 필터링
-        const filteredGroups = isRealtimeSyncEnabled
-          ? parsed
-          : parsed.filter(g => !g.isCloudSync);
+        // 삭제된 그룹(isDeleted: true) 필터링
+        // 실시간 서버전송이 꺼져있으면 세션 그룹(isCloudSync: true)도 필터링
+        const filteredGroups = parsed.filter(g => {
+          if (g.isDeleted) return false; // 삭제된 그룹 제외
+          if (!isRealtimeSyncEnabled && g.isCloudSync) return false; // 서버전송 꺼진 경우 세션 그룹 제외
+          return true;
+        });
         setGroups(filteredGroups.length > 0 ? filteredGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
       }
 

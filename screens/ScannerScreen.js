@@ -173,25 +173,39 @@ function ScannerScreen() {
         const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
         setCurrentGroupId(selectedGroupId);
         const groupsData = await AsyncStorage.getItem('scanGroups');
+        const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+        const isRealtimeSyncEnabled = realtimeSync === 'true';
+
         if (groupsData) {
           const groups = JSON.parse(groupsData);
-          const currentGroup = groups.find(g => g.id === selectedGroupId);
+          // 삭제된 그룹 필터링, 실시간 서버전송이 꺼져있으면 세션 그룹도 필터링
+          const filteredGroups = groups.filter(g => {
+            if (g.isDeleted) return false;
+            if (!isRealtimeSyncEnabled && g.isCloudSync) return false;
+            return true;
+          });
+
+          const currentGroup = filteredGroups.find(g => g.id === selectedGroupId);
           if (currentGroup) {
             setCurrentGroupName(currentGroup.name);
+          } else if (filteredGroups.length > 0) {
+            // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
+            setCurrentGroupId('default');
+            setCurrentGroupName(filteredGroups.find(g => g.id === 'default')?.name || '기본 그룹');
+            await AsyncStorage.setItem('selectedGroupId', 'default');
           }
           // 사용 가능한 그룹 목록 설정
-          setAvailableGroups(groups);
+          setAvailableGroups(filteredGroups);
         }
 
         // 실시간 서버전송 설정 로드
-        const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
-        if (realtimeSync === 'true') {
+        if (isRealtimeSyncEnabled) {
           setRealtimeSyncEnabled(true);
 
           // 현재 선택된 그룹이 세션 그룹인지 확인하여 WebSocket 연결
           if (groupsData) {
             const parsedGroups = JSON.parse(groupsData);
-            const selectedGroup = parsedGroups.find(g => g.id === selectedGroupId);
+            const selectedGroup = parsedGroups.find(g => g.id === selectedGroupId && !g.isDeleted);
             if (selectedGroup && selectedGroup.isCloudSync) {
               setActiveSessionId(selectedGroupId);
 
@@ -286,26 +300,40 @@ function ScannerScreen() {
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
           setCurrentGroupId(selectedGroupId);
           const groupsData = await AsyncStorage.getItem('scanGroups');
+          const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+          const isRealtimeSyncEnabled = realtimeSync === 'true';
+
           if (groupsData) {
             const groups = JSON.parse(groupsData);
-            const currentGroup = groups.find(g => g.id === selectedGroupId);
+            // 삭제된 그룹 필터링, 실시간 서버전송이 꺼져있으면 세션 그룹도 필터링
+            const filteredGroups = groups.filter(g => {
+              if (g.isDeleted) return false;
+              if (!isRealtimeSyncEnabled && g.isCloudSync) return false;
+              return true;
+            });
+
+            const currentGroup = filteredGroups.find(g => g.id === selectedGroupId);
             if (currentGroup) {
               setCurrentGroupName(currentGroup.name);
+            } else if (filteredGroups.length > 0) {
+              // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
+              setCurrentGroupId('default');
+              setCurrentGroupName(filteredGroups.find(g => g.id === 'default')?.name || '기본 그룹');
+              await AsyncStorage.setItem('selectedGroupId', 'default');
             }
             // 사용 가능한 그룹 목록 설정
-            setAvailableGroups(groups);
+            setAvailableGroups(filteredGroups);
           }
 
           // 실시간 서버전송 설정 로드
-          const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
-          if (realtimeSync === 'true') {
+          if (isRealtimeSyncEnabled) {
             setRealtimeSyncEnabled(true);
 
             // 현재 선택된 그룹이 세션 그룹인지 확인하여 WebSocket 연결
             const groupsData2 = await AsyncStorage.getItem('scanGroups');
             if (groupsData2) {
               const groups2 = JSON.parse(groupsData2);
-              const selectedGroup = groups2.find(g => g.id === selectedGroupId);
+              const selectedGroup = groups2.find(g => g.id === selectedGroupId && !g.isDeleted);
 
               if (selectedGroup && selectedGroup.isCloudSync) {
                 setActiveSessionId(selectedGroupId);
