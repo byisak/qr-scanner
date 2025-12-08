@@ -13,6 +13,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as Clipboard from 'expo-clipboard';
@@ -45,6 +46,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [url, setUrl] = useState('');
   const [hapticEnabled, setHapticEnabled] = useState(true);
+  const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
   const [batchScanEnabled, setBatchScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
@@ -65,6 +67,7 @@ export default function SettingsScreen() {
         const e = await SecureStore.getItemAsync('scanLinkEnabled');
         const u = await SecureStore.getItemAsync('baseUrl');
         const h = await AsyncStorage.getItem('hapticEnabled');
+        const ss = await AsyncStorage.getItem('scanSoundEnabled');
         const p = await AsyncStorage.getItem('photoSaveEnabled');
         const bs = await AsyncStorage.getItem('batchScanEnabled');
         const b = await AsyncStorage.getItem('selectedBarcodes');
@@ -76,6 +79,10 @@ export default function SettingsScreen() {
 
         if (h !== null) {
           setHapticEnabled(h === 'true');
+        }
+
+        if (ss !== null) {
+          setScanSoundEnabled(ss === 'true');
         }
 
         if (p !== null) {
@@ -175,6 +182,16 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
+        await AsyncStorage.setItem('scanSoundEnabled', scanSoundEnabled.toString());
+      } catch (error) {
+        console.error('Save scan sound settings error:', error);
+      }
+    })();
+  }, [scanSoundEnabled]);
+
+  useEffect(() => {
+    (async () => {
+      try {
         await AsyncStorage.setItem('photoSaveEnabled', photoSaveEnabled.toString());
       } catch (error) {
         console.error('Save photo save settings error:', error);
@@ -202,6 +219,22 @@ export default function SettingsScreen() {
           // 비활성화 시 state만 초기화 (AsyncStorage는 유지하여 다시 켤 때 복원 가능)
           setSessionUrls([]);
           setActiveSessionId('');
+
+          // 현재 선택된 그룹이 세션 그룹(클라우드 동기화)인지 확인
+          const selectedGroupId = await AsyncStorage.getItem('selectedGroupId');
+          if (selectedGroupId) {
+            const groupsData = await AsyncStorage.getItem('scanGroups');
+            if (groupsData) {
+              const groups = JSON.parse(groupsData);
+              const selectedGroup = groups.find(g => g.id === selectedGroupId);
+
+              // 선택된 그룹이 세션 그룹이면 기본 그룹으로 변경
+              if (selectedGroup && selectedGroup.isCloudSync) {
+                await AsyncStorage.setItem('selectedGroupId', 'default');
+                console.log('Switched to default group as realtime sync was disabled');
+              }
+            }
+          }
         } else {
           // 활성화 시 저장된 세션 URL 복원
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
@@ -418,7 +451,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.hapticFeedback')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.hapticDesc')}</Text>
-              {hapticEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={hapticEnabled}
@@ -429,12 +461,26 @@ export default function SettingsScreen() {
             />
           </View>
 
+          {/* 스캔 소리 */}
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.scanSound')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.scanSoundDesc')}</Text>
+            </View>
+            <Switch
+              value={scanSoundEnabled}
+              onValueChange={setScanSoundEnabled}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.scanSound')}
+            />
+          </View>
+
           {/* 사진 저장 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.photoSave')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.photoSaveDesc')}</Text>
-              {photoSaveEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={photoSaveEnabled}
@@ -450,7 +496,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.batchScanMode')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.batchScanModeDesc')}</Text>
-              {batchScanEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={batchScanEnabled}
@@ -539,7 +584,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.useScanUrlDesc')}</Text>
-              {on && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={on}
@@ -586,7 +630,6 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text }]}>{t('settings.enableRealtimeSync')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.realtimeSyncDesc')}</Text>
-              {realtimeSyncEnabled && <Text style={[s.ok, { color: colors.success }]}>{t('settings.enabled')}</Text>}
             </View>
             <Switch
               value={realtimeSyncEnabled}
@@ -677,6 +720,72 @@ export default function SettingsScreen() {
               )}
             </>
           )}
+        </View>
+
+        {/* 앱 정보 및 지원 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.appInfo')}</Text>
+
+          {/* 개선제안하기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => Alert.alert(t('settings.suggestImprovement'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.suggestImprovement')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.suggestImprovementDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 1:1 문의하기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => Alert.alert(t('settings.oneOnOneInquiry'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.oneOnOneInquiry')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.oneOnOneInquiryDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 서비스 이용약관 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => Alert.alert(t('settings.termsOfService'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.termsOfService')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.termsOfServiceDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 개인정보 처리방침 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => Alert.alert(t('settings.privacyPolicy'), '준비 중입니다')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.privacyPolicy')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.privacyPolicyDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 버전정보 */}
+          <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('settings.versionInfo')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.currentVersion')}</Text>
+            </View>
+            <Text style={[s.versionText, { color: colors.textSecondary }]}>0.1.0</Text>
+          </View>
         </View>
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -982,6 +1091,10 @@ const s = StyleSheet.create({
   },
   modalButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  versionText: {
+    fontSize: 15,
     fontWeight: '600',
   },
 });

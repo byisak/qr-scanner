@@ -91,6 +91,8 @@ export default {
     barcodeSettings: '바코드 설정',
     hapticFeedback: '햅틱 피드백',
     hapticDesc: '스캔 시 진동으로 알림',
+    scanSound: '스캔 소리',
+    scanSoundDesc: '스캔 시 소리로 알림',
     enabled: '활성화됨',
     photoSave: '스캔 사진 저장',
     photoSaveDesc: 'QR 코드 스캔 시 사진 저장',
@@ -134,6 +136,18 @@ export default {
     passwordPlaceholder: '비밀번호 입력',
     passwordRequired: '비밀번호를 입력해주세요',
     passwordSaved: '비밀번호가 저장되었습니다',
+    // 앱 정보 및 지원
+    appInfo: '앱 정보 및 지원',
+    suggestImprovement: '개선제안하기',
+    suggestImprovementDesc: '더 나은 서비스를 위한 제안',
+    oneOnOneInquiry: '1:1 문의하기',
+    oneOnOneInquiryDesc: '궁금한 점을 문의해주세요',
+    termsOfService: '서비스 이용약관',
+    termsOfServiceDesc: '서비스 이용 약관 보기',
+    privacyPolicy: '개인정보 처리방침',
+    privacyPolicyDesc: '개인정보 처리방침 보기',
+    versionInfo: '버전정보',
+    currentVersion: '현재 버전',
   },
 
   // 바코드 선택 화면

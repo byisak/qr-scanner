@@ -157,8 +157,15 @@ export default function GroupEditScreen() {
       return;
     }
 
-    if (editingGroup.id === DEFAULT_GROUP_ID && newGroupName.trim() !== '기본 그룹') {
-      Alert.alert('알림', '기본 그룹의 이름은 "기본 그룹"으로 유지하는 것을 권장합니다.');
+    // 기본 그룹과 클라우드 동기화 그룹은 이름 변경 불가
+    if (editingGroup.id === DEFAULT_GROUP_ID) {
+      Alert.alert('오류', '기본 그룹의 이름은 변경할 수 없습니다.');
+      return;
+    }
+
+    if (editingGroup.isCloudSync) {
+      Alert.alert('오류', '클라우드 동기화 그룹의 이름은 변경할 수 없습니다.');
+      return;
     }
 
     const updatedGroups = groups.map(g =>
@@ -264,11 +271,11 @@ export default function GroupEditScreen() {
 
               {/* 이름 변경 버튼 */}
               <TouchableOpacity
-                style={[s.iconButton, item.isCloudSync && s.iconButtonDisabled]}
+                style={[s.iconButton, (item.isCloudSync || item.id === DEFAULT_GROUP_ID) && s.iconButtonDisabled]}
                 onPress={() => openEditModal(item)}
-                disabled={item.isCloudSync}
+                disabled={item.isCloudSync || item.id === DEFAULT_GROUP_ID}
               >
-                <Ionicons name="create-outline" size={24} color={item.isCloudSync ? '#ccc' : '#007AFF'} />
+                <Ionicons name="create-outline" size={24} color={(item.isCloudSync || item.id === DEFAULT_GROUP_ID) ? '#ccc' : '#007AFF'} />
               </TouchableOpacity>
 
               {/* 삭제 버튼 */}

@@ -9,10 +9,13 @@ import {
   useWindowDimensions,
   Platform,
   Alert,
+  Modal,
+  ScrollView,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { createAudioPlayer } from 'expo-audio';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -38,12 +41,16 @@ function ScannerScreen() {
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
+  const [scanSoundEnabled, setScanSoundEnabled] = useState(true); // 스캔 소리 활성화 여부
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
   const [batchScanEnabled, setBatchScanEnabled] = useState(false); // 배치 스캔 모드 활성화 여부
   const [batchScannedItems, setBatchScannedItems] = useState([]); // 배치로 스캔된 항목들
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
   const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
+  const [currentGroupId, setCurrentGroupId] = useState('default'); // 현재 선택된 그룹 ID
+  const [groupModalVisible, setGroupModalVisible] = useState(false); // 그룹 선택 모달 표시 여부
+  const [availableGroups, setAvailableGroups] = useState([{ id: 'default', name: '기본 그룹', createdAt: Date.now() }]); // 사용 가능한 그룹 목록
   // 기본값: 자주 사용되는 바코드 타입들
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
@@ -77,8 +84,10 @@ function ScannerScreen() {
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
+  const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const qrCodeRef = useRef(null); // QR 코드 생성용 ref
+  const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
 
   const [qrBounds, setQrBounds] = useState(null);
   const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
@@ -92,6 +101,29 @@ function ScannerScreen() {
   useEffect(() => {
     hapticEnabledRef.current = hapticEnabled;
   }, [hapticEnabled]);
+
+  // scanSoundEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    console.log('[ScannerScreen] Syncing scanSoundEnabled state to ref:', scanSoundEnabled);
+    scanSoundEnabledRef.current = scanSoundEnabled;
+  }, [scanSoundEnabled]);
+
+  // 스캔 소리 플레이어 초기화
+  useEffect(() => {
+    try {
+      beepSoundPlayerRef.current = createAudioPlayer(require('../assets/sounds/beep.mp3'));
+      beepSoundPlayerRef.current.volume = 0.5;
+    } catch (error) {
+      console.log('Failed to initialize beep sound player:', error);
+    }
+
+    // 컴포넌트 언마운트 시 플레이어 해제
+    return () => {
+      if (beepSoundPlayerRef.current) {
+        beepSoundPlayerRef.current.remove();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -114,6 +146,14 @@ function ScannerScreen() {
           setHapticEnabled(haptic === 'true');
         }
 
+        const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
+        console.log('[ScannerScreen] Initial load - scanSoundEnabled from storage:', scanSound);
+        if (scanSound !== null) {
+          const enabled = scanSound === 'true';
+          console.log('[ScannerScreen] Initial load - setting scanSoundEnabled to:', enabled);
+          setScanSoundEnabled(enabled);
+        }
+
         const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
         if (photoSave !== null) {
           setPhotoSaveEnabled(photoSave === 'true');
@@ -131,6 +171,7 @@ function ScannerScreen() {
 
         // 현재 선택된 그룹 이름 로드
         const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+        setCurrentGroupId(selectedGroupId);
         const groupsData = await AsyncStorage.getItem('scanGroups');
         if (groupsData) {
           const groups = JSON.parse(groupsData);
@@ -138,6 +179,8 @@ function ScannerScreen() {
           if (currentGroup) {
             setCurrentGroupName(currentGroup.name);
           }
+          // 사용 가능한 그룹 목록 설정
+          setAvailableGroups(groups);
         }
 
         // 실시간 서버전송 설정 로드
@@ -212,6 +255,14 @@ function ScannerScreen() {
             setHapticEnabled(haptic === 'true');
           }
 
+          const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
+          console.log('[ScannerScreen] Loaded scanSoundEnabled from storage:', scanSound);
+          if (scanSound !== null) {
+            const enabled = scanSound === 'true';
+            console.log('[ScannerScreen] Setting scanSoundEnabled to:', enabled);
+            setScanSoundEnabled(enabled);
+          }
+
           const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
           if (photoSave !== null) {
             setPhotoSaveEnabled(photoSave === 'true');
@@ -229,6 +280,7 @@ function ScannerScreen() {
 
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+          setCurrentGroupId(selectedGroupId);
           const groupsData = await AsyncStorage.getItem('scanGroups');
           if (groupsData) {
             const groups = JSON.parse(groupsData);
@@ -236,6 +288,8 @@ function ScannerScreen() {
             if (currentGroup) {
               setCurrentGroupName(currentGroup.name);
             }
+            // 사용 가능한 그룹 목록 설정
+            setAvailableGroups(groups);
           }
 
           // 실시간 서버전송 설정 로드
@@ -310,7 +364,7 @@ function ScannerScreen() {
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr') => {
     try {
-      let selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+      let selectedGroupId = currentGroupId;
 
       // 실시간 서버전송이 활성화되어 있고 활성 세션 ID가 있으면 해당 그룹에 저장
       if (realtimeSyncEnabled && activeSessionId) {
@@ -336,7 +390,10 @@ function ScannerScreen() {
         // 선택된 그룹을 세션 ID 그룹으로 변경
         selectedGroupId = activeSessionId;
         await AsyncStorage.setItem('selectedGroupId', activeSessionId);
-        setCurrentGroupName(activeSessionId);
+        setCurrentGroupId(activeSessionId);
+        setCurrentGroupName(sessionGroup.name);
+        // availableGroups 업데이트
+        setAvailableGroups(groups);
       }
 
       // 그룹별 히스토리 가져오기
@@ -408,7 +465,7 @@ function ScannerScreen() {
       console.error('Save history error:', e);
       return { isDuplicate: false, count: 1 };
     }
-  }, [realtimeSyncEnabled, activeSessionId]);
+  }, [realtimeSyncEnabled, activeSessionId, currentGroupId]);
 
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(
@@ -778,6 +835,21 @@ function ScannerScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
+      // 스캔 소리 설정이 활성화된 경우에만 소리 재생
+      console.log('[ScannerScreen] Checking scan sound - enabled:', scanSoundEnabledRef.current, 'player exists:', !!beepSoundPlayerRef.current);
+      if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+        console.log('[ScannerScreen] Playing scan sound');
+        try {
+          // 처음부터 재생하도록 위치 초기화
+          beepSoundPlayerRef.current.seekTo(0);
+          beepSoundPlayerRef.current.play();
+        } catch (error) {
+          console.log('Scan sound playback error:', error);
+        }
+      } else {
+        console.log('[ScannerScreen] Scan sound skipped');
+      }
+
       // bounds가 없으면 cornerPoints에서 생성 시도
       let effectiveBounds = bounds;
       if (!bounds && cornerPoints) {
@@ -920,6 +992,26 @@ function ScannerScreen() {
     setBatchScannedItems([]);
   }, []);
 
+  // 그룹 선택 핸들러
+  const handleSelectGroup = useCallback(async (groupId, groupName) => {
+    try {
+      setCurrentGroupId(groupId);
+      setCurrentGroupName(groupName);
+      await AsyncStorage.setItem('selectedGroupId', groupId);
+      setGroupModalVisible(false);
+    } catch (error) {
+      console.error('Failed to select group:', error);
+    }
+  }, []);
+
+  // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링)
+  const displayGroups = useMemo(() => {
+    if (realtimeSyncEnabled) {
+      return availableGroups;
+    }
+    return availableGroups.filter(g => !g.isCloudSync);
+  }, [availableGroups, realtimeSyncEnabled]);
+
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
@@ -956,11 +1048,16 @@ function ScannerScreen() {
       )}
 
       <View style={styles.overlay} pointerEvents="box-none">
-        {/* 현재 그룹 표시 */}
-        <View style={styles.groupBadge}>
+        {/* 현재 그룹 표시 (클릭 가능) */}
+        <TouchableOpacity
+          style={styles.groupBadge}
+          onPress={() => setGroupModalVisible(true)}
+          activeOpacity={0.8}
+        >
           <Ionicons name="folder" size={16} color="#fff" />
           <Text style={styles.groupBadgeText}>{currentGroupName}</Text>
-        </View>
+          <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
 
         {/* 배치 모드 활성 표시 */}
         {batchScanEnabled && (
@@ -1109,6 +1206,61 @@ function ScannerScreen() {
           />
         </View>
       )}
+
+      {/* 그룹 선택 모달 */}
+      <Modal
+        visible={groupModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setGroupModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setGroupModalVisible(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="folder" size={24} color="#007AFF" />
+              <Text style={styles.modalTitle}>그룹 선택</Text>
+              <TouchableOpacity
+                onPress={() => setGroupModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color="#8E8E93" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.groupList}>
+              {displayGroups.map((group) => (
+                <TouchableOpacity
+                  key={group.id}
+                  style={[
+                    styles.groupItem,
+                    currentGroupId === group.id && styles.groupItemActive
+                  ]}
+                  onPress={() => handleSelectGroup(group.id, group.name)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.groupItemContent}>
+                    {group.isCloudSync && (
+                      <Ionicons name="cloud" size={18} color="#007AFF" style={{ marginRight: 8 }} />
+                    )}
+                    <Text style={[
+                      styles.groupItemText,
+                      currentGroupId === group.id && styles.groupItemTextActive
+                    ]}>
+                      {group.name}
+                    </Text>
+                  </View>
+                  {currentGroupId === group.id && (
+                    <Ionicons name="checkmark" size={24} color="#007AFF" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -1343,6 +1495,72 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+    marginLeft: 12,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  groupList: {
+    padding: 12,
+  },
+  groupItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#F2F2F7',
+  },
+  groupItemActive: {
+    backgroundColor: '#007AFF15',
+    borderWidth: 2,
+    borderColor: '#007AFF',
+  },
+  groupItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  groupItemText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  groupItemTextActive: {
+    color: '#007AFF',
   },
 });
 
