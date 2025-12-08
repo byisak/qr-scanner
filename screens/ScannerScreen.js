@@ -190,7 +190,8 @@ function ScannerScreen() {
 
           // 현재 선택된 그룹이 세션 그룹인지 확인하여 WebSocket 연결
           if (groupsData) {
-            const selectedGroup = groups.find(g => g.id === selectedGroupId);
+            const parsedGroups = JSON.parse(groupsData);
+            const selectedGroup = parsedGroups.find(g => g.id === selectedGroupId);
             if (selectedGroup && selectedGroup.isCloudSync) {
               setActiveSessionId(selectedGroupId);
 
