@@ -202,6 +202,22 @@ export default function SettingsScreen() {
           // 비활성화 시 state만 초기화 (AsyncStorage는 유지하여 다시 켤 때 복원 가능)
           setSessionUrls([]);
           setActiveSessionId('');
+
+          // 현재 선택된 그룹이 세션 그룹(클라우드 동기화)인지 확인
+          const selectedGroupId = await AsyncStorage.getItem('selectedGroupId');
+          if (selectedGroupId) {
+            const groupsData = await AsyncStorage.getItem('scanGroups');
+            if (groupsData) {
+              const groups = JSON.parse(groupsData);
+              const selectedGroup = groups.find(g => g.id === selectedGroupId);
+
+              // 선택된 그룹이 세션 그룹이면 기본 그룹으로 변경
+              if (selectedGroup && selectedGroup.isCloudSync) {
+                await AsyncStorage.setItem('selectedGroupId', 'default');
+                console.log('Switched to default group as realtime sync was disabled');
+              }
+            }
+          }
         } else {
           // 활성화 시 저장된 세션 URL 복원
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
