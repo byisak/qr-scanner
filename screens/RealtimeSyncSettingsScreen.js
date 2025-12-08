@@ -1,5 +1,5 @@
 // screens/RealtimeSyncSettingsScreen.js - 실시간 서버전송 설정 화면
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -34,6 +34,20 @@ const generateSessionId = () => {
   return result;
 };
 
+// 보관 기간 (일)
+const RETENTION_DAYS = 30;
+
+// 남은 일수 계산
+const getDaysRemaining = (deletedAt) => {
+  if (!deletedAt) return RETENTION_DAYS;
+  const deletedDate = new Date(deletedAt);
+  const expiryDate = new Date(deletedDate.getTime() + RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const diffTime = expiryDate.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(0, diffDays);
+};
+
 export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -44,10 +58,24 @@ export default function RealtimeSyncSettingsScreen() {
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [sessionUrls, setSessionUrls] = useState([]);
 
+  // 탭 상태: 'active' | 'deleted'
+  const [activeTab, setActiveTab] = useState('active');
+
   // 비밀번호 모달 상태
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+
+  // 활성/삭제된 세션 필터링
+  const activeSessions = useMemo(() =>
+    sessionUrls.filter(s => s.status !== 'DELETED'),
+    [sessionUrls]
+  );
+
+  const deletedSessions = useMemo(() =>
+    sessionUrls.filter(s => s.status === 'DELETED'),
+    [sessionUrls]
+  );
 
   // 초기 로드
   useEffect(() => {
@@ -60,7 +88,13 @@ export default function RealtimeSyncSettingsScreen() {
 
         const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
         if (savedSessionUrls) {
-          setSessionUrls(JSON.parse(savedSessionUrls));
+          const parsed = JSON.parse(savedSessionUrls);
+          // 기존 데이터 마이그레이션: status 필드가 없으면 ACTIVE로 설정
+          const migrated = parsed.map(session => ({
+            ...session,
+            status: session.status || 'ACTIVE',
+          }));
+          setSessionUrls(migrated);
         }
       } catch (error) {
         console.error('Load realtime sync settings error:', error);
@@ -75,7 +109,12 @@ export default function RealtimeSyncSettingsScreen() {
         try {
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
           if (savedSessionUrls) {
-            setSessionUrls(JSON.parse(savedSessionUrls));
+            const parsed = JSON.parse(savedSessionUrls);
+            const migrated = parsed.map(session => ({
+              ...session,
+              status: session.status || 'ACTIVE',
+            }));
+            setSessionUrls(migrated);
           } else {
             setSessionUrls([]);
           }
@@ -93,9 +132,6 @@ export default function RealtimeSyncSettingsScreen() {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
         if (!realtimeSyncEnabled) {
-          // 비활성화 시 state만 초기화 (AsyncStorage는 유지하여 다시 켤 때 복원 가능)
-          setSessionUrls([]);
-
           // 현재 선택된 그룹이 세션 그룹(클라우드 동기화)인지 확인
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId');
           if (selectedGroupId) {
@@ -111,12 +147,6 @@ export default function RealtimeSyncSettingsScreen() {
               }
             }
           }
-        } else {
-          // 활성화 시 저장된 세션 URL 복원
-          const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
-          if (savedSessionUrls) {
-            setSessionUrls(JSON.parse(savedSessionUrls));
-          }
         }
       } catch (error) {
         console.error('Save realtime sync settings error:', error);
@@ -126,14 +156,10 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 URL 목록 저장
   useEffect(() => {
-    if (realtimeSyncEnabled) {
-      if (sessionUrls.length > 0) {
-        AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
-      } else {
-        AsyncStorage.removeItem('sessionUrls');
-      }
+    if (sessionUrls.length > 0) {
+      AsyncStorage.setItem('sessionUrls', JSON.stringify(sessionUrls));
     }
-  }, [sessionUrls, realtimeSyncEnabled]);
+  }, [sessionUrls]);
 
   // 새 세션 URL 생성
   const handleGenerateSessionUrl = async () => {
@@ -142,6 +168,8 @@ export default function RealtimeSyncSettingsScreen() {
       id: newSessionId,
       url: `${config.serverUrl}/${newSessionId}`,
       createdAt: Date.now(),
+      status: 'ACTIVE',
+      deletedAt: null,
     };
 
     setSessionUrls(prev => [newSessionUrl, ...prev]);
@@ -183,19 +211,102 @@ export default function RealtimeSyncSettingsScreen() {
     Alert.alert(t('settings.success'), t('settings.sessionCreated'));
   };
 
-  // 세션 삭제
-  const handleDeleteSession = async (sessionId) => {
+  // Soft Delete - 세션을 삭제 상태로 변경
+  const handleSoftDelete = async (sessionId) => {
     Alert.alert(
       t('settings.deleteSession'),
-      t('settings.deleteSessionConfirm'),
+      t('settings.softDeleteConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
           text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
+            // 세션 상태를 DELETED로 변경
+            setSessionUrls(prev => prev.map(session => {
+              if (session.id === sessionId) {
+                return {
+                  ...session,
+                  status: 'DELETED',
+                  deletedAt: Date.now(),
+                };
+              }
+              return session;
+            }));
+
+            // scanGroups에서 해당 그룹 비활성화 (삭제하지 않고 숨김)
+            try {
+              const groupsJson = await AsyncStorage.getItem('scanGroups');
+              if (groupsJson) {
+                const groups = JSON.parse(groupsJson);
+                const updatedGroups = groups.map(g => {
+                  if (g.id === sessionId) {
+                    return { ...g, isDeleted: true };
+                  }
+                  return g;
+                });
+                await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+              }
+            } catch (error) {
+              console.error('Failed to soft delete cloud sync group:', error);
+            }
+
+            Alert.alert(t('settings.success'), t('settings.sessionMovedToTrash'));
+          },
+        },
+      ]
+    );
+  };
+
+  // 세션 복구
+  const handleRestore = async (sessionId) => {
+    // 세션 상태를 ACTIVE로 복원
+    setSessionUrls(prev => prev.map(session => {
+      if (session.id === sessionId) {
+        return {
+          ...session,
+          status: 'ACTIVE',
+          deletedAt: null,
+        };
+      }
+      return session;
+    }));
+
+    // scanGroups에서 해당 그룹 복원
+    try {
+      const groupsJson = await AsyncStorage.getItem('scanGroups');
+      if (groupsJson) {
+        const groups = JSON.parse(groupsJson);
+        const updatedGroups = groups.map(g => {
+          if (g.id === sessionId) {
+            return { ...g, isDeleted: false };
+          }
+          return g;
+        });
+        await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+      }
+    } catch (error) {
+      console.error('Failed to restore cloud sync group:', error);
+    }
+
+    Alert.alert(t('settings.success'), t('settings.sessionRestored'));
+  };
+
+  // 영구 삭제
+  const handlePermanentDelete = async (sessionId) => {
+    Alert.alert(
+      t('settings.permanentDelete'),
+      t('settings.permanentDeleteConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.permanentDeleteButton'),
+          style: 'destructive',
+          onPress: async () => {
+            // 세션 완전 삭제
             setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
 
+            // scanGroups, scanHistoryByGroup에서도 완전 삭제
             try {
               const groupsJson = await AsyncStorage.getItem('scanGroups');
               if (groupsJson) {
@@ -218,8 +329,10 @@ export default function RealtimeSyncSettingsScreen() {
                 }
               }
             } catch (error) {
-              console.error('Failed to delete cloud sync group:', error);
+              console.error('Failed to permanently delete session:', error);
             }
+
+            Alert.alert(t('settings.success'), t('settings.sessionPermanentlyDeleted'));
           },
         },
       ]
@@ -261,6 +374,117 @@ export default function RealtimeSyncSettingsScreen() {
   const handleCopyUrl = async (url) => {
     await Clipboard.setStringAsync(url);
     Alert.alert(t('settings.success'), t('settings.urlCopied'));
+  };
+
+  // 활성 세션 아이템 렌더링
+  const renderActiveSessionItem = (session) => (
+    <View
+      key={session.id}
+      style={[
+        styles.sessionItem,
+        {
+          backgroundColor: colors.inputBackground,
+          borderColor: colors.border
+        }
+      ]}
+    >
+      <View style={styles.sessionItemContent}>
+        <View style={styles.sessionItemHeader}>
+          <Ionicons
+            name="link"
+            size={18}
+            color={colors.primary}
+          />
+          <Text style={[styles.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
+            {session.url}
+          </Text>
+        </View>
+        <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
+          세션 {session.id.substring(0, 4)}
+        </Text>
+      </View>
+
+      <View style={styles.sessionItemActions}>
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: session.password ? colors.success : colors.textTertiary }]}
+          onPress={() => handleOpenPasswordModal(session.id)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={session.password ? "lock-closed" : "lock-open-outline"} size={18} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: colors.primary }]}
+          onPress={() => handleCopyUrl(session.url)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="copy-outline" size={18} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.iconButton, { backgroundColor: colors.error }]}
+          onPress={() => handleSoftDelete(session.id)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="trash-outline" size={18} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // 삭제된 세션 아이템 렌더링
+  const renderDeletedSessionItem = (session) => {
+    const daysRemaining = getDaysRemaining(session.deletedAt);
+
+    return (
+      <View
+        key={session.id}
+        style={[
+          styles.sessionItem,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.border,
+            opacity: 0.8,
+          }
+        ]}
+      >
+        <View style={styles.sessionItemContent}>
+          <View style={styles.sessionItemHeader}>
+            <Ionicons
+              name="trash"
+              size={18}
+              color={colors.textTertiary}
+            />
+            <Text style={[styles.sessionUrl, { color: colors.textTertiary, flex: 1 }]} numberOfLines={1}>
+              {session.url}
+            </Text>
+          </View>
+          <View style={styles.deletedInfoRow}>
+            <Text style={[styles.sessionGroupName, { color: colors.textTertiary }]}>
+              세션 {session.id.substring(0, 4)}
+            </Text>
+            <Text style={[styles.daysRemaining, { color: colors.warning }]}>
+              {t('settings.daysRemaining', { days: daysRemaining })}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.sessionItemActions}>
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: colors.success }]}
+            onPress={() => handleRestore(session.id)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="refresh-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.iconButton, { backgroundColor: colors.error }]}
+            onPress={() => handlePermanentDelete(session.id)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close-circle-outline" size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -310,66 +534,77 @@ export default function RealtimeSyncSettingsScreen() {
                   <Text style={styles.generateButtonText}>{t('settings.generateSessionUrl')}</Text>
                 </TouchableOpacity>
 
-                {/* 생성된 세션 URL 목록 */}
-                {sessionUrls.length > 0 && (
-                  <View style={styles.sessionListContainer}>
-                    <Text style={[styles.sessionListTitle, { color: colors.text }]}>{t('settings.generatedUrls')}</Text>
-                    {sessionUrls.map((session) => (
-                      <View
-                        key={session.id}
-                        style={[
-                          styles.sessionItem,
-                          {
-                            backgroundColor: colors.inputBackground,
-                            borderColor: colors.border
-                          }
-                        ]}
-                      >
-                        <View style={styles.sessionItemContent}>
-                          <View style={styles.sessionItemHeader}>
-                            <Ionicons
-                              name="link"
-                              size={18}
-                              color={colors.primary}
-                            />
-                            <Text style={[styles.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
-                              {session.url}
-                            </Text>
-                          </View>
-                          <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
-                            세션 {session.id.substring(0, 4)}
-                          </Text>
-                        </View>
-
-                        <View style={styles.sessionItemActions}>
-                          <TouchableOpacity
-                            style={[styles.iconButton, { backgroundColor: session.password ? colors.success : colors.textTertiary }]}
-                            onPress={() => handleOpenPasswordModal(session.id)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name={session.password ? "lock-closed" : "lock-open-outline"} size={18} color="#fff" />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.iconButton, { backgroundColor: colors.primary }]}
-                            onPress={() => handleCopyUrl(session.url)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="copy-outline" size={18} color="#fff" />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.iconButton, { backgroundColor: colors.error }]}
-                            onPress={() => handleDeleteSession(session.id)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="trash-outline" size={18} color="#fff" />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
-                    <Text style={[styles.sessionInfo, { color: colors.textTertiary }]}>
-                      {t('settings.sessionInfoNew')}
+                {/* 탭 컨트롤 */}
+                <View style={[styles.tabContainer, { backgroundColor: colors.inputBackground }]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.tab,
+                      activeTab === 'active' && { backgroundColor: colors.surface },
+                    ]}
+                    onPress={() => setActiveTab('active')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.tabText,
+                      { color: activeTab === 'active' ? colors.primary : colors.textTertiary }
+                    ]}>
+                      {t('settings.activeTab')} ({activeSessions.length})
                     </Text>
-                  </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.tab,
+                      activeTab === 'deleted' && { backgroundColor: colors.surface },
+                    ]}
+                    onPress={() => setActiveTab('deleted')}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.tabText,
+                      { color: activeTab === 'deleted' ? colors.error : colors.textTertiary }
+                    ]}>
+                      {t('settings.deletedTab')} ({deletedSessions.length})
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 세션 목록 */}
+                {activeTab === 'active' ? (
+                  // 활성 세션 목록
+                  activeSessions.length > 0 ? (
+                    <View style={styles.sessionListContainer}>
+                      <Text style={[styles.sessionListTitle, { color: colors.text }]}>{t('settings.generatedUrls')}</Text>
+                      {activeSessions.map(renderActiveSessionItem)}
+                      <Text style={[styles.sessionInfo, { color: colors.textTertiary }]}>
+                        {t('settings.sessionInfoNew')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.emptyContainer}>
+                      <Ionicons name="link-outline" size={48} color={colors.textTertiary} />
+                      <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+                        {t('settings.noActiveSessions')}
+                      </Text>
+                    </View>
+                  )
+                ) : (
+                  // 삭제된 세션 목록
+                  deletedSessions.length > 0 ? (
+                    <View style={styles.sessionListContainer}>
+                      <Text style={[styles.sessionListTitle, { color: colors.text }]}>{t('settings.deletedSessions')}</Text>
+                      {deletedSessions.map(renderDeletedSessionItem)}
+                      <Text style={[styles.sessionInfo, { color: colors.textTertiary }]}>
+                        {t('settings.deletedSessionsInfo')}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.emptyContainer}>
+                      <Ionicons name="trash-outline" size={48} color={colors.textTertiary} />
+                      <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+                        {t('settings.noDeletedSessions')}
+                      </Text>
+                    </View>
+                  )
                 )}
               </>
             )}
@@ -518,8 +753,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  sessionListContainer: {
+  tabContainer: {
+    flexDirection: 'row',
     marginTop: 20,
+    borderRadius: 10,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  sessionListContainer: {
+    marginTop: 16,
   },
   sessionListTitle: {
     fontSize: 15,
@@ -550,6 +801,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  deletedInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  daysRemaining: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   sessionItemActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -568,6 +829,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 12,
     lineHeight: 18,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
