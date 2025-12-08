@@ -104,6 +104,7 @@ function ScannerScreen() {
 
   // scanSoundEnabled 상태를 ref에 동기화
   useEffect(() => {
+    console.log('[ScannerScreen] Syncing scanSoundEnabled state to ref:', scanSoundEnabled);
     scanSoundEnabledRef.current = scanSoundEnabled;
   }, [scanSoundEnabled]);
 
@@ -146,8 +147,11 @@ function ScannerScreen() {
         }
 
         const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
+        console.log('[ScannerScreen] Initial load - scanSoundEnabled from storage:', scanSound);
         if (scanSound !== null) {
-          setScanSoundEnabled(scanSound === 'true');
+          const enabled = scanSound === 'true';
+          console.log('[ScannerScreen] Initial load - setting scanSoundEnabled to:', enabled);
+          setScanSoundEnabled(enabled);
         }
 
         const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
@@ -252,8 +256,11 @@ function ScannerScreen() {
           }
 
           const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
+          console.log('[ScannerScreen] Loaded scanSoundEnabled from storage:', scanSound);
           if (scanSound !== null) {
-            setScanSoundEnabled(scanSound === 'true');
+            const enabled = scanSound === 'true';
+            console.log('[ScannerScreen] Setting scanSoundEnabled to:', enabled);
+            setScanSoundEnabled(enabled);
           }
 
           const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
@@ -829,7 +836,9 @@ function ScannerScreen() {
       }
 
       // 스캔 소리 설정이 활성화된 경우에만 소리 재생
+      console.log('[ScannerScreen] Checking scan sound - enabled:', scanSoundEnabledRef.current, 'player exists:', !!beepSoundPlayerRef.current);
       if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+        console.log('[ScannerScreen] Playing scan sound');
         try {
           // 처음부터 재생하도록 위치 초기화
           beepSoundPlayerRef.current.seekTo(0);
@@ -837,6 +846,8 @@ function ScannerScreen() {
         } catch (error) {
           console.log('Scan sound playback error:', error);
         }
+      } else {
+        console.log('[ScannerScreen] Scan sound skipped');
       }
 
       // bounds가 없으면 cornerPoints에서 생성 시도
