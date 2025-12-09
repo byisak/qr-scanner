@@ -262,6 +262,17 @@ export default {
     selected: 'Selected',
   },
 
+  // URL open mode selection screen
+  urlOpenMode: {
+    title: 'URL Open Mode',
+    description: 'Select how to open URLs from QR codes',
+    inApp: 'In-App Browser',
+    inAppDesc: 'Open web pages within the app',
+    browser: 'Default Browser',
+    browserDesc: 'Open in Safari or Chrome',
+    selected: 'Selected',
+  },
+
   // QR code generator screen
   generator: {
     title: 'Generate',

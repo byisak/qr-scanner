@@ -1,6 +1,6 @@
 // screens/ResultScreen.js - Expo Router 버전
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
@@ -28,6 +28,21 @@ export default function ResultScreen() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
+  const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+
+  // URL 열기 방식 설정 로드
+  useEffect(() => {
+    (async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem('urlOpenMode');
+        if (savedMode) {
+          setUrlOpenMode(savedMode);
+        }
+      } catch (error) {
+        console.error('Load URL open mode error:', error);
+      }
+    })();
+  }, []);
 
   // 모든 스캔 시간 파싱
   let allScanTimes = [];
@@ -63,10 +78,26 @@ export default function ResultScreen() {
     }
   };
 
-  const handleOpenUrl = () => {
+  const handleOpenUrl = async () => {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
-      router.push({ pathname: '/webview', params: { url: urlToOpen } });
+      if (urlOpenMode === 'browser') {
+        // 기본 브라우저로 열기
+        try {
+          const supported = await Linking.canOpenURL(urlToOpen);
+          if (supported) {
+            await Linking.openURL(urlToOpen);
+          } else {
+            Alert.alert(t('result.error'), 'Cannot open this URL');
+          }
+        } catch (error) {
+          console.error('Open URL error:', error);
+          Alert.alert(t('result.error'), 'Failed to open URL');
+        }
+      } else {
+        // 앱 내 웹뷰로 열기
+        router.push({ pathname: '/webview', params: { url: urlToOpen } });
+      }
     }
   };
 

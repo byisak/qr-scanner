@@ -34,6 +34,8 @@ export default function SettingsScreen() {
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
+  // URL 열기 방식 상태
+  const [urlOpenMode, setUrlOpenMode] = useState('inApp');
 
   useEffect(() => {
     (async () => {
@@ -75,6 +77,12 @@ export default function SettingsScreen() {
         if (realtimeSync === 'true') {
           setRealtimeSyncEnabled(true);
         }
+
+        // URL 열기 방식 로드
+        const savedUrlOpenMode = await AsyncStorage.getItem('urlOpenMode');
+        if (savedUrlOpenMode) {
+          setUrlOpenMode(savedUrlOpenMode);
+        }
       } catch (error) {
         console.error('Load settings error:', error);
       }
@@ -108,6 +116,11 @@ export default function SettingsScreen() {
 
           const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
           setRealtimeSyncEnabled(realtimeSync === 'true');
+
+          const savedUrlOpenMode = await AsyncStorage.getItem('urlOpenMode');
+          if (savedUrlOpenMode) {
+            setUrlOpenMode(savedUrlOpenMode);
+          }
         } catch (error) {
           console.error('Load settings error:', error);
         }
@@ -289,6 +302,21 @@ export default function SettingsScreen() {
               <Text style={[s.label, { color: colors.text }]}>{t('settings.displayMode')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary }]}>
                 {t(`displayModeSelection.${themeMode}`)}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* URL 열기 방식 선택 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/url-open-mode-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text }]}>{t('urlOpenMode.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary }]}>
+                {t(`urlOpenMode.${urlOpenMode}`)}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
