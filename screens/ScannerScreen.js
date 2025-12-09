@@ -1001,141 +1001,142 @@ function ScannerScreen() {
     setBatchScannedItems([]);
   }, []);
 
-  // 이미지에서 바코드를 감지하기 위한 WebView HTML
+  // 이미지에서 바코드를 감지하기 위한 WebView HTML (jsQR 사용)
   const getBarcodeScannerHtml = useCallback((imageBase64) => {
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://unpkg.com/@niceguys/zxing-library@0.18.8/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <style>
-    body { margin: 0; padding: 0; }
+    body { margin: 0; padding: 0; background: #000; }
     canvas { display: none; }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
   <script>
-    (async function() {
-      try {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = async function() {
+    (function() {
+      const img = new Image();
+
+      img.onload = function() {
+        try {
           const canvas = document.getElementById('canvas');
           const ctx = canvas.getContext('2d');
           canvas.width = img.width;
           canvas.height = img.height;
           ctx.drawImage(img, 0, 0);
 
-          const codeReader = new ZXing.BrowserMultiFormatReader();
           const results = [];
+          const scannedCodes = new Set();
 
-          try {
-            // 전체 이미지 스캔
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const luminanceSource = new ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
-            const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+          // 전체 이미지 스캔
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'dontInvert',
+          });
 
-            // 다중 바코드 감지를 위해 그리드로 분할 스캔
-            const gridSize = 3;
-            const cellWidth = canvas.width / gridSize;
-            const cellHeight = canvas.height / gridSize;
-            const scannedCodes = new Set();
+          if (code && code.data) {
+            scannedCodes.add(code.data);
+            const loc = code.location;
+            const centerX = (loc.topLeftCorner.x + loc.bottomRightCorner.x) / 2;
+            const centerY = (loc.topLeftCorner.y + loc.bottomRightCorner.y) / 2;
+            const width = Math.abs(loc.topRightCorner.x - loc.topLeftCorner.x);
+            const height = Math.abs(loc.bottomLeftCorner.y - loc.topLeftCorner.y);
 
-            for (let row = 0; row < gridSize; row++) {
-              for (let col = 0; col < gridSize; col++) {
-                const x = col * cellWidth;
-                const y = row * cellHeight;
-                const w = Math.min(cellWidth * 1.5, canvas.width - x);
-                const h = Math.min(cellHeight * 1.5, canvas.height - y);
+            results.push({
+              data: code.data,
+              type: 'QR_CODE',
+              bounds: {
+                x: centerX,
+                y: centerY,
+                width: Math.max(width, 50),
+                height: Math.max(height, 50)
+              }
+            });
+          }
 
+          // 그리드로 분할하여 다중 QR 코드 스캔
+          const gridSize = 4;
+          const cellWidth = canvas.width / gridSize;
+          const cellHeight = canvas.height / gridSize;
+
+          for (let row = 0; row < gridSize; row++) {
+            for (let col = 0; col < gridSize; col++) {
+              const x = Math.floor(col * cellWidth);
+              const y = Math.floor(row * cellHeight);
+              const w = Math.floor(Math.min(cellWidth * 1.5, canvas.width - x));
+              const h = Math.floor(Math.min(cellHeight * 1.5, canvas.height - y));
+
+              if (w > 0 && h > 0) {
                 try {
                   const cellImageData = ctx.getImageData(x, y, w, h);
-                  const cellCanvas = document.createElement('canvas');
-                  cellCanvas.width = w;
-                  cellCanvas.height = h;
-                  const cellCtx = cellCanvas.getContext('2d');
-                  cellCtx.putImageData(cellImageData, 0, 0);
+                  const cellCode = jsQR(cellImageData.data, w, h, {
+                    inversionAttempts: 'dontInvert',
+                  });
 
-                  const result = await codeReader.decodeFromImageElement(cellCanvas);
-                  if (result && !scannedCodes.has(result.text)) {
-                    scannedCodes.add(result.text);
+                  if (cellCode && cellCode.data && !scannedCodes.has(cellCode.data)) {
+                    scannedCodes.add(cellCode.data);
+                    const loc = cellCode.location;
+                    const centerX = x + (loc.topLeftCorner.x + loc.bottomRightCorner.x) / 2;
+                    const centerY = y + (loc.topLeftCorner.y + loc.bottomRightCorner.y) / 2;
+                    const codeWidth = Math.abs(loc.topRightCorner.x - loc.topLeftCorner.x);
+                    const codeHeight = Math.abs(loc.bottomLeftCorner.y - loc.topLeftCorner.y);
+
                     results.push({
-                      data: result.text,
-                      type: result.format ? result.format.toString() : 'unknown',
+                      data: cellCode.data,
+                      type: 'QR_CODE',
                       bounds: {
-                        x: x + (w / 2),
-                        y: y + (h / 2),
-                        width: w * 0.6,
-                        height: h * 0.6
+                        x: centerX,
+                        y: centerY,
+                        width: Math.max(codeWidth, 50),
+                        height: Math.max(codeHeight, 50)
                       }
                     });
                   }
                 } catch (e) {}
               }
             }
-
-            // 전체 이미지에서도 한번 더 스캔
-            try {
-              const fullResult = await codeReader.decodeFromImageElement(img);
-              if (fullResult && !scannedCodes.has(fullResult.text)) {
-                scannedCodes.add(fullResult.text);
-                const points = fullResult.resultPoints;
-                let bounds = { x: canvas.width / 2, y: canvas.height / 2, width: 100, height: 100 };
-                if (points && points.length >= 2) {
-                  const xs = points.map(p => p.x);
-                  const ys = points.map(p => p.y);
-                  const minX = Math.min(...xs);
-                  const maxX = Math.max(...xs);
-                  const minY = Math.min(...ys);
-                  const maxY = Math.max(...ys);
-                  bounds = {
-                    x: (minX + maxX) / 2,
-                    y: (minY + maxY) / 2,
-                    width: Math.max(maxX - minX, 50),
-                    height: Math.max(maxY - minY, 50)
-                  };
-                }
-                results.push({
-                  data: fullResult.text,
-                  type: fullResult.format ? fullResult.format.toString() : 'unknown',
-                  bounds: bounds
-                });
-              }
-            } catch (e) {}
-
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              success: true,
-              results: results,
-              imageWidth: canvas.width,
-              imageHeight: canvas.height
-            }));
-          } catch (error) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              success: false,
-              error: error.message,
-              results: [],
-              imageWidth: canvas.width,
-              imageHeight: canvas.height
-            }));
           }
-        };
-        img.onerror = function() {
+
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            success: true,
+            results: results,
+            imageWidth: canvas.width,
+            imageHeight: canvas.height
+          }));
+        } catch (error) {
           window.ReactNativeWebView.postMessage(JSON.stringify({
             success: false,
-            error: 'Image load failed',
-            results: []
+            error: 'Scan error: ' + error.message,
+            results: [],
+            imageWidth: img.width || 0,
+            imageHeight: img.height || 0
           }));
-        };
-        img.src = '${imageBase64}';
-      } catch (error) {
+        }
+      };
+
+      img.onerror = function(e) {
         window.ReactNativeWebView.postMessage(JSON.stringify({
           success: false,
-          error: error.message,
+          error: 'Image load failed',
           results: []
         }));
-      }
+      };
+
+      // 타임아웃 설정 (10초 후에도 결과가 없으면 실패 처리)
+      setTimeout(function() {
+        if (!img.complete) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            success: false,
+            error: 'Image load timeout',
+            results: []
+          }));
+        }
+      }, 10000);
+
+      img.src = '${imageBase64}';
     })();
   </script>
 </body>
@@ -1187,23 +1188,34 @@ function ScannerScreen() {
   // WebView 메시지 처리
   const handleWebViewMessage = useCallback((event) => {
     try {
+      console.log('[ImageScan] WebView message received:', event.nativeEvent.data);
       const data = JSON.parse(event.nativeEvent.data);
       setImageAnalyzing(false);
 
       if (data.success && data.results && data.results.length > 0) {
+        console.log('[ImageScan] Found barcodes:', data.results.length);
         setDetectedBarcodes(data.results);
         setImageDimensions(prev => ({
           width: data.imageWidth || prev.width,
           height: data.imageHeight || prev.height
         }));
       } else {
+        console.log('[ImageScan] No barcodes found or error:', data.error);
         setDetectedBarcodes([]);
       }
     } catch (error) {
-      console.error('WebView message parse error:', error);
+      console.error('[ImageScan] WebView message parse error:', error);
       setImageAnalyzing(false);
       setDetectedBarcodes([]);
     }
+  }, []);
+
+  // WebView 에러 핸들러
+  const handleWebViewError = useCallback((syntheticEvent) => {
+    const { nativeEvent } = syntheticEvent;
+    console.error('[ImageScan] WebView error:', nativeEvent);
+    setImageAnalyzing(false);
+    setDetectedBarcodes([]);
   }, []);
 
   // 바코드 마커 클릭 핸들러
@@ -1664,11 +1676,17 @@ function ScannerScreen() {
             {imageBase64 && imageAnalyzing && (
               <WebView
                 ref={webViewRef}
-                style={{ width: 0, height: 0, opacity: 0 }}
+                style={{ width: 1, height: 1, opacity: 0 }}
                 source={{ html: getBarcodeScannerHtml(imageBase64) }}
                 onMessage={handleWebViewMessage}
+                onError={handleWebViewError}
+                onHttpError={handleWebViewError}
                 javaScriptEnabled={true}
+                domStorageEnabled={true}
                 originWhitelist={['*']}
+                mixedContentMode="always"
+                allowFileAccess={true}
+                allowUniversalAccessFromFileURLs={true}
               />
             )}
           </View>
