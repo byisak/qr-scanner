@@ -1001,14 +1001,13 @@ function ScannerScreen() {
     setBatchScannedItems([]);
   }, []);
 
-  // 이미지에서 바코드를 감지하기 위한 WebView HTML (jsQR 사용)
+  // 이미지에서 바코드를 감지하기 위한 WebView HTML (ZXing 사용)
   const getBarcodeScannerHtml = useCallback((imageBase64) => {
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <style>
     body { margin: 0; padding: 0; background: #000; }
     canvas { display: none; }
@@ -1016,11 +1015,13 @@ function ScannerScreen() {
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <script>
-    (function() {
+  <script type="module">
+    import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/+esm';
+
+    (async function() {
       const img = new Image();
 
-      img.onload = function() {
+      img.onload = async function() {
         try {
           const canvas = document.getElementById('canvas');
           const ctx = canvas.getContext('2d');
@@ -1031,71 +1032,157 @@ function ScannerScreen() {
           const results = [];
           const scannedCodes = new Set();
 
-          // 전체 이미지 스캔
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          });
+          // ZXing BrowserMultiFormatReader 설정
+          const hints = new Map();
+          hints.set(DecodeHintType.TRY_HARDER, true);
+          hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+            BarcodeFormat.QR_CODE,
+            BarcodeFormat.DATA_MATRIX,
+            BarcodeFormat.AZTEC,
+            BarcodeFormat.PDF_417,
+            BarcodeFormat.EAN_13,
+            BarcodeFormat.EAN_8,
+            BarcodeFormat.CODE_128,
+            BarcodeFormat.CODE_39,
+            BarcodeFormat.UPC_A,
+            BarcodeFormat.UPC_E,
+            BarcodeFormat.ITF,
+            BarcodeFormat.CODABAR
+          ]);
 
-          if (code && code.data) {
-            scannedCodes.add(code.data);
-            const loc = code.location;
-            const centerX = (loc.topLeftCorner.x + loc.bottomRightCorner.x) / 2;
-            const centerY = (loc.topLeftCorner.y + loc.bottomRightCorner.y) / 2;
-            const width = Math.abs(loc.topRightCorner.x - loc.topLeftCorner.x);
-            const height = Math.abs(loc.bottomLeftCorner.y - loc.topLeftCorner.y);
+          const codeReader = new BrowserMultiFormatReader(hints);
 
-            results.push({
-              data: code.data,
-              type: 'QR_CODE',
-              bounds: {
-                x: centerX,
-                y: centerY,
-                width: Math.max(width, 50),
-                height: Math.max(height, 50)
+          // 캔버스를 이미지로 변환하여 스캔
+          async function scanImage() {
+            try {
+              // 캔버스의 dataURL을 사용하여 이미지 디코딩
+              const dataUrl = canvas.toDataURL('image/png');
+              const result = await codeReader.decodeFromImageUrl(dataUrl);
+
+              if (result && result.getText() && !scannedCodes.has(result.getText())) {
+                scannedCodes.add(result.getText());
+
+                let centerX = canvas.width / 2;
+                let centerY = canvas.height / 2;
+                let codeWidth = canvas.width * 0.3;
+                let codeHeight = canvas.height * 0.3;
+
+                // ResultPoints에서 위치 추출 시도
+                const points = result.getResultPoints();
+                if (points && points.length >= 2) {
+                  const xs = points.map(p => p.getX());
+                  const ys = points.map(p => p.getY());
+                  const minX = Math.min(...xs);
+                  const maxX = Math.max(...xs);
+                  const minY = Math.min(...ys);
+                  const maxY = Math.max(...ys);
+                  centerX = (minX + maxX) / 2;
+                  centerY = (minY + maxY) / 2;
+                  codeWidth = Math.max(maxX - minX, 50);
+                  codeHeight = Math.max(maxY - minY, 50);
+                }
+
+                // 바코드 포맷 이름 가져오기
+                let formatName = 'UNKNOWN';
+                try {
+                  const format = result.getBarcodeFormat();
+                  formatName = BarcodeFormat[format] || 'UNKNOWN';
+                } catch (e) {
+                  // 포맷 가져오기 실패 시 무시
+                }
+
+                results.push({
+                  data: result.getText(),
+                  type: formatName,
+                  bounds: {
+                    x: centerX,
+                    y: centerY,
+                    width: codeWidth,
+                    height: codeHeight
+                  }
+                });
               }
-            });
+            } catch (e) {
+              // 스캔 실패는 무시 (바코드가 없는 경우)
+              console.log('Scan attempt:', e.message);
+            }
           }
 
-          // 그리드로 분할하여 다중 QR 코드 스캔
-          const gridSize = 4;
+          // 영역별 스캔 함수
+          async function scanRegion(x, y, w, h) {
+            try {
+              // 영역 추출하여 새 캔버스 생성
+              const regionCanvas = document.createElement('canvas');
+              regionCanvas.width = w;
+              regionCanvas.height = h;
+              const regionCtx = regionCanvas.getContext('2d');
+              regionCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
+
+              const dataUrl = regionCanvas.toDataURL('image/png');
+              const result = await codeReader.decodeFromImageUrl(dataUrl);
+
+              if (result && result.getText() && !scannedCodes.has(result.getText())) {
+                scannedCodes.add(result.getText());
+
+                let centerX = x + w / 2;
+                let centerY = y + h / 2;
+                let codeWidth = w * 0.6;
+                let codeHeight = h * 0.6;
+
+                // ResultPoints에서 위치 추출 시도
+                const points = result.getResultPoints();
+                if (points && points.length >= 2) {
+                  const xs = points.map(p => p.getX());
+                  const ys = points.map(p => p.getY());
+                  const minX = Math.min(...xs);
+                  const maxX = Math.max(...xs);
+                  const minY = Math.min(...ys);
+                  const maxY = Math.max(...ys);
+                  centerX = x + (minX + maxX) / 2;
+                  centerY = y + (minY + maxY) / 2;
+                  codeWidth = Math.max(maxX - minX, 50);
+                  codeHeight = Math.max(maxY - minY, 50);
+                }
+
+                let formatName = 'UNKNOWN';
+                try {
+                  const format = result.getBarcodeFormat();
+                  formatName = BarcodeFormat[format] || 'UNKNOWN';
+                } catch (e) {}
+
+                results.push({
+                  data: result.getText(),
+                  type: formatName,
+                  bounds: {
+                    x: centerX,
+                    y: centerY,
+                    width: codeWidth,
+                    height: codeHeight
+                  }
+                });
+              }
+            } catch (e) {
+              // 스캔 실패는 무시
+            }
+          }
+
+          // 전체 이미지 스캔
+          await scanImage();
+
+          // 그리드로 분할하여 다중 바코드 스캔 (3x3 그리드)
+          const gridSize = 3;
           const cellWidth = canvas.width / gridSize;
           const cellHeight = canvas.height / gridSize;
 
           for (let row = 0; row < gridSize; row++) {
             for (let col = 0; col < gridSize; col++) {
-              const x = Math.floor(col * cellWidth);
-              const y = Math.floor(row * cellHeight);
-              const w = Math.floor(Math.min(cellWidth * 1.5, canvas.width - x));
-              const h = Math.floor(Math.min(cellHeight * 1.5, canvas.height - y));
+              const regionX = Math.floor(col * cellWidth);
+              const regionY = Math.floor(row * cellHeight);
+              const regionW = Math.floor(Math.min(cellWidth * 1.5, canvas.width - regionX));
+              const regionH = Math.floor(Math.min(cellHeight * 1.5, canvas.height - regionY));
 
-              if (w > 0 && h > 0) {
-                try {
-                  const cellImageData = ctx.getImageData(x, y, w, h);
-                  const cellCode = jsQR(cellImageData.data, w, h, {
-                    inversionAttempts: 'dontInvert',
-                  });
-
-                  if (cellCode && cellCode.data && !scannedCodes.has(cellCode.data)) {
-                    scannedCodes.add(cellCode.data);
-                    const loc = cellCode.location;
-                    const centerX = x + (loc.topLeftCorner.x + loc.bottomRightCorner.x) / 2;
-                    const centerY = y + (loc.topLeftCorner.y + loc.bottomRightCorner.y) / 2;
-                    const codeWidth = Math.abs(loc.topRightCorner.x - loc.topLeftCorner.x);
-                    const codeHeight = Math.abs(loc.bottomLeftCorner.y - loc.topLeftCorner.y);
-
-                    results.push({
-                      data: cellCode.data,
-                      type: 'QR_CODE',
-                      bounds: {
-                        x: centerX,
-                        y: centerY,
-                        width: Math.max(codeWidth, 50),
-                        height: Math.max(codeHeight, 50)
-                      }
-                    });
-                  }
-                } catch (e) {}
+              if (regionW > 50 && regionH > 50) {
+                await scanRegion(regionX, regionY, regionW, regionH);
               }
             }
           }
@@ -1125,18 +1212,16 @@ function ScannerScreen() {
         }));
       };
 
-      // 타임아웃 설정 (10초 후에도 결과가 없으면 실패 처리)
-      setTimeout(function() {
-        if (!img.complete) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            success: false,
-            error: 'Image load timeout',
-            results: []
-          }));
-        }
-      }, 10000);
-
       img.src = '${imageBase64}';
+
+      // 타임아웃 설정 (20초)
+      setTimeout(function() {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          success: false,
+          error: 'Timeout',
+          results: []
+        }));
+      }, 20000);
     })();
   </script>
 </body>
