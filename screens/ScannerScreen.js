@@ -31,6 +31,11 @@ import jsQR from 'jsqr';
 import jpeg from 'jpeg-js';
 import { Buffer } from 'buffer';
 
+// Buffer를 전역으로 설정 (React Native 환경)
+if (typeof global.Buffer === 'undefined') {
+  global.Buffer = Buffer;
+}
+
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
 const RESET_DELAY_LINK = 1200;
