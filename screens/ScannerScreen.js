@@ -1098,10 +1098,10 @@ function ScannerScreen() {
           height: decoded.height,
         };
 
-        // jsQR로 QR 코드 감지
+        // jsQR로 QR 코드 감지 (색상 반전 시도 포함)
         console.log('Starting QR code detection...');
         const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert', // 성능 향상
+          inversionAttempts: 'attemptBoth', // 일반 및 반전 색상 모두 시도
         });
         console.log('QR detection completed. Found:', !!code);
 
