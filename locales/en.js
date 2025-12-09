@@ -31,6 +31,16 @@ export default {
     sending: 'Sending',
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
+    // Image scan
+    loadImage: 'Load Image',
+    imageAnalysis: 'Image Analysis',
+    analyzing: 'Analyzing...',
+    noBarcodesFound: 'No barcodes found',
+    foundBarcodes: '{count} barcodes found',
+    selectAll: 'Select All',
+    saveSelected: 'Save Selected',
+    savedToHistory: 'Saved to history',
+    tapToSelect: 'Tap green dots to select',
   },
 
   // History screen

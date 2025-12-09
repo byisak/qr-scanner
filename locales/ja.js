@@ -31,6 +31,16 @@ export default {
     sending: '送信中',
     noSessionUrl: '送信URLがありません',
     pleaseGenerateUrl: 'リアルタイム送信を使用するには、設定でURLを生成してください。',
+    // 画像スキャン
+    loadImage: '画像を読み込む',
+    imageAnalysis: '画像分析',
+    analyzing: '分析中...',
+    noBarcodesFound: 'バーコードが見つかりません',
+    foundBarcodes: '{count}個のバーコードを発見',
+    selectAll: 'すべて選択',
+    saveSelected: '選択項目を保存',
+    savedToHistory: '履歴に保存されました',
+    tapToSelect: '緑の点をタップして選択',
   },
 
   // 履歴画面

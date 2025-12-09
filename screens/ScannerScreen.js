@@ -11,6 +11,8 @@ import {
   Alert,
   Modal,
   ScrollView,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -20,12 +22,14 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
+import { WebView } from 'react-native-webview';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
@@ -92,6 +96,16 @@ function ScannerScreen() {
 
   const [qrBounds, setQrBounds] = useState(null);
   const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
+
+  // 이미지 스캔 관련 상태
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageBase64, setImageBase64] = useState(null);
+  const [imageAnalyzing, setImageAnalyzing] = useState(false);
+  const [detectedBarcodes, setDetectedBarcodes] = useState([]);
+  const [selectedBarcodeIndices, setSelectedBarcodeIndices] = useState([]);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const webViewRef = useRef(null);
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -987,6 +1001,267 @@ function ScannerScreen() {
     setBatchScannedItems([]);
   }, []);
 
+  // 이미지에서 바코드를 감지하기 위한 WebView HTML
+  const getBarcodeScannerHtml = useCallback((imageBase64) => {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/@niceguys/zxing-library@0.18.8/umd/index.min.js"></script>
+  <style>
+    body { margin: 0; padding: 0; }
+    canvas { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    (async function() {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = async function() {
+          const canvas = document.getElementById('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          const codeReader = new ZXing.BrowserMultiFormatReader();
+          const results = [];
+
+          try {
+            // 전체 이미지 스캔
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const luminanceSource = new ZXing.RGBLuminanceSource(imageData.data, canvas.width, canvas.height);
+            const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+
+            // 다중 바코드 감지를 위해 그리드로 분할 스캔
+            const gridSize = 3;
+            const cellWidth = canvas.width / gridSize;
+            const cellHeight = canvas.height / gridSize;
+            const scannedCodes = new Set();
+
+            for (let row = 0; row < gridSize; row++) {
+              for (let col = 0; col < gridSize; col++) {
+                const x = col * cellWidth;
+                const y = row * cellHeight;
+                const w = Math.min(cellWidth * 1.5, canvas.width - x);
+                const h = Math.min(cellHeight * 1.5, canvas.height - y);
+
+                try {
+                  const cellImageData = ctx.getImageData(x, y, w, h);
+                  const cellCanvas = document.createElement('canvas');
+                  cellCanvas.width = w;
+                  cellCanvas.height = h;
+                  const cellCtx = cellCanvas.getContext('2d');
+                  cellCtx.putImageData(cellImageData, 0, 0);
+
+                  const result = await codeReader.decodeFromImageElement(cellCanvas);
+                  if (result && !scannedCodes.has(result.text)) {
+                    scannedCodes.add(result.text);
+                    results.push({
+                      data: result.text,
+                      type: result.format ? result.format.toString() : 'unknown',
+                      bounds: {
+                        x: x + (w / 2),
+                        y: y + (h / 2),
+                        width: w * 0.6,
+                        height: h * 0.6
+                      }
+                    });
+                  }
+                } catch (e) {}
+              }
+            }
+
+            // 전체 이미지에서도 한번 더 스캔
+            try {
+              const fullResult = await codeReader.decodeFromImageElement(img);
+              if (fullResult && !scannedCodes.has(fullResult.text)) {
+                scannedCodes.add(fullResult.text);
+                const points = fullResult.resultPoints;
+                let bounds = { x: canvas.width / 2, y: canvas.height / 2, width: 100, height: 100 };
+                if (points && points.length >= 2) {
+                  const xs = points.map(p => p.x);
+                  const ys = points.map(p => p.y);
+                  const minX = Math.min(...xs);
+                  const maxX = Math.max(...xs);
+                  const minY = Math.min(...ys);
+                  const maxY = Math.max(...ys);
+                  bounds = {
+                    x: (minX + maxX) / 2,
+                    y: (minY + maxY) / 2,
+                    width: Math.max(maxX - minX, 50),
+                    height: Math.max(maxY - minY, 50)
+                  };
+                }
+                results.push({
+                  data: fullResult.text,
+                  type: fullResult.format ? fullResult.format.toString() : 'unknown',
+                  bounds: bounds
+                });
+              }
+            } catch (e) {}
+
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              success: true,
+              results: results,
+              imageWidth: canvas.width,
+              imageHeight: canvas.height
+            }));
+          } catch (error) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              success: false,
+              error: error.message,
+              results: [],
+              imageWidth: canvas.width,
+              imageHeight: canvas.height
+            }));
+          }
+        };
+        img.onerror = function() {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            success: false,
+            error: 'Image load failed',
+            results: []
+          }));
+        };
+        img.src = '${imageBase64}';
+      } catch (error) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          success: false,
+          error: error.message,
+          results: []
+        }));
+      }
+    })();
+  </script>
+</body>
+</html>
+    `;
+  }, []);
+
+  // 이미지 선택 핸들러
+  const handlePickImage = useCallback(async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('result.permissionDenied'), t('result.permissionDeniedMessage'));
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        setSelectedImage(asset.uri);
+        setImageDimensions({ width: asset.width, height: asset.height });
+        setDetectedBarcodes([]);
+        setSelectedBarcodeIndices([]);
+        setImageModalVisible(true);
+        setImageAnalyzing(true);
+
+        // 이미지를 base64로 변환
+        try {
+          const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const mimeType = asset.uri.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+          setImageBase64(`data:${mimeType};base64,${base64}`);
+        } catch (base64Error) {
+          console.error('Base64 conversion error:', base64Error);
+          setImageAnalyzing(false);
+        }
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+    }
+  }, [t]);
+
+  // WebView 메시지 처리
+  const handleWebViewMessage = useCallback((event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      setImageAnalyzing(false);
+
+      if (data.success && data.results && data.results.length > 0) {
+        setDetectedBarcodes(data.results);
+        setImageDimensions(prev => ({
+          width: data.imageWidth || prev.width,
+          height: data.imageHeight || prev.height
+        }));
+      } else {
+        setDetectedBarcodes([]);
+      }
+    } catch (error) {
+      console.error('WebView message parse error:', error);
+      setImageAnalyzing(false);
+      setDetectedBarcodes([]);
+    }
+  }, []);
+
+  // 바코드 마커 클릭 핸들러
+  const handleBarcodeMarkerPress = useCallback((index) => {
+    setSelectedBarcodeIndices(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      }
+      return [...prev, index];
+    });
+  }, []);
+
+  // 전체 선택 핸들러
+  const handleSelectAllBarcodes = useCallback(() => {
+    if (selectedBarcodeIndices.length === detectedBarcodes.length) {
+      setSelectedBarcodeIndices([]);
+    } else {
+      setSelectedBarcodeIndices(detectedBarcodes.map((_, i) => i));
+    }
+  }, [selectedBarcodeIndices.length, detectedBarcodes.length]);
+
+  // 선택된 바코드 저장 핸들러
+  const handleSaveSelectedBarcodes = useCallback(async () => {
+    if (selectedBarcodeIndices.length === 0) return;
+
+    try {
+      for (const index of selectedBarcodeIndices) {
+        const barcode = detectedBarcodes[index];
+        if (barcode) {
+          await saveHistory(barcode.data, null, null, barcode.type || 'qr');
+        }
+      }
+
+      if (hapticEnabledRef.current) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+
+      Alert.alert(t('settings.success'), t('scanner.savedToHistory'));
+      setImageModalVisible(false);
+      setSelectedImage(null);
+      setImageBase64(null);
+      setDetectedBarcodes([]);
+      setSelectedBarcodeIndices([]);
+    } catch (error) {
+      console.error('Save barcodes error:', error);
+    }
+  }, [selectedBarcodeIndices, detectedBarcodes, saveHistory, t]);
+
+  // 이미지 모달 닫기
+  const handleCloseImageModal = useCallback(() => {
+    setImageModalVisible(false);
+    setSelectedImage(null);
+    setImageBase64(null);
+    setDetectedBarcodes([]);
+    setSelectedBarcodeIndices([]);
+    setImageAnalyzing(false);
+  }, []);
+
   // 그룹 선택 핸들러
   const handleSelectGroup = useCallback(async (groupId, groupName, isCloudSync = false) => {
     try {
@@ -1212,6 +1487,24 @@ function ScannerScreen() {
         </BlurView>
       </TouchableOpacity>
 
+      {/* 이미지 불러오기 버튼 (우측 상단) */}
+      <TouchableOpacity
+        onPress={handlePickImage}
+        activeOpacity={0.8}
+        accessibilityLabel={t('scanner.loadImage')}
+        accessibilityRole="button"
+        style={styles.imageButtonContainer}
+      >
+        <BlurView
+          intensity={80}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={styles.imageButton}
+        >
+          <Ionicons name="image" size={20} color="rgba(255,255,255,0.95)" />
+        </BlurView>
+      </TouchableOpacity>
+
       {/* 숨겨진 QR 코드 생성용 View */}
       {qrCodeToCapture && (
         <View
@@ -1287,6 +1580,181 @@ function ScannerScreen() {
             </ScrollView>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* 이미지 분석 모달 */}
+      <Modal
+        visible={imageModalVisible}
+        animationType="slide"
+        onRequestClose={handleCloseImageModal}
+      >
+        <View style={styles.imageModalContainer}>
+          {/* 헤더 */}
+          <View style={styles.imageModalHeader}>
+            <TouchableOpacity onPress={handleCloseImageModal} style={styles.imageModalCloseBtn}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.imageModalTitle}>{t('scanner.imageAnalysis')}</Text>
+            <View style={{ width: 44 }} />
+          </View>
+
+          {/* 이미지 및 바코드 마커 */}
+          <View style={styles.imageContainer}>
+            {selectedImage && (
+              <View style={styles.imageWrapper}>
+                <Image
+                  source={{ uri: selectedImage }}
+                  style={styles.analyzedImage}
+                  resizeMode="contain"
+                  onLayout={(event) => {
+                    const { width, height } = event.nativeEvent.layout;
+                    setImageDimensions(prev => ({
+                      ...prev,
+                      displayWidth: width,
+                      displayHeight: height
+                    }));
+                  }}
+                />
+
+                {/* 감지된 바코드 마커 */}
+                {detectedBarcodes.map((barcode, index) => {
+                  const displayWidth = imageDimensions.displayWidth || winWidth;
+                  const displayHeight = imageDimensions.displayHeight || winHeight * 0.6;
+                  const scaleX = displayWidth / (imageDimensions.width || 1);
+                  const scaleY = displayHeight / (imageDimensions.height || 1);
+                  const scale = Math.min(scaleX, scaleY);
+
+                  const markerX = barcode.bounds.x * scale;
+                  const markerY = barcode.bounds.y * scale;
+                  const isSelected = selectedBarcodeIndices.includes(index);
+
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.barcodeMarker,
+                        {
+                          left: markerX - 20,
+                          top: markerY - 20,
+                          backgroundColor: isSelected ? 'rgba(52, 199, 89, 0.8)' : 'rgba(52, 199, 89, 0.5)',
+                          borderColor: isSelected ? '#fff' : 'rgba(255,255,255,0.5)',
+                        }
+                      ]}
+                      onPress={() => handleBarcodeMarkerPress(index)}
+                      activeOpacity={0.7}
+                    >
+                      {isSelected && (
+                        <Ionicons name="checkmark" size={24} color="#fff" />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+
+                {/* 로딩 인디케이터 */}
+                {imageAnalyzing && (
+                  <View style={styles.analyzingOverlay}>
+                    <ActivityIndicator size="large" color="#34C759" />
+                    <Text style={styles.analyzingText}>{t('scanner.analyzing')}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* 숨겨진 WebView for 바코드 분석 */}
+            {imageBase64 && imageAnalyzing && (
+              <WebView
+                ref={webViewRef}
+                style={{ width: 0, height: 0, opacity: 0 }}
+                source={{ html: getBarcodeScannerHtml(imageBase64) }}
+                onMessage={handleWebViewMessage}
+                javaScriptEnabled={true}
+                originWhitelist={['*']}
+              />
+            )}
+          </View>
+
+          {/* 결과 및 액션 */}
+          <View style={styles.imageModalFooter}>
+            {!imageAnalyzing && (
+              <>
+                <Text style={styles.resultText}>
+                  {detectedBarcodes.length > 0
+                    ? t('scanner.foundBarcodes').replace('{count}', detectedBarcodes.length.toString())
+                    : t('scanner.noBarcodesFound')
+                  }
+                </Text>
+
+                {detectedBarcodes.length > 0 && (
+                  <>
+                    <Text style={styles.hintText}>{t('scanner.tapToSelect')}</Text>
+
+                    <View style={styles.imageModalButtons}>
+                      <TouchableOpacity
+                        style={[styles.imageModalBtn, styles.selectAllBtn]}
+                        onPress={handleSelectAllBarcodes}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name={selectedBarcodeIndices.length === detectedBarcodes.length ? 'checkbox' : 'square-outline'}
+                          size={20}
+                          color="#007AFF"
+                        />
+                        <Text style={styles.selectAllBtnText}>{t('scanner.selectAll')}</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.imageModalBtn,
+                          styles.saveBtn,
+                          selectedBarcodeIndices.length === 0 && styles.saveBtnDisabled
+                        ]}
+                        onPress={handleSaveSelectedBarcodes}
+                        activeOpacity={0.8}
+                        disabled={selectedBarcodeIndices.length === 0}
+                      >
+                        <Ionicons name="save" size={20} color="#fff" />
+                        <Text style={styles.saveBtnText}>
+                          {t('scanner.saveSelected')} ({selectedBarcodeIndices.length})
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* 선택된 바코드 목록 */}
+                    <ScrollView style={styles.selectedBarcodesScroll}>
+                      {detectedBarcodes.map((barcode, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.barcodeListItem,
+                            selectedBarcodeIndices.includes(index) && styles.barcodeListItemSelected
+                          ]}
+                          onPress={() => handleBarcodeMarkerPress(index)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.barcodeListItemContent}>
+                            <Ionicons
+                              name={selectedBarcodeIndices.includes(index) ? 'checkbox' : 'square-outline'}
+                              size={22}
+                              color={selectedBarcodeIndices.includes(index) ? '#34C759' : '#8E8E93'}
+                            />
+                            <View style={styles.barcodeListItemText}>
+                              <Text style={styles.barcodeDataText} numberOfLines={1}>
+                                {barcode.data}
+                              </Text>
+                              <Text style={styles.barcodeTypeText}>
+                                {barcode.type}
+                              </Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -1593,6 +2061,173 @@ const styles = StyleSheet.create({
   },
   groupItemTextActive: {
     color: '#007AFF',
+  },
+  // 이미지 버튼 스타일
+  imageButtonContainer: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    right: 20,
+  },
+  imageButton: {
+    padding: 12,
+    borderRadius: 22,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // 이미지 분석 모달 스타일
+  imageModalContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  imageModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#1C1C1E',
+  },
+  imageModalCloseBtn: {
+    padding: 8,
+  },
+  imageModalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  imageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  imageWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  analyzedImage: {
+    width: '100%',
+    height: '100%',
+  },
+  barcodeMarker: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  analyzingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  analyzingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+  },
+  imageModalFooter: {
+    backgroundColor: '#1C1C1E',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  resultText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  hintText: {
+    color: '#8E8E93',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  imageModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  imageModalBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  selectAllBtn: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  selectAllBtnText: {
+    color: '#007AFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  saveBtn: {
+    backgroundColor: '#34C759',
+  },
+  saveBtnDisabled: {
+    backgroundColor: 'rgba(52, 199, 89, 0.3)',
+  },
+  saveBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  selectedBarcodesScroll: {
+    maxHeight: 200,
+  },
+  barcodeListItem: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 8,
+  },
+  barcodeListItemSelected: {
+    backgroundColor: 'rgba(52, 199, 89, 0.2)',
+    borderWidth: 1,
+    borderColor: '#34C759',
+  },
+  barcodeListItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  barcodeListItemText: {
+    flex: 1,
+  },
+  barcodeDataText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  barcodeTypeText: {
+    color: '#8E8E93',
+    fontSize: 13,
+    marginTop: 2,
   },
 });
 

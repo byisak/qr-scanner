@@ -31,6 +31,16 @@ export default {
     sending: '전송',
     noSessionUrl: '전송 주소 없음',
     pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
+    // 이미지 스캔
+    loadImage: '이미지 불러오기',
+    imageAnalysis: '이미지 분석',
+    analyzing: '분석 중...',
+    noBarcodesFound: '바코드를 찾을 수 없습니다',
+    foundBarcodes: '{count}개의 바코드 발견',
+    selectAll: '전체 선택',
+    saveSelected: '선택 항목 저장',
+    savedToHistory: '기록에 저장되었습니다',
+    tapToSelect: '녹색 점을 탭하여 선택하세요',
   },
 
   // 히스토리 화면

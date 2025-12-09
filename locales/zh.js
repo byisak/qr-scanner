@@ -31,6 +31,16 @@ export default {
     sending: '发送中',
     noSessionUrl: '没有传输地址',
     pleaseGenerateUrl: '要使用实时服务器传输，请先在设置中生成地址。',
+    // 图像扫描
+    loadImage: '加载图片',
+    imageAnalysis: '图像分析',
+    analyzing: '分析中...',
+    noBarcodesFound: '未找到条形码',
+    foundBarcodes: '发现{count}个条形码',
+    selectAll: '全选',
+    saveSelected: '保存选中项',
+    savedToHistory: '已保存到历史记录',
+    tapToSelect: '点击绿点选择',
   },
 
   // 历史记录界面
