@@ -29,7 +29,6 @@ import { captureRef } from 'react-native-view-shot';
 import * as ImagePicker from 'expo-image-picker';
 import jsQR from 'jsqr';
 import jpeg from 'jpeg-js';
-import { PNG } from 'pngjs';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
@@ -1057,8 +1056,17 @@ function ScannerScreen() {
         return;
       }
 
-      const imageUri = result.assets[0].uri;
-      console.log('Selected image:', imageUri);
+      const originalUri = result.assets[0].uri;
+      console.log('Selected image:', originalUri);
+
+      // 모든 이미지를 JPEG로 변환 (PNG 등 다른 포맷 지원)
+      const manipulatedImage = await ImageManipulator.manipulateAsync(
+        originalUri,
+        [], // 크기나 회전 변경 없이 그대로
+        { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      const imageUri = manipulatedImage.uri;
 
       // 이미지를 base64로 읽기
       const base64 = await FileSystem.readAsStringAsync(imageUri, {
@@ -1068,49 +1076,14 @@ function ScannerScreen() {
       // base64를 Buffer로 변환
       const buffer = Buffer.from(base64, 'base64');
 
-      let imageData;
-
-      // 파일 확장자로 이미지 타입 판단
-      const isJPEG = imageUri.toLowerCase().endsWith('.jpg') ||
-                     imageUri.toLowerCase().endsWith('.jpeg');
-      const isPNG = imageUri.toLowerCase().endsWith('.png');
-
       try {
-        if (isJPEG) {
-          // JPEG 디코딩
-          const decoded = jpeg.decode(buffer);
-          imageData = {
-            data: decoded.data,
-            width: decoded.width,
-            height: decoded.height,
-          };
-        } else if (isPNG) {
-          // PNG 디코딩
-          const png = PNG.sync.read(buffer);
-          imageData = {
-            data: png.data,
-            width: png.width,
-            height: png.height,
-          };
-        } else {
-          // 기본적으로 JPEG로 시도
-          try {
-            const decoded = jpeg.decode(buffer);
-            imageData = {
-              data: decoded.data,
-              width: decoded.width,
-              height: decoded.height,
-            };
-          } catch (jpegError) {
-            // JPEG 실패시 PNG 시도
-            const png = PNG.sync.read(buffer);
-            imageData = {
-              data: png.data,
-              width: png.width,
-              height: png.height,
-            };
-          }
-        }
+        // JPEG 디코딩
+        const decoded = jpeg.decode(buffer);
+        const imageData = {
+          data: decoded.data,
+          width: decoded.width,
+          height: decoded.height,
+        };
 
         // jsQR로 QR 코드 감지
         const code = jsQR(imageData.data, imageData.width, imageData.height);
@@ -1142,8 +1115,8 @@ function ScannerScreen() {
             }, activeSessionId);
           }
 
-          // 히스토리에 저장
-          const historyResult = await saveHistory(code.data, null, imageUri, 'qr');
+          // 히스토리에 저장 (원본 이미지 URI 사용)
+          const historyResult = await saveHistory(code.data, null, originalUri, 'qr');
 
           // 결과 화면으로 이동
           setCanScan(false);
@@ -1153,7 +1126,7 @@ function ScannerScreen() {
               code: code.data,
               isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
               scanCount: historyResult.count.toString(),
-              photoUri: imageUri,
+              photoUri: originalUri,
             }
           });
 
@@ -1164,7 +1137,7 @@ function ScannerScreen() {
         }
       } catch (decodeError) {
         console.error('Image decode error:', decodeError);
-        Alert.alert('오류', '이미지 형식을 지원하지 않거나 손상되었습니다.');
+        Alert.alert('오류', '이미지를 처리하는 중 오류가 발생했습니다.');
       }
     } catch (error) {
       console.error('Image pick error:', error);
