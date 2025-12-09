@@ -15,7 +15,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
-import { BarCodeScanner } from 'expo-barcode-scanner';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer } from 'expo-audio';
@@ -1227,7 +1226,7 @@ function ScannerScreen() {
     `;
   }, []);
 
-  // 이미지 선택 핸들러 (네이티브 스캔)
+  // 이미지 선택 핸들러 (WebView 스캔)
   const handlePickImage = useCallback(async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1250,77 +1249,16 @@ function ScannerScreen() {
         setSelectedBarcodeIndices([]);
         setImageModalVisible(true);
         setImageAnalyzing(true);
-        setImageBase64(null); // WebView 사용 안함
 
-        // 네이티브 바코드 스캔 (expo-barcode-scanner)
+        // 이미지를 base64로 변환하여 WebView로 전달
         try {
-          console.log('[ImageScan] Starting native scan for:', asset.uri);
-
-          // 지원하는 모든 바코드 타입
-          const barcodeTypes = [
-            BarCodeScanner.Constants.BarCodeType.qr,
-            BarCodeScanner.Constants.BarCodeType.ean13,
-            BarCodeScanner.Constants.BarCodeType.ean8,
-            BarCodeScanner.Constants.BarCodeType.code128,
-            BarCodeScanner.Constants.BarCodeType.code39,
-            BarCodeScanner.Constants.BarCodeType.upc_e,
-            BarCodeScanner.Constants.BarCodeType.upc_a,
-            BarCodeScanner.Constants.BarCodeType.itf14,
-            BarCodeScanner.Constants.BarCodeType.codabar,
-            BarCodeScanner.Constants.BarCodeType.datamatrix,
-            BarCodeScanner.Constants.BarCodeType.aztec,
-            BarCodeScanner.Constants.BarCodeType.pdf417,
-          ].filter(Boolean); // undefined 제거
-
-          const scanResults = await BarCodeScanner.scanFromURLAsync(asset.uri, barcodeTypes);
-
-          console.log('[ImageScan] Native scan results:', scanResults);
-
-          if (scanResults && scanResults.length > 0) {
-            const formattedResults = scanResults.map((barcode, index) => {
-              // 바코드 위치 계산
-              let centerX = asset.width / 2;
-              let centerY = asset.height / 2;
-              let codeWidth = asset.width * 0.3;
-              let codeHeight = asset.height * 0.3;
-
-              if (barcode.bounds) {
-                const { origin, size } = barcode.bounds;
-                centerX = origin.x + size.width / 2;
-                centerY = origin.y + size.height / 2;
-                codeWidth = size.width;
-                codeHeight = size.height;
-              } else if (barcode.cornerPoints && barcode.cornerPoints.length >= 2) {
-                const xs = barcode.cornerPoints.map(p => p.x);
-                const ys = barcode.cornerPoints.map(p => p.y);
-                centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
-                centerY = (Math.min(...ys) + Math.max(...ys)) / 2;
-                codeWidth = Math.max(...xs) - Math.min(...xs);
-                codeHeight = Math.max(...ys) - Math.min(...ys);
-              }
-
-              return {
-                data: barcode.data,
-                type: barcode.type || 'UNKNOWN',
-                bounds: {
-                  x: centerX,
-                  y: centerY,
-                  width: Math.max(codeWidth, 50),
-                  height: Math.max(codeHeight, 50)
-                }
-              };
-            });
-
-            setDetectedBarcodes(formattedResults);
-            console.log('[ImageScan] Found', formattedResults.length, 'barcodes');
-          } else {
-            setDetectedBarcodes([]);
-            console.log('[ImageScan] No barcodes found');
-          }
-        } catch (scanError) {
-          console.error('[ImageScan] Native scan error:', scanError);
-          setDetectedBarcodes([]);
-        } finally {
+          const base64 = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          const mimeType = asset.uri.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+          setImageBase64(`data:${mimeType};base64,${base64}`);
+        } catch (base64Error) {
+          console.error('Base64 conversion error:', base64Error);
           setImageAnalyzing(false);
         }
       }
@@ -1329,6 +1267,34 @@ function ScannerScreen() {
       setImageAnalyzing(false);
     }
   }, [t]);
+
+  // WebView 메시지 처리
+  const handleWebViewMessage = useCallback((event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      setImageAnalyzing(false);
+
+      if (data.success && data.results && data.results.length > 0) {
+        setDetectedBarcodes(data.results);
+        setImageDimensions(prev => ({
+          width: data.imageWidth || prev.width,
+          height: data.imageHeight || prev.height
+        }));
+      } else {
+        setDetectedBarcodes([]);
+      }
+    } catch (error) {
+      console.error('[ImageScan] WebView message parse error:', error);
+      setImageAnalyzing(false);
+      setDetectedBarcodes([]);
+    }
+  }, []);
+
+  // WebView 에러 핸들러
+  const handleWebViewError = useCallback(() => {
+    setImageAnalyzing(false);
+    setDetectedBarcodes([]);
+  }, []);
 
   // 바코드 마커 클릭 핸들러
   const handleBarcodeMarkerPress = useCallback((index) => {
