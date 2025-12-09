@@ -1195,13 +1195,13 @@ function ScannerScreen() {
       )}
 
       <TouchableOpacity
-        style={styles.torchButton}
+        style={[styles.torchButton, torchOn && styles.torchButtonActive]}
         onPress={toggleTorch}
         activeOpacity={0.8}
         accessibilityLabel={torchOn ? t('scanner.torchOn') : t('scanner.torchOff')}
         accessibilityRole="button"
       >
-        <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={32} color="white" />
+        <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.9)'} />
       </TouchableOpacity>
 
       {/* 숨겨진 QR 코드 생성용 View */}
@@ -1455,13 +1455,23 @@ const styles = StyleSheet.create({
   },
   torchButton: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 110 : 90,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    padding: 22,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: 12,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    // 리퀴드 글래스 효과
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  torchButtonActive: {
+    backgroundColor: 'rgba(255,214,10,0.25)',
+    borderColor: 'rgba(255,214,10,0.4)',
   },
   msg: {
     flex: 1,
