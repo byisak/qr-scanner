@@ -262,6 +262,19 @@ export default {
     selected: '選択済み',
   },
 
+  // URL開き方選択画面
+  urlOpenMode: {
+    title: 'URL開き方',
+    description: 'QRコードからURLを認識した時の開き方を選択してください',
+    inApp: 'アプリ内ブラウザ',
+    inAppDesc: 'アプリ内でウェブページを開きます',
+    safari: 'Safariで開く',
+    safariDesc: 'Safariブラウザで開きます',
+    chrome: 'Chromeで開く',
+    chromeDesc: 'Chromeブラウザで開きます',
+    selected: '選択済み',
+  },
+
   // QRコード生成画面
   generator: {
     title: 'コード生成',

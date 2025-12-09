@@ -262,6 +262,19 @@ export default {
     selected: '已选择',
   },
 
+  // URL打开方式选择界面
+  urlOpenMode: {
+    title: 'URL打开方式',
+    description: '选择从QR码识别URL时的打开方式',
+    inApp: '应用内浏览器',
+    inAppDesc: '在应用内打开网页',
+    safari: '用Safari打开',
+    safariDesc: '使用Safari浏览器打开',
+    chrome: '用Chrome打开',
+    chromeDesc: '使用Chrome浏览器打开',
+    selected: '已选择',
+  },
+
   // 二维码生成界面
   generator: {
     title: '代码生成',
