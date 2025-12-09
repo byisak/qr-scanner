@@ -27,7 +27,9 @@ import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
 import * as ImagePicker from 'expo-image-picker';
-import RNQRGenerator from 'rn-qr-generator';
+import jsQR from 'jsqr';
+import jpeg from 'jpeg-js';
+import { PNG } from 'pngjs';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
@@ -1056,67 +1058,114 @@ function ScannerScreen() {
       }
 
       const imageUri = result.assets[0].uri;
+      console.log('Selected image:', imageUri);
 
-      // rn-qr-generator로 QR 코드 감지
-      RNQRGenerator.detect({
-        uri: imageUri,
-      })
-        .then(async (response) => {
-          const { values } = response;
+      // 이미지를 base64로 읽기
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-          if (values && values.length > 0) {
-            // QR 코드 발견
-            const qrData = values[0];
-            console.log('QR code found in image:', qrData);
+      // base64를 Buffer로 변환
+      const buffer = Buffer.from(base64, 'base64');
 
-            // 햅틱 피드백
-            if (hapticEnabledRef.current) {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
+      let imageData;
 
-            // 스캔 소리 재생
-            if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
-              try {
-                beepSoundPlayerRef.current.seekTo(0);
-                beepSoundPlayerRef.current.play();
-              } catch (error) {
-                console.log('Scan sound playback error:', error);
-              }
-            }
+      // 파일 확장자로 이미지 타입 판단
+      const isJPEG = imageUri.toLowerCase().endsWith('.jpg') ||
+                     imageUri.toLowerCase().endsWith('.jpeg');
+      const isPNG = imageUri.toLowerCase().endsWith('.png');
 
-            // 실시간 서버전송
-            if (realtimeSyncEnabled && activeSessionId) {
-              websocketClient.sendScanData({
-                code: qrData,
-                timestamp: Date.now(),
-              }, activeSessionId);
-            }
-
-            // 히스토리에 저장
-            const historyResult = await saveHistory(qrData, null, imageUri, 'qr');
-
-            // 결과 화면으로 이동
-            setCanScan(false);
-            router.push({
-              pathname: '/result',
-              params: {
-                code: qrData,
-                isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
-                scanCount: historyResult.count.toString(),
-                photoUri: imageUri,
-              }
-            });
-
-            setTimeout(() => setCanScan(true), 1000);
-          } else {
-            // QR 코드를 찾지 못함
-            Alert.alert('QR 코드 없음', '선택한 이미지에서 QR 코드를 찾을 수 없습니다.');
+      try {
+        if (isJPEG) {
+          // JPEG 디코딩
+          const decoded = jpeg.decode(buffer);
+          imageData = {
+            data: decoded.data,
+            width: decoded.width,
+            height: decoded.height,
+          };
+        } else if (isPNG) {
+          // PNG 디코딩
+          const png = PNG.sync.read(buffer);
+          imageData = {
+            data: png.data,
+            width: png.width,
+            height: png.height,
+          };
+        } else {
+          // 기본적으로 JPEG로 시도
+          try {
+            const decoded = jpeg.decode(buffer);
+            imageData = {
+              data: decoded.data,
+              width: decoded.width,
+              height: decoded.height,
+            };
+          } catch (jpegError) {
+            // JPEG 실패시 PNG 시도
+            const png = PNG.sync.read(buffer);
+            imageData = {
+              data: png.data,
+              width: png.width,
+              height: png.height,
+            };
           }
-        })
-        .catch((error) => {
-          console.error('QR detection error:', error);
-          Alert.alert('오류', '이미지에서 QR 코드를 찾을 수 없습니다.');
-        });
+        }
+
+        // jsQR로 QR 코드 감지
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code) {
+          // QR 코드 발견
+          console.log('QR code found in image:', code.data);
+
+          // 햅틱 피드백
+          if (hapticEnabledRef.current) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+
+          // 스캔 소리 재생
+          if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+            try {
+              beepSoundPlayerRef.current.seekTo(0);
+              beepSoundPlayerRef.current.play();
+            } catch (error) {
+              console.log('Scan sound playback error:', error);
+            }
+          }
+
+          // 실시간 서버전송
+          if (realtimeSyncEnabled && activeSessionId) {
+            websocketClient.sendScanData({
+              code: code.data,
+              timestamp: Date.now(),
+            }, activeSessionId);
+          }
+
+          // 히스토리에 저장
+          const historyResult = await saveHistory(code.data, null, imageUri, 'qr');
+
+          // 결과 화면으로 이동
+          setCanScan(false);
+          router.push({
+            pathname: '/result',
+            params: {
+              code: code.data,
+              isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
+              scanCount: historyResult.count.toString(),
+              photoUri: imageUri,
+            }
+          });
+
+          setTimeout(() => setCanScan(true), 1000);
+        } else {
+          // QR 코드를 찾지 못함
+          Alert.alert('QR 코드 없음', '선택한 이미지에서 QR 코드를 찾을 수 없습니다.');
+        }
+      } catch (decodeError) {
+        console.error('Image decode error:', decodeError);
+        Alert.alert('오류', '이미지 형식을 지원하지 않거나 손상되었습니다.');
+      }
     } catch (error) {
       console.error('Image pick error:', error);
       Alert.alert('오류', '이미지를 처리하는 중 오류가 발생했습니다.');
