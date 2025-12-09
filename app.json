@@ -18,7 +18,8 @@
       "bundleIdentifier": "com.yourcompany.qrscanner",
       "infoPlist": {
         "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
-        "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
+        "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다.",
+        "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes"]
       }
     },
     "android": {

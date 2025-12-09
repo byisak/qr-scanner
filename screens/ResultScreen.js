@@ -105,13 +105,22 @@ export default function ResultScreen() {
             } else {
               chromeUrl = urlToOpen.replace('http://', 'googlechrome://');
             }
-          }
-          const supported = await Linking.canOpenURL(chromeUrl);
-          if (supported) {
-            await Linking.openURL(chromeUrl);
+            // Chrome으로 직접 열기 시도
+            try {
+              await Linking.openURL(chromeUrl);
+            } catch {
+              // Chrome이 설치되어 있지 않으면 기본 브라우저로 열기
+              await Linking.openURL(urlToOpen);
+            }
           } else {
-            // Chrome이 설치되어 있지 않으면 기본 브라우저로 열기
-            await Linking.openURL(urlToOpen);
+            // Android에서는 Chrome intent 사용
+            const intentUrl = `intent://${urlToOpen.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
+            try {
+              await Linking.openURL(intentUrl);
+            } catch {
+              // Chrome이 없으면 기본 브라우저로
+              await Linking.openURL(urlToOpen);
+            }
           }
         } catch (error) {
           console.error('Open URL error:', error);
