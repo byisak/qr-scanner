@@ -81,14 +81,37 @@ export default function ResultScreen() {
   const handleOpenUrl = async () => {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
-      if (urlOpenMode === 'safari' || urlOpenMode === 'chrome') {
-        // Safari 또는 Chrome으로 열기
+      if (urlOpenMode === 'safari') {
+        // Safari로 열기
         try {
           const supported = await Linking.canOpenURL(urlToOpen);
           if (supported) {
             await Linking.openURL(urlToOpen);
           } else {
             Alert.alert(t('result.error'), 'Cannot open this URL');
+          }
+        } catch (error) {
+          console.error('Open URL error:', error);
+          Alert.alert(t('result.error'), 'Failed to open URL');
+        }
+      } else if (urlOpenMode === 'chrome') {
+        // Chrome으로 열기
+        try {
+          let chromeUrl = urlToOpen;
+          if (Platform.OS === 'ios') {
+            // iOS에서는 Chrome URL scheme 사용
+            if (urlToOpen.startsWith('https://')) {
+              chromeUrl = urlToOpen.replace('https://', 'googlechromes://');
+            } else {
+              chromeUrl = urlToOpen.replace('http://', 'googlechrome://');
+            }
+          }
+          const supported = await Linking.canOpenURL(chromeUrl);
+          if (supported) {
+            await Linking.openURL(chromeUrl);
+          } else {
+            // Chrome이 설치되어 있지 않으면 기본 브라우저로 열기
+            await Linking.openURL(urlToOpen);
           }
         } catch (error) {
           console.error('Open URL error:', error);

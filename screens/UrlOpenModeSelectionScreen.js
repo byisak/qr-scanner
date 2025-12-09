@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -15,20 +14,19 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 
-// Get platform-specific browser option
-const getBrowserOption = () => {
-  if (Platform.OS === 'ios') {
-    return { id: 'safari', icon: 'compass-outline' };
-  }
-  return { id: 'chrome', icon: 'logo-chrome' };
-};
-
 const urlOpenModes = [
   {
     id: 'inApp',
     icon: 'phone-portrait-outline',
   },
-  getBrowserOption(),
+  {
+    id: 'safari',
+    icon: 'compass-outline',
+  },
+  {
+    id: 'chrome',
+    icon: 'logo-chrome',
+  },
 ];
 
 export default function UrlOpenModeSelectionScreen() {
