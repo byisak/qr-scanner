@@ -1053,7 +1053,7 @@ function ScannerScreen() {
 
       // 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: 'images', // 문자열로 직접 지정 (expo-image-picker 17.x)
         quality: 1,
         allowsEditing: false,
       });
