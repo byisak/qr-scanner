@@ -268,8 +268,10 @@ export default {
     description: 'Select how to open URLs from QR codes',
     inApp: 'In-App Browser',
     inAppDesc: 'Open web pages within the app',
-    browser: 'Default Browser',
-    browserDesc: 'Open in Safari or Chrome',
+    safari: 'Open in Safari',
+    safariDesc: 'Opens in Safari browser',
+    chrome: 'Open in Chrome',
+    chromeDesc: 'Opens in Chrome browser',
     selected: 'Selected',
   },
 

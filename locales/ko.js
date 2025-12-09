@@ -268,8 +268,10 @@ export default {
     description: 'QR 코드에서 URL을 인식했을 때 열기 방식을 선택하세요',
     inApp: '앱 내 웹뷰',
     inAppDesc: '앱 내에서 웹페이지를 엽니다',
-    browser: '기본 브라우저',
-    browserDesc: 'Safari 또는 Chrome으로 엽니다',
+    safari: 'Safari로 열기',
+    safariDesc: 'Safari 브라우저로 엽니다',
+    chrome: 'Chrome으로 열기',
+    chromeDesc: 'Chrome 브라우저로 엽니다',
     selected: '선택됨',
   },
 

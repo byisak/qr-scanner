@@ -81,8 +81,8 @@ export default function ResultScreen() {
   const handleOpenUrl = async () => {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
-      if (urlOpenMode === 'browser') {
-        // 기본 브라우저로 열기
+      if (urlOpenMode === 'safari' || urlOpenMode === 'chrome') {
+        // Safari 또는 Chrome으로 열기
         try {
           const supported = await Linking.canOpenURL(urlToOpen);
           if (supported) {
