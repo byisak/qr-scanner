@@ -29,6 +29,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as ImagePicker from 'expo-image-picker';
 import jsQR from 'jsqr';
 import jpeg from 'jpeg-js';
+import { Buffer } from 'buffer';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
