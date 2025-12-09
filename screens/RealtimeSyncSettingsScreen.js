@@ -48,6 +48,22 @@ const getDaysRemaining = (deletedAt) => {
   return Math.max(0, diffDays);
 };
 
+// 서버에서 세션 목록 가져오기
+const fetchSessionsFromServer = async () => {
+  try {
+    const response = await fetch(`${config.serverUrl}/api/sessions`);
+    if (!response.ok) {
+      console.warn('Failed to fetch sessions from server:', response.status);
+      return null;
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.warn('Error fetching sessions from server:', error);
+    return null;
+  }
+};
+
 export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t } = useLanguage();
@@ -77,30 +93,95 @@ export default function RealtimeSyncSettingsScreen() {
     [sessionUrls]
   );
 
+  // 서버에서 세션 목록을 가져와 로컬과 동기화하는 함수
+  const syncSessionsFromServer = useCallback(async (localSessions) => {
+    const serverSessions = await fetchSessionsFromServer();
+    if (!serverSessions || !Array.isArray(serverSessions)) {
+      return localSessions;
+    }
+
+    // 서버 세션 ID 목록
+    const serverSessionMap = new Map();
+    serverSessions.forEach(session => {
+      serverSessionMap.set(session.session_id || session.sessionId, {
+        status: session.status || 'ACTIVE',
+        deletedAt: session.deleted_at || session.deletedAt,
+      });
+    });
+
+    // 로컬 세션을 서버 상태와 동기화
+    const updatedSessions = localSessions.map(session => {
+      const serverData = serverSessionMap.get(session.id);
+      if (serverData) {
+        return {
+          ...session,
+          status: serverData.status,
+          deletedAt: serverData.deletedAt ? new Date(serverData.deletedAt).getTime() : null,
+        };
+      }
+      return session;
+    });
+
+    // 업데이트된 세션 목록 저장
+    if (updatedSessions.length > 0) {
+      await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedSessions));
+    }
+
+    // scanGroups도 동기화 (삭제된 세션 그룹 isDeleted 업데이트)
+    try {
+      const groupsJson = await AsyncStorage.getItem('scanGroups');
+      if (groupsJson) {
+        const groups = JSON.parse(groupsJson);
+        const updatedGroups = groups.map(g => {
+          const serverData = serverSessionMap.get(g.id);
+          if (serverData && g.isCloudSync) {
+            return { ...g, isDeleted: serverData.status === 'DELETED' };
+          }
+          return g;
+        });
+        await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+      }
+    } catch (error) {
+      console.error('Failed to sync scanGroups:', error);
+    }
+
+    return updatedSessions;
+  }, []);
+
   // 초기 로드
   useEffect(() => {
     (async () => {
       try {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
-        if (realtimeSync === 'true') {
+        const isEnabled = realtimeSync === 'true';
+        if (isEnabled) {
           setRealtimeSyncEnabled(true);
         }
 
         const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+        let localSessions = [];
         if (savedSessionUrls) {
           const parsed = JSON.parse(savedSessionUrls);
           // 기존 데이터 마이그레이션: status 필드가 없으면 ACTIVE로 설정
-          const migrated = parsed.map(session => ({
+          localSessions = parsed.map(session => ({
             ...session,
             status: session.status || 'ACTIVE',
           }));
-          setSessionUrls(migrated);
+        }
+
+        // 실시간 동기화가 활성화된 경우 서버에서 세션 목록 동기화
+        if (isEnabled && localSessions.length > 0) {
+          const synced = await syncSessionsFromServer(localSessions);
+          setSessionUrls(synced);
+          console.log('앱 시작: 서버에서 세션 목록 동기화 완료');
+        } else {
+          setSessionUrls(localSessions);
         }
       } catch (error) {
         console.error('Load realtime sync settings error:', error);
       }
     })();
-  }, []);
+  }, [syncSessionsFromServer]);
 
   // 화면 포커스 시 데이터 다시 로드
   useFocusEffect(
@@ -131,7 +212,23 @@ export default function RealtimeSyncSettingsScreen() {
       try {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
-        if (!realtimeSyncEnabled) {
+        if (realtimeSyncEnabled) {
+          // 토글 활성화 시 서버에서 세션 목록 동기화
+          const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+          if (savedSessionUrls) {
+            const parsed = JSON.parse(savedSessionUrls);
+            const localSessions = parsed.map(session => ({
+              ...session,
+              status: session.status || 'ACTIVE',
+            }));
+
+            if (localSessions.length > 0) {
+              const synced = await syncSessionsFromServer(localSessions);
+              setSessionUrls(synced);
+              console.log('토글 활성화: 서버에서 세션 목록 동기화 완료');
+            }
+          }
+        } else {
           // 현재 선택된 그룹이 세션 그룹(클라우드 동기화)인지 확인
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId');
           if (selectedGroupId) {
@@ -152,7 +249,7 @@ export default function RealtimeSyncSettingsScreen() {
         console.error('Save realtime sync settings error:', error);
       }
     })();
-  }, [realtimeSyncEnabled]);
+  }, [realtimeSyncEnabled, syncSessionsFromServer]);
 
   // 세션 URL 목록 저장
   useEffect(() => {
