@@ -1053,7 +1053,7 @@ function ScannerScreen() {
 
       // 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         quality: 1,
         allowsEditing: false,
       });
@@ -1065,14 +1065,18 @@ function ScannerScreen() {
       const originalUri = result.assets[0].uri;
       console.log('Selected image:', originalUri);
 
-      // 모든 이미지를 JPEG로 변환 (PNG 등 다른 포맷 지원)
+      // 이미지 크기 확인 및 적절한 크기로 조정 (QR 인식 성능 향상)
+      // 너무 큰 이미지는 인식 속도가 느리고 메모리 문제가 발생할 수 있음
       const manipulatedImage = await ImageManipulator.manipulateAsync(
         originalUri,
-        [], // 크기나 회전 변경 없이 그대로
+        [
+          { resize: { width: 1000 } } // 최대 너비 1000px로 조정
+        ],
         { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
       );
 
       const imageUri = manipulatedImage.uri;
+      console.log('Image converted to JPEG:', imageUri);
 
       // 이미지를 base64로 읽기
       const base64 = await FileSystem.readAsStringAsync(imageUri, {
@@ -1081,10 +1085,13 @@ function ScannerScreen() {
 
       // base64를 Buffer로 변환
       const buffer = Buffer.from(base64, 'base64');
+      console.log('Buffer created, size:', buffer.length);
 
       try {
         // JPEG 디코딩
         const decoded = jpeg.decode(buffer);
+        console.log('Image decoded - Width:', decoded.width, 'Height:', decoded.height);
+
         const imageData = {
           data: decoded.data,
           width: decoded.width,
@@ -1092,7 +1099,11 @@ function ScannerScreen() {
         };
 
         // jsQR로 QR 코드 감지
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        console.log('Starting QR code detection...');
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: 'dontInvert', // 성능 향상
+        });
+        console.log('QR detection completed. Found:', !!code);
 
         if (code) {
           // QR 코드 발견
