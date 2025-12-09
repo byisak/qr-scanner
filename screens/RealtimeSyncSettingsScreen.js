@@ -323,11 +323,25 @@ export default function RealtimeSyncSettingsScreen() {
     try {
       if (!websocketClient.getConnectionStatus()) {
         websocketClient.connect(config.serverUrl);
+        // 연결 완료 대기 (최대 3초)
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Connection timeout'));
+          }, 3000);
+
+          const checkConnection = setInterval(() => {
+            if (websocketClient.getConnectionStatus()) {
+              clearInterval(checkConnection);
+              clearTimeout(timeout);
+              resolve();
+            }
+          }, 100);
+        });
       }
       await websocketClient.createSession(newSessionId);
       console.log('서버에 세션 생성 요청:', newSessionId);
     } catch (error) {
-      console.error('서버 세션 생성 실패:', error);
+      console.warn('서버 세션 생성 실패 (로컬에서는 생성됨):', error.message);
     }
 
     // 자동으로 scanGroups에 클라우드 동기화 그룹 추가
