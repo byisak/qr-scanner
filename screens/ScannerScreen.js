@@ -25,6 +25,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { captureRef } from 'react-native-view-shot';
 
 const DEBOUNCE_DELAY = 500;
@@ -1202,14 +1203,23 @@ function ScannerScreen() {
         accessibilityRole="button"
         style={styles.torchButtonContainer}
       >
-        <BlurView
-          intensity={80}
-          tint="systemChromeMaterialLight"
-          experimentalBlurMethod="dimezisBlurView"
-          style={[styles.torchButton, torchOn && styles.torchButtonActive]}
-        >
-          <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-        </BlurView>
+        {isLiquidGlassAvailable() ? (
+          <GlassView
+            style={[styles.torchButton, torchOn && styles.torchButtonActive]}
+            glassEffectStyle="regular"
+          >
+            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(0,0,0,0.8)'} />
+          </GlassView>
+        ) : (
+          <BlurView
+            intensity={80}
+            tint="systemChromeMaterialLight"
+            experimentalBlurMethod="dimezisBlurView"
+            style={[styles.torchButton, torchOn && styles.torchButtonActive]}
+          >
+            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+          </BlurView>
+        )}
       </TouchableOpacity>
 
       {/* 숨겨진 QR 코드 생성용 View */}
