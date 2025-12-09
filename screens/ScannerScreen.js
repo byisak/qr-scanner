@@ -1470,13 +1470,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 22,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   torchButtonActive: {
-    borderColor: 'rgba(255,214,10,0.5)',
     backgroundColor: 'rgba(255,214,10,0.15)',
   },
   msg: {
