@@ -1001,7 +1001,7 @@ function ScannerScreen() {
     setBatchScannedItems([]);
   }, []);
 
-  // 이미지에서 바코드를 감지하기 위한 WebView HTML (ZXing 사용 - 최적화됨)
+  // 이미지에서 바코드를 감지하기 위한 WebView HTML (ZXing 사용 - decodeFromCanvas)
   const getBarcodeScannerHtml = useCallback((imageBase64) => {
     return `
 <!DOCTYPE html>
@@ -1016,26 +1016,18 @@ function ScannerScreen() {
 <body>
   <canvas id="canvas"></canvas>
   <script type="module">
-    import {
-      MultiFormatReader,
-      DecodeHintType,
-      BarcodeFormat,
-      RGBLuminanceSource,
-      BinaryBitmap,
-      HybridBinarizer,
-      GlobalHistogramBinarizer
-    } from 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/+esm';
+    import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/+esm';
 
-    (function() {
+    (async function() {
       const img = new Image();
 
-      img.onload = function() {
+      img.onload = async function() {
         try {
           const canvas = document.getElementById('canvas');
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          const ctx = canvas.getContext('2d');
 
-          // 이미지 크기 제한 (성능 최적화)
-          const MAX_SIZE = 1200;
+          // 이미지 크기 제한 (성능)
+          const MAX_SIZE = 1500;
           let width = img.width;
           let height = img.height;
           let scale = 1;
@@ -1053,7 +1045,7 @@ function ScannerScreen() {
           const results = [];
           const scannedCodes = new Set();
 
-          // ZXing Reader 설정
+          // ZXing 힌트 설정
           const hints = new Map();
           hints.set(DecodeHintType.TRY_HARDER, true);
           hints.set(DecodeHintType.POSSIBLE_FORMATS, [
@@ -1071,51 +1063,20 @@ function ScannerScreen() {
             BarcodeFormat.CODABAR
           ]);
 
-          const reader = new MultiFormatReader();
-          reader.setHints(hints);
+          const codeReader = new BrowserMultiFormatReader(hints);
 
-          // ImageData에서 luminance 배열 생성 (최적화)
-          function getLuminanceFromImageData(imageData) {
-            const data = imageData.data;
-            const length = imageData.width * imageData.height;
-            const luminances = new Uint8ClampedArray(length);
-            for (let i = 0; i < length; i++) {
-              const offset = i * 4;
-              const r = data[offset];
-              const g = data[offset + 1];
-              const b = data[offset + 2];
-              luminances[i] = Math.floor(0.299 * r + 0.587 * g + 0.114 * b);
-            }
-            return luminances;
-          }
-
-          // 직접 디코딩 함수 (빠름)
-          function decodeFromImageData(imageData, offsetX = 0, offsetY = 0) {
+          // 캔버스에서 직접 디코딩
+          async function scanCanvas(sourceCanvas, offsetX = 0, offsetY = 0) {
             try {
-              const luminances = getLuminanceFromImageData(imageData);
-              const source = new RGBLuminanceSource(luminances, imageData.width, imageData.height);
-
-              // HybridBinarizer 먼저 시도
-              let bitmap = new BinaryBitmap(new HybridBinarizer(source));
-              let result = null;
-
-              try {
-                result = reader.decode(bitmap);
-              } catch (e) {
-                // GlobalHistogramBinarizer로 재시도
-                try {
-                  bitmap = new BinaryBitmap(new GlobalHistogramBinarizer(source));
-                  result = reader.decode(bitmap);
-                } catch (e2) {}
-              }
+              const result = await codeReader.decodeFromCanvas(sourceCanvas);
 
               if (result && result.getText() && !scannedCodes.has(result.getText())) {
                 scannedCodes.add(result.getText());
 
-                let centerX = offsetX + imageData.width / 2;
-                let centerY = offsetY + imageData.height / 2;
-                let codeWidth = imageData.width * 0.5;
-                let codeHeight = imageData.height * 0.5;
+                let centerX = sourceCanvas.width / 2;
+                let centerY = sourceCanvas.height / 2;
+                let codeWidth = sourceCanvas.width * 0.5;
+                let codeHeight = sourceCanvas.height * 0.5;
 
                 const points = result.getResultPoints();
                 if (points && points.length >= 2) {
@@ -1125,24 +1086,23 @@ function ScannerScreen() {
                   const maxX = Math.max(...xs);
                   const minY = Math.min(...ys);
                   const maxY = Math.max(...ys);
-                  centerX = offsetX + (minX + maxX) / 2;
-                  centerY = offsetY + (minY + maxY) / 2;
+                  centerX = (minX + maxX) / 2;
+                  centerY = (minY + maxY) / 2;
                   codeWidth = Math.max(maxX - minX, 30);
                   codeHeight = Math.max(maxY - minY, 30);
                 }
 
                 let formatName = 'UNKNOWN';
                 try {
-                  const format = result.getBarcodeFormat();
-                  formatName = BarcodeFormat[format] || String(format);
+                  formatName = BarcodeFormat[result.getBarcodeFormat()] || 'UNKNOWN';
                 } catch (e) {}
 
                 results.push({
                   data: result.getText(),
                   type: formatName,
                   bounds: {
-                    x: centerX / scale,
-                    y: centerY / scale,
+                    x: (offsetX + centerX) / scale,
+                    y: (offsetY + centerY) / scale,
                     width: codeWidth / scale,
                     height: codeHeight / scale
                   }
@@ -1153,39 +1113,39 @@ function ScannerScreen() {
             return false;
           }
 
-          // 전체 이미지 스캔
-          const fullImageData = ctx.getImageData(0, 0, width, height);
-          decodeFromImageData(fullImageData, 0, 0);
+          // 영역 캔버스 생성
+          function createRegionCanvas(x, y, w, h) {
+            const rc = document.createElement('canvas');
+            rc.width = w;
+            rc.height = h;
+            rc.getContext('2d').drawImage(canvas, x, y, w, h, 0, 0, w, h);
+            return rc;
+          }
 
-          // 전체 이미지에서 못 찾으면 영역별 스캔
+          // 1. 전체 이미지
+          await scanCanvas(canvas, 0, 0);
+
+          // 2. 2x2 그리드
           if (results.length === 0) {
-            const gridSize = 2;
-            const cellW = Math.floor(width / gridSize);
-            const cellH = Math.floor(height / gridSize);
-
-            for (let row = 0; row < gridSize; row++) {
-              for (let col = 0; col < gridSize; col++) {
-                const x = col * cellW;
-                const y = row * cellH;
-                const w = Math.min(Math.floor(cellW * 1.2), width - x);
-                const h = Math.min(Math.floor(cellH * 1.2), height - y);
-
-                if (w > 50 && h > 50) {
-                  const regionData = ctx.getImageData(x, y, w, h);
-                  decodeFromImageData(regionData, x, y);
+            const cw = Math.floor(width / 2);
+            const ch = Math.floor(height / 2);
+            for (let r = 0; r < 2; r++) {
+              for (let c = 0; c < 2; c++) {
+                const x = c * cw, y = r * ch;
+                const w = Math.min(Math.floor(cw * 1.3), width - x);
+                const h = Math.min(Math.floor(ch * 1.3), height - y);
+                if (w > 100 && h > 100) {
+                  await scanCanvas(createRegionCanvas(x, y, w, h), x, y);
                 }
               }
             }
           }
 
-          // 추가: 중앙 영역 스캔
+          // 3. 중앙 영역
           if (results.length === 0) {
-            const centerX = Math.floor(width * 0.15);
-            const centerY = Math.floor(height * 0.15);
-            const centerW = Math.floor(width * 0.7);
-            const centerH = Math.floor(height * 0.7);
-            const centerData = ctx.getImageData(centerX, centerY, centerW, centerH);
-            decodeFromImageData(centerData, centerX, centerY);
+            const cx = Math.floor(width * 0.15), cy = Math.floor(height * 0.15);
+            const cw = Math.floor(width * 0.7), ch = Math.floor(height * 0.7);
+            await scanCanvas(createRegionCanvas(cx, cy, cw, ch), cx, cy);
           }
 
           window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -1197,7 +1157,7 @@ function ScannerScreen() {
         } catch (error) {
           window.ReactNativeWebView.postMessage(JSON.stringify({
             success: false,
-            error: 'Scan error: ' + error.message,
+            error: error.message,
             results: [],
             imageWidth: img.width || 0,
             imageHeight: img.height || 0
@@ -1205,7 +1165,7 @@ function ScannerScreen() {
         }
       };
 
-      img.onerror = function(e) {
+      img.onerror = function() {
         window.ReactNativeWebView.postMessage(JSON.stringify({
           success: false,
           error: 'Image load failed',
@@ -1215,14 +1175,13 @@ function ScannerScreen() {
 
       img.src = '${imageBase64}';
 
-      // 타임아웃 설정 (10초)
       setTimeout(function() {
         window.ReactNativeWebView.postMessage(JSON.stringify({
           success: false,
           error: 'Timeout',
           results: []
         }));
-      }, 10000);
+      }, 12000);
     })();
   </script>
 </body>
