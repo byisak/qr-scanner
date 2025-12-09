@@ -1203,8 +1203,9 @@ function ScannerScreen() {
         style={styles.torchButtonContainer}
       >
         <BlurView
-          intensity={40}
-          tint="light"
+          intensity={80}
+          tint="systemChromeMaterialLight"
+          experimentalBlurMethod="dimezisBlurView"
           style={[styles.torchButton, torchOn && styles.torchButtonActive]}
         >
           <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
