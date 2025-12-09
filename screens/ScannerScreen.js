@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import { CameraView, Camera } from 'expo-camera';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -25,6 +26,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
+import * as ImagePicker from 'expo-image-picker';
+import RNQRGenerator from 'rn-qr-generator';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
@@ -1031,6 +1034,95 @@ function ScannerScreen() {
     return availableGroups.filter(g => !g.isCloudSync);
   }, [availableGroups, realtimeSyncEnabled]);
 
+  // 이미지에서 QR 코드 인식
+  const handlePickImage = useCallback(async () => {
+    try {
+      // 이미지 라이브러리 접근 권한 요청
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('권한 필요', '갤러리에 접근하려면 권한이 필요합니다.');
+        return;
+      }
+
+      // 이미지 선택
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        allowsEditing: false,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const imageUri = result.assets[0].uri;
+
+      // rn-qr-generator로 QR 코드 감지
+      RNQRGenerator.detect({
+        uri: imageUri,
+      })
+        .then(async (response) => {
+          const { values } = response;
+
+          if (values && values.length > 0) {
+            // QR 코드 발견
+            const qrData = values[0];
+            console.log('QR code found in image:', qrData);
+
+            // 햅틱 피드백
+            if (hapticEnabledRef.current) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+
+            // 스캔 소리 재생
+            if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+              try {
+                beepSoundPlayerRef.current.seekTo(0);
+                beepSoundPlayerRef.current.play();
+              } catch (error) {
+                console.log('Scan sound playback error:', error);
+              }
+            }
+
+            // 실시간 서버전송
+            if (realtimeSyncEnabled && activeSessionId) {
+              websocketClient.sendScanData({
+                code: qrData,
+                timestamp: Date.now(),
+              }, activeSessionId);
+            }
+
+            // 히스토리에 저장
+            const historyResult = await saveHistory(qrData, null, imageUri, 'qr');
+
+            // 결과 화면으로 이동
+            setCanScan(false);
+            router.push({
+              pathname: '/result',
+              params: {
+                code: qrData,
+                isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
+                scanCount: historyResult.count.toString(),
+                photoUri: imageUri,
+              }
+            });
+
+            setTimeout(() => setCanScan(true), 1000);
+          } else {
+            // QR 코드를 찾지 못함
+            Alert.alert('QR 코드 없음', '선택한 이미지에서 QR 코드를 찾을 수 없습니다.');
+          }
+        })
+        .catch((error) => {
+          console.error('QR detection error:', error);
+          Alert.alert('오류', '이미지에서 QR 코드를 찾을 수 없습니다.');
+        });
+    } catch (error) {
+      console.error('Image pick error:', error);
+      Alert.alert('오류', '이미지를 처리하는 중 오류가 발생했습니다.');
+    }
+  }, [saveHistory, router, realtimeSyncEnabled, activeSessionId]);
+
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
@@ -1194,14 +1286,26 @@ function ScannerScreen() {
         </View>
       )}
 
+      {/* 왼쪽 상단 조명 버튼 - 작은 둥근 리퀴드 글라스 */}
       <TouchableOpacity
-        style={styles.torchButton}
+        style={styles.smallRoundButton}
         onPress={toggleTorch}
         activeOpacity={0.8}
         accessibilityLabel={torchOn ? t('scanner.torchOn') : t('scanner.torchOff')}
         accessibilityRole="button"
       >
-        <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={32} color="white" />
+        <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={22} color="white" />
+      </TouchableOpacity>
+
+      {/* 오른쪽 상단 이미지 불러오기 버튼 - 작은 둥근 리퀴드 글라스 */}
+      <TouchableOpacity
+        style={styles.imagePickButton}
+        onPress={handlePickImage}
+        activeOpacity={0.8}
+        accessibilityLabel="이미지에서 QR 코드 인식"
+        accessibilityRole="button"
+      >
+        <Ionicons name="image" size={22} color="white" />
       </TouchableOpacity>
 
       {/* 숨겨진 QR 코드 생성용 View */}
@@ -1453,15 +1557,45 @@ const styles = StyleSheet.create({
     borderRightWidth: 3,
     borderBottomRightRadius: 6,
   },
-  torchButton: {
+  // 작은 둥근 리퀴드 글라스 버튼 (왼쪽 상단 - 조명)
+  smallRoundButton: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 110 : 90,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    padding: 22,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
+    left: 20,
+    top: Platform.OS === 'ios' ? 60 : 40,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backdropFilter: 'blur(10px)', // iOS에서 지원
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  // 작은 둥근 리퀴드 글라스 버튼 (오른쪽 상단 - 이미지)
+  imagePickButton: {
+    position: 'absolute',
+    right: 20,
+    top: Platform.OS === 'ios' ? 60 : 40,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backdropFilter: 'blur(10px)', // iOS에서 지원
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   msg: {
     flex: 1,
