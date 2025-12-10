@@ -271,11 +271,6 @@ export default function GroupEditScreen() {
             key={item.id}
             style={[s.groupItem, { backgroundColor: colors.surface }]}
           >
-            {/* 드래그 핸들 아이콘 */}
-            <View style={s.dragHandle}>
-              <Ionicons name="menu" size={22} color={colors.textTertiary} />
-            </View>
-
             <View style={s.groupInfo}>
               {item.isCloudSync && (
                 <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
@@ -487,7 +482,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    paddingLeft: 8,
+    paddingLeft: 16,
     borderRadius: 14,
     marginBottom: 10,
     elevation: 2,
@@ -496,15 +491,10 @@ const s = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
-  dragHandle: {
-    paddingHorizontal: 10,
-    paddingVertical: 14,
-  },
   groupInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 4,
   },
   groupName: {
     fontSize: 16,
