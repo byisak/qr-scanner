@@ -28,7 +28,11 @@ import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
 
 const DEBOUNCE_DELAY = 500;
-const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
+const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
+const DEBOUNCE_DELAY_1D_BARCODE = 800; // 1D 바코드 (code39 등) 전용 디바운스
+
+// 1D 바코드 타입 목록 (Code 39 포함)
+const ONE_D_BARCODE_TYPES = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar'];
 const RESET_DELAY_LINK = 1200;
 const RESET_DELAY_NORMAL = 800;
 
@@ -749,6 +753,9 @@ function ScannerScreen() {
       console.log(`Normalized type: ${normalizedType}`);
 
       // 바코드가 화면 중앙 십자가 근처에 있을 때만 스캔
+      // 1D 바코드 여부 확인
+      const is1DBarcode = ONE_D_BARCODE_TYPES.includes(normalizedType);
+
       // bounds가 없거나 정규화할 수 없으면 디바운스만 적용 (위치 확인 불가능)
       if (bounds) {
         const normalized = normalizeBounds(bounds);
@@ -761,31 +768,59 @@ function ScannerScreen() {
           const screenCenterX = winWidth / 2;
           const screenCenterY = winHeight / 2;
 
-          // 타겟 영역 크기 (화면 중앙 ±50px 범위)
-          const targetRadius = 50;
+          // 1D 바코드는 수평 방향으로 더 넓은 타겟 영역 적용
+          // Code 39 등 1D 바코드: 가로 150px, 세로 80px 타원형 영역
+          // QR 등 2D 바코드: 기존 50px 원형 영역
+          let isInTargetArea = false;
+          if (is1DBarcode) {
+            // 1D 바코드용 타원형 타겟 영역 (가로로 긴 바코드 특성 반영)
+            const targetRadiusX = 150; // 수평 방향 확대
+            const targetRadiusY = 80;  // 수직 방향도 적당히 확대
+            const normalizedDistX = Math.abs(barcodeCenterX - screenCenterX) / targetRadiusX;
+            const normalizedDistY = Math.abs(barcodeCenterY - screenCenterY) / targetRadiusY;
+            isInTargetArea = (normalizedDistX * normalizedDistX + normalizedDistY * normalizedDistY) <= 1;
+          } else {
+            // 2D 바코드용 원형 타겟 영역
+            const targetRadius = 50;
+            const distanceFromCenter = Math.sqrt(
+              Math.pow(barcodeCenterX - screenCenterX, 2) + Math.pow(barcodeCenterY - screenCenterY, 2)
+            );
+            isInTargetArea = distanceFromCenter <= targetRadius;
+          }
 
-          // 바코드 중심이 타겟 영역에 없으면 스캔하지 않음
-          const distanceFromCenter = Math.sqrt(
-            Math.pow(barcodeCenterX - screenCenterX, 2) + Math.pow(barcodeCenterY - screenCenterY, 2)
-          );
-
-          if (distanceFromCenter > targetRadius) {
+          if (!isInTargetArea) {
             return; // 타겟 영역 밖이면 스캔하지 않음
           }
         } else {
-          // bounds는 있지만 정규화 실패 - 위치 확인 불가능하므로 스캔 거부
-          console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
-          return;
+          // bounds는 있지만 정규화 실패
+          // 1D 바코드는 bounds 정보가 불완전할 수 있으므로 허용 (디바운스만 적용)
+          if (is1DBarcode) {
+            console.log(`Cannot normalize bounds for ${normalizedType}, but allowing 1D barcode scan`);
+          } else {
+            console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
+            return;
+          }
         }
       } else {
-        // bounds가 없는 경우 - 위치 확인 불가능하므로 디바운스로만 제어
-        console.log(`No bounds for ${normalizedType}, relying on debounce only`);
+        // bounds가 없는 경우 - 1D 바코드는 허용, 2D 바코드는 더 긴 디바운스 적용
+        if (is1DBarcode) {
+          console.log(`No bounds for 1D barcode ${normalizedType}, allowing scan with debounce`);
+        } else {
+          console.log(`No bounds for ${normalizedType}, relying on extended debounce`);
+        }
       }
 
       const now = Date.now();
 
-      // bounds 유무에 따라 다른 디바운스 적용
-      const debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
+      // 바코드 타입과 bounds 유무에 따라 최적화된 디바운스 적용
+      let debounceDelay;
+      if (is1DBarcode) {
+        // 1D 바코드 (Code 39 등): bounds 유무와 관계없이 최적화된 딜레이 적용
+        debounceDelay = bounds ? DEBOUNCE_DELAY_1D_BARCODE : DEBOUNCE_DELAY_NO_BOUNDS;
+      } else {
+        // 2D 바코드 (QR 등): 기존 로직 유지
+        debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
+      }
       if (lastScannedData.current === data && now - lastScannedTime.current < debounceDelay) {
         return;
       }
