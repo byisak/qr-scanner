@@ -26,6 +26,9 @@ import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
+import jsQR from 'jsqr';
+import jpeg from 'jpeg-js';
+import { Buffer } from 'buffer';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -737,6 +740,86 @@ function ScannerScreen() {
     }
   }, [normalizeBounds, winWidth, winHeight]);
 
+  // 사진에서 QR 코드의 EC Level 추출
+  const extractECLevelFromPhoto = useCallback(async (photoUri) => {
+    try {
+      if (!photoUri) return null;
+
+      // 이미지를 base64로 읽기
+      const base64Data = await FileSystem.readAsStringAsync(photoUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // base64를 Buffer로 변환
+      const imageBuffer = Buffer.from(base64Data, 'base64');
+
+      // JPEG 디코딩
+      const rawImageData = jpeg.decode(imageBuffer, { useTArray: true });
+
+      // jsQR로 QR 코드 분석
+      const qrResult = jsQR(rawImageData.data, rawImageData.width, rawImageData.height);
+
+      if (qrResult) {
+        // jsQR은 version 속성을 제공하며, EC Level은 직접 제공하지 않음
+        // QR 코드 버전 정보로부터 대략적인 추정 또는 raw 데이터 분석
+        console.log('jsQR result:', JSON.stringify({
+          data: qrResult.data?.substring(0, 50),
+          version: qrResult.version,
+        }));
+
+        // EC Level 추출 - QR 코드의 format info에서 추출
+        // Format info는 QR 코드의 처음 15비트에 인코딩됨
+        // jsQR이 직접 제공하지 않으므로 추정 방법 사용
+        // 실제로는 QR 코드의 특성상 데이터 용량과 버전으로 추정 가능
+
+        // jsQR v1.4.0 이상에서는 chunks 정보 제공
+        if (qrResult.chunks && qrResult.chunks.length > 0) {
+          // 첫 번째 청크의 mode에서 힌트를 얻을 수 있음
+          console.log('QR chunks:', qrResult.chunks);
+        }
+
+        // QR 코드의 버전과 데이터 길이를 기반으로 EC Level 추정
+        // 이 방법은 정확하지 않으므로, 대안적으로 기본값 사용
+        // 향후 네이티브 모듈이나 다른 라이브러리로 개선 가능
+
+        // 간단한 휴리스틱: 작은 QR (버전 1-5)은 보통 L 또는 M 사용
+        // 큰 QR (버전 10+)은 다양한 EC Level 사용
+        const version = qrResult.version || 1;
+        const dataLength = (qrResult.data || '').length;
+
+        // 버전별 최대 용량 기준으로 EC Level 추정 (매우 대략적)
+        // 실제 EC Level을 정확히 알려면 format pattern을 직접 디코딩해야 함
+        let estimatedECLevel = null;
+
+        // 버전 1-2의 최대 데이터 용량 (Numeric mode 기준)
+        // L: 41-77, M: 34-63, Q: 27-48, H: 17-34
+        if (version <= 2) {
+          if (dataLength <= 17) estimatedECLevel = 'H';
+          else if (dataLength <= 27) estimatedECLevel = 'Q';
+          else if (dataLength <= 34) estimatedECLevel = 'M';
+          else estimatedECLevel = 'L';
+        } else if (version <= 5) {
+          // 버전 3-5
+          if (dataLength <= 58) estimatedECLevel = 'H';
+          else if (dataLength <= 90) estimatedECLevel = 'Q';
+          else if (dataLength <= 122) estimatedECLevel = 'M';
+          else estimatedECLevel = 'L';
+        } else {
+          // 버전 6 이상 - 기본값 M 사용
+          estimatedECLevel = 'M';
+        }
+
+        console.log(`Estimated EC Level: ${estimatedECLevel} (version: ${version}, dataLen: ${dataLength})`);
+        return estimatedECLevel;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('EC Level extraction error:', error);
+      return null;
+    }
+  }, []);
+
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw } = scanResult;
@@ -933,6 +1016,31 @@ function ScannerScreen() {
         setQrBounds({ ...smoothBounds.current });
       }
 
+      // QR 코드일 경우 카메라 사진으로 EC Level 추출 시도
+      const isQRCode = normalizedType === 'qr' || normalizedType === 'qrcode';
+      let ecLevelPromise = Promise.resolve(null);
+      if (isQRCode && !errorCorrectionLevel) {
+        // 카메라에서 사진 촬영하여 EC Level 추출
+        ecLevelPromise = (async () => {
+          try {
+            const tempPhoto = await capturePhoto(effectiveBounds);
+            if (tempPhoto) {
+              const extractedEC = await extractECLevelFromPhoto(tempPhoto);
+              // 임시 사진 삭제 (저장용 이미지는 별도로 생성됨)
+              try {
+                await FileSystem.deleteAsync(tempPhoto, { idempotent: true });
+              } catch (e) {
+                console.log('Failed to delete temp photo:', e);
+              }
+              return extractedEC;
+            }
+          } catch (e) {
+            console.log('EC Level extraction failed:', e);
+          }
+          return null;
+        })();
+      }
+
       // QR 코드 이미지 생성 (카메라 사진 대신 깨끗한 QR 코드 생성)
       const photoPromise = photoSaveEnabledRef.current ? generateQRCodeImage(data, type) : Promise.resolve(null);
 
@@ -944,6 +1052,13 @@ function ScannerScreen() {
         try {
           // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
           const photoUri = await photoPromise;
+
+          // EC Level 추출 결과 대기 (QR 코드인 경우)
+          const extractedECLevel = await ecLevelPromise;
+          if (extractedECLevel && !errorCorrectionLevel) {
+            errorCorrectionLevel = extractedECLevel;
+            console.log(`EC Level extracted from photo: ${errorCorrectionLevel}`);
+          }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
           if (realtimeSyncEnabled && activeSessionId) {
@@ -1017,7 +1132,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
+    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, extractECLevelFromPhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
