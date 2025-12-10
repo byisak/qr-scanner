@@ -232,27 +232,37 @@ export default function RealtimeSyncSettingsScreen() {
     })();
   }, [syncSessionsFromServer]);
 
-  // 화면 포커스 시 데이터 다시 로드
+  // 화면 포커스 시 데이터 다시 로드 (서버 동기화 포함)
   useFocusEffect(
     useCallback(() => {
       (async () => {
         try {
+          const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+          const isEnabled = realtimeSync === 'true';
+
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+          let localSessions = [];
           if (savedSessionUrls) {
             const parsed = JSON.parse(savedSessionUrls);
-            const migrated = parsed.map(session => ({
+            localSessions = parsed.map(session => ({
               ...session,
               status: session.status || 'ACTIVE',
             }));
-            setSessionUrls(migrated);
+          }
+
+          // 실시간 동기화가 활성화된 경우 서버에서 세션 목록 동기화 (삭제된 항목 포함)
+          if (isEnabled) {
+            const synced = await syncSessionsFromServer(localSessions);
+            setSessionUrls(synced);
+            console.log('포커스 복귀: 서버에서 세션 목록 동기화 완료 (삭제된 항목 포함)');
           } else {
-            setSessionUrls([]);
+            setSessionUrls(localSessions);
           }
         } catch (error) {
           console.error('Load session URLs error:', error);
         }
       })();
-    }, [])
+    }, [syncSessionsFromServer])
   );
 
   // 실시간 서버전송 설정 저장
