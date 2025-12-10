@@ -1031,7 +1031,8 @@ function ScannerScreen() {
         ecLevelPromise = (async () => {
           try {
             console.log('[EC Level] Capturing photo for EC analysis...');
-            const tempPhoto = await capturePhoto(effectiveBounds);
+            // bounds를 null로 전달하여 crop하지 않은 전체 이미지 사용 (jsQR 인식률 향상)
+            const tempPhoto = await capturePhoto(null);
             console.log('[EC Level] Photo captured:', tempPhoto);
             if (tempPhoto) {
               const extractedEC = await extractECLevelFromPhoto(tempPhoto);
