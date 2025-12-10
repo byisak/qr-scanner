@@ -16,7 +16,7 @@ import { Colors } from '../constants/Colors';
 
 export default function LanguageSelectionScreen() {
   const router = useRouter();
-  const { language, changeLanguage, t } = useLanguage();
+  const { language, changeLanguage, t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 

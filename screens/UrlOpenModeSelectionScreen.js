@@ -31,7 +31,7 @@ const urlOpenModes = [
 
 export default function UrlOpenModeSelectionScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const [selectedMode, setSelectedMode] = useState('inApp');

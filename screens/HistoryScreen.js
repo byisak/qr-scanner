@@ -23,7 +23,7 @@ const DEFAULT_GROUP_ID = 'default';
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
@@ -227,12 +227,12 @@ export default function HistoryScreen() {
                 {group.isCloudSync && (
                   <Ionicons name="cloud" size={16} color={isActive ? '#fff' : colors.primary} style={{ marginRight: 6 }} />
                 )}
-                <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text }, isActive && s.groupTabTextActive]}>
+                <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
                   {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
                 </Text>
                 {scanCount > 0 && (
                   <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
-                    <Text style={[s.groupCountBadgeText, { color: isActive ? colors.primary : '#fff' }, isActive && s.groupCountBadgeTextActive]}>
+                    <Text style={[s.groupCountBadgeText, { color: isActive ? colors.primary : '#fff', fontFamily: fonts.bold }, isActive && s.groupCountBadgeTextActive]}>
                       {scanCount}
                     </Text>
                   </View>
@@ -242,19 +242,19 @@ export default function HistoryScreen() {
           })}
           <TouchableOpacity style={[s.editGroupTab, { backgroundColor: colors.inputBackground }]} onPress={() => router.push('/group-edit')}>
             <Ionicons name="settings-outline" size={20} color={colors.primary} />
-            <Text style={[s.editGroupTabText, { color: colors.primary }]}>{t('history.editGroups')}</Text>
+            <Text style={[s.editGroupTabText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('history.editGroups')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
 
       {/* 헤더 */}
       <View style={s.header}>
-        <Text style={[s.title, { color: colors.text }]}>
+        <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
           {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
-            <Text style={[s.del, { color: colors.error }]}>{t('history.deleteAll')}</Text>
+            <Text style={[s.del, { color: colors.error, fontFamily: fonts.semiBold }]}>{t('history.deleteAll')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -263,7 +263,7 @@ export default function HistoryScreen() {
       {filteredList.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="file-tray-outline" size={64} color={colors.borderLight} />
-          <Text style={[s.emptyText, { color: colors.textSecondary }]}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
+          <Text style={[s.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
         </View>
       ) : (
         <FlatList
@@ -279,12 +279,12 @@ export default function HistoryScreen() {
             >
               <View style={s.itemHeader}>
                 <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
-                <Text style={[s.code, { color: colors.text }]} numberOfLines={1}>
+                <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
                   {item.code}
                 </Text>
                 {item.type && item.type !== 'qr' && (
                   <View style={[s.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                    <Text style={[s.typeBadgeText, { color: colors.primary }]}>{item.type.toUpperCase()}</Text>
+                    <Text style={[s.typeBadgeText, { color: colors.primary, fontFamily: fonts.bold }]}>{item.type.toUpperCase()}</Text>
                   </View>
                 )}
                 {item.count && item.count > 1 && (
@@ -294,9 +294,9 @@ export default function HistoryScreen() {
                   </View>
                 )}
               </View>
-              <Text style={[s.time, { color: colors.textSecondary }]}>{formatDateTime(item.timestamp)}</Text>
+              <Text style={[s.time, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{formatDateTime(item.timestamp)}</Text>
               {item.url && (
-                <Text style={[s.url, { color: colors.primary }]} numberOfLines={1}>
+                <Text style={[s.url, { color: colors.primary, fontFamily: fonts.regular }]} numberOfLines={1}>
                   {item.url}
                 </Text>
               )}

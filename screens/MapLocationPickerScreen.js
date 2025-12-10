@@ -15,7 +15,7 @@ import { Colors } from '../constants/Colors';
 import { useRouter } from 'expo-router';
 
 export default function MapLocationPickerScreen() {
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();

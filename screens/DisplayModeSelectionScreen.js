@@ -30,7 +30,7 @@ const displayModes = [
 
 export default function DisplayModeSelectionScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { themeMode, changeTheme, isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 

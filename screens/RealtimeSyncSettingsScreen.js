@@ -66,7 +66,7 @@ const fetchSessionsFromServer = async () => {
 
 export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
