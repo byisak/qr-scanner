@@ -39,7 +39,7 @@ const QR_TYPES = [
 ];
 
 export default function GeneratorScreen() {
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();

@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations } from '../locales';
+import { getFontFamily, getFontStyle } from '../constants/Fonts';
 
 const LanguageContext = createContext();
 
@@ -66,11 +67,19 @@ export const LanguageProvider = ({ children }) => {
     return value || key;
   };
 
+  // Get font family for current language
+  const fonts = getFontFamily(language);
+
+  // Get font style helper
+  const fontStyle = (weight = 'regular') => getFontStyle(language, weight);
+
   const value = {
     language,
     changeLanguage,
     t,
     isLoading,
+    fonts,
+    fontStyle,
   };
 
   return (

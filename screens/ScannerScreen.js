@@ -38,7 +38,7 @@ const RESET_DELAY_NORMAL = 800;
 
 function ScannerScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
 
   const [hasPermission, setHasPermission] = useState(null);

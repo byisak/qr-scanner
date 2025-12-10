@@ -23,7 +23,7 @@ const DEFAULT_GROUP_ID = 'default';
 
 export default function GroupEditScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 

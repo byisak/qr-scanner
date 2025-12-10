@@ -33,7 +33,7 @@ const BARCODE_TYPES = [
 
 export default function BarcodeSelectionScreen() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 

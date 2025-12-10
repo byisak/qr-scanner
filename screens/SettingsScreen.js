@@ -24,7 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { language, t } = useLanguage();
+  const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const [on, setOn] = useState(false);
@@ -187,18 +187,18 @@ export default function SettingsScreen() {
         <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
         {/* Header */}
         <View style={s.header}>
-          <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
+          <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>{t('settings.title')}</Text>
         </View>
 
         {/* 바코드 인식 설정 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.barcodeSettings')}</Text>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.barcodeSettings')}</Text>
 
           {/* 햅틱 피드백 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.hapticFeedback')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.hapticDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.hapticFeedback')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.hapticDesc')}</Text>
             </View>
             <Switch
               value={hapticEnabled}
@@ -212,8 +212,8 @@ export default function SettingsScreen() {
           {/* 스캔 소리 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.scanSound')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.scanSoundDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.scanSound')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.scanSoundDesc')}</Text>
             </View>
             <Switch
               value={scanSoundEnabled}
@@ -227,8 +227,8 @@ export default function SettingsScreen() {
           {/* 사진 저장 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.photoSave')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.photoSaveDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.photoSaveDesc')}</Text>
             </View>
             <Switch
               value={photoSaveEnabled}
@@ -242,8 +242,8 @@ export default function SettingsScreen() {
           {/* 배치 스캔 모드 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.batchScanMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.batchScanModeDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
             </View>
             <Switch
               value={batchScanEnabled}
@@ -261,8 +261,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.selectBarcodes')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.selectBarcodes')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -274,8 +274,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.exportHistory')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.exportHistoryDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.exportHistory')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.exportHistoryDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -287,8 +287,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.cameraSelection')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.cameraSelectionDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.cameraSelection')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.cameraSelectionDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -300,8 +300,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.languageSelection')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.languageSelection')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {languages.find(lang => lang.code === language)?.name || '한국어'}
               </Text>
             </View>
@@ -315,8 +315,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.displayMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.displayMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {t(`displayModeSelection.${themeMode}`)}
               </Text>
             </View>
@@ -330,8 +330,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('urlOpenMode.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('urlOpenMode.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {t(`urlOpenMode.${urlOpenMode}`)}
               </Text>
             </View>
@@ -341,7 +341,7 @@ export default function SettingsScreen() {
 
         {/* URL 연동 설정 */}
         <View style={[s.section, !t('settings.autoMove') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
-          {t('settings.autoMove') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text> : null}
+          {t('settings.autoMove') ? <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.autoMove')}</Text> : null}
 
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.autoMove') ? 10 : 0 }]}
@@ -349,11 +349,11 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.useScanUrlDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.useScanUrl')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary }]}>
+              <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {on ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
@@ -363,7 +363,7 @@ export default function SettingsScreen() {
 
         {/* 실시간 서버전송 설정 */}
         <View style={[s.section, !t('settings.realtimeSync') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
-          {t('settings.realtimeSync') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.realtimeSync')}</Text> : null}
+          {t('settings.realtimeSync') ? <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.realtimeSync')}</Text> : null}
 
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.realtimeSync') ? 10 : 0 }]}
@@ -371,11 +371,11 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.enableRealtimeSync')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.realtimeSyncDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.enableRealtimeSync')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.realtimeSyncDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary }]}>
+              <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {realtimeSyncEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
@@ -385,7 +385,7 @@ export default function SettingsScreen() {
 
         {/* 앱 정보 및 지원 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.appInfo')}</Text>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
 
           {/* 개선제안하기 */}
           <TouchableOpacity
@@ -394,8 +394,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.suggestImprovement')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.suggestImprovementDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.suggestImprovement')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.suggestImprovementDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -407,8 +407,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.oneOnOneInquiry')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.oneOnOneInquiryDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.oneOnOneInquiry')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.oneOnOneInquiryDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -420,8 +420,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.termsOfService')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.termsOfServiceDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.termsOfService')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.termsOfServiceDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -433,8 +433,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.privacyPolicy')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.privacyPolicyDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.privacyPolicy')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.privacyPolicyDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -442,10 +442,10 @@ export default function SettingsScreen() {
           {/* 버전정보 */}
           <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text }]}>{t('settings.versionInfo')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary }]}>{t('settings.currentVersion')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.versionInfo')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.currentVersion')}</Text>
             </View>
-            <Text style={[s.versionText, { color: colors.textSecondary }]}>0.1.0</Text>
+            <Text style={[s.versionText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>0.1.0</Text>
           </View>
         </View>
         </ScrollView>
