@@ -17,6 +17,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { BlurView } from 'expo-blur';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -178,6 +179,13 @@ export default function HistoryScreen() {
 
   return (
     <View style={[s.c, { backgroundColor: colors.background }]}>
+      {/* 상단 블러 */}
+      <BlurView
+        intensity={80}
+        tint={isDark ? 'dark' : 'light'}
+        style={s.statusBarBlur}
+      />
+
       {/* 검색 */}
       <View style={[s.search, { backgroundColor: colors.surface }]}>
         <Ionicons name="search" size={20} color={colors.textTertiary} />
@@ -300,6 +308,14 @@ export default function HistoryScreen() {
 const s = StyleSheet.create({
   c: {
     flex: 1,
+  },
+  statusBarBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.OS === 'ios' ? 50 : 40,
+    zIndex: 100,
   },
   search: {
     flexDirection: 'row',

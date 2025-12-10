@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import { BlurView } from 'expo-blur';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -169,7 +171,14 @@ export default function SettingsScreen() {
   }, [batchScanEnabled]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* 상단 블러 */}
+      <BlurView
+        intensity={80}
+        tint={isDark ? 'dark' : 'light'}
+        style={s.statusBarBlur}
+      />
+
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
         {/* Header */}
@@ -444,6 +453,14 @@ export default function SettingsScreen() {
 const s = StyleSheet.create({
   c: {
     flex: 1,
+  },
+  statusBarBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.OS === 'ios' ? 50 : 40,
+    zIndex: 100,
   },
   content: {
     paddingHorizontal: 20,
