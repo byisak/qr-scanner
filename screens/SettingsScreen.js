@@ -172,7 +172,10 @@ export default function SettingsScreen() {
     <View style={{ flex: 1 }}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
-        <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
+        </View>
 
         {/* 바코드 인식 설정 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
@@ -443,14 +446,17 @@ const s = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 40,
+  },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginTop: 30,
-    marginBottom: 30,
+    marginBottom: 6,
   },
   section: {
     borderRadius: 16,
