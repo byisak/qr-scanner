@@ -16,7 +16,7 @@ export default function ResultScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
@@ -25,6 +25,27 @@ export default function ResultScreen() {
   const hasPhoto = photoUri && photoUri.length > 0;
   const isFromHistory = fromHistory === 'true';
   const barcodeType = type || 'qr';
+  const ecLevel = errorCorrectionLevel || null;
+
+  // 오류 검증 레벨 설명 함수
+  const getECLevelDescription = (level) => {
+    if (!level) return null;
+    const levelUpper = level.toUpperCase();
+    switch (levelUpper) {
+      case 'L':
+        return { level: 'L', desc: t('result.ecLevelL'), percent: '~7%' };
+      case 'M':
+        return { level: 'M', desc: t('result.ecLevelM'), percent: '~15%' };
+      case 'Q':
+        return { level: 'Q', desc: t('result.ecLevelQ'), percent: '~25%' };
+      case 'H':
+        return { level: 'H', desc: t('result.ecLevelH'), percent: '~30%' };
+      default:
+        return { level: levelUpper, desc: '', percent: '' };
+    }
+  };
+
+  const ecLevelInfo = getECLevelDescription(ecLevel);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
@@ -391,10 +412,36 @@ export default function ResultScreen() {
           </View>
         )}
 
+        {/* QR 코드 오류 검증 레벨 표시 */}
+        {ecLevelInfo && (barcodeType === 'qr' || barcodeType === 'qrcode') && (
+          <View style={[styles.ecLevelContainer, {
+            backgroundColor: isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)',
+            borderColor: colors.primary
+          }]}>
+            <View style={styles.ecLevelHeader}>
+              <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+              <Text style={[styles.ecLevelTitle, { color: colors.primary }]}>
+                {t('result.errorCorrectionLevel')}
+              </Text>
+            </View>
+            <View style={styles.ecLevelContent}>
+              <View style={[styles.ecLevelBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.ecLevelBadgeText}>{ecLevelInfo.level}</Text>
+              </View>
+              <View style={styles.ecLevelInfo}>
+                <Text style={[styles.ecLevelDesc, { color: colors.text }]}>{ecLevelInfo.desc}</Text>
+                <Text style={[styles.ecLevelPercent, { color: colors.textSecondary }]}>
+                  {t('result.recoveryRate')}: {ecLevelInfo.percent}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         <View style={styles.labelRow}>
           <View style={styles.labelWithType}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
-            {barcodeType && barcodeType !== 'qr' && (
+            {barcodeType && barcodeType !== 'qr' && barcodeType !== 'qrcode' && (
               <View style={[styles.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
                 <Text style={[styles.typeBadgeText, { color: colors.primary }]}>{barcodeType.toUpperCase()}</Text>
               </View>
@@ -638,6 +685,50 @@ const styles = StyleSheet.create({
   typeBadgeText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  ecLevelContainer: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+  },
+  ecLevelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  ecLevelTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  ecLevelContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ecLevelBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecLevelBadgeText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  ecLevelInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  ecLevelDesc: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  ecLevelPercent: {
+    fontSize: 12,
+    marginTop: 2,
   },
   editToggleButton: {
     flexDirection: 'row',

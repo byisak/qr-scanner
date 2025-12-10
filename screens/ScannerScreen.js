@@ -407,7 +407,7 @@ function ScannerScreen() {
     }
   }, [qrBounds, scaleAnim, opacityAnim]);
 
-  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr') => {
+  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null) => {
     try {
       // 현재 선택된 그룹에 저장 (세션 그룹이면 세션 그룹에, 일반 그룹이면 일반 그룹에)
       let selectedGroupId = currentGroupId;
@@ -453,6 +453,7 @@ function ScannerScreen() {
           photos: photos, // 모든 사진 저장
           ...(url && { url }), // URL이 있으면 업데이트
           type: barcodeType, // 바코드 타입
+          ...(ecLevel && { errorCorrectionLevel: ecLevel }), // QR 오류 검증 레벨
         };
 
         // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
@@ -468,6 +469,7 @@ function ScannerScreen() {
           photos: photoUri ? [photoUri] : [], // 사진 배열
           ...(url && { url }),
           type: barcodeType, // 바코드 타입
+          ...(ecLevel && { errorCorrectionLevel: ecLevel }), // QR 오류 검증 레벨
         };
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
       }
@@ -476,10 +478,10 @@ function ScannerScreen() {
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
 
       // 중복 여부 반환 (ResultScreen에서 사용)
-      return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1 };
+      return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1, errorCorrectionLevel: ecLevel };
     } catch (e) {
       console.error('Save history error:', e);
-      return { isDuplicate: false, count: 1 };
+      return { isDuplicate: false, count: 1, errorCorrectionLevel: null };
     }
   }, [currentGroupId]);
 
@@ -736,8 +738,12 @@ function ScannerScreen() {
   }, [normalizeBounds, winWidth, winHeight]);
 
   const handleBarCodeScanned = useCallback(
-    async ({ data, bounds, type, cornerPoints }) => {
+    async (scanResult) => {
+      const { data, bounds, type, cornerPoints, raw } = scanResult;
       if (!isActive || !canScan) return; // canScan 추가 확인
+
+      // 전체 스캔 결과 로깅 (디버깅용)
+      console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
 
       // bounds 정보 로깅 (디버깅용)
       console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
@@ -751,6 +757,22 @@ function ScannerScreen() {
       // 바코드 타입 정규화 (org.iso.Code39 -> code39)
       const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
       console.log(`Normalized type: ${normalizedType}`);
+
+      // QR 코드 메타데이터 추출 (오류 검증 레벨 등)
+      let errorCorrectionLevel = null;
+      if (normalizedType === 'qr' || normalizedType === 'qrcode') {
+        // 스캔 결과에서 errorCorrectionLevel 추출 시도
+        if (scanResult.errorCorrectionLevel) {
+          errorCorrectionLevel = scanResult.errorCorrectionLevel;
+        } else if (scanResult.ecLevel) {
+          errorCorrectionLevel = scanResult.ecLevel;
+        } else if (raw) {
+          // raw 데이터에서 EC 레벨 추출 시도 (QR 코드 포맷 분석)
+          // QR 코드의 첫 번째 바이트에서 EC 레벨 힌트를 얻을 수 있음
+          console.log('Raw data available:', raw);
+        }
+        console.log(`QR Error Correction Level: ${errorCorrectionLevel || 'Unknown'}`);
+      }
 
       // 바코드가 화면 중앙 십자가 근처에 있을 때만 스캔
       // 1D 바코드 여부 확인
@@ -942,6 +964,7 @@ function ScannerScreen() {
               timestamp: Date.now(),
               photoUri: photoUri || null,
               type: normalizedType,
+              errorCorrectionLevel: errorCorrectionLevel,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -963,7 +986,7 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri, normalizedType);
+              await saveHistory(data, url, photoUri, normalizedType, errorCorrectionLevel);
               setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
@@ -971,7 +994,7 @@ function ScannerScreen() {
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri, normalizedType);
+          const historyResult = await saveHistory(data, null, photoUri, normalizedType, errorCorrectionLevel);
           setCanScan(false);
           router.push({
             pathname: '/result',
@@ -980,12 +1003,14 @@ function ScannerScreen() {
               isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
               scanCount: historyResult.count.toString(),
               photoUri: photoUri || '',
+              type: normalizedType,
+              errorCorrectionLevel: errorCorrectionLevel || '',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
-          await saveHistory(data, null, null, type);
+          await saveHistory(data, null, null, type, null);
           startResetTimer(RESET_DELAY_NORMAL);
         } finally {
           navigationTimerRef.current = null;
@@ -1004,7 +1029,7 @@ function ScannerScreen() {
     try {
       // 모든 배치 항목을 히스토리에 저장
       for (const item of batchScannedItems) {
-        await saveHistory(item.code, null, item.photoUri, item.type);
+        await saveHistory(item.code, null, item.photoUri, item.type, item.errorCorrectionLevel);
       }
 
       // 배치 항목 초기화
