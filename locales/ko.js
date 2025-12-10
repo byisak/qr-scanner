@@ -220,6 +220,8 @@ export default {
     japaneseName: 'Japanese',
     chinese: '중국어',
     chineseName: 'Chinese',
+    spanish: '스페인어',
+    spanishName: 'Spanish',
     selected: '선택됨',
   },
 
