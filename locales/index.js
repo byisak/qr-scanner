@@ -3,12 +3,14 @@ import ko from './ko';
 import en from './en';
 import ja from './ja';
 import zh from './zh';
+import es from './es';
 
 export const translations = {
   ko,
   en,
   ja,
   zh,
+  es,
 };
 
 export const languages = [
@@ -16,6 +18,7 @@ export const languages = [
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'ja', name: '日本語', nativeName: 'Japanese' },
   { code: 'zh', name: '中文', nativeName: 'Chinese' },
+  { code: 'es', name: 'Español', nativeName: 'Spanish' },
 ];
 
 export default translations;

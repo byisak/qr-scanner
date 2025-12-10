@@ -83,6 +83,13 @@ export default {
     errorSavePhoto: 'An error occurred while saving photo.',
     permissionDenied: 'Permission Denied',
     permissionDeniedMessage: 'Photo library permission is required to save photos.',
+    // QR Code Error Correction Level
+    errorCorrectionLevel: 'Error Correction Level',
+    recoveryRate: 'Recovery Rate',
+    ecLevelL: 'Low',
+    ecLevelM: 'Medium',
+    ecLevelQ: 'Quartile',
+    ecLevelH: 'High',
   },
 
   // Settings screen
@@ -213,6 +220,8 @@ export default {
     japaneseName: 'Japanese',
     chinese: '中文',
     chineseName: 'Chinese',
+    spanish: 'Español',
+    spanishName: 'Spanish',
     selected: 'Selected',
   },
 

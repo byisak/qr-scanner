@@ -83,6 +83,13 @@ export default {
     errorSavePhoto: '保存照片时出现问题。',
     permissionDenied: '权限被拒绝',
     permissionDeniedMessage: '保存照片需要相册权限。',
+    // 二维码纠错等级
+    errorCorrectionLevel: '纠错等级',
+    recoveryRate: '恢复率',
+    ecLevelL: '低 (Low)',
+    ecLevelM: '中 (Medium)',
+    ecLevelQ: '较高 (Quartile)',
+    ecLevelH: '最高 (High)',
   },
 
   // 设置界面
@@ -213,6 +220,8 @@ export default {
     japaneseName: 'Japanese',
     chinese: '中文',
     chineseName: 'Chinese',
+    spanish: '西班牙语',
+    spanishName: 'Spanish',
     selected: '已选择',
   },
 

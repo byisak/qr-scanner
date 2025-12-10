@@ -83,6 +83,13 @@ export default {
     errorSavePhoto: '사진 저장 중 문제가 발생했습니다.',
     permissionDenied: '권한 거부됨',
     permissionDeniedMessage: '사진을 저장하려면 사진 라이브러리 권한이 필요합니다.',
+    // QR 코드 오류 검증 레벨
+    errorCorrectionLevel: '오류 검증 레벨',
+    recoveryRate: '복구율',
+    ecLevelL: '낮음 (Low)',
+    ecLevelM: '중간 (Medium)',
+    ecLevelQ: '높음 (Quartile)',
+    ecLevelH: '최고 (High)',
   },
 
   // 설정 화면
@@ -213,6 +220,8 @@ export default {
     japaneseName: 'Japanese',
     chinese: '중국어',
     chineseName: 'Chinese',
+    spanish: '스페인어',
+    spanishName: 'Spanish',
     selected: '선택됨',
   },
 

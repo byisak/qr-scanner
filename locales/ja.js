@@ -83,6 +83,13 @@ export default {
     errorSavePhoto: '写真の保存中に問題が発生しました。',
     permissionDenied: '権限が拒否されました',
     permissionDeniedMessage: '写真を保存するにはフォトライブラリの権限が必要です。',
+    // QRコード誤り訂正レベル
+    errorCorrectionLevel: '誤り訂正レベル',
+    recoveryRate: '復元率',
+    ecLevelL: '低 (Low)',
+    ecLevelM: '中 (Medium)',
+    ecLevelQ: '高 (Quartile)',
+    ecLevelH: '最高 (High)',
   },
 
   // 設定画面
@@ -213,6 +220,8 @@ export default {
     japaneseName: 'Japanese',
     chinese: '中国語',
     chineseName: 'Chinese',
+    spanish: 'スペイン語',
+    spanishName: 'Spanish',
     selected: '選択済み',
   },
 

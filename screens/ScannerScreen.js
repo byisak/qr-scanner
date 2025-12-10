@@ -28,7 +28,11 @@ import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
 
 const DEBOUNCE_DELAY = 500;
-const DEBOUNCE_DELAY_NO_BOUNDS = 2000; // bounds 없는 바코드는 더 긴 디바운스 (2초)
+const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
+const DEBOUNCE_DELAY_1D_BARCODE = 800; // 1D 바코드 (code39 등) 전용 디바운스
+
+// 1D 바코드 타입 목록 (Code 39 포함)
+const ONE_D_BARCODE_TYPES = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar'];
 const RESET_DELAY_LINK = 1200;
 const RESET_DELAY_NORMAL = 800;
 
@@ -403,7 +407,7 @@ function ScannerScreen() {
     }
   }, [qrBounds, scaleAnim, opacityAnim]);
 
-  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr') => {
+  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null) => {
     try {
       // 현재 선택된 그룹에 저장 (세션 그룹이면 세션 그룹에, 일반 그룹이면 일반 그룹에)
       let selectedGroupId = currentGroupId;
@@ -449,6 +453,7 @@ function ScannerScreen() {
           photos: photos, // 모든 사진 저장
           ...(url && { url }), // URL이 있으면 업데이트
           type: barcodeType, // 바코드 타입
+          ...(ecLevel && { errorCorrectionLevel: ecLevel }), // QR 오류 검증 레벨
         };
 
         // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
@@ -464,6 +469,7 @@ function ScannerScreen() {
           photos: photoUri ? [photoUri] : [], // 사진 배열
           ...(url && { url }),
           type: barcodeType, // 바코드 타입
+          ...(ecLevel && { errorCorrectionLevel: ecLevel }), // QR 오류 검증 레벨
         };
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
       }
@@ -472,10 +478,10 @@ function ScannerScreen() {
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
 
       // 중복 여부 반환 (ResultScreen에서 사용)
-      return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1 };
+      return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1, errorCorrectionLevel: ecLevel };
     } catch (e) {
       console.error('Save history error:', e);
-      return { isDuplicate: false, count: 1 };
+      return { isDuplicate: false, count: 1, errorCorrectionLevel: null };
     }
   }, [currentGroupId]);
 
@@ -732,8 +738,12 @@ function ScannerScreen() {
   }, [normalizeBounds, winWidth, winHeight]);
 
   const handleBarCodeScanned = useCallback(
-    async ({ data, bounds, type, cornerPoints }) => {
+    async (scanResult) => {
+      const { data, bounds, type, cornerPoints, raw } = scanResult;
       if (!isActive || !canScan) return; // canScan 추가 확인
+
+      // 전체 스캔 결과 로깅 (디버깅용)
+      console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
 
       // bounds 정보 로깅 (디버깅용)
       console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
@@ -748,7 +758,26 @@ function ScannerScreen() {
       const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
       console.log(`Normalized type: ${normalizedType}`);
 
+      // QR 코드 메타데이터 추출 (오류 검증 레벨 등)
+      let errorCorrectionLevel = null;
+      if (normalizedType === 'qr' || normalizedType === 'qrcode') {
+        // 스캔 결과에서 errorCorrectionLevel 추출 시도
+        if (scanResult.errorCorrectionLevel) {
+          errorCorrectionLevel = scanResult.errorCorrectionLevel;
+        } else if (scanResult.ecLevel) {
+          errorCorrectionLevel = scanResult.ecLevel;
+        } else if (raw) {
+          // raw 데이터에서 EC 레벨 추출 시도 (QR 코드 포맷 분석)
+          // QR 코드의 첫 번째 바이트에서 EC 레벨 힌트를 얻을 수 있음
+          console.log('Raw data available:', raw);
+        }
+        console.log(`QR Error Correction Level: ${errorCorrectionLevel || 'Unknown'}`);
+      }
+
       // 바코드가 화면 중앙 십자가 근처에 있을 때만 스캔
+      // 1D 바코드 여부 확인
+      const is1DBarcode = ONE_D_BARCODE_TYPES.includes(normalizedType);
+
       // bounds가 없거나 정규화할 수 없으면 디바운스만 적용 (위치 확인 불가능)
       if (bounds) {
         const normalized = normalizeBounds(bounds);
@@ -761,31 +790,59 @@ function ScannerScreen() {
           const screenCenterX = winWidth / 2;
           const screenCenterY = winHeight / 2;
 
-          // 타겟 영역 크기 (화면 중앙 ±50px 범위)
-          const targetRadius = 50;
+          // 1D 바코드는 수평 방향으로 더 넓은 타겟 영역 적용
+          // Code 39 등 1D 바코드: 가로 150px, 세로 80px 타원형 영역
+          // QR 등 2D 바코드: 기존 50px 원형 영역
+          let isInTargetArea = false;
+          if (is1DBarcode) {
+            // 1D 바코드용 타원형 타겟 영역 (가로로 긴 바코드 특성 반영)
+            const targetRadiusX = 150; // 수평 방향 확대
+            const targetRadiusY = 80;  // 수직 방향도 적당히 확대
+            const normalizedDistX = Math.abs(barcodeCenterX - screenCenterX) / targetRadiusX;
+            const normalizedDistY = Math.abs(barcodeCenterY - screenCenterY) / targetRadiusY;
+            isInTargetArea = (normalizedDistX * normalizedDistX + normalizedDistY * normalizedDistY) <= 1;
+          } else {
+            // 2D 바코드용 원형 타겟 영역
+            const targetRadius = 50;
+            const distanceFromCenter = Math.sqrt(
+              Math.pow(barcodeCenterX - screenCenterX, 2) + Math.pow(barcodeCenterY - screenCenterY, 2)
+            );
+            isInTargetArea = distanceFromCenter <= targetRadius;
+          }
 
-          // 바코드 중심이 타겟 영역에 없으면 스캔하지 않음
-          const distanceFromCenter = Math.sqrt(
-            Math.pow(barcodeCenterX - screenCenterX, 2) + Math.pow(barcodeCenterY - screenCenterY, 2)
-          );
-
-          if (distanceFromCenter > targetRadius) {
+          if (!isInTargetArea) {
             return; // 타겟 영역 밖이면 스캔하지 않음
           }
         } else {
-          // bounds는 있지만 정규화 실패 - 위치 확인 불가능하므로 스캔 거부
-          console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
-          return;
+          // bounds는 있지만 정규화 실패
+          // 1D 바코드는 bounds 정보가 불완전할 수 있으므로 허용 (디바운스만 적용)
+          if (is1DBarcode) {
+            console.log(`Cannot normalize bounds for ${normalizedType}, but allowing 1D barcode scan`);
+          } else {
+            console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
+            return;
+          }
         }
       } else {
-        // bounds가 없는 경우 - 위치 확인 불가능하므로 디바운스로만 제어
-        console.log(`No bounds for ${normalizedType}, relying on debounce only`);
+        // bounds가 없는 경우 - 1D 바코드는 허용, 2D 바코드는 더 긴 디바운스 적용
+        if (is1DBarcode) {
+          console.log(`No bounds for 1D barcode ${normalizedType}, allowing scan with debounce`);
+        } else {
+          console.log(`No bounds for ${normalizedType}, relying on extended debounce`);
+        }
       }
 
       const now = Date.now();
 
-      // bounds 유무에 따라 다른 디바운스 적용
-      const debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
+      // 바코드 타입과 bounds 유무에 따라 최적화된 디바운스 적용
+      let debounceDelay;
+      if (is1DBarcode) {
+        // 1D 바코드 (Code 39 등): bounds 유무와 관계없이 최적화된 딜레이 적용
+        debounceDelay = bounds ? DEBOUNCE_DELAY_1D_BARCODE : DEBOUNCE_DELAY_NO_BOUNDS;
+      } else {
+        // 2D 바코드 (QR 등): 기존 로직 유지
+        debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
+      }
       if (lastScannedData.current === data && now - lastScannedTime.current < debounceDelay) {
         return;
       }
@@ -907,6 +964,7 @@ function ScannerScreen() {
               timestamp: Date.now(),
               photoUri: photoUri || null,
               type: normalizedType,
+              errorCorrectionLevel: errorCorrectionLevel,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -928,7 +986,7 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri, normalizedType);
+              await saveHistory(data, url, photoUri, normalizedType, errorCorrectionLevel);
               setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
@@ -936,7 +994,7 @@ function ScannerScreen() {
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri, normalizedType);
+          const historyResult = await saveHistory(data, null, photoUri, normalizedType, errorCorrectionLevel);
           setCanScan(false);
           router.push({
             pathname: '/result',
@@ -945,12 +1003,14 @@ function ScannerScreen() {
               isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
               scanCount: historyResult.count.toString(),
               photoUri: photoUri || '',
+              type: normalizedType,
+              errorCorrectionLevel: errorCorrectionLevel || '',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
-          await saveHistory(data, null, null, type);
+          await saveHistory(data, null, null, type, null);
           startResetTimer(RESET_DELAY_NORMAL);
         } finally {
           navigationTimerRef.current = null;
@@ -969,7 +1029,7 @@ function ScannerScreen() {
     try {
       // 모든 배치 항목을 히스토리에 저장
       for (const item of batchScannedItems) {
-        await saveHistory(item.code, null, item.photoUri, item.type);
+        await saveHistory(item.code, null, item.photoUri, item.type, item.errorCorrectionLevel);
       }
 
       // 배치 항목 초기화
