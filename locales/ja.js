@@ -363,4 +363,42 @@ export default {
     clipboardPasted: 'クリップボードの内容を取得しました',
     clipboardEmpty: 'クリップボードが空です',
   },
+
+  // プレミアム
+  premium: {
+    title: 'プレミアム',
+    subtitle: 'すべての機能を制限なく使用',
+    removeAds: 'すべての広告を削除',
+    realtimeSync: 'リアルタイムサーバー送信',
+    batchScan: 'バッチスキャンモード',
+    photoSave: 'スキャン写真を保存',
+    exportHistory: '履歴のエクスポート',
+    scanUrl: 'スキャン連動URL',
+    futureFeatures: '今後追加されるすべてのプレミアム機能',
+    purchase: 'プレミアムに登録',
+    lifetime: '永久',
+    restore: '購入を復元',
+    alreadyPremium: 'プレミアム利用中',
+    purchaseSuccess: '購入完了',
+    purchaseSuccessMessage: 'プレミアム機能が有効になりました！',
+    purchaseFailed: '購入失敗',
+    purchaseFailedMessage: '購入を完了できませんでした。',
+    restoreSuccess: '復元完了',
+    restoreSuccessMessage: '購入が復元されました。',
+    restoreNotFound: '復元失敗',
+    restoreNotFoundMessage: '復元する購入履歴がありません。',
+    unlockAll: 'プレミアムですべての機能を解除',
+    info: '購入後、すべてのデバイスで使用可能です。\nサブスクリプションは自動更新されません。',
+  },
+
+  // 広告
+  ads: {
+    removeAd: '広告削除',
+    watchToUnlock: '広告を視聴して機能を解除',
+    adsRemaining: '残りの広告: {count}回',
+    featureUnlocked: '機能が解除されました！',
+    watchAd: '広告を見る',
+    adLoading: '広告を読み込み中...',
+    adFailed: '広告を読み込めませんでした',
+  },
 };

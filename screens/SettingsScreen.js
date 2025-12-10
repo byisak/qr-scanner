@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAd } from '../contexts/AdContext';
+import { usePurchase } from '../contexts/PurchaseContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
 
@@ -24,6 +27,8 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { language, t } = useLanguage();
   const { themeMode, isDark } = useTheme();
+  const { isFeatureLocked, getRemainingAdCount, REQUIRED_AD_COUNT } = useAd();
+  const { isPremium } = usePurchase();
   const colors = isDark ? Colors.dark : Colors.light;
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -367,6 +372,38 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* 프리미엄 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('premium.title')}</Text>
+
+          {/* 프리미엄 구독 버튼 */}
+          <TouchableOpacity
+            style={[s.premiumButton, {
+              backgroundColor: isPremium ? colors.success + '20' : '#007AFF',
+              borderColor: isPremium ? colors.success : '#007AFF',
+            }]}
+            onPress={() => router.push('/premium')}
+            activeOpacity={0.8}
+          >
+            <View style={s.premiumButtonContent}>
+              <Ionicons
+                name={isPremium ? "checkmark-circle" : "star"}
+                size={24}
+                color={isPremium ? colors.success : "#fff"}
+              />
+              <View style={s.premiumTextContainer}>
+                <Text style={[s.premiumButtonText, { color: isPremium ? colors.success : "#fff" }]}>
+                  {isPremium ? t('premium.alreadyPremium') : t('premium.purchase')}
+                </Text>
+                {!isPremium && (
+                  <Text style={s.premiumSubtext}>{t('premium.subtitle')}</Text>
+                )}
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={isPremium ? colors.success : "#fff"} />
+          </TouchableOpacity>
+        </View>
+
         {/* 앱 정보 및 지원 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.appInfo')}</Text>
@@ -507,5 +544,46 @@ const s = StyleSheet.create({
   versionText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  premiumButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  premiumButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  premiumTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  premiumButtonText: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  premiumSubtext: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  lockedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 149, 0, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  lockedBadgeText: {
+    fontSize: 11,
+    color: '#FF9500',
+    fontWeight: '600',
+    marginLeft: 4,
   },
 });

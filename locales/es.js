@@ -363,4 +363,42 @@ export default {
     clipboardPasted: 'Contenido del portapapeles pegado',
     clipboardEmpty: 'El portapapeles está vacío',
   },
+
+  // Premium
+  premium: {
+    title: 'Premium',
+    subtitle: 'Desbloquea todas las funciones sin límites',
+    removeAds: 'Eliminar todos los anuncios',
+    realtimeSync: 'Sincronización en tiempo real',
+    batchScan: 'Modo de escaneo por lotes',
+    photoSave: 'Guardar fotos de escaneo',
+    exportHistory: 'Exportar historial',
+    scanUrl: 'URL de escaneo integrado',
+    futureFeatures: 'Todas las futuras funciones premium',
+    purchase: 'Suscribirse a Premium',
+    lifetime: 'De por vida',
+    restore: 'Restaurar compra',
+    alreadyPremium: 'Premium activo',
+    purchaseSuccess: 'Compra completada',
+    purchaseSuccessMessage: '¡Las funciones premium están activadas!',
+    purchaseFailed: 'Compra fallida',
+    purchaseFailedMessage: 'No se pudo completar la compra.',
+    restoreSuccess: 'Restauración completada',
+    restoreSuccessMessage: 'La compra ha sido restaurada.',
+    restoreNotFound: 'Restauración fallida',
+    restoreNotFoundMessage: 'No se encontró ninguna compra para restaurar.',
+    unlockAll: 'Desbloquear todo con Premium',
+    info: 'Disponible en todos los dispositivos después de la compra.\nLa suscripción no se renueva automáticamente.',
+  },
+
+  // Anuncios
+  ads: {
+    removeAd: 'Eliminar anuncios',
+    watchToUnlock: 'Mira anuncios para desbloquear esta función',
+    adsRemaining: 'Anuncios restantes: {count}',
+    featureUnlocked: '¡Función desbloqueada!',
+    watchAd: 'Ver anuncio',
+    adLoading: 'Cargando anuncio...',
+    adFailed: 'Error al cargar el anuncio',
+  },
 };

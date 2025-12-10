@@ -363,4 +363,42 @@ export default {
     clipboardPasted: '已粘贴剪贴板内容',
     clipboardEmpty: '剪贴板为空',
   },
+
+  // 高级版
+  premium: {
+    title: '高级版',
+    subtitle: '无限制使用所有功能',
+    removeAds: '移除所有广告',
+    realtimeSync: '实时服务器传输',
+    batchScan: '批量扫描模式',
+    photoSave: '保存扫描照片',
+    exportHistory: '导出历史记录',
+    scanUrl: '扫描联动URL',
+    futureFeatures: '所有未来的高级功能',
+    purchase: '订阅高级版',
+    lifetime: '永久',
+    restore: '恢复购买',
+    alreadyPremium: '高级版使用中',
+    purchaseSuccess: '购买成功',
+    purchaseSuccessMessage: '高级功能已激活！',
+    purchaseFailed: '购买失败',
+    purchaseFailedMessage: '无法完成购买。',
+    restoreSuccess: '恢复成功',
+    restoreSuccessMessage: '购买已恢复。',
+    restoreNotFound: '恢复失败',
+    restoreNotFoundMessage: '没有可恢复的购买记录。',
+    unlockAll: '使用高级版解锁所有功能',
+    info: '购买后可在所有设备上使用。\n订阅不会自动续费。',
+  },
+
+  // 广告
+  ads: {
+    removeAd: '移除广告',
+    watchToUnlock: '观看广告以解锁此功能',
+    adsRemaining: '剩余广告: {count}次',
+    featureUnlocked: '功能已解锁！',
+    watchAd: '观看广告',
+    adLoading: '正在加载广告...',
+    adFailed: '无法加载广告',
+  },
 };

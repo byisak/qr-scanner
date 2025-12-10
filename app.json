@@ -56,6 +56,13 @@
         {
           "locationWhenInUsePermission": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-xxxxxxxxxxxxxxxx~yyyyyyyyyy",
+          "iosAppId": "ca-app-pub-xxxxxxxxxxxxxxxx~zzzzzzzzzz"
+        }
       ]
     ],
     "experiments": {

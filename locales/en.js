@@ -363,4 +363,42 @@ export default {
     clipboardPasted: 'Clipboard content pasted',
     clipboardEmpty: 'Clipboard is empty',
   },
+
+  // Premium
+  premium: {
+    title: 'Premium',
+    subtitle: 'Unlock all features without limits',
+    removeAds: 'Remove all ads',
+    realtimeSync: 'Realtime server sync',
+    batchScan: 'Batch scan mode',
+    photoSave: 'Save scan photos',
+    exportHistory: 'Export history',
+    scanUrl: 'Scan URL integration',
+    futureFeatures: 'All future premium features',
+    purchase: 'Subscribe to Premium',
+    lifetime: 'Lifetime',
+    restore: 'Restore Purchase',
+    alreadyPremium: 'Premium Active',
+    purchaseSuccess: 'Purchase Complete',
+    purchaseSuccessMessage: 'Premium features are now activated!',
+    purchaseFailed: 'Purchase Failed',
+    purchaseFailedMessage: 'Unable to complete purchase.',
+    restoreSuccess: 'Restore Complete',
+    restoreSuccessMessage: 'Purchase has been restored.',
+    restoreNotFound: 'Restore Failed',
+    restoreNotFoundMessage: 'No purchase found to restore.',
+    unlockAll: 'Unlock all with Premium',
+    info: 'Available on all devices after purchase.\nSubscription does not auto-renew.',
+  },
+
+  // Ads
+  ads: {
+    removeAd: 'Remove Ads',
+    watchToUnlock: 'Watch ads to unlock this feature',
+    adsRemaining: 'Remaining ads: {count}',
+    featureUnlocked: 'Feature unlocked!',
+    watchAd: 'Watch Ad',
+    adLoading: 'Loading ad...',
+    adFailed: 'Failed to load ad',
+  },
 };

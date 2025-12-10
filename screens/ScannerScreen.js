@@ -26,6 +26,7 @@ import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
+import BannerAdWithRemove from '../components/ads/BannerAdWithRemove';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -1348,12 +1349,24 @@ function ScannerScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* 하단 배너 광고 */}
+      <View style={styles.bannerAdContainer}>
+        <BannerAdWithRemove />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
+  bannerAdContainer: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 80,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',

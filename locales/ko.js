@@ -363,4 +363,42 @@ export default {
     clipboardPasted: '클립보드 내용을 가져왔습니다',
     clipboardEmpty: '클립보드가 비어있습니다',
   },
+
+  // 프리미엄
+  premium: {
+    title: '프리미엄',
+    subtitle: '모든 기능을 제한 없이 사용하세요',
+    removeAds: '모든 광고 제거',
+    realtimeSync: '실시간 서버 전송',
+    batchScan: '배치 스캔 모드',
+    photoSave: '스캔 사진 저장',
+    exportHistory: '히스토리 내보내기',
+    scanUrl: '스캔 연동 URL',
+    futureFeatures: '향후 추가되는 모든 프리미엄 기능',
+    purchase: '프리미엄 구독하기',
+    lifetime: '평생',
+    restore: '구매 복원하기',
+    alreadyPremium: '프리미엄 사용 중',
+    purchaseSuccess: '구매 완료',
+    purchaseSuccessMessage: '프리미엄 기능이 활성화되었습니다!',
+    purchaseFailed: '구매 실패',
+    purchaseFailedMessage: '구매를 완료할 수 없습니다.',
+    restoreSuccess: '복원 완료',
+    restoreSuccessMessage: '구매가 복원되었습니다.',
+    restoreNotFound: '복원 실패',
+    restoreNotFoundMessage: '복원할 구매 내역이 없습니다.',
+    unlockAll: '프리미엄으로 모든 기능 해제',
+    info: '구매 후 모든 기기에서 사용 가능합니다.\n구독은 자동으로 갱신되지 않습니다.',
+  },
+
+  // 광고
+  ads: {
+    removeAd: '광고제거',
+    watchToUnlock: '광고를 시청하고 기능을 해제하세요',
+    adsRemaining: '남은 광고: {count}회',
+    featureUnlocked: '기능이 해제되었습니다!',
+    watchAd: '광고 보기',
+    adLoading: '광고 로딩 중...',
+    adFailed: '광고를 불러올 수 없습니다',
+  },
 };

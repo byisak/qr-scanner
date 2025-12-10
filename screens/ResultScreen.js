@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import BannerAdWithRemove from '../components/ads/BannerAdWithRemove';
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -544,6 +545,11 @@ export default function ResultScreen() {
           <Text style={styles.scanAgainText}>{t('result.scanAgain')}</Text>
         </TouchableOpacity>
       )}
+
+      {/* 하단 배너 광고 */}
+      <View style={styles.bannerAdContainer}>
+        <BannerAdWithRemove />
+      </View>
     </View>
   );
 }
@@ -551,6 +557,15 @@ export default function ResultScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  bannerAdContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
