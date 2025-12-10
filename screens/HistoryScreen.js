@@ -228,7 +228,7 @@ export default function HistoryScreen() {
                   <Ionicons name="cloud" size={16} color={isActive ? '#fff' : colors.primary} style={{ marginRight: 6 }} />
                 )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text }, isActive && s.groupTabTextActive]}>
-                  {group.name}
+                  {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
                 </Text>
                 {scanCount > 0 && (
                   <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
@@ -250,7 +250,7 @@ export default function HistoryScreen() {
       {/* 헤더 */}
       <View style={s.header}>
         <Text style={[s.title, { color: colors.text }]}>
-          {currentGroup?.name || t('history.scanRecord')} {filteredList.length > 0 && `(${filteredList.length})`}
+          {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
