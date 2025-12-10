@@ -1158,7 +1158,9 @@ function ScannerScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="folder" size={16} color="#fff" />
-          <Text style={styles.groupBadgeText}>{currentGroupName}</Text>
+          <Text style={styles.groupBadgeText}>
+            {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
+          </Text>
           <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
         </TouchableOpacity>
 
