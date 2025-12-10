@@ -100,15 +100,19 @@ export default function RealtimeSyncSettingsScreen() {
       return localSessions;
     }
 
-    // 서버 세션 ID 목록
+    // 서버 세션 ID 목록 (DB 컬럼명 대소문자 호환)
     const serverSessionMap = new Map();
     serverSessions.forEach(session => {
-      const sessionId = session.session_id || session.sessionId;
+      const sessionId = session.SESSION_ID || session.session_id || session.sessionId;
+      const status = session.STATUS || session.status || 'ACTIVE';
+      const deletedAt = session.DELETED_AT || session.deleted_at || session.deletedAt;
+      const createdAt = session.CREATED_AT || session.created_at || session.createdAt;
+
       serverSessionMap.set(sessionId, {
         id: sessionId,
-        status: session.status || 'ACTIVE',
-        deletedAt: session.deleted_at || session.deletedAt,
-        createdAt: session.created_at || session.createdAt,
+        status: status,
+        deletedAt: deletedAt,
+        createdAt: createdAt,
       });
     });
 
