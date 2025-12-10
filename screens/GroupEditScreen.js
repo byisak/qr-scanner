@@ -5,22 +5,28 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
   TextInput,
   Alert,
   Modal,
-  Platform,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 
 const DEFAULT_GROUP_ID = 'default';
 
 export default function GroupEditScreen() {
   const router = useRouter();
-  const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: '기본 그룹', createdAt: Date.now() }]);
+  const { t } = useLanguage();
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
+
+  const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -32,7 +38,16 @@ export default function GroupEditScreen() {
       const groupsData = await AsyncStorage.getItem('scanGroups');
       if (groupsData) {
         const parsed = JSON.parse(groupsData);
-        setGroups(parsed.length > 0 ? parsed : [{ id: DEFAULT_GROUP_ID, name: '기본 그룹', createdAt: Date.now() }]);
+        // 기본 그룹 이름을 현재 언어로 표시
+        const updatedGroups = parsed.map(g => {
+          if (g.id === DEFAULT_GROUP_ID) {
+            return { ...g, name: t('groupEdit.defaultGroup') };
+          }
+          return g;
+        });
+        setGroups(updatedGroups.length > 0 ? updatedGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
+      } else {
+        setGroups([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
       }
     } catch (error) {
       console.error('Load groups error:', error);
@@ -42,13 +57,24 @@ export default function GroupEditScreen() {
   useFocusEffect(
     useCallback(() => {
       loadGroups();
-    }, [])
+    }, [t])
   );
+
+  // 그룹 저장 헬퍼 함수
+  const saveGroups = async (updatedGroups) => {
+    const groupsToSave = updatedGroups.map(g => {
+      if (g.id === DEFAULT_GROUP_ID) {
+        return { ...g, name: 'default' };
+      }
+      return g;
+    });
+    await AsyncStorage.setItem('scanGroups', JSON.stringify(groupsToSave));
+  };
 
   // 그룹 추가
   const addGroup = async () => {
     if (!newGroupName.trim()) {
-      Alert.alert('오류', '그룹 이름을 입력해주세요');
+      Alert.alert(t('common.error') || '오류', t('groupEdit.emptyName'));
       return;
     }
 
@@ -60,7 +86,7 @@ export default function GroupEditScreen() {
 
     const updatedGroups = [...groups, newGroup];
     setGroups(updatedGroups);
-    await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+    await saveGroups(updatedGroups);
 
     // 새 그룹의 빈 히스토리 초기화
     const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
@@ -75,23 +101,22 @@ export default function GroupEditScreen() {
   // 그룹 삭제
   const deleteGroup = async (groupId) => {
     if (groupId === DEFAULT_GROUP_ID) {
-      Alert.alert('오류', '기본 그룹은 삭제할 수 없습니다');
+      Alert.alert(t('common.error') || '오류', t('groupEdit.cannotDeleteDefault'));
       return;
     }
 
-    Alert.alert('그룹 삭제', '이 그룹과 모든 스캔 기록을 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert(t('groupEdit.deleteConfirmTitle'), t('groupEdit.deleteConfirmMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: '삭제',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          // 삭제하려는 그룹이 클라우드 동기화 그룹인지 확인
           const groupToDelete = groups.find(g => g.id === groupId);
           const isCloudSyncGroup = groupToDelete?.isCloudSync;
 
           const updatedGroups = groups.filter(g => g.id !== groupId);
           setGroups(updatedGroups);
-          await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+          await saveGroups(updatedGroups);
 
           // 히스토리에서도 삭제
           const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
@@ -120,18 +145,13 @@ export default function GroupEditScreen() {
                 const updatedSessionUrls = sessionUrls.filter(s => s.id !== groupId);
                 await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedSessionUrls));
 
-                console.log(`Deleted cloud sync group and session URL: ${groupId}`);
-
-                // 삭제된 세션이 활성 세션인 경우 초기화
                 const activeSessionId = await AsyncStorage.getItem('activeSessionId');
                 if (activeSessionId === groupId) {
                   if (updatedSessionUrls.length > 0) {
                     const newActiveId = updatedSessionUrls[0].id;
                     await AsyncStorage.setItem('activeSessionId', newActiveId);
-                    console.log(`Active session changed to: ${newActiveId}`);
                   } else {
                     await AsyncStorage.removeItem('activeSessionId');
-                    console.log('No remaining sessions, activeSessionId removed');
                   }
                 }
               }
@@ -140,7 +160,6 @@ export default function GroupEditScreen() {
             }
           }
 
-          // 선택된 그룹이 삭제되는 경우 기본 그룹으로 변경
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId');
           if (selectedGroupId === groupId) {
             await AsyncStorage.setItem('selectedGroupId', DEFAULT_GROUP_ID);
@@ -153,18 +172,17 @@ export default function GroupEditScreen() {
   // 그룹 이름 변경
   const editGroupName = async () => {
     if (!newGroupName.trim()) {
-      Alert.alert('오류', '그룹 이름을 입력해주세요');
+      Alert.alert(t('common.error') || '오류', t('groupEdit.emptyName'));
       return;
     }
 
-    // 기본 그룹과 클라우드 동기화 그룹은 이름 변경 불가
     if (editingGroup.id === DEFAULT_GROUP_ID) {
-      Alert.alert('오류', '기본 그룹의 이름은 변경할 수 없습니다.');
+      Alert.alert(t('common.error') || '오류', t('groupEdit.cannotDeleteDefault'));
       return;
     }
 
     if (editingGroup.isCloudSync) {
-      Alert.alert('오류', '클라우드 동기화 그룹의 이름은 변경할 수 없습니다.');
+      Alert.alert(t('common.error') || '오류', '클라우드 동기화 그룹의 이름은 변경할 수 없습니다.');
       return;
     }
 
@@ -172,33 +190,23 @@ export default function GroupEditScreen() {
       g.id === editingGroup.id ? { ...g, name: newGroupName.trim() } : g
     );
     setGroups(updatedGroups);
-    await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+    await saveGroups(updatedGroups);
 
     setNewGroupName('');
     setEditingGroup(null);
     setShowEditModal(false);
   };
 
-  // 그룹 순서 변경 (위로)
-  const moveGroupUp = async (index) => {
-    if (index === 0) return;
+  // 그룹 순서 변경
+  const moveGroup = async (fromIndex, toIndex) => {
+    if (toIndex < 0 || toIndex >= groups.length) return;
 
     const updatedGroups = [...groups];
-    [updatedGroups[index - 1], updatedGroups[index]] = [updatedGroups[index], updatedGroups[index - 1]];
+    const [movedItem] = updatedGroups.splice(fromIndex, 1);
+    updatedGroups.splice(toIndex, 0, movedItem);
 
     setGroups(updatedGroups);
-    await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
-  };
-
-  // 그룹 순서 변경 (아래로)
-  const moveGroupDown = async (index) => {
-    if (index === groups.length - 1) return;
-
-    const updatedGroups = [...groups];
-    [updatedGroups[index], updatedGroups[index + 1]] = [updatedGroups[index + 1], updatedGroups[index]];
-
-    setGroups(updatedGroups);
-    await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+    await saveGroups(updatedGroups);
   };
 
   // 그룹 이름 변경 모달 열기
@@ -209,65 +217,80 @@ export default function GroupEditScreen() {
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={s.header}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={s.backButton}
           onPress={() => router.back()}
-          accessibilityLabel="뒤로 가기"
+          accessibilityLabel={t('common.back')}
         >
-          <Ionicons name="arrow-back" size={28} color="#007AFF" />
+          <Ionicons name="arrow-back" size={28} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>그룹 편집</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>{t('groupEdit.title')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
       {/* 그룹 목록 */}
-      <FlatList
-        data={groups}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={s.listContent}
-        renderItem={({ item, index }) => (
-          <View style={s.groupItem}>
+      <ScrollView style={s.listContainer} contentContainerStyle={s.listContent}>
+        {groups.map((item, index) => (
+          <View
+            key={item.id}
+            style={[s.groupItem, { backgroundColor: colors.surface }]}
+          >
+            {/* 드래그 핸들 아이콘 */}
+            <View style={s.dragHandle}>
+              <Ionicons name="menu" size={22} color={colors.textTertiary} />
+            </View>
+
             <View style={s.groupInfo}>
               {item.isCloudSync && (
-                <Ionicons name="cloud" size={18} color="#007AFF" style={{ marginRight: 8 }} />
+                <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
               )}
-              <Text style={s.groupName}>{item.name}</Text>
+              <Text style={[s.groupName, { color: colors.text }]}>{item.name}</Text>
               {item.id === DEFAULT_GROUP_ID && (
-                <Text style={s.defaultBadge}>기본</Text>
+                <View style={[s.badge, { backgroundColor: colors.primary + '20' }]}>
+                  <Text style={[s.badgeText, { color: colors.primary }]}>
+                    {t('groupEdit.defaultGroup').split(' ')[0] || '기본'}
+                  </Text>
+                </View>
               )}
               {item.isCloudSync && (
-                <Text style={[s.defaultBadge, { backgroundColor: '#007AFF', marginLeft: 8 }]}>클라우드</Text>
+                <View style={[s.badge, { backgroundColor: colors.primary, marginLeft: 6 }]}>
+                  <Text style={[s.badgeText, { color: '#fff' }]}>Cloud</Text>
+                </View>
               )}
             </View>
 
             <View style={s.groupActions}>
               {/* 순서 변경 버튼 */}
-              <TouchableOpacity
-                style={[s.iconButton, index === 0 && s.iconButtonDisabled]}
-                onPress={() => moveGroupUp(index)}
-                disabled={index === 0}
-              >
-                <Ionicons
-                  name="chevron-up"
-                  size={24}
-                  color={index === 0 ? '#ccc' : '#666'}
-                />
-              </TouchableOpacity>
+              <View style={s.reorderButtons}>
+                <TouchableOpacity
+                  style={[s.reorderButton, index === 0 && s.iconButtonDisabled]}
+                  onPress={() => moveGroup(index, index - 1)}
+                  disabled={index === 0}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name="chevron-up"
+                    size={20}
+                    color={index === 0 ? colors.borderLight : colors.textSecondary}
+                  />
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[s.iconButton, index === groups.length - 1 && s.iconButtonDisabled]}
-                onPress={() => moveGroupDown(index)}
-                disabled={index === groups.length - 1}
-              >
-                <Ionicons
-                  name="chevron-down"
-                  size={24}
-                  color={index === groups.length - 1 ? '#ccc' : '#666'}
-                />
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.reorderButton, index === groups.length - 1 && s.iconButtonDisabled]}
+                  onPress={() => moveGroup(index, index + 1)}
+                  disabled={index === groups.length - 1}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={index === groups.length - 1 ? colors.borderLight : colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
 
               {/* 이름 변경 버튼 */}
               <TouchableOpacity
@@ -275,7 +298,11 @@ export default function GroupEditScreen() {
                 onPress={() => openEditModal(item)}
                 disabled={item.isCloudSync || item.id === DEFAULT_GROUP_ID}
               >
-                <Ionicons name="create-outline" size={24} color={(item.isCloudSync || item.id === DEFAULT_GROUP_ID) ? '#ccc' : '#007AFF'} />
+                <Ionicons
+                  name="create-outline"
+                  size={22}
+                  color={(item.isCloudSync || item.id === DEFAULT_GROUP_ID) ? colors.borderLight : colors.primary}
+                />
               </TouchableOpacity>
 
               {/* 삭제 버튼 */}
@@ -286,23 +313,25 @@ export default function GroupEditScreen() {
               >
                 <Ionicons
                   name="trash-outline"
-                  size={24}
-                  color={item.id === DEFAULT_GROUP_ID ? '#ccc' : '#FF3B30'}
+                  size={22}
+                  color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.error}
                 />
               </TouchableOpacity>
             </View>
           </View>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {/* 그룹 추가 버튼 */}
-      <TouchableOpacity
-        style={s.addButton}
-        onPress={() => setShowAddModal(true)}
-      >
-        <Ionicons name="add-circle" size={24} color="#fff" />
-        <Text style={s.addButtonText}>새 그룹 추가</Text>
-      </TouchableOpacity>
+      <View style={[s.addButtonContainer, { backgroundColor: colors.background }]}>
+        <TouchableOpacity
+          style={[s.addButton, { backgroundColor: colors.primary }]}
+          onPress={() => setShowAddModal(true)}
+        >
+          <Ionicons name="add-circle" size={24} color="#fff" />
+          <Text style={s.addButtonText}>{t('groupEdit.addGroup')}</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* 그룹 추가 모달 */}
       <Modal
@@ -312,30 +341,35 @@ export default function GroupEditScreen() {
         onRequestClose={() => setShowAddModal(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={s.modalContent}>
-            <Text style={s.modalTitle}>새 그룹 추가</Text>
+          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
             <TextInput
-              style={s.modalInput}
-              placeholder="그룹 이름"
+              style={[s.modalInput, {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              placeholder={t('groupEdit.groupNamePlaceholder')}
+              placeholderTextColor={colors.textTertiary}
               value={newGroupName}
               onChangeText={setNewGroupName}
               autoFocus
             />
             <View style={s.modalButtons}>
               <TouchableOpacity
-                style={[s.modalButton, s.modalButtonCancel]}
+                style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
                 onPress={() => {
                   setShowAddModal(false);
                   setNewGroupName('');
                 }}
               >
-                <Text style={s.modalButtonTextCancel}>취소</Text>
+                <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.modalButton, s.modalButtonConfirm]}
+                style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
                 onPress={addGroup}
               >
-                <Text style={s.modalButtonTextConfirm}>추가</Text>
+                <Text style={s.modalButtonTextConfirm}>{t('groupEdit.create')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -350,31 +384,36 @@ export default function GroupEditScreen() {
         onRequestClose={() => setShowEditModal(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={s.modalContent}>
-            <Text style={s.modalTitle}>그룹 이름 변경</Text>
+          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
             <TextInput
-              style={s.modalInput}
-              placeholder="그룹 이름"
+              style={[s.modalInput, {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              placeholder={t('groupEdit.groupNamePlaceholder')}
+              placeholderTextColor={colors.textTertiary}
               value={newGroupName}
               onChangeText={setNewGroupName}
               autoFocus
             />
             <View style={s.modalButtons}>
               <TouchableOpacity
-                style={[s.modalButton, s.modalButtonCancel]}
+                style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
                 onPress={() => {
                   setShowEditModal(false);
                   setNewGroupName('');
                   setEditingGroup(null);
                 }}
               >
-                <Text style={s.modalButtonTextCancel}>취소</Text>
+                <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.modalButton, s.modalButtonConfirm]}
+                style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
                 onPress={editGroupName}
               >
-                <Text style={s.modalButtonTextConfirm}>변경</Text>
+                <Text style={s.modalButtonTextConfirm}>{t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -387,7 +426,6 @@ export default function GroupEditScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     flexDirection: 'row',
@@ -396,9 +434,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   backButton: {
     padding: 4,
@@ -406,51 +442,63 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#000',
+  },
+  listContainer: {
+    flex: 1,
   },
   listContent: {
     padding: 15,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   groupItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
+    padding: 12,
+    paddingLeft: 8,
     borderRadius: 14,
-    marginBottom: 12,
+    marginBottom: 10,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
   },
+  dragHandle: {
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+  },
   groupInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    marginLeft: 4,
   },
   groupName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#000',
   },
-  defaultBadge: {
+  badge: {
     marginLeft: 8,
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: '#007AFF',
-    color: '#fff',
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  badgeText: {
     fontSize: 11,
     fontWeight: '700',
-    borderRadius: 8,
-    overflow: 'hidden',
   },
   groupActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+  },
+  reorderButtons: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  reorderButton: {
+    padding: 2,
   },
   iconButton: {
     padding: 8,
@@ -458,13 +506,19 @@ const s = StyleSheet.create({
   iconButtonDisabled: {
     opacity: 0.3,
   },
+  addButtonContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 10,
+  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007AFF',
-    marginHorizontal: 20,
-    marginBottom: 40,
     paddingVertical: 16,
     borderRadius: 16,
     elevation: 4,
@@ -472,14 +526,10 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
   },
   addButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 'bold',
     marginLeft: 8,
   },
@@ -488,10 +538,9 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 100,
+    paddingTop: 120,
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 24,
     width: '85%',
@@ -501,13 +550,11 @@ const s = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: '#000',
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#E5E5EA',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     fontSize: 16,
     marginBottom: 20,
   },
@@ -517,20 +564,17 @@ const s = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
   modalButtonCancel: {
-    backgroundColor: '#F0F0F0',
     marginRight: 8,
   },
   modalButtonConfirm: {
-    backgroundColor: '#007AFF',
     marginLeft: 8,
   },
   modalButtonTextCancel: {
-    color: '#666',
     fontSize: 16,
     fontWeight: '600',
   },

@@ -237,6 +237,7 @@ export default {
     defaultGroup: 'Default Group',
     cannotDeleteDefault: 'Cannot delete default group.',
     emptyName: 'Please enter a group name.',
+    selectGroup: 'Select Group',
   },
 
   // Export history screen

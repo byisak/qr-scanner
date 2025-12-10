@@ -190,17 +190,25 @@ function ScannerScreen() {
             return true;
           });
 
-          const currentGroup = filteredGroups.find(g => g.id === selectedGroupId);
+          // 기본 그룹 이름을 현재 언어로 변환
+          const localizedGroups = filteredGroups.map(g => {
+            if (g.id === 'default') {
+              return { ...g, name: t('groupEdit.defaultGroup') };
+            }
+            return g;
+          });
+
+          const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
           if (currentGroup) {
             setCurrentGroupName(currentGroup.name);
-          } else if (filteredGroups.length > 0) {
+          } else if (localizedGroups.length > 0) {
             // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
             setCurrentGroupId('default');
-            setCurrentGroupName(filteredGroups.find(g => g.id === 'default')?.name || '기본 그룹');
+            setCurrentGroupName(t('groupEdit.defaultGroup'));
             await AsyncStorage.setItem('selectedGroupId', 'default');
           }
           // 사용 가능한 그룹 목록 설정
-          setAvailableGroups(filteredGroups);
+          setAvailableGroups(localizedGroups);
         }
 
         // 실시간 서버전송 설정 로드
@@ -317,17 +325,25 @@ function ScannerScreen() {
               return true;
             });
 
-            const currentGroup = filteredGroups.find(g => g.id === selectedGroupId);
+            // 기본 그룹 이름을 현재 언어로 변환
+            const localizedGroups = filteredGroups.map(g => {
+              if (g.id === 'default') {
+                return { ...g, name: t('groupEdit.defaultGroup') };
+              }
+              return g;
+            });
+
+            const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
             if (currentGroup) {
               setCurrentGroupName(currentGroup.name);
-            } else if (filteredGroups.length > 0) {
+            } else if (localizedGroups.length > 0) {
               // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
               setCurrentGroupId('default');
-              setCurrentGroupName(filteredGroups.find(g => g.id === 'default')?.name || '기본 그룹');
+              setCurrentGroupName(t('groupEdit.defaultGroup'));
               await AsyncStorage.setItem('selectedGroupId', 'default');
             }
             // 사용 가능한 그룹 목록 설정
-            setAvailableGroups(filteredGroups);
+            setAvailableGroups(localizedGroups);
           }
 
           // 실시간 서버전송 설정 로드
@@ -1084,13 +1100,20 @@ function ScannerScreen() {
     }
   }, [realtimeSyncEnabled]);
 
-  // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링)
+  // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링, 기본 그룹 이름 다국어 적용)
   const displayGroups = useMemo(() => {
-    if (realtimeSyncEnabled) {
-      return availableGroups;
-    }
-    return availableGroups.filter(g => !g.isCloudSync);
-  }, [availableGroups, realtimeSyncEnabled]);
+    const filtered = realtimeSyncEnabled
+      ? availableGroups
+      : availableGroups.filter(g => !g.isCloudSync);
+
+    // 기본 그룹 이름을 현재 언어로 변환
+    return filtered.map(g => {
+      if (g.id === 'default') {
+        return { ...g, name: t('groupEdit.defaultGroup') };
+      }
+      return g;
+    });
+  }, [availableGroups, realtimeSyncEnabled, t]);
 
   if (hasPermission === null) {
     return (
@@ -1135,7 +1158,9 @@ function ScannerScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="folder" size={16} color="#fff" />
-          <Text style={styles.groupBadgeText}>{currentGroupName}</Text>
+          <Text style={styles.groupBadgeText}>
+            {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
+          </Text>
           <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
         </TouchableOpacity>
 
@@ -1309,7 +1334,7 @@ function ScannerScreen() {
           <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Ionicons name="folder" size={24} color="#007AFF" />
-              <Text style={styles.modalTitle}>그룹 선택</Text>
+              <Text style={styles.modalTitle}>{t('groupEdit.selectGroup')}</Text>
               <TouchableOpacity
                 onPress={() => setGroupModalVisible(false)}
                 style={styles.modalCloseButton}

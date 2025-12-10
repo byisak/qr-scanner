@@ -237,6 +237,7 @@ export default {
     defaultGroup: '默认分组',
     cannotDeleteDefault: '无法删除默认分组。',
     emptyName: '请输入分组名称。',
+    selectGroup: '选择分组',
   },
 
   // 导出界面

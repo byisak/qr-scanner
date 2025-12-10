@@ -9,6 +9,7 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -169,10 +171,24 @@ export default function SettingsScreen() {
   }, [batchScanEnabled]);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* 상단 그라데이션 */}
+      <LinearGradient
+        colors={
+          isDark
+            ? ['rgba(0,0,0,1)', 'rgba(0,0,0,0.95)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']
+            : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
+        }
+        locations={[0, 0.3, 0.6, 0.85, 1]}
+        style={s.statusBarGradient}
+      />
+
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
-        <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={[s.title, { color: colors.text }]}>{t('settings.title')}</Text>
+        </View>
 
         {/* 바코드 인식 설정 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
@@ -324,11 +340,11 @@ export default function SettingsScreen() {
         </View>
 
         {/* URL 연동 설정 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text>
+        <View style={[s.section, !t('settings.autoMove') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
+          {t('settings.autoMove') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text> : null}
 
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+            style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.autoMove') ? 10 : 0 }]}
             onPress={() => router.push('/scan-url-settings')}
             activeOpacity={0.7}
           >
@@ -346,11 +362,11 @@ export default function SettingsScreen() {
         </View>
 
         {/* 실시간 서버전송 설정 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.realtimeSync')}</Text>
+        <View style={[s.section, !t('settings.realtimeSync') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
+          {t('settings.realtimeSync') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.realtimeSync')}</Text> : null}
 
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+            style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.realtimeSync') ? 10 : 0 }]}
             onPress={() => router.push('/realtime-sync-settings')}
             activeOpacity={0.7}
           >
@@ -442,15 +458,26 @@ const s = StyleSheet.create({
   c: {
     flex: 1,
   },
+  statusBarGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.OS === 'ios' ? 70 : 60,
+    zIndex: 100,
+  },
   content: {
-    padding: 20,
-    paddingBottom: 120,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginTop: 40,
-    marginBottom: 30,
+    marginBottom: 6,
   },
   section: {
     borderRadius: 16,
@@ -461,6 +488,10 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  sectionNoTitle: {
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   sectionTitle: {
     fontSize: 14,

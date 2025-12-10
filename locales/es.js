@@ -237,6 +237,7 @@ export default {
     defaultGroup: 'Grupo predeterminado',
     cannotDeleteDefault: 'No se puede eliminar el grupo predeterminado.',
     emptyName: 'Por favor, ingresa un nombre de grupo.',
+    selectGroup: 'Seleccionar grupo',
   },
 
   // Pantalla de exportar historial

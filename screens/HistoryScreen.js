@@ -17,6 +17,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -53,7 +54,14 @@ export default function HistoryScreen() {
           if (!isRealtimeSyncEnabled && g.isCloudSync) return false; // 서버전송 꺼진 경우 세션 그룹 제외
           return true;
         });
-        setGroups(filteredGroups.length > 0 ? filteredGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
+        // 기본 그룹 이름을 현재 언어로 표시
+        const localizedGroups = filteredGroups.map(g => {
+          if (g.id === DEFAULT_GROUP_ID) {
+            return { ...g, name: t('groupEdit.defaultGroup') };
+          }
+          return g;
+        });
+        setGroups(localizedGroups.length > 0 ? localizedGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
       }
 
       if (historyData) {
@@ -81,7 +89,7 @@ export default function HistoryScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadGroups();
-    }, [])
+    }, [t])
   );
 
   // 선택된 그룹의 히스토리 가져오기
@@ -171,6 +179,17 @@ export default function HistoryScreen() {
 
   return (
     <View style={[s.c, { backgroundColor: colors.background }]}>
+      {/* 상단 그라데이션 */}
+      <LinearGradient
+        colors={
+          isDark
+            ? ['rgba(0,0,0,1)', 'rgba(0,0,0,0.95)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']
+            : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
+        }
+        locations={[0, 0.3, 0.6, 0.85, 1]}
+        style={s.statusBarGradient}
+      />
+
       {/* 검색 */}
       <View style={[s.search, { backgroundColor: colors.surface }]}>
         <Ionicons name="search" size={20} color={colors.textTertiary} />
@@ -209,7 +228,7 @@ export default function HistoryScreen() {
                   <Ionicons name="cloud" size={16} color={isActive ? '#fff' : colors.primary} style={{ marginRight: 6 }} />
                 )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text }, isActive && s.groupTabTextActive]}>
-                  {group.name}
+                  {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
                 </Text>
                 {scanCount > 0 && (
                   <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
@@ -231,7 +250,7 @@ export default function HistoryScreen() {
       {/* 헤더 */}
       <View style={s.header}>
         <Text style={[s.title, { color: colors.text }]}>
-          {currentGroup?.name || t('history.scanRecord')} {filteredList.length > 0 && `(${filteredList.length})`}
+          {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
@@ -293,6 +312,14 @@ export default function HistoryScreen() {
 const s = StyleSheet.create({
   c: {
     flex: 1,
+  },
+  statusBarGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.OS === 'ios' ? 70 : 60,
+    zIndex: 100,
   },
   search: {
     flexDirection: 'row',
@@ -397,7 +424,7 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: 100,
   },
   item: {
     marginHorizontal: 15,
