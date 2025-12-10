@@ -640,7 +640,7 @@ export default function RealtimeSyncSettingsScreen() {
           </Text>
         </View>
         <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
-          세션 {session.id.substring(0, 4)}
+          {session.name || session.id}
         </Text>
       </View>
 
@@ -699,7 +699,7 @@ export default function RealtimeSyncSettingsScreen() {
           </View>
           <View style={styles.deletedInfoRow}>
             <Text style={[styles.sessionGroupName, { color: colors.textTertiary }]}>
-              세션 {session.id.substring(0, 4)}
+              {session.name || session.id}
             </Text>
             <Text style={[styles.daysRemaining, { color: colors.warning }]}>
               {t('settings.daysRemaining', { days: daysRemaining })}
