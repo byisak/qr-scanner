@@ -237,6 +237,7 @@ export default {
     defaultGroup: 'デフォルトグループ',
     cannotDeleteDefault: 'デフォルトグループは削除できません。',
     emptyName: 'グループ名を入力してください。',
+    selectGroup: 'グループを選択',
   },
 
   // エクスポート画面

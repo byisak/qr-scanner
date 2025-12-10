@@ -190,17 +190,25 @@ function ScannerScreen() {
             return true;
           });
 
-          const currentGroup = filteredGroups.find(g => g.id === selectedGroupId);
+          // 기본 그룹 이름을 현재 언어로 변환
+          const localizedGroups = filteredGroups.map(g => {
+            if (g.id === 'default') {
+              return { ...g, name: t('groupEdit.defaultGroup') };
+            }
+            return g;
+          });
+
+          const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
           if (currentGroup) {
             setCurrentGroupName(currentGroup.name);
-          } else if (filteredGroups.length > 0) {
+          } else if (localizedGroups.length > 0) {
             // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
             setCurrentGroupId('default');
-            setCurrentGroupName(filteredGroups.find(g => g.id === 'default')?.name || '기본 그룹');
+            setCurrentGroupName(t('groupEdit.defaultGroup'));
             await AsyncStorage.setItem('selectedGroupId', 'default');
           }
           // 사용 가능한 그룹 목록 설정
-          setAvailableGroups(filteredGroups);
+          setAvailableGroups(localizedGroups);
         }
 
         // 실시간 서버전송 설정 로드
@@ -317,17 +325,25 @@ function ScannerScreen() {
               return true;
             });
 
-            const currentGroup = filteredGroups.find(g => g.id === selectedGroupId);
+            // 기본 그룹 이름을 현재 언어로 변환
+            const localizedGroups = filteredGroups.map(g => {
+              if (g.id === 'default') {
+                return { ...g, name: t('groupEdit.defaultGroup') };
+              }
+              return g;
+            });
+
+            const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
             if (currentGroup) {
               setCurrentGroupName(currentGroup.name);
-            } else if (filteredGroups.length > 0) {
+            } else if (localizedGroups.length > 0) {
               // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
               setCurrentGroupId('default');
-              setCurrentGroupName(filteredGroups.find(g => g.id === 'default')?.name || '기본 그룹');
+              setCurrentGroupName(t('groupEdit.defaultGroup'));
               await AsyncStorage.setItem('selectedGroupId', 'default');
             }
             // 사용 가능한 그룹 목록 설정
-            setAvailableGroups(filteredGroups);
+            setAvailableGroups(localizedGroups);
           }
 
           // 실시간 서버전송 설정 로드
@@ -1309,7 +1325,7 @@ function ScannerScreen() {
           <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
               <Ionicons name="folder" size={24} color="#007AFF" />
-              <Text style={styles.modalTitle}>그룹 선택</Text>
+              <Text style={styles.modalTitle}>{t('groupEdit.selectGroup')}</Text>
               <TouchableOpacity
                 onPress={() => setGroupModalVisible(false)}
                 style={styles.modalCloseButton}
