@@ -341,7 +341,7 @@ export default function SettingsScreen() {
 
         {/* URL 연동 설정 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text>
+          {t('settings.autoMove') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text> : null}
 
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
@@ -363,7 +363,7 @@ export default function SettingsScreen() {
 
         {/* 실시간 서버전송 설정 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.realtimeSync')}</Text>
+          {t('settings.realtimeSync') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.realtimeSync')}</Text> : null}
 
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
