@@ -21,6 +21,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -172,12 +173,21 @@ export default function SettingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* 상단 블러 */}
-      <BlurView
-        intensity={80}
-        tint={isDark ? 'dark' : 'light'}
-        style={s.statusBarBlur}
-      />
+      {/* 상단 블러 + 그라데이션 */}
+      <View style={s.statusBarContainer}>
+        <BlurView
+          intensity={80}
+          tint={isDark ? 'dark' : 'light'}
+          style={s.statusBarBlur}
+        />
+        <LinearGradient
+          colors={[
+            isDark ? 'rgba(0,0,0,0.8)' : 'rgba(249,249,249,0.9)',
+            isDark ? 'rgba(0,0,0,0)' : 'rgba(249,249,249,0)',
+          ]}
+          style={s.statusBarGradient}
+        />
+      </View>
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView style={[s.c, { backgroundColor: colors.background }]} contentContainerStyle={s.content}>
@@ -454,13 +464,18 @@ const s = StyleSheet.create({
   c: {
     flex: 1,
   },
-  statusBarBlur: {
+  statusBarContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === 'ios' ? 50 : 40,
     zIndex: 100,
+  },
+  statusBarBlur: {
+    height: Platform.OS === 'ios' ? 44 : 34,
+  },
+  statusBarGradient: {
+    height: 20,
   },
   content: {
     paddingHorizontal: 20,

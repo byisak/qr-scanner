@@ -18,6 +18,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -179,12 +180,21 @@ export default function HistoryScreen() {
 
   return (
     <View style={[s.c, { backgroundColor: colors.background }]}>
-      {/* 상단 블러 */}
-      <BlurView
-        intensity={80}
-        tint={isDark ? 'dark' : 'light'}
-        style={s.statusBarBlur}
-      />
+      {/* 상단 블러 + 그라데이션 */}
+      <View style={s.statusBarContainer}>
+        <BlurView
+          intensity={80}
+          tint={isDark ? 'dark' : 'light'}
+          style={s.statusBarBlur}
+        />
+        <LinearGradient
+          colors={[
+            isDark ? 'rgba(0,0,0,0.8)' : 'rgba(249,249,249,0.9)',
+            isDark ? 'rgba(0,0,0,0)' : 'rgba(249,249,249,0)',
+          ]}
+          style={s.statusBarGradient}
+        />
+      </View>
 
       {/* 검색 */}
       <View style={[s.search, { backgroundColor: colors.surface }]}>
@@ -309,13 +319,18 @@ const s = StyleSheet.create({
   c: {
     flex: 1,
   },
-  statusBarBlur: {
+  statusBarContainer: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === 'ios' ? 50 : 40,
     zIndex: 100,
+  },
+  statusBarBlur: {
+    height: Platform.OS === 'ios' ? 44 : 34,
+  },
+  statusBarGradient: {
+    height: 20,
   },
   search: {
     flexDirection: 'row',
