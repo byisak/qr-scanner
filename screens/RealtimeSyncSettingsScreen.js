@@ -100,15 +100,21 @@ export default function RealtimeSyncSettingsScreen() {
       return localSessions;
     }
 
-    // 서버 세션 ID 목록
+    // 서버 세션 ID 목록 (DB 컬럼명 대소문자 호환)
     const serverSessionMap = new Map();
     serverSessions.forEach(session => {
-      const sessionId = session.session_id || session.sessionId;
+      const sessionId = session.SESSION_ID || session.session_id || session.sessionId;
+      const status = session.STATUS || session.status || 'ACTIVE';
+      const deletedAt = session.DELETED_AT || session.deleted_at || session.deletedAt;
+      const createdAt = session.CREATED_AT || session.created_at || session.createdAt;
+      const sessionName = session.SESSION_NAME || session.session_name || session.name || null;
+
       serverSessionMap.set(sessionId, {
         id: sessionId,
-        status: session.status || 'ACTIVE',
-        deletedAt: session.deleted_at || session.deletedAt,
-        createdAt: session.created_at || session.createdAt,
+        status: status,
+        deletedAt: deletedAt,
+        createdAt: createdAt,
+        name: sessionName,
       });
     });
 
@@ -123,6 +129,8 @@ export default function RealtimeSyncSettingsScreen() {
           ...session,
           status: serverData.status,
           deletedAt: serverData.deletedAt ? new Date(serverData.deletedAt).getTime() : null,
+          // 서버에 이름이 있으면 동기화, 없으면 기존 이름 유지
+          name: serverData.name || session.name,
         };
       }
       return session;
@@ -138,6 +146,7 @@ export default function RealtimeSyncSettingsScreen() {
           createdAt: serverData.createdAt ? new Date(serverData.createdAt).getTime() : Date.now(),
           status: serverData.status,
           deletedAt: serverData.deletedAt ? new Date(serverData.deletedAt).getTime() : null,
+          name: serverData.name,
         });
       }
     });
@@ -150,17 +159,22 @@ export default function RealtimeSyncSettingsScreen() {
       await AsyncStorage.setItem('sessionUrls', JSON.stringify(allSessions));
     }
 
-    // scanGroups도 동기화 (삭제된 세션 그룹 isDeleted 업데이트 + 새 그룹 추가)
+    // scanGroups도 동기화 (삭제된 세션 그룹 isDeleted 업데이트 + 새 그룹 추가 + 이름 동기화)
     try {
       const groupsJson = await AsyncStorage.getItem('scanGroups');
       let groups = groupsJson ? JSON.parse(groupsJson) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
       const groupIds = new Set(groups.map(g => g.id));
 
-      // 기존 그룹 상태 업데이트
+      // 기존 그룹 상태 및 이름 업데이트
       groups = groups.map(g => {
         const serverData = serverSessionMap.get(g.id);
         if (serverData && g.isCloudSync) {
-          return { ...g, isDeleted: serverData.status === 'DELETED' };
+          return {
+            ...g,
+            isDeleted: serverData.status === 'DELETED',
+            // 서버에 이름이 있으면 동기화
+            name: serverData.name || g.name,
+          };
         }
         return g;
       });
@@ -170,7 +184,8 @@ export default function RealtimeSyncSettingsScreen() {
         if (!groupIds.has(newSession.id)) {
           groups.push({
             id: newSession.id,
-            name: `세션 ${newSession.id.substring(0, 4)}`,
+            // 서버에서 받은 이름 사용, 없으면 기본값
+            name: newSession.name || `세션 ${newSession.id.substring(0, 4)}`,
             createdAt: newSession.createdAt,
             isCloudSync: true,
             isDeleted: newSession.status === 'DELETED',
@@ -232,27 +247,37 @@ export default function RealtimeSyncSettingsScreen() {
     })();
   }, [syncSessionsFromServer]);
 
-  // 화면 포커스 시 데이터 다시 로드
+  // 화면 포커스 시 데이터 다시 로드 (서버 동기화 포함)
   useFocusEffect(
     useCallback(() => {
       (async () => {
         try {
+          const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+          const isEnabled = realtimeSync === 'true';
+
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
+          let localSessions = [];
           if (savedSessionUrls) {
             const parsed = JSON.parse(savedSessionUrls);
-            const migrated = parsed.map(session => ({
+            localSessions = parsed.map(session => ({
               ...session,
               status: session.status || 'ACTIVE',
             }));
-            setSessionUrls(migrated);
+          }
+
+          // 실시간 동기화가 활성화된 경우 서버에서 세션 목록 동기화 (삭제된 항목 포함)
+          if (isEnabled) {
+            const synced = await syncSessionsFromServer(localSessions);
+            setSessionUrls(synced);
+            console.log('포커스 복귀: 서버에서 세션 목록 동기화 완료 (삭제된 항목 포함)');
           } else {
-            setSessionUrls([]);
+            setSessionUrls(localSessions);
           }
         } catch (error) {
           console.error('Load session URLs error:', error);
         }
       })();
-    }, [])
+    }, [syncSessionsFromServer])
   );
 
   // 실시간 서버전송 설정 저장
@@ -615,7 +640,7 @@ export default function RealtimeSyncSettingsScreen() {
           </Text>
         </View>
         <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
-          세션 {session.id.substring(0, 4)}
+          {session.name || session.id}
         </Text>
       </View>
 
@@ -674,7 +699,7 @@ export default function RealtimeSyncSettingsScreen() {
           </View>
           <View style={styles.deletedInfoRow}>
             <Text style={[styles.sessionGroupName, { color: colors.textTertiary }]}>
-              세션 {session.id.substring(0, 4)}
+              {session.name || session.id}
             </Text>
             <Text style={[styles.daysRemaining, { color: colors.warning }]}>
               {t('settings.daysRemaining', { days: daysRemaining })}

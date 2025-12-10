@@ -17,6 +17,7 @@ import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import config from '../config/config';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -181,13 +182,45 @@ export default function GroupEditScreen() {
       return;
     }
 
+    const trimmedName = newGroupName.trim();
+
+    // 클라우드 동기화 그룹이면 서버에 이름 업데이트
     if (editingGroup.isCloudSync) {
-      Alert.alert(t('common.error') || '오류', '클라우드 동기화 그룹의 이름은 변경할 수 없습니다.');
-      return;
+      try {
+        const response = await fetch(`${config.serverUrl}/api/sessions/${editingGroup.id}/name`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ name: trimmedName }),
+        });
+
+        if (!response.ok) {
+          console.warn('Server name update failed:', response.status);
+        } else {
+          console.log('Server name update success:', editingGroup.id, trimmedName);
+        }
+      } catch (error) {
+        console.warn('Server name update error (continuing locally):', error);
+      }
+
+      // sessionUrls에도 이름 업데이트
+      try {
+        const sessionUrlsJson = await AsyncStorage.getItem('sessionUrls');
+        if (sessionUrlsJson) {
+          const sessionUrls = JSON.parse(sessionUrlsJson);
+          const updatedSessionUrls = sessionUrls.map(s =>
+            s.id === editingGroup.id ? { ...s, name: trimmedName } : s
+          );
+          await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedSessionUrls));
+        }
+      } catch (error) {
+        console.error('Failed to update session URL name:', error);
+      }
     }
 
     const updatedGroups = groups.map(g =>
-      g.id === editingGroup.id ? { ...g, name: newGroupName.trim() } : g
+      g.id === editingGroup.id ? { ...g, name: trimmedName } : g
     );
     setGroups(updatedGroups);
     await saveGroups(updatedGroups);
@@ -294,14 +327,14 @@ export default function GroupEditScreen() {
 
               {/* 이름 변경 버튼 */}
               <TouchableOpacity
-                style={[s.iconButton, (item.isCloudSync || item.id === DEFAULT_GROUP_ID) && s.iconButtonDisabled]}
+                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
                 onPress={() => openEditModal(item)}
-                disabled={item.isCloudSync || item.id === DEFAULT_GROUP_ID}
+                disabled={item.id === DEFAULT_GROUP_ID}
               >
                 <Ionicons
                   name="create-outline"
                   size={22}
-                  color={(item.isCloudSync || item.id === DEFAULT_GROUP_ID) ? colors.borderLight : colors.primary}
+                  color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.primary}
                 />
               </TouchableOpacity>
 
