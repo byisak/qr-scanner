@@ -743,79 +743,83 @@ function ScannerScreen() {
   // 사진에서 QR 코드의 EC Level 추출
   const extractECLevelFromPhoto = useCallback(async (photoUri) => {
     try {
-      if (!photoUri) return null;
+      if (!photoUri) {
+        console.log('[EC Level] No photo URI provided');
+        return null;
+      }
+
+      console.log('[EC Level] Reading photo:', photoUri);
 
       // 이미지를 base64로 읽기
       const base64Data = await FileSystem.readAsStringAsync(photoUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
+      console.log('[EC Level] Photo read, base64 length:', base64Data.length);
+
       // base64를 Buffer로 변환
       const imageBuffer = Buffer.from(base64Data, 'base64');
 
       // JPEG 디코딩
       const rawImageData = jpeg.decode(imageBuffer, { useTArray: true });
+      console.log('[EC Level] Image decoded:', rawImageData.width, 'x', rawImageData.height);
 
       // jsQR로 QR 코드 분석
       const qrResult = jsQR(rawImageData.data, rawImageData.width, rawImageData.height);
 
       if (qrResult) {
-        // jsQR은 version 속성을 제공하며, EC Level은 직접 제공하지 않음
-        // QR 코드 버전 정보로부터 대략적인 추정 또는 raw 데이터 분석
-        console.log('jsQR result:', JSON.stringify({
-          data: qrResult.data?.substring(0, 50),
-          version: qrResult.version,
-        }));
+        console.log('[EC Level] QR code found:', qrResult.data?.substring(0, 30));
 
-        // EC Level 추출 - QR 코드의 format info에서 추출
-        // Format info는 QR 코드의 처음 15비트에 인코딩됨
-        // jsQR이 직접 제공하지 않으므로 추정 방법 사용
-        // 실제로는 QR 코드의 특성상 데이터 용량과 버전으로 추정 가능
+        // QR 코드의 format information에서 EC Level 추출
+        // Format info 위치: finder pattern 주변의 특정 모듈들
+        const { topLeftCorner, topRightCorner, bottomLeftCorner } = qrResult.location;
 
-        // jsQR v1.4.0 이상에서는 chunks 정보 제공
-        if (qrResult.chunks && qrResult.chunks.length > 0) {
-          // 첫 번째 청크의 mode에서 힌트를 얻을 수 있음
-          console.log('QR chunks:', qrResult.chunks);
-        }
+        // QR 코드 모듈 크기 계산
+        const moduleSize = (topRightCorner.x - topLeftCorner.x) / (qrResult.version * 4 + 17);
 
-        // QR 코드의 버전과 데이터 길이를 기반으로 EC Level 추정
-        // 이 방법은 정확하지 않으므로, 대안적으로 기본값 사용
-        // 향후 네이티브 모듈이나 다른 라이브러리로 개선 가능
+        // Format information은 (8, 0) ~ (8, 5) 및 (8, 7), (8, 8) 위치에 있음
+        // 첫 2비트가 EC Level: 00=M, 01=L, 10=H, 11=Q
+        // 하지만 format info는 BCH 코드로 인코딩되어 있어 직접 읽기 어려움
 
-        // 간단한 휴리스틱: 작은 QR (버전 1-5)은 보통 L 또는 M 사용
-        // 큰 QR (버전 10+)은 다양한 EC Level 사용
+        // 대안: QR 코드의 버전과 데이터 용량 비율로 EC Level 추정
         const version = qrResult.version || 1;
         const dataLength = (qrResult.data || '').length;
 
-        // 버전별 최대 용량 기준으로 EC Level 추정 (매우 대략적)
-        // 실제 EC Level을 정확히 알려면 format pattern을 직접 디코딩해야 함
-        let estimatedECLevel = null;
+        // 각 버전별 EC Level에 따른 최대 Alphanumeric 문자 수
+        // 이 테이블을 기반으로 EC Level 추정
+        const capacityTable = {
+          1: { L: 25, M: 20, Q: 16, H: 10 },
+          2: { L: 47, M: 38, Q: 29, H: 20 },
+          3: { L: 77, M: 61, Q: 47, H: 35 },
+          4: { L: 114, M: 90, Q: 67, H: 50 },
+          5: { L: 154, M: 122, Q: 87, H: 64 },
+          6: { L: 195, M: 154, Q: 108, H: 84 },
+          7: { L: 224, M: 178, Q: 125, H: 93 },
+          8: { L: 279, M: 221, Q: 157, H: 122 },
+          9: { L: 335, M: 262, Q: 189, H: 143 },
+          10: { L: 395, M: 311, Q: 221, H: 174 },
+        };
 
-        // 버전 1-2의 최대 데이터 용량 (Numeric mode 기준)
-        // L: 41-77, M: 34-63, Q: 27-48, H: 17-34
-        if (version <= 2) {
-          if (dataLength <= 17) estimatedECLevel = 'H';
-          else if (dataLength <= 27) estimatedECLevel = 'Q';
-          else if (dataLength <= 34) estimatedECLevel = 'M';
+        let estimatedECLevel = 'M'; // 기본값
+
+        if (version <= 10 && capacityTable[version]) {
+          const cap = capacityTable[version];
+          // 데이터가 해당 EC Level의 용량에 맞는지 확인
+          if (dataLength <= cap.H) estimatedECLevel = 'H';
+          else if (dataLength <= cap.Q) estimatedECLevel = 'Q';
+          else if (dataLength <= cap.M) estimatedECLevel = 'M';
           else estimatedECLevel = 'L';
-        } else if (version <= 5) {
-          // 버전 3-5
-          if (dataLength <= 58) estimatedECLevel = 'H';
-          else if (dataLength <= 90) estimatedECLevel = 'Q';
-          else if (dataLength <= 122) estimatedECLevel = 'M';
-          else estimatedECLevel = 'L';
-        } else {
-          // 버전 6 이상 - 기본값 M 사용
-          estimatedECLevel = 'M';
         }
 
-        console.log(`Estimated EC Level: ${estimatedECLevel} (version: ${version}, dataLen: ${dataLength})`);
+        console.log(`[EC Level] Estimated: ${estimatedECLevel} (version: ${version}, dataLen: ${dataLength})`);
         return estimatedECLevel;
+      } else {
+        console.log('[EC Level] No QR code found in image');
       }
 
       return null;
     } catch (error) {
-      console.error('EC Level extraction error:', error);
+      console.error('[EC Level] Extraction error:', error.message || error);
       return null;
     }
   }, []);
@@ -1018,14 +1022,20 @@ function ScannerScreen() {
 
       // QR 코드일 경우 카메라 사진으로 EC Level 추출 시도
       const isQRCode = normalizedType === 'qr' || normalizedType === 'qrcode';
+      console.log('[EC Level] isQRCode:', isQRCode, 'normalizedType:', normalizedType, 'currentEC:', errorCorrectionLevel);
+
       let ecLevelPromise = Promise.resolve(null);
       if (isQRCode && !errorCorrectionLevel) {
+        console.log('[EC Level] Starting EC Level extraction...');
         // 카메라에서 사진 촬영하여 EC Level 추출
         ecLevelPromise = (async () => {
           try {
+            console.log('[EC Level] Capturing photo for EC analysis...');
             const tempPhoto = await capturePhoto(effectiveBounds);
+            console.log('[EC Level] Photo captured:', tempPhoto);
             if (tempPhoto) {
               const extractedEC = await extractECLevelFromPhoto(tempPhoto);
+              console.log('[EC Level] Extracted EC:', extractedEC);
               // 임시 사진 삭제 (저장용 이미지는 별도로 생성됨)
               try {
                 await FileSystem.deleteAsync(tempPhoto, { idempotent: true });
@@ -1033,9 +1043,11 @@ function ScannerScreen() {
                 console.log('Failed to delete temp photo:', e);
               }
               return extractedEC;
+            } else {
+              console.log('[EC Level] Photo capture failed - null result');
             }
           } catch (e) {
-            console.log('EC Level extraction failed:', e);
+            console.log('[EC Level] EC Level extraction failed:', e.message || e);
           }
           return null;
         })();
