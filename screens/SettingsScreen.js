@@ -444,12 +444,12 @@ const s = StyleSheet.create({
   },
   content: {
     padding: 20,
-    paddingBottom: 120,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginTop: 40,
+    marginTop: 30,
     marginBottom: 30,
   },
   section: {

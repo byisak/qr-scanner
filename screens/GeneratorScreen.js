@@ -876,11 +876,11 @@ const s = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 50,
     paddingBottom: 16,
   },
   title: {
-    fontSize: 34,
+    fontSize: 32,
     fontWeight: '700',
     letterSpacing: -0.5,
     marginBottom: 6,

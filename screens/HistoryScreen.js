@@ -397,7 +397,7 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   listContent: {
-    paddingBottom: 20,
+    paddingBottom: 100,
   },
   item: {
     marginHorizontal: 15,
