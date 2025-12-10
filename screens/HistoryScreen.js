@@ -53,7 +53,14 @@ export default function HistoryScreen() {
           if (!isRealtimeSyncEnabled && g.isCloudSync) return false; // 서버전송 꺼진 경우 세션 그룹 제외
           return true;
         });
-        setGroups(filteredGroups.length > 0 ? filteredGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
+        // 기본 그룹 이름을 현재 언어로 표시
+        const localizedGroups = filteredGroups.map(g => {
+          if (g.id === DEFAULT_GROUP_ID) {
+            return { ...g, name: t('groupEdit.defaultGroup') };
+          }
+          return g;
+        });
+        setGroups(localizedGroups.length > 0 ? localizedGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
       }
 
       if (historyData) {
@@ -81,7 +88,7 @@ export default function HistoryScreen() {
   useFocusEffect(
     React.useCallback(() => {
       loadGroups();
-    }, [])
+    }, [t])
   );
 
   // 선택된 그룹의 히스토리 가져오기
