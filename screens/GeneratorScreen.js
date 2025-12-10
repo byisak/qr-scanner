@@ -23,6 +23,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const QR_TYPES = [
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
@@ -695,6 +696,17 @@ export default function GeneratorScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
+      {/* 상단 그라데이션 */}
+      <LinearGradient
+        colors={
+          isDark
+            ? ['rgba(0,0,0,1)', 'rgba(0,0,0,0.95)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']
+            : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
+        }
+        locations={[0, 0.3, 0.6, 0.85, 1]}
+        style={s.statusBarGradient}
+      />
+
       <ScrollView
         style={s.content}
         contentContainerStyle={s.scrollContent}
@@ -867,6 +879,14 @@ export default function GeneratorScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  statusBarGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: Platform.OS === 'ios' ? 70 : 60,
+    zIndex: 100,
   },
   content: {
     flex: 1,
