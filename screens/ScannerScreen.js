@@ -1100,13 +1100,20 @@ function ScannerScreen() {
     }
   }, [realtimeSyncEnabled]);
 
-  // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링)
+  // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링, 기본 그룹 이름 다국어 적용)
   const displayGroups = useMemo(() => {
-    if (realtimeSyncEnabled) {
-      return availableGroups;
-    }
-    return availableGroups.filter(g => !g.isCloudSync);
-  }, [availableGroups, realtimeSyncEnabled]);
+    const filtered = realtimeSyncEnabled
+      ? availableGroups
+      : availableGroups.filter(g => !g.isCloudSync);
+
+    // 기본 그룹 이름을 현재 언어로 변환
+    return filtered.map(g => {
+      if (g.id === 'default') {
+        return { ...g, name: t('groupEdit.defaultGroup') };
+      }
+      return g;
+    });
+  }, [availableGroups, realtimeSyncEnabled, t]);
 
   if (hasPermission === null) {
     return (

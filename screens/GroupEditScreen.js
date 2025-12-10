@@ -1,5 +1,5 @@
 // screens/GroupEditScreen.js - 그룹 편집 화면
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,7 @@ import {
   TextInput,
   Alert,
   Modal,
-  Platform,
-  Animated,
-  PanResponder,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -19,10 +17,8 @@ import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
-import * as Haptics from 'expo-haptics';
 
 const DEFAULT_GROUP_ID = 'default';
-const ITEM_HEIGHT = 64; // 각 아이템의 대략적인 높이
 
 export default function GroupEditScreen() {
   const router = useRouter();
@@ -35,33 +31,6 @@ export default function GroupEditScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [editingGroup, setEditingGroup] = useState(null);
-  const [draggingIndex, setDraggingIndex] = useState(null);
-  const [hapticEnabled, setHapticEnabled] = useState(true);
-
-  // 드래그 애니메이션 값들
-  const dragY = useRef(new Animated.Value(0)).current;
-  const dragScale = useRef(new Animated.Value(1)).current;
-  const draggingIndexRef = useRef(null);
-  const groupsRef = useRef(groups);
-
-  // groupsRef 동기화
-  React.useEffect(() => {
-    groupsRef.current = groups;
-  }, [groups]);
-
-  // 햅틱 설정 로드
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const h = await AsyncStorage.getItem('hapticEnabled');
-        if (h !== null) {
-          setHapticEnabled(h === 'true');
-        }
-      } catch (error) {
-        console.error('Load haptic settings error:', error);
-      }
-    })();
-  }, []);
 
   // 그룹 데이터 로드
   const loadGroups = async () => {
@@ -247,209 +216,6 @@ export default function GroupEditScreen() {
     setShowEditModal(true);
   };
 
-  // 드래그 가능한 그룹 아이템 컴포넌트
-  const DraggableGroupItem = ({ item, index }) => {
-    const pan = useRef(new Animated.ValueXY()).current;
-    const scale = useRef(new Animated.Value(1)).current;
-    const zIndex = useRef(new Animated.Value(0)).current;
-    const isDragging = useRef(false);
-    const startY = useRef(0);
-
-    const panResponder = useRef(
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => false,
-        onMoveShouldSetPanResponder: (_, gestureState) => {
-          return isDragging.current && Math.abs(gestureState.dy) > 5;
-        },
-        onPanResponderGrant: () => {
-          pan.setOffset({
-            x: 0,
-            y: pan.y._value,
-          });
-          pan.setValue({ x: 0, y: 0 });
-        },
-        onPanResponderMove: (_, gestureState) => {
-          if (!isDragging.current) return;
-          pan.y.setValue(gestureState.dy);
-
-          // 이동 거리에 따라 새 인덱스 계산
-          const newIndex = Math.round(gestureState.dy / ITEM_HEIGHT) + index;
-          if (newIndex !== index && newIndex >= 0 && newIndex < groupsRef.current.length) {
-            if (hapticEnabled) {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }
-          }
-        },
-        onPanResponderRelease: async (_, gestureState) => {
-          if (!isDragging.current) return;
-
-          pan.flattenOffset();
-
-          // 새 인덱스 계산
-          const moveAmount = Math.round(gestureState.dy / ITEM_HEIGHT);
-          const newIndex = Math.min(Math.max(0, index + moveAmount), groupsRef.current.length - 1);
-
-          // 애니메이션으로 원래 위치로 돌아가기
-          Animated.parallel([
-            Animated.spring(pan, {
-              toValue: { x: 0, y: 0 },
-              useNativeDriver: true,
-            }),
-            Animated.spring(scale, {
-              toValue: 1,
-              useNativeDriver: true,
-            }),
-          ]).start();
-
-          zIndex.setValue(0);
-          isDragging.current = false;
-          setDraggingIndex(null);
-
-          // 순서 변경
-          if (newIndex !== index) {
-            await moveGroup(index, newIndex);
-          }
-        },
-        onPanResponderTerminate: () => {
-          Animated.parallel([
-            Animated.spring(pan, {
-              toValue: { x: 0, y: 0 },
-              useNativeDriver: true,
-            }),
-            Animated.spring(scale, {
-              toValue: 1,
-              useNativeDriver: true,
-            }),
-          ]).start();
-
-          zIndex.setValue(0);
-          isDragging.current = false;
-          setDraggingIndex(null);
-        },
-      })
-    ).current;
-
-    const handleLongPress = () => {
-      isDragging.current = true;
-      setDraggingIndex(index);
-      zIndex.setValue(100);
-
-      if (hapticEnabled) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-
-      Animated.spring(scale, {
-        toValue: 1.05,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    return (
-      <Animated.View
-        {...panResponder.panHandlers}
-        style={[
-          s.groupItem,
-          { backgroundColor: colors.surface },
-          {
-            transform: [
-              { translateY: pan.y },
-              { scale: scale },
-            ],
-            zIndex: draggingIndex === index ? 100 : 0,
-            elevation: draggingIndex === index ? 10 : 2,
-          },
-          draggingIndex === index && s.groupItemDragging,
-        ]}
-      >
-        {/* 드래그 핸들 */}
-        <TouchableOpacity
-          style={s.dragHandle}
-          onLongPress={handleLongPress}
-          delayLongPress={200}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="menu" size={22} color={draggingIndex === index ? colors.primary : colors.textTertiary} />
-        </TouchableOpacity>
-
-        <View style={s.groupInfo}>
-          {item.isCloudSync && (
-            <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-          )}
-          <Text style={[s.groupName, { color: colors.text }]}>{item.name}</Text>
-          {item.id === DEFAULT_GROUP_ID && (
-            <View style={[s.badge, { backgroundColor: colors.primary + '20' }]}>
-              <Text style={[s.badgeText, { color: colors.primary }]}>
-                {t('groupEdit.defaultGroup').split(' ')[0] || '기본'}
-              </Text>
-            </View>
-          )}
-          {item.isCloudSync && (
-            <View style={[s.badge, { backgroundColor: colors.primary, marginLeft: 6 }]}>
-              <Text style={[s.badgeText, { color: '#fff' }]}>Cloud</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={s.groupActions}>
-          {/* 순서 변경 버튼 */}
-          <View style={s.reorderButtons}>
-            <TouchableOpacity
-              style={[s.reorderButton, index === 0 && s.iconButtonDisabled]}
-              onPress={() => moveGroup(index, index - 1)}
-              disabled={index === 0}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name="chevron-up"
-                size={20}
-                color={index === 0 ? colors.borderLight : colors.textSecondary}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[s.reorderButton, index === groups.length - 1 && s.iconButtonDisabled]}
-              onPress={() => moveGroup(index, index + 1)}
-              disabled={index === groups.length - 1}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={index === groups.length - 1 ? colors.borderLight : colors.textSecondary}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* 이름 변경 버튼 */}
-          <TouchableOpacity
-            style={[s.iconButton, (item.isCloudSync || item.id === DEFAULT_GROUP_ID) && s.iconButtonDisabled]}
-            onPress={() => openEditModal(item)}
-            disabled={item.isCloudSync || item.id === DEFAULT_GROUP_ID}
-          >
-            <Ionicons
-              name="create-outline"
-              size={22}
-              color={(item.isCloudSync || item.id === DEFAULT_GROUP_ID) ? colors.borderLight : colors.primary}
-            />
-          </TouchableOpacity>
-
-          {/* 삭제 버튼 */}
-          <TouchableOpacity
-            style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
-            onPress={() => deleteGroup(item.id)}
-            disabled={item.id === DEFAULT_GROUP_ID}
-          >
-            <Ionicons
-              name="trash-outline"
-              size={22}
-              color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.error}
-            />
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
-    );
-  };
-
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
@@ -466,13 +232,95 @@ export default function GroupEditScreen() {
       </View>
 
       {/* 그룹 목록 */}
-      <View style={s.listContainer}>
-        <View style={s.listContent}>
-          {groups.map((item, index) => (
-            <DraggableGroupItem key={item.id} item={item} index={index} />
-          ))}
-        </View>
-      </View>
+      <ScrollView style={s.listContainer} contentContainerStyle={s.listContent}>
+        {groups.map((item, index) => (
+          <View
+            key={item.id}
+            style={[s.groupItem, { backgroundColor: colors.surface }]}
+          >
+            {/* 드래그 핸들 아이콘 */}
+            <View style={s.dragHandle}>
+              <Ionicons name="menu" size={22} color={colors.textTertiary} />
+            </View>
+
+            <View style={s.groupInfo}>
+              {item.isCloudSync && (
+                <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+              )}
+              <Text style={[s.groupName, { color: colors.text }]}>{item.name}</Text>
+              {item.id === DEFAULT_GROUP_ID && (
+                <View style={[s.badge, { backgroundColor: colors.primary + '20' }]}>
+                  <Text style={[s.badgeText, { color: colors.primary }]}>
+                    {t('groupEdit.defaultGroup').split(' ')[0] || '기본'}
+                  </Text>
+                </View>
+              )}
+              {item.isCloudSync && (
+                <View style={[s.badge, { backgroundColor: colors.primary, marginLeft: 6 }]}>
+                  <Text style={[s.badgeText, { color: '#fff' }]}>Cloud</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={s.groupActions}>
+              {/* 순서 변경 버튼 */}
+              <View style={s.reorderButtons}>
+                <TouchableOpacity
+                  style={[s.reorderButton, index === 0 && s.iconButtonDisabled]}
+                  onPress={() => moveGroup(index, index - 1)}
+                  disabled={index === 0}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name="chevron-up"
+                    size={20}
+                    color={index === 0 ? colors.borderLight : colors.textSecondary}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[s.reorderButton, index === groups.length - 1 && s.iconButtonDisabled]}
+                  onPress={() => moveGroup(index, index + 1)}
+                  disabled={index === groups.length - 1}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons
+                    name="chevron-down"
+                    size={20}
+                    color={index === groups.length - 1 ? colors.borderLight : colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* 이름 변경 버튼 */}
+              <TouchableOpacity
+                style={[s.iconButton, (item.isCloudSync || item.id === DEFAULT_GROUP_ID) && s.iconButtonDisabled]}
+                onPress={() => openEditModal(item)}
+                disabled={item.isCloudSync || item.id === DEFAULT_GROUP_ID}
+              >
+                <Ionicons
+                  name="create-outline"
+                  size={22}
+                  color={(item.isCloudSync || item.id === DEFAULT_GROUP_ID) ? colors.borderLight : colors.primary}
+                />
+              </TouchableOpacity>
+
+              {/* 삭제 버튼 */}
+              <TouchableOpacity
+                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+                onPress={() => deleteGroup(item.id)}
+                disabled={item.id === DEFAULT_GROUP_ID}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={22}
+                  color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.error}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
 
       {/* 그룹 추가 버튼 */}
       <View style={[s.addButtonContainer, { backgroundColor: colors.background }]}>
@@ -609,15 +457,11 @@ const s = StyleSheet.create({
     paddingLeft: 8,
     borderRadius: 14,
     marginBottom: 10,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-  },
-  groupItemDragging: {
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
   },
   dragHandle: {
     paddingHorizontal: 10,
