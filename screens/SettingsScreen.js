@@ -340,11 +340,11 @@ export default function SettingsScreen() {
         </View>
 
         {/* URL 연동 설정 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
+        <View style={[s.section, !t('settings.autoMove') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
           {t('settings.autoMove') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.autoMove')}</Text> : null}
 
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+            style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.autoMove') ? 10 : 0 }]}
             onPress={() => router.push('/scan-url-settings')}
             activeOpacity={0.7}
           >
@@ -362,11 +362,11 @@ export default function SettingsScreen() {
         </View>
 
         {/* 실시간 서버전송 설정 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
+        <View style={[s.section, !t('settings.realtimeSync') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
           {t('settings.realtimeSync') ? <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>{t('settings.realtimeSync')}</Text> : null}
 
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+            style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.realtimeSync') ? 10 : 0 }]}
             onPress={() => router.push('/realtime-sync-settings')}
             activeOpacity={0.7}
           >
@@ -488,6 +488,10 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  sectionNoTitle: {
+    paddingTop: 12,
+    paddingBottom: 12,
   },
   sectionTitle: {
     fontSize: 14,
