@@ -13,6 +13,70 @@ export default {
     loading: 'Cargando...',
   },
 
+  // Autenticación
+  auth: {
+    // Botón de inicio de sesión/registro
+    loginSignup: 'Iniciar sesión/Registrarse',
+    loginPrompt: 'Inicia sesión para usar la sincronización en tiempo real',
+    // Pantalla de inicio de sesión
+    loginTitle: 'Iniciar sesión',
+    loginSubtitle: 'Comienza con QR Scanner',
+    loginWithKakao: 'Iniciar sesión con Kakao',
+    loginWithGoogle: 'Iniciar sesión con Google',
+    loginWithApple: 'Iniciar sesión con Apple',
+    loginWithEmail: 'Iniciar sesión con correo',
+    recentLogin: 'Inicio reciente',
+    // Inicio de sesión con correo
+    email: 'Correo electrónico',
+    emailPlaceholder: 'Ingresa tu correo',
+    password: 'Contraseña',
+    passwordPlaceholder: 'Ingresa tu contraseña',
+    login: 'Iniciar sesión',
+    signup: 'Registrarse',
+    findAccount: 'Buscar cuenta',
+    // Registro
+    signupTitle: 'Registrarse',
+    passwordConfirm: 'Confirmar contraseña',
+    passwordConfirmPlaceholder: 'Ingresa tu contraseña de nuevo',
+    nickname: 'Apodo',
+    nicknamePlaceholder: 'Ingresa tu apodo',
+    agreeTerms: 'Acepto los Términos de Servicio (Requerido)',
+    agreePrivacy: 'Acepto la Política de Privacidad (Requerido)',
+    signupButton: 'Registrarse',
+    // Validación de contraseña
+    passwordMinLength: '8+ caracteres',
+    passwordRequireAlphaNum: 'Letras+Números',
+    passwordMatch: 'Contraseñas coinciden',
+    passwordNotMatch: 'Contraseñas no coinciden',
+    // Configuración de perfil
+    profileSettings: 'Configuración de cuenta',
+    profileImage: 'Imagen de perfil',
+    changeProfileImage: 'Cambiar',
+    changePassword: 'Cambiar contraseña',
+    logout: 'Cerrar sesión',
+    withdraw: 'Eliminar cuenta',
+    logoutConfirm: '¿Estás seguro de que quieres cerrar sesión?',
+    withdrawConfirm: '¿Estás seguro de que quieres eliminar tu cuenta?\nTodos los datos serán eliminados.',
+    // Estado de inicio de sesión
+    myPoints: 'Mis puntos',
+    mySessions: 'Sesiones',
+    // Mensajes de error
+    errorEmailRequired: 'Por favor, ingresa tu correo',
+    errorPasswordRequired: 'Por favor, ingresa tu contraseña',
+    errorInvalidEmail: 'Por favor, ingresa un correo válido',
+    errorPasswordTooShort: 'La contraseña debe tener al menos 8 caracteres',
+    errorPasswordMismatch: 'Las contraseñas no coinciden',
+    errorNicknameRequired: 'Por favor, ingresa tu apodo',
+    errorAgreeTerms: 'Por favor, acepta los Términos de Servicio',
+    errorAgreePrivacy: 'Por favor, acepta la Política de Privacidad',
+    errorLoginFailed: 'Error al iniciar sesión',
+    errorSignupFailed: 'Error al registrarse',
+    // Mensajes de éxito
+    signupSuccess: 'Registro completado',
+    logoutSuccess: 'Sesión cerrada',
+    profileUpdateSuccess: 'Perfil actualizado',
+  },
+
   // Pantalla de escaneo
   scanner: {
     title: 'Escanear',

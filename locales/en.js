@@ -13,6 +13,70 @@ export default {
     loading: 'Loading...',
   },
 
+  // Auth
+  auth: {
+    // Login/Signup button
+    loginSignup: 'Login/Sign Up',
+    loginPrompt: 'Login to use realtime server sync',
+    // Login screen
+    loginTitle: 'Login',
+    loginSubtitle: 'Get started with QR Scanner',
+    loginWithKakao: 'Login with Kakao',
+    loginWithGoogle: 'Login with Google',
+    loginWithApple: 'Login with Apple',
+    loginWithEmail: 'Login with Email',
+    recentLogin: 'Recent Login',
+    // Email login
+    email: 'Email',
+    emailPlaceholder: 'Enter your email',
+    password: 'Password',
+    passwordPlaceholder: 'Enter your password',
+    login: 'Login',
+    signup: 'Sign Up',
+    findAccount: 'Find Account',
+    // Sign up
+    signupTitle: 'Sign Up',
+    passwordConfirm: 'Confirm Password',
+    passwordConfirmPlaceholder: 'Enter your password again',
+    nickname: 'Nickname',
+    nicknamePlaceholder: 'Enter your nickname',
+    agreeTerms: 'Agree to Terms of Service (Required)',
+    agreePrivacy: 'Agree to Privacy Policy (Required)',
+    signupButton: 'Sign Up',
+    // Password validation
+    passwordMinLength: '8+ characters',
+    passwordRequireAlphaNum: 'Letters+Numbers',
+    passwordMatch: 'Passwords match',
+    passwordNotMatch: 'Passwords do not match',
+    // Profile settings
+    profileSettings: 'Account Settings',
+    profileImage: 'Profile Image',
+    changeProfileImage: 'Change',
+    changePassword: 'Change Password',
+    logout: 'Logout',
+    withdraw: 'Delete Account',
+    logoutConfirm: 'Are you sure you want to logout?',
+    withdrawConfirm: 'Are you sure you want to delete your account?\nAll data will be deleted.',
+    // Logged in state
+    myPoints: 'My Points',
+    mySessions: 'Sessions',
+    // Error messages
+    errorEmailRequired: 'Please enter your email',
+    errorPasswordRequired: 'Please enter your password',
+    errorInvalidEmail: 'Please enter a valid email',
+    errorPasswordTooShort: 'Password must be at least 8 characters',
+    errorPasswordMismatch: 'Passwords do not match',
+    errorNicknameRequired: 'Please enter your nickname',
+    errorAgreeTerms: 'Please agree to Terms of Service',
+    errorAgreePrivacy: 'Please agree to Privacy Policy',
+    errorLoginFailed: 'Login failed',
+    errorSignupFailed: 'Sign up failed',
+    // Success messages
+    signupSuccess: 'Sign up completed',
+    logoutSuccess: 'Logged out',
+    profileUpdateSuccess: 'Profile updated',
+  },
+
   // Scanner screen
   scanner: {
     title: 'Scan',
