@@ -71,6 +71,13 @@ export default {
     errorAgreePrivacy: '개인정보 처리방침에 동의해주세요',
     errorLoginFailed: '로그인에 실패했습니다',
     errorSignupFailed: '회원가입에 실패했습니다',
+    errorEmailExists: '이미 사용 중인 이메일입니다',
+    // 이메일 중복 확인
+    checkDuplicate: '중복확인',
+    checking: '확인 중...',
+    emailAvailable: '사용 가능한 이메일입니다',
+    emailNotAvailable: '이미 사용 중인 이메일입니다',
+    pleaseCheckEmail: '이메일 중복 확인을 해주세요',
     // 성공 메시지
     signupSuccess: '회원가입이 완료되었습니다',
     logoutSuccess: '로그아웃되었습니다',

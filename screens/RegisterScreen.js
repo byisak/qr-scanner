@@ -23,7 +23,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { register } = useAuth();
+  const { register, checkEmailExists } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [email, setEmail] = useState('');
@@ -35,6 +35,9 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isEmailChecked, setIsEmailChecked] = useState(false);
+  const [isEmailAvailable, setIsEmailAvailable] = useState(false);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -48,12 +51,48 @@ export default function RegisterScreen() {
   const isFormValid =
     email &&
     validateEmail(email) &&
+    isEmailChecked &&
+    isEmailAvailable &&
     isPasswordLongEnough &&
     hasAlphaAndNum &&
     passwordsMatch &&
     nickname &&
     agreeTerms &&
     agreePrivacy;
+
+  const handleEmailChange = (text) => {
+    setEmail(text);
+    setIsEmailChecked(false);
+    setIsEmailAvailable(false);
+  };
+
+  const handleCheckEmail = async () => {
+    if (!email.trim()) {
+      Alert.alert(t('settings.error'), t('auth.errorEmailRequired'));
+      return;
+    }
+    if (!validateEmail(email)) {
+      Alert.alert(t('settings.error'), t('auth.errorInvalidEmail'));
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    try {
+      const result = await checkEmailExists(email);
+      setIsEmailChecked(true);
+      if (result.success) {
+        setIsEmailAvailable(!result.exists);
+      } else {
+        Alert.alert(t('settings.error'), result.error || t('auth.errorSignupFailed'));
+        setIsEmailAvailable(false);
+      }
+    } catch (error) {
+      Alert.alert(t('settings.error'), error.message);
+      setIsEmailAvailable(false);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   const handleRegister = async () => {
     // 유효성 검사
@@ -63,6 +102,10 @@ export default function RegisterScreen() {
     }
     if (!validateEmail(email)) {
       Alert.alert(t('settings.error'), t('auth.errorInvalidEmail'));
+      return;
+    }
+    if (!isEmailChecked || !isEmailAvailable) {
+      Alert.alert(t('settings.error'), t('auth.pleaseCheckEmail'));
       return;
     }
     if (!isPasswordLongEnough) {
@@ -159,18 +202,66 @@ export default function RegisterScreen() {
           <Text style={[styles.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
             {t('auth.email')}
           </Text>
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
-            <TextInput
-              style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
-              placeholder={t('auth.emailPlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+          <View style={styles.emailInputRow}>
+            <View style={[styles.inputWrapper, styles.emailInput, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+              <TextInput
+                style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
+                placeholder={t('auth.emailPlaceholder')}
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={handleEmailChange}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.checkButton,
+                {
+                  backgroundColor: validateEmail(email) && !isCheckingEmail ? '#E67E22' : colors.borderLight,
+                },
+              ]}
+              onPress={handleCheckEmail}
+              disabled={isCheckingEmail || !validateEmail(email)}
+              activeOpacity={0.8}
+            >
+              {isCheckingEmail ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text
+                  style={[
+                    styles.checkButtonText,
+                    {
+                      color: validateEmail(email) ? '#fff' : colors.textTertiary,
+                      fontFamily: fonts.semiBold,
+                    },
+                  ]}
+                >
+                  {t('auth.checkDuplicate')}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
+          {/* 이메일 중복 확인 결과 */}
+          {isEmailChecked && (
+            <View style={styles.validationRow}>
+              <View style={styles.validationItem}>
+                {renderValidationIcon(isEmailAvailable)}
+                <Text
+                  style={[
+                    styles.validationText,
+                    {
+                      color: isEmailAvailable ? '#27AE60' : '#E74C3C',
+                      fontFamily: fonts.regular,
+                    },
+                  ]}
+                >
+                  {isEmailAvailable ? t('auth.emailAvailable') : t('auth.emailNotAvailable')}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* 비밀번호 입력 */}
@@ -392,6 +483,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
+  },
+  emailInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  emailInput: {
+    flex: 1,
+  },
+  checkButton: {
+    height: 52,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  checkButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   input: {
     flex: 1,

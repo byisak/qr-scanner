@@ -71,6 +71,13 @@ export default {
     errorAgreePrivacy: 'Please agree to Privacy Policy',
     errorLoginFailed: 'Login failed',
     errorSignupFailed: 'Sign up failed',
+    errorEmailExists: 'Email is already in use',
+    // Email duplicate check
+    checkDuplicate: 'Check',
+    checking: 'Checking...',
+    emailAvailable: 'Email is available',
+    emailNotAvailable: 'Email is already in use',
+    pleaseCheckEmail: 'Please check email availability',
     // Success messages
     signupSuccess: 'Sign up completed',
     logoutSuccess: 'Logged out',

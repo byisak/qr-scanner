@@ -71,6 +71,13 @@ export default {
     errorAgreePrivacy: '请同意隐私政策',
     errorLoginFailed: '登录失败',
     errorSignupFailed: '注册失败',
+    errorEmailExists: '该邮箱已被使用',
+    // 邮箱重复检查
+    checkDuplicate: '检查',
+    checking: '检查中...',
+    emailAvailable: '该邮箱可以使用',
+    emailNotAvailable: '该邮箱已被使用',
+    pleaseCheckEmail: '请检查邮箱是否可用',
     // 成功消息
     signupSuccess: '注册成功',
     logoutSuccess: '已退出登录',

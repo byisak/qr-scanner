@@ -71,6 +71,13 @@ export default {
     errorAgreePrivacy: 'Por favor, acepta la Política de Privacidad',
     errorLoginFailed: 'Error al iniciar sesión',
     errorSignupFailed: 'Error al registrarse',
+    errorEmailExists: 'El correo ya está en uso',
+    // Verificación de correo duplicado
+    checkDuplicate: 'Verificar',
+    checking: 'Verificando...',
+    emailAvailable: 'El correo está disponible',
+    emailNotAvailable: 'El correo ya está en uso',
+    pleaseCheckEmail: 'Por favor, verifica la disponibilidad del correo',
     // Mensajes de éxito
     signupSuccess: 'Registro completado',
     logoutSuccess: 'Sesión cerrada',

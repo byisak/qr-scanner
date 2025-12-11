@@ -71,6 +71,13 @@ export default {
     errorAgreePrivacy: 'プライバシーポリシーに同意してください',
     errorLoginFailed: 'ログインに失敗しました',
     errorSignupFailed: '会員登録に失敗しました',
+    errorEmailExists: 'すでに使用中のメールアドレスです',
+    // メール重複確認
+    checkDuplicate: '確認',
+    checking: '確認中...',
+    emailAvailable: '使用可能なメールアドレスです',
+    emailNotAvailable: 'すでに使用中のメールアドレスです',
+    pleaseCheckEmail: 'メールアドレスの重複確認をしてください',
     // 成功メッセージ
     signupSuccess: '会員登録が完了しました',
     logoutSuccess: 'ログアウトしました',

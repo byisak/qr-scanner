@@ -348,6 +348,37 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 이메일 중복 확인
+  const checkEmailExists = async (email) => {
+    try {
+      const response = await fetch(`${API_URL}/check-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Check failed'
+        };
+      }
+
+      return {
+        success: true,
+        exists: data.exists,
+        message: data.message
+      };
+    } catch (error) {
+      console.error('Check email error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // 토큰 갱신
   const refreshAccessToken = async () => {
     try {
@@ -403,6 +434,7 @@ export const AuthProvider = ({ children }) => {
     withdraw,
     getToken,
     refreshAccessToken,
+    checkEmailExists,
   };
 
   return (
