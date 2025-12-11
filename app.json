@@ -19,7 +19,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
         "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다.",
-        "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes"]
+        "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"]
       }
     },
     "android": {
@@ -62,7 +62,18 @@
       "typedRoutes": true
     },
     "extra": {
-      "serverUrl": "http://138.2.58.102:3000"
+      "serverUrl": "http://138.2.58.102:3000",
+      "kakao": {
+        "nativeAppKey": "YOUR_KAKAO_NATIVE_APP_KEY"
+      },
+      "naver": {
+        "clientId": "YOUR_NAVER_CLIENT_ID",
+        "serviceUrlScheme": "qrscanner"
+      },
+      "google": {
+        "webClientId": "YOUR_GOOGLE_WEB_CLIENT_ID",
+        "iosClientId": "YOUR_GOOGLE_IOS_CLIENT_ID"
+      }
     }
   }
 }
