@@ -18,6 +18,7 @@ const config = {
   google: {
     webClientId: extra.google?.webClientId || '',
     iosClientId: extra.google?.iosClientId || '',
+    androidClientId: extra.google?.androidClientId || '',
   },
 };
 

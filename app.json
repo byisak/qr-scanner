@@ -72,7 +72,8 @@
       },
       "google": {
         "webClientId": "YOUR_GOOGLE_WEB_CLIENT_ID",
-        "iosClientId": "YOUR_GOOGLE_IOS_CLIENT_ID"
+        "iosClientId": "YOUR_GOOGLE_IOS_CLIENT_ID",
+        "androidClientId": "YOUR_GOOGLE_ANDROID_CLIENT_ID"
       }
     }
   }
