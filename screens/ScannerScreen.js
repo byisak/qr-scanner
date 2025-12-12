@@ -794,8 +794,12 @@ function ScannerScreen() {
       // 1D 바코드 여부 확인
       const is1DBarcode = ONE_D_BARCODE_TYPES.includes(normalizedType);
 
+      // fullScreenScanMode가 활성화되면 위치 체크 건너뛰기 (전체 화면 스캔)
+      // Android에서는 bounds 정보가 다를 수 있으므로 fullScreenScanMode 또는 Android에서는 위치 체크 완화
+      const skipPositionCheck = fullScreenScanMode || Platform.OS === 'android';
+
       // bounds가 없거나 정규화할 수 없으면 디바운스만 적용 (위치 확인 불가능)
-      if (bounds) {
+      if (bounds && !skipPositionCheck) {
         const normalized = normalizeBounds(bounds);
         if (normalized) {
           // 바코드의 중심점 계산
@@ -839,7 +843,7 @@ function ScannerScreen() {
             return;
           }
         }
-      } else {
+      } else if (!skipPositionCheck) {
         // bounds가 없는 경우 - 1D 바코드는 허용, 2D 바코드는 더 긴 디바운스 적용
         if (is1DBarcode) {
           console.log(`No bounds for 1D barcode ${normalizedType}, allowing scan with debounce`);
