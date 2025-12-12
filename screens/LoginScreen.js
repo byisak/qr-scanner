@@ -1,5 +1,5 @@
 // screens/LoginScreen.js - 소셜 로그인 선택 화면
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Image,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,53 +17,148 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
+import {
+  useKakaoLogin,
+  useNaverLogin,
+  useGoogleLogin,
+  useAppleLogin,
+} from '../hooks/useSocialLogin';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { language, t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { loginWithKakao, loginWithGoogle, loginWithApple } = useAuth();
+  const { loginWithKakao, loginWithNaver, loginWithGoogle, loginWithApple } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
+
+  // 소셜 로그인 훅
+  const kakaoLogin = useKakaoLogin();
+  const naverLogin = useNaverLogin();
+  const googleLogin = useGoogleLogin();
+  const appleLogin = useAppleLogin();
+
+  const [isLoading, setIsLoading] = useState(false);
 
   // 한국어일 때 카카오, 다른 언어일 때 구글
   const isKorean = language === 'ko';
 
   const handleKakaoLogin = async () => {
+    setIsLoading(true);
     try {
-      const result = await loginWithKakao();
+      // 1. SDK로 카카오 인증
+      const sdkResult = await kakaoLogin.login();
+      if (!sdkResult.success) {
+        if (sdkResult.error !== 'Kakao login cancelled') {
+          Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        }
+        return;
+      }
+
+      // 2. 서버에 인증 코드/토큰 전송
+      const result = await loginWithKakao({
+        authorizationCode: sdkResult.authorizationCode,
+        accessToken: sdkResult.accessToken,
+      });
+
       if (result.success) {
         router.back();
       } else {
-        Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        Alert.alert(t('settings.error'), result.error || t('auth.errorLoginFailed'));
       }
     } catch (error) {
       Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNaverLogin = async () => {
+    setIsLoading(true);
+    try {
+      // 1. SDK로 네이버 인증
+      const sdkResult = await naverLogin.login();
+      if (!sdkResult.success) {
+        if (sdkResult.error !== 'Naver login cancelled') {
+          Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        }
+        return;
+      }
+
+      // 2. 서버에 인증 코드 전송
+      const result = await loginWithNaver({
+        authorizationCode: sdkResult.authorizationCode,
+      });
+
+      if (result.success) {
+        router.back();
+      } else {
+        Alert.alert(t('settings.error'), result.error || t('auth.errorLoginFailed'));
+      }
+    } catch (error) {
+      Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setIsLoading(true);
     try {
-      const result = await loginWithGoogle();
+      // 1. SDK로 구글 인증
+      const sdkResult = await googleLogin.login();
+      if (!sdkResult.success) {
+        if (sdkResult.error !== 'Google login cancelled') {
+          Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        }
+        return;
+      }
+
+      // 2. 서버에 토큰 전송
+      const result = await loginWithGoogle({
+        accessToken: sdkResult.accessToken,
+        idToken: sdkResult.idToken,
+      });
+
       if (result.success) {
         router.back();
       } else {
-        Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        Alert.alert(t('settings.error'), result.error || t('auth.errorLoginFailed'));
       }
     } catch (error) {
       Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleAppleLogin = async () => {
+    setIsLoading(true);
     try {
-      const result = await loginWithApple();
+      // 1. SDK로 애플 인증
+      const sdkResult = await appleLogin.login();
+      if (!sdkResult.success) {
+        if (sdkResult.error !== 'Apple login cancelled') {
+          Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        }
+        return;
+      }
+
+      // 2. 서버에 ID 토큰 전송
+      const result = await loginWithApple({
+        idToken: sdkResult.idToken,
+        authorizationCode: sdkResult.authorizationCode,
+        user: sdkResult.user,
+      });
+
       if (result.success) {
         router.back();
       } else {
-        Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        Alert.alert(t('settings.error'), result.error || t('auth.errorLoginFailed'));
       }
     } catch (error) {
       Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -107,29 +203,43 @@ export default function LoginScreen() {
         {/* 카카오 또는 구글 로그인 (언어에 따라) */}
         {isKorean ? (
           <TouchableOpacity
-            style={[styles.loginButton, styles.kakaoButton]}
+            style={[styles.loginButton, styles.kakaoButton, isLoading && styles.buttonDisabled]}
             onPress={handleKakaoLogin}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
-            <View style={styles.buttonIcon}>
-              <Ionicons name="chatbubble" size={20} color="#000" />
-            </View>
-            <Text style={[styles.buttonText, styles.kakaoText, { fontFamily: fonts.semiBold }]}>
-              {t('auth.loginWithKakao')}
-            </Text>
+            {isLoading && kakaoLogin.isLoading ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <>
+                <View style={styles.buttonIcon}>
+                  <Ionicons name="chatbubble" size={20} color="#000" />
+                </View>
+                <Text style={[styles.buttonText, styles.kakaoText, { fontFamily: fonts.semiBold }]}>
+                  {t('auth.loginWithKakao')}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.loginButton, styles.googleButton]}
+            style={[styles.loginButton, styles.googleButton, isLoading && styles.buttonDisabled]}
             onPress={handleGoogleLogin}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
-            <View style={styles.buttonIcon}>
-              <Text style={styles.googleIcon}>G</Text>
-            </View>
-            <Text style={[styles.buttonText, styles.googleText, { fontFamily: fonts.semiBold }]}>
-              {t('auth.loginWithGoogle')}
-            </Text>
+            {isLoading && googleLogin.isLoading ? (
+              <ActivityIndicator color="#4285F4" />
+            ) : (
+              <>
+                <View style={styles.buttonIcon}>
+                  <Text style={styles.googleIcon}>G</Text>
+                </View>
+                <Text style={[styles.buttonText, styles.googleText, { fontFamily: fonts.semiBold }]}>
+                  {t('auth.loginWithGoogle')}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         )}
 
@@ -137,8 +247,9 @@ export default function LoginScreen() {
         {isKorean && (
           <TouchableOpacity
             style={[styles.loginButton, styles.naverButton]}
-            onPress={handleGoogleLogin}
+            onPress={handleNaverLogin}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
             <View style={styles.buttonIcon}>
               <Text style={[styles.naverIcon, { fontFamily: fonts.bold }]}>N</Text>
@@ -150,18 +261,25 @@ export default function LoginScreen() {
         )}
 
         {/* 애플 로그인 (iOS만) */}
-        {Platform.OS === 'ios' && (
+        {Platform.OS === 'ios' && appleLogin.isAvailable && (
           <TouchableOpacity
-            style={[styles.loginButton, styles.appleButton]}
+            style={[styles.loginButton, styles.appleButton, isLoading && styles.buttonDisabled]}
             onPress={handleAppleLogin}
             activeOpacity={0.8}
+            disabled={isLoading}
           >
-            <View style={styles.buttonIcon}>
-              <Ionicons name="logo-apple" size={20} color="#fff" />
-            </View>
-            <Text style={[styles.buttonText, styles.appleText, { fontFamily: fonts.semiBold }]}>
-              {t('auth.loginWithApple')}
-            </Text>
+            {isLoading && appleLogin.isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <View style={styles.buttonIcon}>
+                  <Ionicons name="logo-apple" size={20} color="#fff" />
+                </View>
+                <Text style={[styles.buttonText, styles.appleText, { fontFamily: fonts.semiBold }]}>
+                  {t('auth.loginWithApple')}
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         )}
 
@@ -249,6 +367,9 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: 8,
     marginBottom: 12,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonIcon: {
     width: 24,

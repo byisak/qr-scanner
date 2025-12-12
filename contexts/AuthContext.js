@@ -152,15 +152,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 카카오 로그인
-  const loginWithKakao = async (kakaoAccessToken) => {
+  // 카카오 로그인 (서버로 인증 코드 또는 토큰 전송)
+  const loginWithKakao = async ({ authorizationCode, accessToken }) => {
     try {
-      // 카카오 토큰이 없으면 SDK에서 받아와야 함
-      // TODO: expo-auth-session 또는 @react-native-seoul/kakao-login 연동 필요
-      if (!kakaoAccessToken) {
-        // 임시: mock 처리 (실제로는 카카오 SDK 호출 필요)
-        console.warn('Kakao SDK not integrated yet');
-        return { success: false, error: 'Kakao SDK not integrated' };
+      if (!authorizationCode && !accessToken) {
+        return { success: false, error: 'No authorization code or access token provided' };
       }
 
       const response = await fetch(`${API_URL}/social/kakao`, {
@@ -168,7 +164,10 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ accessToken: kakaoAccessToken }),
+        body: JSON.stringify({
+          ...(authorizationCode && { code: authorizationCode }),
+          ...(accessToken && { accessToken }),
+        }),
       });
 
       const data = await response.json();
@@ -192,13 +191,47 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 구글 로그인
-  const loginWithGoogle = async (googleAccessToken) => {
+  // 네이버 로그인 (서버로 인증 코드 전송)
+  const loginWithNaver = async ({ authorizationCode }) => {
     try {
-      // TODO: expo-auth-session 또는 @react-native-google-signin 연동 필요
-      if (!googleAccessToken) {
-        console.warn('Google SDK not integrated yet');
-        return { success: false, error: 'Google SDK not integrated' };
+      if (!authorizationCode) {
+        return { success: false, error: 'No authorization code provided' };
+      }
+
+      const response = await fetch(`${API_URL}/social/naver`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ code: authorizationCode }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Naver login failed'
+        };
+      }
+
+      if (data.success && data.user && data.accessToken) {
+        await login(data.user, data.accessToken, data.refreshToken);
+        return { success: true, user: data.user, isNewUser: data.isNewUser };
+      }
+
+      return { success: false, error: 'Invalid response from server' };
+    } catch (error) {
+      console.error('Naver login error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // 구글 로그인 (서버로 액세스 토큰 또는 ID 토큰 전송)
+  const loginWithGoogle = async ({ accessToken, idToken }) => {
+    try {
+      if (!accessToken && !idToken) {
+        return { success: false, error: 'No access token or ID token provided' };
       }
 
       const response = await fetch(`${API_URL}/social/google`, {
@@ -206,7 +239,10 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ accessToken: googleAccessToken }),
+        body: JSON.stringify({
+          ...(accessToken && { accessToken }),
+          ...(idToken && { idToken }),
+        }),
       });
 
       const data = await response.json();
@@ -230,13 +266,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 애플 로그인
-  const loginWithApple = async (appleIdToken) => {
+  // 애플 로그인 (서버로 ID 토큰 전송)
+  const loginWithApple = async ({ idToken, authorizationCode, user: appleUser }) => {
     try {
-      // TODO: expo-apple-authentication 연동 필요
-      if (!appleIdToken) {
-        console.warn('Apple SDK not integrated yet');
-        return { success: false, error: 'Apple SDK not integrated' };
+      if (!idToken) {
+        return { success: false, error: 'No ID token provided' };
       }
 
       const response = await fetch(`${API_URL}/social/apple`, {
@@ -244,7 +278,11 @@ export const AuthProvider = ({ children }) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ idToken: appleIdToken }),
+        body: JSON.stringify({
+          idToken,
+          ...(authorizationCode && { authorizationCode }),
+          ...(appleUser && { appleUser }),
+        }),
       });
 
       const data = await response.json();
@@ -428,6 +466,7 @@ export const AuthProvider = ({ children }) => {
     register,
     loginWithEmail,
     loginWithKakao,
+    loginWithNaver,
     loginWithGoogle,
     loginWithApple,
     updateProfile,
