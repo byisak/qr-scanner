@@ -60,7 +60,7 @@
       [
         "@react-native-seoul/kakao-login",
         {
-          "kakaoAppKey": "YOUR_KAKAO_NATIVE_APP_KEY",
+          "kakaoAppKey": "80e502ff718c19c5284201ae76c15ac7",
           "kotlinVersion": "1.9.0"
         }
       ],
@@ -79,7 +79,7 @@
     "extra": {
       "serverUrl": "http://138.2.58.102:3000",
       "kakao": {
-        "nativeAppKey": "YOUR_KAKAO_NATIVE_APP_KEY"
+        "nativeAppKey": "80e502ff718c19c5284201ae76c15ac7"
       },
       "naver": {
         "clientId": "YOUR_NAVER_CLIENT_ID",
