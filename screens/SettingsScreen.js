@@ -10,6 +10,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -26,6 +28,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
+  const { user, isLoggedIn } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
@@ -189,6 +192,62 @@ export default function SettingsScreen() {
         <View style={s.header}>
           <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>{t('settings.title')}</Text>
         </View>
+
+        {/* 로그인/프로필 섹션 */}
+        {isLoggedIn ? (
+          // 로그인된 상태 - 프로필 표시
+          <TouchableOpacity
+            style={[s.profileSection, { backgroundColor: colors.surface }]}
+            onPress={() => router.push('/profile-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={s.profileLeft}>
+              <View style={[s.profileAvatar, { backgroundColor: isDark ? '#333' : '#f0f0f0' }]}>
+                {user?.profileImage ? (
+                  <Image source={{ uri: user.profileImage }} style={s.avatarImage} />
+                ) : (
+                  <Ionicons name="person" size={32} color={colors.textTertiary} />
+                )}
+              </View>
+              <View style={s.profileInfo}>
+                <View style={s.profileNameRow}>
+                  <Text style={[s.profileName, { color: colors.text, fontFamily: fonts.bold }]}>
+                    {user?.name || 'User'}
+                  </Text>
+                  <Text style={[s.profileNameSuffix, { color: colors.text, fontFamily: fonts.regular }]}>
+                    {' '}{language === 'ko' ? '님' : ''}
+                  </Text>
+                </View>
+                <Text style={[s.profileEmail, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                  {user?.email || ''}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={s.settingsIconButton}
+              onPress={() => router.push('/profile-settings')}
+            >
+              <Ionicons name="settings-outline" size={24} color={colors.textTertiary} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ) : (
+          // 로그인 안된 상태 - 로그인 유도
+          <TouchableOpacity
+            style={[s.loginSection, { backgroundColor: colors.surface }]}
+            onPress={() => router.push('/login')}
+            activeOpacity={0.7}
+          >
+            <View style={s.loginContent}>
+              <Text style={[s.loginTitle, { color: '#E67E22', fontFamily: fonts.bold }]}>
+                {t('auth.loginSignup')}
+              </Text>
+              <Text style={[s.loginDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t('auth.loginPrompt')}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#E67E22" />
+          </TouchableOpacity>
+        )}
 
         {/* 바코드 인식 설정 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
@@ -538,5 +597,84 @@ const s = StyleSheet.create({
   versionText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  // 로그인 섹션 스타일
+  loginSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  loginContent: {
+    flex: 1,
+  },
+  loginTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  loginDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  // 프로필 섹션 스타일
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  profileLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  profileAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileInfo: {
+    marginLeft: 14,
+    flex: 1,
+  },
+  profileNameRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  profileNameSuffix: {
+    fontSize: 16,
+  },
+  profileEmail: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  settingsIconButton: {
+    padding: 8,
   },
 });

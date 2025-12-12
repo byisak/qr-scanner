@@ -13,6 +13,77 @@ export default {
     loading: '로딩 중...',
   },
 
+  // 인증
+  auth: {
+    // 로그인/회원가입 버튼
+    loginSignup: '로그인/회원가입',
+    loginPrompt: '로그인하여 실시간 서버 전송을 이용해보세요',
+    // 로그인 화면
+    loginTitle: '로그인',
+    loginSubtitle: 'QR 스캐너로 시작하기',
+    loginWithKakao: '카카오로 로그인',
+    loginWithGoogle: 'Google로 로그인',
+    loginWithApple: 'Apple로 로그인',
+    loginWithEmail: '이메일로 로그인',
+    recentLogin: '최근 로그인',
+    // 이메일 로그인
+    email: '이메일',
+    emailPlaceholder: '이메일을 입력해주세요',
+    password: '비밀번호',
+    passwordPlaceholder: '비밀번호를 입력해주세요',
+    login: '로그인',
+    signup: '회원가입',
+    findAccount: '계정 찾기',
+    // 회원가입
+    signupTitle: '회원가입',
+    passwordConfirm: '비밀번호 확인',
+    passwordConfirmPlaceholder: '비밀번호를 다시 입력해주세요',
+    nickname: '닉네임',
+    nicknamePlaceholder: '닉네임을 입력해주세요',
+    agreeTerms: '이용약관 동의 (필수)',
+    agreePrivacy: '개인정보 처리방침 동의 (필수)',
+    signupButton: '가입하기',
+    // 비밀번호 유효성
+    passwordMinLength: '8자 이상',
+    passwordRequireAlphaNum: '영문+숫자',
+    passwordMatch: '비밀번호 일치',
+    passwordNotMatch: '비밀번호 불일치',
+    // 프로필 설정
+    profileSettings: '계정 설정',
+    profileImage: '프로필 이미지',
+    changeProfileImage: '변경하기',
+    changePassword: '비밀번호 변경',
+    logout: '로그아웃',
+    withdraw: '회원탈퇴',
+    logoutConfirm: '정말 로그아웃 하시겠습니까?',
+    withdrawConfirm: '정말 탈퇴하시겠습니까?\n탈퇴 시 모든 데이터가 삭제됩니다.',
+    // 로그인된 상태
+    myPoints: '내 포인트',
+    mySessions: '세션 수',
+    // 오류 메시지
+    errorEmailRequired: '이메일을 입력해주세요',
+    errorPasswordRequired: '비밀번호를 입력해주세요',
+    errorInvalidEmail: '유효한 이메일을 입력해주세요',
+    errorPasswordTooShort: '비밀번호는 8자 이상이어야 합니다',
+    errorPasswordMismatch: '비밀번호가 일치하지 않습니다',
+    errorNicknameRequired: '닉네임을 입력해주세요',
+    errorAgreeTerms: '이용약관에 동의해주세요',
+    errorAgreePrivacy: '개인정보 처리방침에 동의해주세요',
+    errorLoginFailed: '로그인에 실패했습니다',
+    errorSignupFailed: '회원가입에 실패했습니다',
+    errorEmailExists: '이미 사용 중인 이메일입니다',
+    // 이메일 중복 확인
+    checkDuplicate: '중복확인',
+    checking: '확인 중...',
+    emailAvailable: '사용 가능한 이메일입니다',
+    emailNotAvailable: '이미 사용 중인 이메일입니다',
+    pleaseCheckEmail: '이메일 중복 확인을 해주세요',
+    // 성공 메시지
+    signupSuccess: '회원가입이 완료되었습니다',
+    logoutSuccess: '로그아웃되었습니다',
+    profileUpdateSuccess: '프로필이 수정되었습니다',
+  },
+
   // 스캔 화면
   scanner: {
     title: '스캔',

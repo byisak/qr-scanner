@@ -13,6 +13,77 @@ export default {
     loading: '加载中...',
   },
 
+  // 认证
+  auth: {
+    // 登录/注册按钮
+    loginSignup: '登录/注册',
+    loginPrompt: '登录后使用实时服务器传输功能',
+    // 登录界面
+    loginTitle: '登录',
+    loginSubtitle: '开始使用QR扫描器',
+    loginWithKakao: '使用Kakao登录',
+    loginWithGoogle: '使用Google登录',
+    loginWithApple: '使用Apple登录',
+    loginWithEmail: '使用邮箱登录',
+    recentLogin: '最近登录',
+    // 邮箱登录
+    email: '邮箱',
+    emailPlaceholder: '请输入邮箱',
+    password: '密码',
+    passwordPlaceholder: '请输入密码',
+    login: '登录',
+    signup: '注册',
+    findAccount: '找回账户',
+    // 注册
+    signupTitle: '注册',
+    passwordConfirm: '确认密码',
+    passwordConfirmPlaceholder: '请再次输入密码',
+    nickname: '昵称',
+    nicknamePlaceholder: '请输入昵称',
+    agreeTerms: '同意服务条款（必填）',
+    agreePrivacy: '同意隐私政策（必填）',
+    signupButton: '注册',
+    // 密码验证
+    passwordMinLength: '8位以上',
+    passwordRequireAlphaNum: '字母+数字',
+    passwordMatch: '密码一致',
+    passwordNotMatch: '密码不一致',
+    // 个人资料设置
+    profileSettings: '账户设置',
+    profileImage: '头像',
+    changeProfileImage: '更换',
+    changePassword: '修改密码',
+    logout: '退出登录',
+    withdraw: '注销账户',
+    logoutConfirm: '确定要退出登录吗？',
+    withdrawConfirm: '确定要注销账户吗？\n注销后所有数据将被删除。',
+    // 登录状态
+    myPoints: '我的积分',
+    mySessions: '会话数',
+    // 错误消息
+    errorEmailRequired: '请输入邮箱',
+    errorPasswordRequired: '请输入密码',
+    errorInvalidEmail: '请输入有效的邮箱',
+    errorPasswordTooShort: '密码至少需要8位',
+    errorPasswordMismatch: '密码不一致',
+    errorNicknameRequired: '请输入昵称',
+    errorAgreeTerms: '请同意服务条款',
+    errorAgreePrivacy: '请同意隐私政策',
+    errorLoginFailed: '登录失败',
+    errorSignupFailed: '注册失败',
+    errorEmailExists: '该邮箱已被使用',
+    // 邮箱重复检查
+    checkDuplicate: '检查',
+    checking: '检查中...',
+    emailAvailable: '该邮箱可以使用',
+    emailNotAvailable: '该邮箱已被使用',
+    pleaseCheckEmail: '请检查邮箱是否可用',
+    // 成功消息
+    signupSuccess: '注册成功',
+    logoutSuccess: '已退出登录',
+    profileUpdateSuccess: '个人资料已更新',
+  },
+
   // 扫描界面
   scanner: {
     title: '扫描',

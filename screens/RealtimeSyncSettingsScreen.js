@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
 import websocketClient from '../utils/websocket';
 import config from '../config/config';
@@ -68,6 +69,7 @@ export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const { isLoggedIn } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
   // 실시간 서버전송 관련 상태
@@ -753,7 +755,15 @@ export default function RealtimeSyncSettingsScreen() {
               </View>
               <Switch
                 value={realtimeSyncEnabled}
-                onValueChange={setRealtimeSyncEnabled}
+                onValueChange={(value) => {
+                  // 켜려고 할 때만 로그인 체크
+                  if (value && !isLoggedIn) {
+                    // 로그인되지 않은 경우 로그인 화면으로 이동
+                    router.push('/login');
+                    return;
+                  }
+                  setRealtimeSyncEnabled(value);
+                }}
                 trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
                 thumbColor="#fff"
                 accessibilityLabel={t('settings.enableRealtimeSync')}

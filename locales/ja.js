@@ -13,6 +13,77 @@ export default {
     loading: '読み込み中...',
   },
 
+  // 認証
+  auth: {
+    // ログイン/会員登録ボタン
+    loginSignup: 'ログイン/会員登録',
+    loginPrompt: 'ログインしてリアルタイムサーバー送信を利用しましょう',
+    // ログイン画面
+    loginTitle: 'ログイン',
+    loginSubtitle: 'QRスキャナーで始めよう',
+    loginWithKakao: 'カカオでログイン',
+    loginWithGoogle: 'Googleでログイン',
+    loginWithApple: 'Appleでログイン',
+    loginWithEmail: 'メールでログイン',
+    recentLogin: '最近のログイン',
+    // メールログイン
+    email: 'メールアドレス',
+    emailPlaceholder: 'メールアドレスを入力してください',
+    password: 'パスワード',
+    passwordPlaceholder: 'パスワードを入力してください',
+    login: 'ログイン',
+    signup: '会員登録',
+    findAccount: 'アカウント検索',
+    // 会員登録
+    signupTitle: '会員登録',
+    passwordConfirm: 'パスワード確認',
+    passwordConfirmPlaceholder: 'パスワードをもう一度入力してください',
+    nickname: 'ニックネーム',
+    nicknamePlaceholder: 'ニックネームを入力してください',
+    agreeTerms: '利用規約に同意する（必須）',
+    agreePrivacy: 'プライバシーポリシーに同意する（必須）',
+    signupButton: '登録する',
+    // パスワード検証
+    passwordMinLength: '8文字以上',
+    passwordRequireAlphaNum: '英数字',
+    passwordMatch: 'パスワード一致',
+    passwordNotMatch: 'パスワード不一致',
+    // プロフィール設定
+    profileSettings: 'アカウント設定',
+    profileImage: 'プロフィール画像',
+    changeProfileImage: '変更する',
+    changePassword: 'パスワード変更',
+    logout: 'ログアウト',
+    withdraw: '退会',
+    logoutConfirm: '本当にログアウトしますか？',
+    withdrawConfirm: '本当に退会しますか？\n退会するとすべてのデータが削除されます。',
+    // ログイン状態
+    myPoints: 'ポイント',
+    mySessions: 'セッション数',
+    // エラーメッセージ
+    errorEmailRequired: 'メールアドレスを入力してください',
+    errorPasswordRequired: 'パスワードを入力してください',
+    errorInvalidEmail: '有効なメールアドレスを入力してください',
+    errorPasswordTooShort: 'パスワードは8文字以上必要です',
+    errorPasswordMismatch: 'パスワードが一致しません',
+    errorNicknameRequired: 'ニックネームを入力してください',
+    errorAgreeTerms: '利用規約に同意してください',
+    errorAgreePrivacy: 'プライバシーポリシーに同意してください',
+    errorLoginFailed: 'ログインに失敗しました',
+    errorSignupFailed: '会員登録に失敗しました',
+    errorEmailExists: 'すでに使用中のメールアドレスです',
+    // メール重複確認
+    checkDuplicate: '確認',
+    checking: '確認中...',
+    emailAvailable: '使用可能なメールアドレスです',
+    emailNotAvailable: 'すでに使用中のメールアドレスです',
+    pleaseCheckEmail: 'メールアドレスの重複確認をしてください',
+    // 成功メッセージ
+    signupSuccess: '会員登録が完了しました',
+    logoutSuccess: 'ログアウトしました',
+    profileUpdateSuccess: 'プロフィールが更新されました',
+  },
+
   // スキャン画面
   scanner: {
     title: 'スキャン',
