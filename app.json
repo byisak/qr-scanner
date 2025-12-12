@@ -56,6 +56,21 @@
         {
           "locationWhenInUsePermission": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
         }
+      ],
+      [
+        "@react-native-seoul/kakao-login",
+        {
+          "kakaoAppKey": "YOUR_KAKAO_NATIVE_APP_KEY",
+          "kotlinVersion": "1.9.0"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
+          }
+        }
       ]
     ],
     "experiments": {

@@ -4,6 +4,7 @@ import { Platform, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as KakaoLogin from '@react-native-seoul/kakao-login';
 import config from '../config/config';
 
 // WebBrowser warm up for faster auth
@@ -11,8 +12,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 /**
  * 카카오 로그인 훅
- * 패키지: @react-native-seoul/kakao-login (설치 필요)
- * 또는 expo-auth-session으로 웹 기반 OAuth
+ * 패키지: @react-native-seoul/kakao-login 사용 (네이티브 SDK)
  */
 export const useKakaoLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -20,40 +20,60 @@ export const useKakaoLogin = () => {
   const login = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 방법 1: @react-native-seoul/kakao-login 사용 (네이티브)
-      // const KakaoLogin = require('@react-native-seoul/kakao-login');
-      // const result = await KakaoLogin.login();
-      // return { success: true, accessToken: result.accessToken };
+      // 네이티브 SDK로 로그인
+      const token = await KakaoLogin.login();
 
-      // 방법 2: expo-auth-session으로 웹 기반 OAuth (Expo 호환)
-      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${config.kakao.nativeAppKey}&redirect_uri=${encodeURIComponent(`${config.serverUrl}/api/auth/social/kakao`)}&response_type=code`;
-
-      const result = await WebBrowser.openAuthSessionAsync(
-        kakaoAuthUrl,
-        `${config.naver.serviceUrlScheme}://oauth`
-      );
-
-      if (result.type === 'success' && result.url) {
-        // URL에서 authorization code 추출
-        const url = new URL(result.url);
-        const code = url.searchParams.get('code');
-
-        if (code) {
-          // 서버에서 code를 token으로 교환
-          return { success: true, authorizationCode: code };
-        }
-      }
-
-      return { success: false, error: 'Kakao login cancelled' };
+      return {
+        success: true,
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+        idToken: token.idToken,
+      };
     } catch (error) {
       console.error('Kakao login error:', error);
+      if (error.code === 'E_CANCELLED_OPERATION') {
+        return { success: false, error: 'Kakao login cancelled' };
+      }
       return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  return { login, isLoading };
+  // 프로필 가져오기
+  const getProfile = useCallback(async () => {
+    try {
+      const profile = await KakaoLogin.getProfile();
+      return { success: true, profile };
+    } catch (error) {
+      console.error('Kakao getProfile error:', error);
+      return { success: false, error: error.message };
+    }
+  }, []);
+
+  // 로그아웃
+  const logout = useCallback(async () => {
+    try {
+      await KakaoLogin.logout();
+      return { success: true };
+    } catch (error) {
+      console.error('Kakao logout error:', error);
+      return { success: false, error: error.message };
+    }
+  }, []);
+
+  // 연결 끊기 (탈퇴)
+  const unlink = useCallback(async () => {
+    try {
+      await KakaoLogin.unlink();
+      return { success: true };
+    } catch (error) {
+      console.error('Kakao unlink error:', error);
+      return { success: false, error: error.message };
+    }
+  }, []);
+
+  return { login, getProfile, logout, unlink, isLoading };
 };
 
 /**
