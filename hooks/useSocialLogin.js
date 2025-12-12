@@ -26,7 +26,7 @@ export const useKakaoLogin = () => {
       // return { success: true, accessToken: result.accessToken };
 
       // 방법 2: expo-auth-session으로 웹 기반 OAuth (Expo 호환)
-      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${config.kakao.nativeAppKey}&redirect_uri=${encodeURIComponent(`${config.serverUrl}/api/auth/callback/kakao`)}&response_type=code`;
+      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${config.kakao.nativeAppKey}&redirect_uri=${encodeURIComponent(`${config.serverUrl}/api/auth/social/kakao`)}&response_type=code`;
 
       const result = await WebBrowser.openAuthSessionAsync(
         kakaoAuthUrl,
