@@ -1,51 +1,14 @@
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
-// iOS용 GlassView (iOS 26+에서만 동작, 그 외에는 View로 fallback)
-let GlassView: any = null;
-let isLiquidGlassAvailable: (() => boolean) | null = null;
-if (Platform.OS === 'ios') {
-  try {
-    const glassEffect = require('expo-glass-effect');
-    GlassView = glassEffect.GlassView;
-    isLiquidGlassAvailable = glassEffect.isLiquidGlassAvailable;
-  } catch (e) {
-    GlassView = null;
-    isLiquidGlassAvailable = null;
-  }
-}
-
-// 탭바 배경 컴포넌트
+// Android: 탭바 배경 컴포넌트
 function TabBarBackground() {
   const { isDark } = useTheme();
 
-  // iOS: GlassView 사용 (iOS 26+), 그렇지 않으면 BlurView
-  if (Platform.OS === 'ios') {
-    // GlassView가 사용 가능한지 확인
-    if (GlassView && isLiquidGlassAvailable && isLiquidGlassAvailable()) {
-      return (
-        <GlassView
-          style={StyleSheet.absoluteFill}
-          glassEffectStyle="regular"
-        />
-      );
-    }
-    // Fallback: BlurView
-    return (
-      <BlurView
-        style={StyleSheet.absoluteFill}
-        intensity={80}
-        tint={isDark ? 'dark' : 'light'}
-      />
-    );
-  }
-
-  // Android: 반투명 배경
   return (
     <View
       style={[
