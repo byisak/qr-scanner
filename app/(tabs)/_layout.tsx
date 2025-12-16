@@ -1,18 +1,63 @@
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
-// iOS용 NativeTabs (unstable API)
-let NativeTabs: any = null;
+// iOS용 GlassView (iOS 26+에서만 동작, 그 외에는 View로 fallback)
+let GlassView: any = null;
+let isLiquidGlassAvailable: (() => boolean) | null = null;
 if (Platform.OS === 'ios') {
   try {
-    NativeTabs = require('expo-router/unstable-native-tabs').Tabs;
+    const glassEffect = require('expo-glass-effect');
+    GlassView = glassEffect.GlassView;
+    isLiquidGlassAvailable = glassEffect.isLiquidGlassAvailable;
   } catch (e) {
-    NativeTabs = null;
+    GlassView = null;
+    isLiquidGlassAvailable = null;
   }
+}
+
+// 탭바 배경 컴포넌트
+function TabBarBackground() {
+  const { isDark } = useTheme();
+
+  // iOS: GlassView 사용 (iOS 26+), 그렇지 않으면 BlurView
+  if (Platform.OS === 'ios') {
+    // GlassView가 사용 가능한지 확인
+    if (GlassView && isLiquidGlassAvailable && isLiquidGlassAvailable()) {
+      return (
+        <GlassView
+          style={StyleSheet.absoluteFill}
+          glassEffectStyle="regular"
+        />
+      );
+    }
+    // Fallback: BlurView
+    return (
+      <BlurView
+        style={StyleSheet.absoluteFill}
+        intensity={80}
+        tint={isDark ? 'dark' : 'light'}
+      />
+    );
+  }
+
+  // Android: 반투명 배경
+  return (
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: isDark
+            ? 'rgba(28, 28, 30, 0.95)'
+            : 'rgba(255, 255, 255, 0.95)',
+        },
+      ]}
+    />
+  );
 }
 
 export default function TabLayout() {
@@ -20,47 +65,6 @@ export default function TabLayout() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
-  // iOS: NativeTabs 사용 (네이티브 탭 모양 + SF Symbol)
-  if (Platform.OS === 'ios' && NativeTabs) {
-    return (
-      <NativeTabs
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <NativeTabs.Screen
-          name="history"
-          options={{
-            title: t('history.title'),
-            tabBarIcon: () => ({ sfSymbol: 'clock' }),
-          }}
-        />
-        <NativeTabs.Screen
-          name="generator"
-          options={{
-            title: t('generator.title'),
-            tabBarIcon: () => ({ sfSymbol: 'qrcode' }),
-          }}
-        />
-        <NativeTabs.Screen
-          name="index"
-          options={{
-            title: t('scanner.title'),
-            tabBarIcon: () => ({ sfSymbol: 'viewfinder' }),
-          }}
-        />
-        <NativeTabs.Screen
-          name="settings"
-          options={{
-            title: t('settings.title'),
-            tabBarIcon: () => ({ sfSymbol: 'gearshape' }),
-          }}
-        />
-      </NativeTabs>
-    );
-  }
-
-  // Android 또는 iOS fallback: 일반 Tabs 사용 (블러 탭 스타일)
   return (
     <Tabs
       screenOptions={{
@@ -68,9 +72,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
+          position: 'absolute',
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 0,
         },
+        tabBarBackground: () => <TabBarBackground />,
       }}
     >
       <Tabs.Screen
