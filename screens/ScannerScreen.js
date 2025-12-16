@@ -1151,9 +1151,9 @@ function ScannerScreen() {
           facing={cameraFacing}
           onBarcodeScanned={handleBarCodeScanned}
           enableTorch={torchOn}
-          barcodeScannerSettings={{
+          barcodeScannerSettings={Platform.OS === 'ios' ? {
             barcodeTypes: barcodeTypes,
-          }}
+          } : undefined}
         />
       )}
 
