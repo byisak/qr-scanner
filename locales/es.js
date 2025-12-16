@@ -193,6 +193,12 @@ export default {
     exampleTitle: 'Ejemplo:',
     exampleUrl: 'https://ejemplo.com/producto/{code}',
     exampleDesc: '→ Si el valor escaneado es "ABC123"\nNavega a https://ejemplo.com/producto/ABC123',
+    // Lista de URL
+    urlListTitle: 'Lista de URL',
+    urlEmptyError: 'Por favor, ingresa una URL',
+    urlDuplicateError: 'Esta URL ya ha sido agregada',
+    deleteUrlConfirm: '¿Deseas eliminar esta URL?',
+    urlToggleInfo: 'Solo las URLs habilitadas se usarán al escanear',
     // Sincronización en tiempo real
     realtimeSync: 'Sincronización en tiempo real',
     enableRealtimeSync: 'Activar sincronización en tiempo real',

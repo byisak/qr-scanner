@@ -193,6 +193,12 @@ export default {
     exampleTitle: '示例:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ 扫描值为"ABC123"时\n将跳转到 https://example.com/product/ABC123',
+    // URL列表相关
+    urlListTitle: 'URL列表',
+    urlEmptyError: '请输入URL',
+    urlDuplicateError: '此URL已添加',
+    deleteUrlConfirm: '确定要删除此URL吗？',
+    urlToggleInfo: '扫描时只使用启用的URL',
     // 实时服务器传输
     realtimeSync: '实时服务器传输',
     enableRealtimeSync: '启用实时传输',
