@@ -195,6 +195,12 @@ export default {
     exampleTitle: '예시:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ 스캔 값이 "ABC123"이면\nhttps://example.com/product/ABC123 로 이동',
+    // URL 리스트 관련
+    urlListTitle: 'URL 목록',
+    urlEmptyError: 'URL을 입력해주세요',
+    urlDuplicateError: '이미 추가된 URL입니다',
+    deleteUrlConfirm: '이 URL을 삭제하시겠습니까?',
+    urlToggleInfo: '활성화된 URL만 스캔 시 사용됩니다',
     // 실시간 서버전송
     realtimeSync: '',
     enableRealtimeSync: '실시간 서버 전송',

@@ -193,6 +193,12 @@ export default {
     exampleTitle: '例:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ スキャン値が「ABC123」の場合\nhttps://example.com/product/ABC123 に移動',
+    // URLリスト関連
+    urlListTitle: 'URLリスト',
+    urlEmptyError: 'URLを入力してください',
+    urlDuplicateError: 'このURLは既に追加されています',
+    deleteUrlConfirm: 'このURLを削除しますか？',
+    urlToggleInfo: '有効なURLのみがスキャン時に使用されます',
     // リアルタイムサーバー送信
     realtimeSync: 'リアルタイムサーバー送信',
     enableRealtimeSync: 'リアルタイム送信を使用',
