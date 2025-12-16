@@ -540,7 +540,9 @@ function ScannerScreen() {
         return null;
       }
 
-      // 형식 1: { origin: { x, y }, size: { width, height } }
+      console.log('[normalizeBounds] Input:', JSON.stringify(bounds));
+
+      // 형식 1: { origin: { x, y }, size: { width, height } } (iOS)
       if (bounds.origin && bounds.size) {
         const { origin, size } = bounds;
         const isPixel = origin.x > 1 || origin.y > 1;
@@ -582,6 +584,16 @@ function ScannerScreen() {
           y: box.y * scaleY,
           width: box.width * scaleX,
           height: box.height * scaleY,
+        };
+      }
+
+      // 형식 4: Android CameraView { left, top, right, bottom }
+      if (bounds.left !== undefined && bounds.top !== undefined && bounds.right !== undefined && bounds.bottom !== undefined) {
+        return {
+          x: bounds.left,
+          y: bounds.top,
+          width: bounds.right - bounds.left,
+          height: bounds.bottom - bounds.top,
         };
       }
 
@@ -801,8 +813,11 @@ function ScannerScreen() {
       // 1D 바코드 여부 확인
       const is1DBarcode = ONE_D_BARCODE_TYPES.includes(normalizedType);
 
-      // bounds가 없거나 정규화할 수 없으면 디바운스만 적용 (위치 확인 불가능)
-      if (bounds) {
+      // Android에서는 bounds 검증을 건너뛰고 바로 스캔 허용 (bounds 형식 호환성 문제)
+      if (Platform.OS === 'android') {
+        console.log('[Android] Skipping bounds validation, allowing scan');
+      } else if (bounds) {
+        // iOS: bounds 기반 타겟 영역 검사
         const normalized = normalizeBounds(bounds);
         if (normalized) {
           // 바코드의 중심점 계산
