@@ -124,11 +124,12 @@ export default function ScanUrlSettingsScreen() {
     );
   };
 
-  // URL 활성화 토글
+  // URL 활성화 토글 (단일 선택만 허용)
   const handleToggleUrl = (id, value) => {
     setUrlList(prev => prev.map(item => ({
       ...item,
-      enabled: item.id === id ? value : item.enabled,
+      // 선택된 항목만 활성화, 나머지는 비활성화 (라디오 버튼처럼 동작)
+      enabled: item.id === id ? value : false,
     })));
   };
 
