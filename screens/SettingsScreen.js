@@ -23,6 +23,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -30,6 +31,11 @@ export default function SettingsScreen() {
   const { themeMode, isDark } = useTheme();
   const { user, isLoggedIn } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
+  const insets = useSafeAreaInsets();
+
+  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
+  const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
+
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
@@ -183,7 +189,7 @@ export default function SettingsScreen() {
             : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
         }
         locations={[0, 0.3, 0.6, 0.85, 1]}
-        style={s.statusBarGradient}
+        style={[s.statusBarGradient, { height: statusBarHeight }]}
       />
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -522,7 +528,7 @@ const s = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === 'ios' ? 70 : 60,
+    // height는 인라인 스타일로 동적 설정
     zIndex: 100,
   },
   content: {

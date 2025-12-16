@@ -24,6 +24,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const QR_TYPES = [
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
@@ -43,6 +44,10 @@ export default function GeneratorScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
+  const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
 
   const [selectedType, setSelectedType] = useState('website');
   const [hapticEnabled, setHapticEnabled] = useState(false);
@@ -704,7 +709,7 @@ export default function GeneratorScreen() {
             : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
         }
         locations={[0, 0.3, 0.6, 0.85, 1]}
-        style={s.statusBarGradient}
+        style={[s.statusBarGradient, { height: statusBarHeight }]}
       />
 
       <ScrollView
@@ -885,7 +890,7 @@ const s = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === 'ios' ? 70 : 60,
+    // height는 인라인 스타일로 동적 설정
     zIndex: 100,
   },
   content: {

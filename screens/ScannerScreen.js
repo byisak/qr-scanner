@@ -26,6 +26,7 @@ import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -40,6 +41,12 @@ function ScannerScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
+  const topOffset = Platform.OS === 'ios' ? 60 : insets.top + 10;
+  const batchBadgeTop = Platform.OS === 'ios' ? 105 : insets.top + 55;
+  const bottomOffset = Platform.OS === 'ios' ? 200 : insets.bottom + 130;
 
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
@@ -1153,7 +1160,7 @@ function ScannerScreen() {
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) */}
         <TouchableOpacity
-          style={styles.groupBadge}
+          style={[styles.groupBadge, { top: topOffset }]}
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
@@ -1166,7 +1173,7 @@ function ScannerScreen() {
 
         {/* 배치 모드 활성 표시 */}
         {batchScanEnabled && (
-          <View style={styles.batchModeBadge}>
+          <View style={[styles.batchModeBadge, { top: batchBadgeTop }]}>
             <Ionicons name="layers" size={16} color="#fff" />
             <Text style={styles.batchModeBadgeText}>{t('scanner.batchModeActive')}</Text>
           </View>
@@ -1250,7 +1257,7 @@ function ScannerScreen() {
 
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
-        <View style={styles.batchControlPanel}>
+        <View style={[styles.batchControlPanel, { bottom: bottomOffset }]}>
           <View style={styles.batchCountContainer}>
             <Ionicons name="checkmark-circle" size={20} color="#34C759" />
             <Text style={styles.batchCountText}>
@@ -1285,16 +1292,21 @@ function ScannerScreen() {
         activeOpacity={0.8}
         accessibilityLabel={torchOn ? t('scanner.torchOn') : t('scanner.torchOff')}
         accessibilityRole="button"
-        style={styles.torchButtonContainer}
+        style={[styles.torchButtonContainer, { top: topOffset }]}
       >
-        <BlurView
-          intensity={80}
-          tint="light"
-          experimentalBlurMethod="dimezisBlurView"
-          style={[styles.torchButton, torchOn && styles.torchButtonActive]}
-        >
-          <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-        </BlurView>
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={80}
+            tint="light"
+            style={[styles.torchButton, torchOn && styles.torchButtonActive]}
+          >
+            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+          </BlurView>
+        ) : (
+          <View style={[styles.torchButton, styles.torchButtonAndroid, torchOn && styles.torchButtonActive]}>
+            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+          </View>
+        )}
       </TouchableOpacity>
 
       {/* 숨겨진 QR 코드 생성용 View */}
@@ -1386,7 +1398,7 @@ const styles = StyleSheet.create({
   },
   groupBadge: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
+    // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 122, 255, 0.9)',
@@ -1407,7 +1419,7 @@ const styles = StyleSheet.create({
   },
   batchModeBadge: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 105 : 85,
+    // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(52, 199, 89, 0.9)',
@@ -1450,7 +1462,7 @@ const styles = StyleSheet.create({
   },
   batchControlPanel: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 200 : 180,
+    // bottom은 인라인 스타일로 동적 설정
     alignSelf: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderRadius: 20,
@@ -1548,7 +1560,7 @@ const styles = StyleSheet.create({
   },
   torchButtonContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
+    // top은 인라인 스타일로 동적 설정
     left: 20,
   },
   torchButton: {
@@ -1557,6 +1569,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  torchButtonAndroid: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   torchButtonActive: {
     backgroundColor: 'rgba(255,214,10,0.15)',
