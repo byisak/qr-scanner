@@ -922,7 +922,13 @@ function ScannerScreen() {
 
       // 햅틱 설정이 활성화된 경우에만 진동
       if (hapticEnabledRef.current) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (Platform.OS === 'android') {
+          // Android: Heavy impact로 더 강한 진동
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        } else {
+          // iOS: 기존 Success notification
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
       }
 
       // 스캔 소리 설정이 활성화된 경우에만 소리 재생
@@ -940,9 +946,14 @@ function ScannerScreen() {
         console.log('[ScannerScreen] Scan sound skipped');
       }
 
+      // Android: cornerPoints를 우선 사용 (더 정확한 위치)
       // bounds가 없으면 cornerPoints에서 생성 시도
       let effectiveBounds = bounds;
-      if (!bounds && cornerPoints) {
+      if (Platform.OS === 'android' && cornerPoints && cornerPoints.length >= 4) {
+        // Android에서는 cornerPoints가 더 정확함
+        console.log('[Android] Using cornerPoints for bounds');
+        effectiveBounds = boundsFromCornerPoints(cornerPoints);
+      } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
