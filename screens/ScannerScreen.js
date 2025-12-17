@@ -509,8 +509,10 @@ function ScannerScreen() {
   }, [currentGroupId]);
 
   // cornerPoints에서 bounds 생성
+  // Android ML Kit: cornerPoints는 카메라 해상도 기준 픽셀 좌표
+  // iOS AVFoundation: cornerPoints는 0~1 정규화 좌표 또는 픽셀 좌표
   const boundsFromCornerPoints = useCallback(
-    (cornerPoints) => {
+    (cornerPoints, frameInfo = null) => {
       if (!cornerPoints || cornerPoints.length < 3) return null;
 
       // cornerPoints는 [{x, y}, {x, y}, ...] 형식
@@ -522,14 +524,38 @@ function ScannerScreen() {
       const minY = Math.min(...yCoords);
       const maxY = Math.max(...yCoords);
 
-      return {
+      let bounds = {
         x: minX,
         y: minY,
         width: maxX - minX,
         height: maxY - minY,
       };
+
+      // Android: ML Kit 좌표를 화면 좌표로 변환
+      if (Platform.OS === 'android') {
+        // ML Kit은 카메라 해상도 기준 좌표 반환 (예: 1920x1080)
+        // 화면 크기로 스케일링 필요
+        // 일반적인 카메라 해상도 추정 (프레임 정보가 없는 경우)
+        const estimatedCameraWidth = frameInfo?.width || 1920;
+        const estimatedCameraHeight = frameInfo?.height || 1080;
+
+        // 카메라 좌표 → 화면 좌표 변환
+        const scaleX = winWidth / estimatedCameraWidth;
+        const scaleY = winHeight / estimatedCameraHeight;
+
+        bounds = {
+          x: bounds.x * scaleX,
+          y: bounds.y * scaleY,
+          width: bounds.width * scaleX,
+          height: bounds.height * scaleY,
+        };
+
+        console.log(`[Android] Scaled bounds: cameraRes=${estimatedCameraWidth}x${estimatedCameraHeight}, screenRes=${winWidth}x${winHeight}`);
+      }
+
+      return bounds;
     },
-    []
+    [winWidth, winHeight]
   );
 
   const normalizeBounds = useCallback(
@@ -780,6 +806,11 @@ function ScannerScreen() {
       // 전체 스캔 결과 로깅 (디버깅용)
       console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
 
+      // Android ML Kit frame 정보 확인
+      if (Platform.OS === 'android') {
+        console.log('[Android ML Kit] Frame info:', scanResult.frame ? JSON.stringify(scanResult.frame) : 'N/A');
+      }
+
       // bounds 정보 로깅 (디버깅용)
       console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
       if (bounds) {
@@ -949,13 +980,14 @@ function ScannerScreen() {
       // Android: cornerPoints를 우선 사용 (더 정확한 위치)
       // bounds가 없으면 cornerPoints에서 생성 시도
       let effectiveBounds = bounds;
+      const frameInfo = scanResult.frame || null; // ML Kit frame 정보
       if (Platform.OS === 'android' && cornerPoints && cornerPoints.length >= 4) {
-        // Android에서는 cornerPoints가 더 정확함
-        console.log('[Android] Using cornerPoints for bounds');
-        effectiveBounds = boundsFromCornerPoints(cornerPoints);
+        // Android에서는 cornerPoints가 더 정확함 (ML Kit)
+        console.log('[Android] Using cornerPoints for bounds with frame:', frameInfo);
+        effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
-        effectiveBounds = boundsFromCornerPoints(cornerPoints);
+        effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
       }
 
       let normalized = normalizeBounds(effectiveBounds);
