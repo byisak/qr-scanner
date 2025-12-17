@@ -509,53 +509,41 @@ function ScannerScreen() {
   }, [currentGroupId]);
 
   // cornerPoints에서 bounds 생성
-  // Android ML Kit: cornerPoints는 카메라 해상도 기준 픽셀 좌표
-  // iOS AVFoundation: cornerPoints는 0~1 정규화 좌표 또는 픽셀 좌표
+  // Android ML Kit: cornerPoints의 x/y가 뒤바뀌어 있음 (카메라 센서 방향 때문)
+  // iOS AVFoundation: cornerPoints는 정상적인 x/y 좌표
   const boundsFromCornerPoints = useCallback(
     (cornerPoints, frameInfo = null) => {
       if (!cornerPoints || cornerPoints.length < 3) return null;
 
+      // Android: x와 y가 뒤바뀌어 있으므로 스왑
+      // 로그에서 확인: bounds.origin.x=307, cornerPoints[0].x=223 (y값과 같음)
+      let processedPoints = cornerPoints;
+      if (Platform.OS === 'android') {
+        processedPoints = cornerPoints.map(p => ({ x: p.y, y: p.x }));
+        console.log('[Android] Swapped cornerPoints x/y');
+      }
+
       // cornerPoints는 [{x, y}, {x, y}, ...] 형식
-      const xCoords = cornerPoints.map(p => p.x);
-      const yCoords = cornerPoints.map(p => p.y);
+      const xCoords = processedPoints.map(p => p.x);
+      const yCoords = processedPoints.map(p => p.y);
 
       const minX = Math.min(...xCoords);
       const maxX = Math.max(...xCoords);
       const minY = Math.min(...yCoords);
       const maxY = Math.max(...yCoords);
 
-      let bounds = {
+      const bounds = {
         x: minX,
         y: minY,
         width: maxX - minX,
         height: maxY - minY,
       };
 
-      // Android: ML Kit 좌표를 화면 좌표로 변환
-      if (Platform.OS === 'android') {
-        // ML Kit은 카메라 해상도 기준 좌표 반환 (예: 1920x1080)
-        // 화면 크기로 스케일링 필요
-        // 일반적인 카메라 해상도 추정 (프레임 정보가 없는 경우)
-        const estimatedCameraWidth = frameInfo?.width || 1920;
-        const estimatedCameraHeight = frameInfo?.height || 1080;
-
-        // 카메라 좌표 → 화면 좌표 변환
-        const scaleX = winWidth / estimatedCameraWidth;
-        const scaleY = winHeight / estimatedCameraHeight;
-
-        bounds = {
-          x: bounds.x * scaleX,
-          y: bounds.y * scaleY,
-          width: bounds.width * scaleX,
-          height: bounds.height * scaleY,
-        };
-
-        console.log(`[Android] Scaled bounds: cameraRes=${estimatedCameraWidth}x${estimatedCameraHeight}, screenRes=${winWidth}x${winHeight}`);
-      }
+      console.log(`[boundsFromCornerPoints] Result: x=${bounds.x.toFixed(1)}, y=${bounds.y.toFixed(1)}, w=${bounds.width.toFixed(1)}, h=${bounds.height.toFixed(1)}`);
 
       return bounds;
     },
-    [winWidth, winHeight]
+    []
   );
 
   const normalizeBounds = useCallback(
