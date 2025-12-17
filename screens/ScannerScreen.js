@@ -986,10 +986,10 @@ function ScannerScreen() {
         let width = bounds.size.width;
         let height = bounds.size.height;
 
-        // 단순 오프셋 적용 (화면 높이/2 - 화면 너비/2)
-        // 이 오프셋은 ML Kit 좌표계와 화면 좌표계의 차이를 보정
-        const offsetX = (winHeight - winWidth) / 2;
-        const offsetY = winHeight / 4; // y 오프셋도 필요할 수 있음
+        // 오프셋 보정 (ML Kit 좌표계 → 화면 좌표계)
+        // 실험적으로 결정된 오프셋 값
+        const offsetX = winWidth / 3;  // ~137
+        const offsetY = winHeight / 7; // ~113
 
         let x = rawX - offsetX;
         let y = rawY - offsetY;
