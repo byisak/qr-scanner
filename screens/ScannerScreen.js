@@ -88,6 +88,8 @@ function ScannerScreen() {
 
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const androidScanAnim = useRef(new Animated.Value(0)).current; // Android 스캔 감지 애니메이션
+  const [showAndroidScanIndicator, setShowAndroidScanIndicator] = useState(false);
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -977,9 +979,26 @@ function ScannerScreen() {
 
       if (Platform.OS === 'android') {
         // Android: ML Kit 좌표 변환이 불안정하여 테두리 표시 비활성화
-        // 스캔 기능은 정상 작동, 햅틱/사운드 피드백으로 인식 알림
+        // 대신 중앙에 스캔 감지 애니메이션 표시
         effectiveBounds = null;
-        console.log('[Android] Bounding box disabled - using haptic/sound feedback only');
+
+        // Android 스캔 감지 애니메이션 트리거
+        setShowAndroidScanIndicator(true);
+        androidScanAnim.setValue(0);
+        Animated.sequence([
+          Animated.timing(androidScanAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(androidScanAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => setShowAndroidScanIndicator(false));
+
+        console.log('[Android] Scan detected - showing center indicator');
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
@@ -1242,7 +1261,7 @@ function ScannerScreen() {
         )}
 
         {/* 중앙 십자가 타겟 (항상 표시) */}
-        {!qrBounds && (
+        {!qrBounds && !showAndroidScanIndicator && (
           <View style={styles.centerTarget} pointerEvents="none">
             {/* 수평선 */}
             <View style={styles.targetLineHorizontal} />
@@ -1251,6 +1270,31 @@ function ScannerScreen() {
             {/* 중심 원 */}
             <View style={styles.targetCenter} />
           </View>
+        )}
+
+        {/* Android 스캔 감지 인디케이터 */}
+        {Platform.OS === 'android' && showAndroidScanIndicator && (
+          <Animated.View
+            style={[
+              styles.androidScanIndicator,
+              {
+                opacity: androidScanAnim,
+                transform: [
+                  {
+                    scale: androidScanAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1.2],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <View style={styles.androidScanCircle}>
+              <Ionicons name="checkmark" size={50} color="#34C759" />
+            </View>
+          </Animated.View>
         )}
       </View>
 
@@ -1747,6 +1791,33 @@ const styles = StyleSheet.create({
   },
   groupItemTextActive: {
     color: '#007AFF',
+  },
+  // Android 스캔 감지 인디케이터 스타일
+  androidScanIndicator: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -50,
+    marginTop: -50,
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  androidScanCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(52, 199, 89, 0.2)',
+    borderWidth: 3,
+    borderColor: '#34C759',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
   },
 });
 
