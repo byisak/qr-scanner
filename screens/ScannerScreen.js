@@ -975,15 +975,14 @@ function ScannerScreen() {
       console.log(`[DEBUG] Platform: ${Platform.OS}, cornerPoints: ${cornerPoints?.length || 0}, bounds: ${!!bounds}`);
 
       if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
-        // Android ML Kit: bounds의 origin.x와 origin.y가 스왑되어 있음
-        // bounds를 직접 사용하되 x/y 스왑 적용
+        // Android ML Kit: bounds를 그대로 사용 (스왑 없이)
         effectiveBounds = {
-          x: bounds.origin.y,  // y → x
-          y: bounds.origin.x,  // x → y
-          width: bounds.size.height,  // height → width
-          height: bounds.size.width,  // width → height
+          x: bounds.origin.x,
+          y: bounds.origin.y,
+          width: bounds.size.width,
+          height: bounds.size.height,
         };
-        console.log('[Android] Swapped ML Kit bounds x/y:', JSON.stringify(effectiveBounds));
+        console.log('[Android] Using ML Kit bounds directly:', JSON.stringify(effectiveBounds));
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
