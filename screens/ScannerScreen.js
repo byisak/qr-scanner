@@ -901,6 +901,7 @@ function ScannerScreen() {
         debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
       }
       if (lastScannedData.current === data && now - lastScannedTime.current < debounceDelay) {
+        console.log('[DEBUG] Debounce return - same data within delay');
         return;
       }
 
@@ -921,7 +922,10 @@ function ScannerScreen() {
           const dw = Math.abs(newB.width - smoothBounds.current.width);
           const dh = Math.abs(newB.height - smoothBounds.current.height);
 
-          if (dx < 10 && dy < 10 && dw < 10 && dh < 10) return;
+          if (dx < 10 && dy < 10 && dw < 10 && dh < 10) {
+            console.log('[DEBUG] Bounds unchanged return');
+            return;
+          }
         }
       }
 
@@ -969,6 +973,7 @@ function ScannerScreen() {
       // bounds가 없으면 cornerPoints에서 생성 시도
       let effectiveBounds = bounds;
       const frameInfo = scanResult.frame || null; // ML Kit frame 정보
+      console.log(`[DEBUG] Platform: ${Platform.OS}, cornerPoints: ${cornerPoints?.length || 0}, bounds: ${!!bounds}`);
       if (Platform.OS === 'android' && cornerPoints && cornerPoints.length >= 4) {
         // Android에서는 cornerPoints가 더 정확함 (ML Kit)
         console.log('[Android] Using cornerPoints for bounds with frame:', frameInfo);
@@ -977,6 +982,7 @@ function ScannerScreen() {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
       }
+      console.log('[DEBUG] effectiveBounds:', JSON.stringify(effectiveBounds));
 
       let normalized = normalizeBounds(effectiveBounds);
 
