@@ -977,39 +977,35 @@ function ScannerScreen() {
 
       if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
         // Android ML Kit 좌표 변환
-        // ML Kit은 전체 카메라 프레임 (4:3 비율)에서 좌표를 반환
-        // CameraView는 "cover" 모드로 화면에 맞게 중앙 크롭하여 표시
-        // 따라서 ML Kit 좌표를 화면 좌표로 변환해야 함
+        // 로그 분석 결과: bounds.origin의 x/y가 cornerPoints 대비 뒤바뀌어 있음
+        // cornerPoints[0].x ≈ bounds.origin.y, cornerPoints[0].y ≈ bounds.origin.x
+        // 좌표는 이미 dp 단위로 보임 (PixelRatio 적용 불필요)
 
-        const CAMERA_ASPECT = 4 / 3; // 카메라 센서 비율 (일반적으로 4:3)
+        const CAMERA_ASPECT = 4 / 3; // 카메라 센서 비율
         const screenAspect = winWidth / winHeight;
-        const pixelRatio = PixelRatio.get();
 
-        // ML Kit 원본 좌표 (픽셀 단위로 추정)
-        let mlX = bounds.origin.x;
-        let mlY = bounds.origin.y;
-        let mlWidth = bounds.size.width;
-        let mlHeight = bounds.size.height;
+        // bounds.origin의 x/y가 실제로 뒤바뀌어 있으므로 스왑
+        // bounds.origin.y → 실제 화면 x 좌표
+        // bounds.origin.x → 실제 화면 y 좌표
+        let x = bounds.origin.y;
+        let y = bounds.origin.x;
+        let width = bounds.size.width;
+        let height = bounds.size.height;
 
-        console.log(`[Android] Original ML Kit bounds: x=${mlX.toFixed(1)}, y=${mlY.toFixed(1)}, w=${mlWidth.toFixed(1)}, h=${mlHeight.toFixed(1)}`);
-        console.log(`[Android] Screen: ${winWidth}x${winHeight}, pixelRatio=${pixelRatio.toFixed(2)}, screenAspect=${screenAspect.toFixed(3)}, cameraAspect=${CAMERA_ASPECT.toFixed(3)}`);
+        console.log(`[Android] Original bounds: origin.x=${bounds.origin.x.toFixed(1)}, origin.y=${bounds.origin.y.toFixed(1)}`);
+        console.log(`[Android] Swapped: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
+        console.log(`[Android] Screen: ${winWidth.toFixed(1)}x${winHeight.toFixed(1)}, screenAspect=${screenAspect.toFixed(3)}`);
 
-        // ML Kit 좌표를 dp로 변환 (픽셀 → dp)
-        let x = mlX / pixelRatio;
-        let y = mlY / pixelRatio;
-        let width = mlWidth / pixelRatio;
-        let height = mlHeight / pixelRatio;
-
-        // Center crop 오프셋 계산
-        // 화면이 카메라보다 세로로 긴 경우 (일반적인 스마트폰) → 좌우 크롭
+        // Center crop 오프셋 계산 (카메라 4:3, 화면은 더 좁은 비율)
         if (screenAspect < CAMERA_ASPECT) {
-          // 화면 높이에 맞춰 카메라가 스케일됨 → 가로가 넘침 → 좌우 크롭
+          // 화면이 세로로 긴 경우 → 좌우 크롭
+          // 카메라 프레임 너비 (화면 높이 기준)
           const virtualCameraWidth = winHeight * CAMERA_ASPECT;
           const cropOffsetX = (virtualCameraWidth - winWidth) / 2;
           x = x - cropOffsetX;
           console.log(`[Android] Horizontal crop: virtualWidth=${virtualCameraWidth.toFixed(1)}, cropOffsetX=${cropOffsetX.toFixed(1)}`);
         } else {
-          // 화면이 카메라보다 가로로 긴 경우 → 상하 크롭
+          // 화면이 가로로 긴 경우 → 상하 크롭
           const virtualCameraHeight = winWidth / CAMERA_ASPECT;
           const cropOffsetY = (virtualCameraHeight - winHeight) / 2;
           y = y - cropOffsetY;
