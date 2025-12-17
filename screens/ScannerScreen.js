@@ -977,34 +977,27 @@ function ScannerScreen() {
 
       if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
         // Android ML Kit 좌표 변환
-        // 1. bounds.origin의 x/y가 cornerPoints 대비 뒤바뀌어 있음
-        // 2. 카메라 프레임(4:3)이 화면에 center crop되어 표시됨 (확대 효과)
-        // 3. ML Kit 좌표를 화면 좌표로 스케일링 필요
-
-        const CAMERA_ASPECT = 4 / 3;
-        // 카메라 프레임의 가상 너비 (화면 높이 기준 4:3)
-        const virtualCameraWidth = winHeight * CAMERA_ASPECT;
-        // 스케일 팩터: 화면 너비 / 가상 카메라 너비
-        const scaleX = winWidth / virtualCameraWidth;
-        // Center crop 오프셋 (가상 카메라 좌표계에서)
-        const cropOffsetX = (virtualCameraWidth - winWidth) / 2;
+        // bounds.origin의 x/y가 뒤바뀌어 있음
+        // ML Kit 좌표는 화면 좌표와 거의 1:1이지만 오프셋이 있음
 
         // bounds.origin의 x/y 스왑
         let rawX = bounds.origin.y; // 실제 화면 x
         let rawY = bounds.origin.x; // 실제 화면 y
-        let rawWidth = bounds.size.width;
-        let rawHeight = bounds.size.height;
+        let width = bounds.size.width;
+        let height = bounds.size.height;
 
-        // ML Kit 좌표 → 화면 좌표 변환
-        // 가상 카메라 좌표를 화면 좌표로 매핑
-        let x = (rawX - cropOffsetX) * scaleX;
-        let y = rawY; // y는 그대로 (세로는 crop 없음)
-        let width = rawWidth * scaleX;
-        let height = rawHeight;
+        // 단순 오프셋 적용 (화면 높이/2 - 화면 너비/2)
+        // 이 오프셋은 ML Kit 좌표계와 화면 좌표계의 차이를 보정
+        const offsetX = (winHeight - winWidth) / 2;
+        const offsetY = winHeight / 4; // y 오프셋도 필요할 수 있음
+
+        let x = rawX - offsetX;
+        let y = rawY - offsetY;
 
         console.log(`[Android] Original bounds: origin.x=${bounds.origin.x.toFixed(1)}, origin.y=${bounds.origin.y.toFixed(1)}`);
-        console.log(`[Android] virtualCameraWidth=${virtualCameraWidth.toFixed(1)}, scaleX=${scaleX.toFixed(3)}, cropOffsetX=${cropOffsetX.toFixed(1)}`);
-        console.log(`[Android] Transformed: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
+        console.log(`[Android] Swapped: rawX=${rawX.toFixed(1)}, rawY=${rawY.toFixed(1)}`);
+        console.log(`[Android] Offsets: offsetX=${offsetX.toFixed(1)}, offsetY=${offsetY.toFixed(1)}`);
+        console.log(`[Android] Final: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
         console.log(`[Android] Screen: ${winWidth.toFixed(1)}x${winHeight.toFixed(1)}`);
 
         effectiveBounds = { x, y, width, height };
