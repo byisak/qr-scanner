@@ -976,38 +976,18 @@ function ScannerScreen() {
       console.log(`[DEBUG] Platform: ${Platform.OS}, cornerPoints: ${cornerPoints?.length || 0}, bounds: ${!!bounds}`);
 
       if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
-        // Android: 카메라 센서 비율(4:3)과 화면 비율 차이로 인한 Center Crop 보정
-        const density = PixelRatio.get();
-
-        // 픽셀 → dp 변환
-        let x = bounds.origin.x / density;
-        let y = bounds.origin.y / density;
-        let width = bounds.size.width / density;
-        let height = bounds.size.height / density;
-
-        // 카메라 센서 비율 (대부분 4:3, Portrait에서는 3:4)
-        const CAMERA_RATIO = 3 / 4;
-        const viewRatio = winWidth / winHeight;
-
-        // Center Crop 오프셋 계산
-        if (viewRatio < CAMERA_RATIO) {
-          // 화면이 카메라보다 더 길쭉함 (대부분의 최신 스마트폰)
-          // 좌우가 잘림 → x 좌표 오프셋 적용
-          const scaledWidth = winHeight * CAMERA_RATIO;
-          const offsetX = (winWidth - scaledWidth) / 2;
-          x = x + offsetX;
-          console.log(`[Android] Center Crop X offset: ${offsetX.toFixed(1)}, scaledWidth: ${scaledWidth.toFixed(1)}`);
-        } else {
-          // 화면이 카메라보다 더 넓음 (태블릿 등)
-          // 상하가 잘림 → y 좌표 오프셋 적용
-          const scaledHeight = winWidth / CAMERA_RATIO;
-          const offsetY = (winHeight - scaledHeight) / 2;
-          y = y + offsetY;
-          console.log(`[Android] Center Crop Y offset: ${offsetY.toFixed(1)}, scaledHeight: ${scaledHeight.toFixed(1)}`);
-        }
+        // Android ML Kit: bounds의 x/y가 스왑되어 있음 (cornerPoints 분석 결과)
+        // bounds.origin.y → 실제 x 좌표
+        // bounds.origin.x → 실제 y 좌표
+        // PixelRatio 적용 안함 (이미 dp 단위로 보임)
+        let x = bounds.origin.y;
+        let y = bounds.origin.x;
+        let width = bounds.size.height;
+        let height = bounds.size.width;
 
         effectiveBounds = { x, y, width, height };
-        console.log(`[Android] Transformed bounds: density=${density}, x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
+        console.log(`[Android] Swapped bounds: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
+        console.log(`[Android] Original bounds: origin.x=${bounds.origin.x.toFixed(1)}, origin.y=${bounds.origin.y.toFixed(1)}`);
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
