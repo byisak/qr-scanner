@@ -978,19 +978,33 @@ function ScannerScreen() {
       if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
         // Android ML Kit 좌표 변환
         // 1. bounds.origin의 x/y가 cornerPoints 대비 뒤바뀌어 있음
-        // 2. x 좌표가 수평으로 뒤집혀 있음 (카메라 좌표계 차이)
+        // 2. 카메라 프레임(4:3)이 화면에 center crop되어 표시됨 (확대 효과)
+        // 3. ML Kit 좌표를 화면 좌표로 스케일링 필요
 
-        let width = bounds.size.width;
-        let height = bounds.size.height;
+        const CAMERA_ASPECT = 4 / 3;
+        // 카메라 프레임의 가상 너비 (화면 높이 기준 4:3)
+        const virtualCameraWidth = winHeight * CAMERA_ASPECT;
+        // 스케일 팩터: 화면 너비 / 가상 카메라 너비
+        const scaleX = winWidth / virtualCameraWidth;
+        // Center crop 오프셋 (가상 카메라 좌표계에서)
+        const cropOffsetX = (virtualCameraWidth - winWidth) / 2;
 
-        // bounds.origin.y → 화면 x (스왑)
-        // 그런데 x 축이 뒤집혀 있으므로 반전 필요
-        let rawX = bounds.origin.y;
-        let x = winWidth - rawX - width; // x 축 반전
-        let y = bounds.origin.x;
+        // bounds.origin의 x/y 스왑
+        let rawX = bounds.origin.y; // 실제 화면 x
+        let rawY = bounds.origin.x; // 실제 화면 y
+        let rawWidth = bounds.size.width;
+        let rawHeight = bounds.size.height;
+
+        // ML Kit 좌표 → 화면 좌표 변환
+        // 가상 카메라 좌표를 화면 좌표로 매핑
+        let x = (rawX - cropOffsetX) * scaleX;
+        let y = rawY; // y는 그대로 (세로는 crop 없음)
+        let width = rawWidth * scaleX;
+        let height = rawHeight;
 
         console.log(`[Android] Original bounds: origin.x=${bounds.origin.x.toFixed(1)}, origin.y=${bounds.origin.y.toFixed(1)}`);
-        console.log(`[Android] Swapped + X mirrored: rawX=${rawX.toFixed(1)}, x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
+        console.log(`[Android] virtualCameraWidth=${virtualCameraWidth.toFixed(1)}, scaleX=${scaleX.toFixed(3)}, cropOffsetX=${cropOffsetX.toFixed(1)}`);
+        console.log(`[Android] Transformed: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
         console.log(`[Android] Screen: ${winWidth.toFixed(1)}x${winHeight.toFixed(1)}`);
 
         effectiveBounds = { x, y, width, height };
