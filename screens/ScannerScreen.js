@@ -977,12 +977,9 @@ function ScannerScreen() {
 
       if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
         // Android ML Kit 좌표 변환
-        // 로그 분석 결과: bounds.origin의 x/y가 cornerPoints 대비 뒤바뀌어 있음
+        // 로그 분석: bounds.origin의 x/y가 cornerPoints 대비 뒤바뀌어 있음
         // cornerPoints[0].x ≈ bounds.origin.y, cornerPoints[0].y ≈ bounds.origin.x
-        // 좌표는 이미 dp 단위로 보임 (PixelRatio 적용 불필요)
-
-        const CAMERA_ASPECT = 4 / 3; // 카메라 센서 비율
-        const screenAspect = winWidth / winHeight;
+        // expo-camera가 이미 화면 좌표로 변환해서 반환하는 것으로 추정 (crop 적용 불필요)
 
         // bounds.origin의 x/y가 실제로 뒤바뀌어 있으므로 스왑
         // bounds.origin.y → 실제 화면 x 좌표
@@ -993,27 +990,10 @@ function ScannerScreen() {
         let height = bounds.size.height;
 
         console.log(`[Android] Original bounds: origin.x=${bounds.origin.x.toFixed(1)}, origin.y=${bounds.origin.y.toFixed(1)}`);
-        console.log(`[Android] Swapped: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
-        console.log(`[Android] Screen: ${winWidth.toFixed(1)}x${winHeight.toFixed(1)}, screenAspect=${screenAspect.toFixed(3)}`);
-
-        // Center crop 오프셋 계산 (카메라 4:3, 화면은 더 좁은 비율)
-        if (screenAspect < CAMERA_ASPECT) {
-          // 화면이 세로로 긴 경우 → 좌우 크롭
-          // 카메라 프레임 너비 (화면 높이 기준)
-          const virtualCameraWidth = winHeight * CAMERA_ASPECT;
-          const cropOffsetX = (virtualCameraWidth - winWidth) / 2;
-          x = x - cropOffsetX;
-          console.log(`[Android] Horizontal crop: virtualWidth=${virtualCameraWidth.toFixed(1)}, cropOffsetX=${cropOffsetX.toFixed(1)}`);
-        } else {
-          // 화면이 가로로 긴 경우 → 상하 크롭
-          const virtualCameraHeight = winWidth / CAMERA_ASPECT;
-          const cropOffsetY = (virtualCameraHeight - winHeight) / 2;
-          y = y - cropOffsetY;
-          console.log(`[Android] Vertical crop: virtualHeight=${virtualCameraHeight.toFixed(1)}, cropOffsetY=${cropOffsetY.toFixed(1)}`);
-        }
+        console.log(`[Android] Swapped (no crop offset): x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
+        console.log(`[Android] Screen: ${winWidth.toFixed(1)}x${winHeight.toFixed(1)}`);
 
         effectiveBounds = { x, y, width, height };
-        console.log(`[Android] Final bounds: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
