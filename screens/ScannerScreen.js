@@ -975,32 +975,11 @@ function ScannerScreen() {
       const frameInfo = scanResult.frame || null;
       console.log(`[DEBUG] Platform: ${Platform.OS}, cornerPoints: ${cornerPoints?.length || 0}, bounds: ${!!bounds}`);
 
-      if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
-        // Android ML Kit 좌표 변환
-        // bounds.origin의 x/y가 뒤바뀌어 있음
-        // ML Kit 좌표는 화면 좌표와 거의 1:1이지만 오프셋이 있음
-
-        // bounds.origin의 x/y 스왑
-        let rawX = bounds.origin.y; // 실제 화면 x
-        let rawY = bounds.origin.x; // 실제 화면 y
-        let width = bounds.size.width;
-        let height = bounds.size.height;
-
-        // 오프셋 보정 (ML Kit 좌표계 → 화면 좌표계)
-        // 실험적으로 결정된 오프셋 값
-        const offsetX = winWidth / 3;  // ~137
-        const offsetY = winHeight / 7; // ~113
-
-        let x = rawX - offsetX;
-        let y = rawY - offsetY;
-
-        console.log(`[Android] Original bounds: origin.x=${bounds.origin.x.toFixed(1)}, origin.y=${bounds.origin.y.toFixed(1)}`);
-        console.log(`[Android] Swapped: rawX=${rawX.toFixed(1)}, rawY=${rawY.toFixed(1)}`);
-        console.log(`[Android] Offsets: offsetX=${offsetX.toFixed(1)}, offsetY=${offsetY.toFixed(1)}`);
-        console.log(`[Android] Final: x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
-        console.log(`[Android] Screen: ${winWidth.toFixed(1)}x${winHeight.toFixed(1)}`);
-
-        effectiveBounds = { x, y, width, height };
+      if (Platform.OS === 'android') {
+        // Android: ML Kit 좌표 변환이 불안정하여 테두리 표시 비활성화
+        // 스캔 기능은 정상 작동, 햅틱/사운드 피드백으로 인식 알림
+        effectiveBounds = null;
+        console.log('[Android] Bounding box disabled - using haptic/sound feedback only');
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
