@@ -11,6 +11,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,16 +27,32 @@ export default function ScanUrlSettingsScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [enabled, setEnabled] = useState(false);
-  const [url, setUrl] = useState('');
+  const [inputUrl, setInputUrl] = useState('');
+  const [urlList, setUrlList] = useState([]); // [{ id: string, url: string, enabled: boolean }]
 
+  // 초기 데이터 로드
   useEffect(() => {
     (async () => {
       try {
         const e = await SecureStore.getItemAsync('scanLinkEnabled');
-        const u = await SecureStore.getItemAsync('baseUrl');
+        const savedUrlList = await SecureStore.getItemAsync('scanUrlList');
+
         if (e === 'true') {
           setEnabled(true);
-          setUrl(u || '');
+        }
+
+        if (savedUrlList) {
+          const parsed = JSON.parse(savedUrlList);
+          setUrlList(parsed);
+        } else {
+          // 기존 단일 URL 마이그레이션
+          const oldUrl = await SecureStore.getItemAsync('baseUrl');
+          if (oldUrl) {
+            const migratedList = [{ id: Date.now().toString(), url: oldUrl, enabled: true }];
+            setUrlList(migratedList);
+            await SecureStore.setItemAsync('scanUrlList', JSON.stringify(migratedList));
+            await SecureStore.deleteItemAsync('baseUrl');
+          }
         }
       } catch (error) {
         console.error('Load scan URL settings error:', error);
@@ -43,20 +60,78 @@ export default function ScanUrlSettingsScreen() {
     })();
   }, []);
 
+  // 기능 활성화 상태 저장
   useEffect(() => {
     SecureStore.setItemAsync('scanLinkEnabled', enabled.toString());
-    if (!enabled) {
-      SecureStore.deleteItemAsync('baseUrl');
-      setUrl('');
-    }
   }, [enabled]);
 
+  // URL 리스트 변경 시 저장
   useEffect(() => {
-    if (enabled && url.trim()) {
-      const t = setTimeout(() => SecureStore.setItemAsync('baseUrl', url.trim()), 500);
-      return () => clearTimeout(t);
+    if (urlList.length > 0) {
+      SecureStore.setItemAsync('scanUrlList', JSON.stringify(urlList));
+
+      // 활성화된 URL을 baseUrl에도 저장 (하위 호환성)
+      const activeUrl = urlList.find(item => item.enabled);
+      if (activeUrl) {
+        SecureStore.setItemAsync('baseUrl', activeUrl.url);
+      } else {
+        SecureStore.deleteItemAsync('baseUrl');
+      }
     }
-  }, [url, enabled]);
+  }, [urlList]);
+
+  // URL 추가
+  const handleAddUrl = () => {
+    const trimmedUrl = inputUrl.trim();
+    if (!trimmedUrl) {
+      Alert.alert(t('settings.error'), t('settings.urlEmptyError'));
+      return;
+    }
+
+    // 중복 체크
+    const isDuplicate = urlList.some(item => item.url === trimmedUrl);
+    if (isDuplicate) {
+      Alert.alert(t('settings.error'), t('settings.urlDuplicateError'));
+      return;
+    }
+
+    const newItem = {
+      id: Date.now().toString(),
+      url: trimmedUrl,
+      enabled: urlList.length === 0, // 첫 번째 URL은 자동 활성화
+    };
+
+    setUrlList(prev => [...prev, newItem]);
+    setInputUrl('');
+    Keyboard.dismiss();
+  };
+
+  // URL 삭제
+  const handleDeleteUrl = (id) => {
+    Alert.alert(
+      t('settings.deleteSession'),
+      t('settings.deleteUrlConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: () => {
+            setUrlList(prev => prev.filter(item => item.id !== id));
+          },
+        },
+      ]
+    );
+  };
+
+  // URL 활성화 토글 (단일 선택만 허용)
+  const handleToggleUrl = (id, value) => {
+    setUrlList(prev => prev.map(item => ({
+      ...item,
+      // 선택된 항목만 활성화, 나머지는 비활성화 (라디오 버튼처럼 동작)
+      enabled: item.id === id ? value : false,
+    })));
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -98,17 +173,79 @@ export default function ScanUrlSettingsScreen() {
                 <Text style={[styles.urlInfo, { color: colors.textSecondary }]}>
                   {t('settings.urlInfo')}
                 </Text>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
-                  value={url}
-                  onChangeText={setUrl}
-                  placeholder={t('settings.urlPlaceholder')}
-                  placeholderTextColor={colors.textTertiary}
-                  autoCapitalize="none"
-                  keyboardType="url"
-                  accessibilityLabel={t('settings.useScanUrl')}
-                />
-                <Text style={[styles.save, { color: colors.success }]}>{t('settings.autoSaved')}</Text>
+
+                {/* URL 입력 및 추가 버튼 */}
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={[styles.input, styles.inputFlex, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    value={inputUrl}
+                    onChangeText={setInputUrl}
+                    placeholder={t('settings.urlPlaceholder')}
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    keyboardType="url"
+                    accessibilityLabel={t('settings.useScanUrl')}
+                  />
+                  <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                    onPress={handleAddUrl}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="add" size={24} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* URL 리스트 */}
+                {urlList.length > 0 && (
+                  <View style={styles.urlListContainer}>
+                    <Text style={[styles.urlListTitle, { color: colors.textSecondary }]}>
+                      {t('settings.urlListTitle')} ({urlList.length})
+                    </Text>
+                    {urlList.map((item, index) => (
+                      <View
+                        key={item.id}
+                        style={[
+                          styles.urlItem,
+                          {
+                            backgroundColor: colors.inputBackground,
+                            borderColor: item.enabled ? colors.success : colors.border
+                          }
+                        ]}
+                      >
+                        <View style={styles.urlItemContent}>
+                          <Text
+                            style={[
+                              styles.urlItemText,
+                              { color: item.enabled ? colors.text : colors.textTertiary }
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {item.url}
+                          </Text>
+                          <View style={styles.urlItemActions}>
+                            <Switch
+                              value={item.enabled}
+                              onValueChange={(value) => handleToggleUrl(item.id, value)}
+                              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                              thumbColor="#fff"
+                              style={styles.urlItemSwitch}
+                            />
+                            <TouchableOpacity
+                              onPress={() => handleDeleteUrl(item.id)}
+                              style={styles.deleteButton}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="trash-outline" size={20} color={colors.error} />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                    <Text style={[styles.urlListInfo, { color: colors.textTertiary }]}>
+                      {t('settings.urlToggleInfo')}
+                    </Text>
+                  </View>
+                )}
 
                 <View style={[styles.exampleBox, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
                   <Text style={[styles.exampleTitle, { color: colors.textSecondary }]}>{t('settings.exampleTitle')}</Text>
@@ -185,18 +322,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  input: {
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 15,
+    gap: 10,
+  },
+  input: {
     padding: 16,
     borderRadius: 12,
     fontSize: 15,
     borderWidth: 1,
   },
-  save: {
-    marginTop: 10,
-    textAlign: 'center',
+  inputFlex: {
+    flex: 1,
+  },
+  addButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  urlListContainer: {
+    marginTop: 20,
+  },
+  urlListTitle: {
+    fontSize: 14,
     fontWeight: '600',
+    marginBottom: 12,
+  },
+  urlItem: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+    padding: 12,
+  },
+  urlItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  urlItemText: {
+    flex: 1,
+    fontSize: 14,
+    marginRight: 10,
+  },
+  urlItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  urlItemSwitch: {
+    transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
+  },
+  deleteButton: {
+    padding: 6,
+  },
+  urlListInfo: {
     fontSize: 12,
+    marginTop: 4,
+    lineHeight: 18,
   },
   exampleBox: {
     marginTop: 20,

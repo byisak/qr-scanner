@@ -18,6 +18,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -26,6 +27,12 @@ export default function HistoryScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
+  const insets = useSafeAreaInsets();
+
+  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
+  const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
+  const searchMarginTop = Platform.OS === 'ios' ? 50 : insets.top + 10;
+
   const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
   const [selectedGroupId, setSelectedGroupId] = useState(DEFAULT_GROUP_ID);
   const [scanHistory, setScanHistory] = useState({ [DEFAULT_GROUP_ID]: [] });
@@ -187,11 +194,11 @@ export default function HistoryScreen() {
             : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
         }
         locations={[0, 0.3, 0.6, 0.85, 1]}
-        style={s.statusBarGradient}
+        style={[s.statusBarGradient, { height: statusBarHeight }]}
       />
 
       {/* 검색 */}
-      <View style={[s.search, { backgroundColor: colors.surface }]}>
+      <View style={[s.search, { backgroundColor: colors.surface, marginTop: searchMarginTop }]}>
         <Ionicons name="search" size={20} color={colors.textTertiary} />
         <TextInput
           style={[s.input, { color: colors.text }]}
@@ -318,14 +325,14 @@ const s = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: Platform.OS === 'ios' ? 70 : 60,
+    // height는 인라인 스타일로 동적 설정
     zIndex: 100,
   },
   search: {
     flexDirection: 'row',
     alignItems: 'center',
     margin: 15,
-    marginTop: 50,
+    // marginTop은 인라인 스타일로 동적 설정
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,

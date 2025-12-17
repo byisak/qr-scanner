@@ -193,6 +193,12 @@ export default {
     exampleTitle: 'Example:',
     exampleUrl: 'https://example.com/product/{code}',
     exampleDesc: '→ If scanned value is "ABC123"\nNavigates to https://example.com/product/ABC123',
+    // URL List
+    urlListTitle: 'URL List',
+    urlEmptyError: 'Please enter a URL',
+    urlDuplicateError: 'This URL has already been added',
+    deleteUrlConfirm: 'Do you want to delete this URL?',
+    urlToggleInfo: 'Only enabled URLs will be used when scanning',
     // Realtime Server Sync
     realtimeSync: 'Realtime Server Sync',
     enableRealtimeSync: 'Enable Realtime Sync',

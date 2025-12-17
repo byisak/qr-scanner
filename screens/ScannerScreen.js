@@ -26,6 +26,7 @@ import websocketClient from '../utils/websocket';
 import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
 import { captureRef } from 'react-native-view-shot';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -40,6 +41,12 @@ function ScannerScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
+  const topOffset = Platform.OS === 'ios' ? 60 : insets.top + 10;
+  const batchBadgeTop = Platform.OS === 'ios' ? 105 : insets.top + 55;
+  const bottomOffset = Platform.OS === 'ios' ? 200 : insets.bottom + 130;
 
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
@@ -533,7 +540,9 @@ function ScannerScreen() {
         return null;
       }
 
-      // 형식 1: { origin: { x, y }, size: { width, height } }
+      console.log('[normalizeBounds] Input:', JSON.stringify(bounds));
+
+      // 형식 1: { origin: { x, y }, size: { width, height } } (iOS)
       if (bounds.origin && bounds.size) {
         const { origin, size } = bounds;
         const isPixel = origin.x > 1 || origin.y > 1;
@@ -575,6 +584,16 @@ function ScannerScreen() {
           y: box.y * scaleY,
           width: box.width * scaleX,
           height: box.height * scaleY,
+        };
+      }
+
+      // 형식 4: Android CameraView { left, top, right, bottom }
+      if (bounds.left !== undefined && bounds.top !== undefined && bounds.right !== undefined && bounds.bottom !== undefined) {
+        return {
+          x: bounds.left,
+          y: bounds.top,
+          width: bounds.right - bounds.left,
+          height: bounds.bottom - bounds.top,
         };
       }
 
@@ -794,8 +813,11 @@ function ScannerScreen() {
       // 1D 바코드 여부 확인
       const is1DBarcode = ONE_D_BARCODE_TYPES.includes(normalizedType);
 
-      // bounds가 없거나 정규화할 수 없으면 디바운스만 적용 (위치 확인 불가능)
-      if (bounds) {
+      // Android에서는 bounds 검증을 건너뛰고 바로 스캔 허용 (bounds 형식 호환성 문제)
+      if (Platform.OS === 'android') {
+        console.log('[Android] Skipping bounds validation, allowing scan');
+      } else if (bounds) {
+        // iOS: bounds 기반 타겟 영역 검사
         const normalized = normalizeBounds(bounds);
         if (normalized) {
           // 바코드의 중심점 계산
@@ -900,7 +922,13 @@ function ScannerScreen() {
 
       // 햅틱 설정이 활성화된 경우에만 진동
       if (hapticEnabledRef.current) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (Platform.OS === 'android') {
+          // Android: Heavy impact로 더 강한 진동
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        } else {
+          // iOS: 기존 Success notification
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
       }
 
       // 스캔 소리 설정이 활성화된 경우에만 소리 재생
@@ -918,9 +946,14 @@ function ScannerScreen() {
         console.log('[ScannerScreen] Scan sound skipped');
       }
 
+      // Android: cornerPoints를 우선 사용 (더 정확한 위치)
       // bounds가 없으면 cornerPoints에서 생성 시도
       let effectiveBounds = bounds;
-      if (!bounds && cornerPoints) {
+      if (Platform.OS === 'android' && cornerPoints && cornerPoints.length >= 4) {
+        // Android에서는 cornerPoints가 더 정확함
+        console.log('[Android] Using cornerPoints for bounds');
+        effectiveBounds = boundsFromCornerPoints(cornerPoints);
+      } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
@@ -1144,16 +1177,16 @@ function ScannerScreen() {
           facing={cameraFacing}
           onBarcodeScanned={handleBarCodeScanned}
           enableTorch={torchOn}
-          barcodeScannerSettings={{
+          barcodeScannerSettings={Platform.OS === 'ios' ? {
             barcodeTypes: barcodeTypes,
-          }}
+          } : undefined}
         />
       )}
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) */}
         <TouchableOpacity
-          style={styles.groupBadge}
+          style={[styles.groupBadge, { top: topOffset }]}
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
@@ -1166,7 +1199,7 @@ function ScannerScreen() {
 
         {/* 배치 모드 활성 표시 */}
         {batchScanEnabled && (
-          <View style={styles.batchModeBadge}>
+          <View style={[styles.batchModeBadge, { top: batchBadgeTop }]}>
             <Ionicons name="layers" size={16} color="#fff" />
             <Text style={styles.batchModeBadgeText}>{t('scanner.batchModeActive')}</Text>
           </View>
@@ -1250,7 +1283,7 @@ function ScannerScreen() {
 
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
-        <View style={styles.batchControlPanel}>
+        <View style={[styles.batchControlPanel, { bottom: bottomOffset }]}>
           <View style={styles.batchCountContainer}>
             <Ionicons name="checkmark-circle" size={20} color="#34C759" />
             <Text style={styles.batchCountText}>
@@ -1285,16 +1318,21 @@ function ScannerScreen() {
         activeOpacity={0.8}
         accessibilityLabel={torchOn ? t('scanner.torchOn') : t('scanner.torchOff')}
         accessibilityRole="button"
-        style={styles.torchButtonContainer}
+        style={[styles.torchButtonContainer, { top: topOffset }]}
       >
-        <BlurView
-          intensity={80}
-          tint="light"
-          experimentalBlurMethod="dimezisBlurView"
-          style={[styles.torchButton, torchOn && styles.torchButtonActive]}
-        >
-          <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-        </BlurView>
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={80}
+            tint="light"
+            style={[styles.torchButton, torchOn && styles.torchButtonActive]}
+          >
+            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+          </BlurView>
+        ) : (
+          <View style={[styles.torchButton, styles.torchButtonAndroid, torchOn && styles.torchButtonActive]}>
+            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+          </View>
+        )}
       </TouchableOpacity>
 
       {/* 숨겨진 QR 코드 생성용 View */}
@@ -1386,7 +1424,7 @@ const styles = StyleSheet.create({
   },
   groupBadge: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
+    // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 122, 255, 0.9)',
@@ -1407,7 +1445,7 @@ const styles = StyleSheet.create({
   },
   batchModeBadge: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 105 : 85,
+    // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(52, 199, 89, 0.9)',
@@ -1450,7 +1488,7 @@ const styles = StyleSheet.create({
   },
   batchControlPanel: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 200 : 180,
+    // bottom은 인라인 스타일로 동적 설정
     alignSelf: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     borderRadius: 20,
@@ -1548,7 +1586,7 @@ const styles = StyleSheet.create({
   },
   torchButtonContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
+    // top은 인라인 스타일로 동적 설정
     left: 20,
   },
   torchButton: {
@@ -1557,6 +1595,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  torchButtonAndroid: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   torchButtonActive: {
     backgroundColor: 'rgba(255,214,10,0.15)',

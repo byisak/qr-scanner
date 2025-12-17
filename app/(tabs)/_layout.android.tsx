@@ -5,7 +5,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
-// Fallback 탭바 배경 컴포넌트 (web 및 기타 플랫폼용)
+// Android: 탭바 배경 컴포넌트
 function TabBarBackground() {
   const { isDark } = useTheme();
 
