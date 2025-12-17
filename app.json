@@ -71,9 +71,9 @@
         "serviceUrlScheme": "qrscanner"
       },
       "google": {
-        "webClientId": "YOUR_GOOGLE_WEB_CLIENT_ID",
-        "iosClientId": "YOUR_GOOGLE_IOS_CLIENT_ID",
-        "androidClientId": "YOUR_GOOGLE_ANDROID_CLIENT_ID"
+        "webClientId": "585698187056-3tqjnjbcdidddn9ddvp2opp0mgj7tgd4.apps.googleusercontent.com",
+        "iosClientId": "585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot.apps.googleusercontent.com",
+        "androidClientId": "585698187056-c245sfancbg2e2djpjn6q0j945f0muff.apps.googleusercontent.com"
       }
     }
   }
