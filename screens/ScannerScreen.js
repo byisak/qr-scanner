@@ -977,20 +977,20 @@ function ScannerScreen() {
 
       if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
         // Android ML Kit 좌표 변환
-        // 로그 분석: bounds.origin의 x/y가 cornerPoints 대비 뒤바뀌어 있음
-        // cornerPoints[0].x ≈ bounds.origin.y, cornerPoints[0].y ≈ bounds.origin.x
-        // expo-camera가 이미 화면 좌표로 변환해서 반환하는 것으로 추정 (crop 적용 불필요)
+        // 1. bounds.origin의 x/y가 cornerPoints 대비 뒤바뀌어 있음
+        // 2. x 좌표가 수평으로 뒤집혀 있음 (카메라 좌표계 차이)
 
-        // bounds.origin의 x/y가 실제로 뒤바뀌어 있으므로 스왑
-        // bounds.origin.y → 실제 화면 x 좌표
-        // bounds.origin.x → 실제 화면 y 좌표
-        let x = bounds.origin.y;
-        let y = bounds.origin.x;
         let width = bounds.size.width;
         let height = bounds.size.height;
 
+        // bounds.origin.y → 화면 x (스왑)
+        // 그런데 x 축이 뒤집혀 있으므로 반전 필요
+        let rawX = bounds.origin.y;
+        let x = winWidth - rawX - width; // x 축 반전
+        let y = bounds.origin.x;
+
         console.log(`[Android] Original bounds: origin.x=${bounds.origin.x.toFixed(1)}, origin.y=${bounds.origin.y.toFixed(1)}`);
-        console.log(`[Android] Swapped (no crop offset): x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
+        console.log(`[Android] Swapped + X mirrored: rawX=${rawX.toFixed(1)}, x=${x.toFixed(1)}, y=${y.toFixed(1)}, w=${width.toFixed(1)}, h=${height.toFixed(1)}`);
         console.log(`[Android] Screen: ${winWidth.toFixed(1)}x${winHeight.toFixed(1)}`);
 
         effectiveBounds = { x, y, width, height };
