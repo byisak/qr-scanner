@@ -969,15 +969,21 @@ function ScannerScreen() {
         console.log('[ScannerScreen] Scan sound skipped');
       }
 
-      // Android: cornerPoints를 우선 사용 (더 정확한 위치)
-      // bounds가 없으면 cornerPoints에서 생성 시도
+      // bounds 처리
       let effectiveBounds = bounds;
-      const frameInfo = scanResult.frame || null; // ML Kit frame 정보
+      const frameInfo = scanResult.frame || null;
       console.log(`[DEBUG] Platform: ${Platform.OS}, cornerPoints: ${cornerPoints?.length || 0}, bounds: ${!!bounds}`);
-      if (Platform.OS === 'android' && cornerPoints && cornerPoints.length >= 4) {
-        // Android에서는 cornerPoints가 더 정확함 (ML Kit)
-        console.log('[Android] Using cornerPoints for bounds with frame:', frameInfo);
-        effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
+
+      if (Platform.OS === 'android' && bounds && bounds.origin && bounds.size) {
+        // Android ML Kit: bounds의 origin.x와 origin.y가 스왑되어 있음
+        // bounds를 직접 사용하되 x/y 스왑 적용
+        effectiveBounds = {
+          x: bounds.origin.y,  // y → x
+          y: bounds.origin.x,  // x → y
+          width: bounds.size.height,  // height → width
+          height: bounds.size.width,  // width → height
+        };
+        console.log('[Android] Swapped ML Kit bounds x/y:', JSON.stringify(effectiveBounds));
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints, frameInfo);
