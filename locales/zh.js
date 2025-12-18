@@ -197,6 +197,8 @@ export default {
     urlListTitle: 'URL列表',
     urlEmptyError: '请输入URL',
     urlDuplicateError: '此URL已添加',
+    editUrl: '编辑URL',
+    editUrlDesc: '请输入新的URL',
     deleteUrlConfirm: '确定要删除此URL吗？',
     urlToggleInfo: '扫描时只使用启用的URL',
     // 实时服务器传输

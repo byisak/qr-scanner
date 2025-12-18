@@ -197,6 +197,8 @@ export default {
     urlListTitle: 'Lista de URL',
     urlEmptyError: 'Por favor, ingresa una URL',
     urlDuplicateError: 'Esta URL ya ha sido agregada',
+    editUrl: 'Editar URL',
+    editUrlDesc: 'Ingresa la nueva URL',
     deleteUrlConfirm: '¿Deseas eliminar esta URL?',
     urlToggleInfo: 'Solo las URLs habilitadas se usarán al escanear',
     // Sincronización en tiempo real

@@ -12,6 +12,8 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +31,11 @@ export default function ScanUrlSettingsScreen() {
   const [enabled, setEnabled] = useState(false);
   const [inputUrl, setInputUrl] = useState('');
   const [urlList, setUrlList] = useState([]); // [{ id: string, url: string, enabled: boolean }]
+
+  // 수정 모달 상태
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editingUrl, setEditingUrl] = useState('');
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -124,6 +131,41 @@ export default function ScanUrlSettingsScreen() {
     );
   };
 
+  // URL 수정 모달 열기
+  const handleEditUrl = (item) => {
+    setEditingItem(item);
+    setEditingUrl(item.url);
+    setEditModalVisible(true);
+  };
+
+  // URL 수정 저장
+  const handleSaveEdit = () => {
+    const trimmedUrl = editingUrl?.trim();
+    if (!trimmedUrl) {
+      Alert.alert(t('settings.error'), t('settings.urlEmptyError'));
+      return;
+    }
+    // 중복 체크 (자기 자신 제외)
+    const isDuplicate = urlList.some(u => u.url === trimmedUrl && u.id !== editingItem.id);
+    if (isDuplicate) {
+      Alert.alert(t('settings.error'), t('settings.urlDuplicateError'));
+      return;
+    }
+    setUrlList(prev => prev.map(u =>
+      u.id === editingItem.id ? { ...u, url: trimmedUrl } : u
+    ));
+    setEditModalVisible(false);
+    setEditingItem(null);
+    setEditingUrl('');
+  };
+
+  // 수정 모달 닫기
+  const handleCancelEdit = () => {
+    setEditModalVisible(false);
+    setEditingItem(null);
+    setEditingUrl('');
+  };
+
   // URL 활성화 토글 (단일 선택만 허용)
   const handleToggleUrl = (id, value) => {
     setUrlList(prev => prev.map(item => ({
@@ -212,7 +254,8 @@ export default function ScanUrlSettingsScreen() {
                           }
                         ]}
                       >
-                        <View style={styles.urlItemContent}>
+                        {/* Row 1: URL + Toggle */}
+                        <View style={styles.urlItemRow}>
                           <Text
                             style={[
                               styles.urlItemText,
@@ -222,22 +265,36 @@ export default function ScanUrlSettingsScreen() {
                           >
                             {item.url}
                           </Text>
-                          <View style={styles.urlItemActions}>
-                            <Switch
-                              value={item.enabled}
-                              onValueChange={(value) => handleToggleUrl(item.id, value)}
-                              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                              thumbColor="#fff"
-                              style={styles.urlItemSwitch}
-                            />
-                            <TouchableOpacity
-                              onPress={() => handleDeleteUrl(item.id)}
-                              style={styles.deleteButton}
-                              activeOpacity={0.7}
-                            >
-                              <Ionicons name="trash-outline" size={20} color={colors.error} />
-                            </TouchableOpacity>
-                          </View>
+                          <Switch
+                            value={item.enabled}
+                            onValueChange={(value) => handleToggleUrl(item.id, value)}
+                            trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                            thumbColor="#fff"
+                            style={styles.urlItemSwitch}
+                          />
+                        </View>
+                        {/* Row 2: Edit + Delete buttons */}
+                        <View style={styles.urlItemButtonRow}>
+                          <TouchableOpacity
+                            onPress={() => handleEditUrl(item)}
+                            style={[styles.actionButton, { borderColor: colors.border }]}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+                            <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+                              {t('common.edit') || '수정'}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteUrl(item.id)}
+                            style={[styles.actionButton, { borderColor: colors.border }]}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="trash-outline" size={16} color={colors.error} />
+                            <Text style={[styles.actionButtonText, { color: colors.error }]}>
+                              {t('common.delete') || '삭제'}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
                     ))}
@@ -259,6 +316,62 @@ export default function ScanUrlSettingsScreen() {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+
+      {/* URL 수정 모달 */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelEdit}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalKeyboardView}
+        >
+          <TouchableWithoutFeedback onPress={handleCancelEdit}>
+            <View style={styles.modalOverlay}>
+              <TouchableWithoutFeedback>
+                <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    {t('settings.editUrl') || 'URL 수정'}
+                  </Text>
+                  <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+                    {t('settings.editUrlDesc') || '새로운 URL을 입력하세요'}
+                  </Text>
+                  <TextInput
+                    style={[styles.modalInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    value={editingUrl}
+                    onChangeText={setEditingUrl}
+                    placeholder={t('settings.urlPlaceholder')}
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    keyboardType="url"
+                    autoFocus
+                  />
+                  <View style={styles.modalButtons}>
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
+                      onPress={handleCancelEdit}
+                    >
+                      <Text style={[styles.modalButtonText, { color: colors.textSecondary }]}>
+                        {t('common.cancel')}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.modalButton, styles.modalSaveButton, { backgroundColor: colors.primary }]}
+                      onPress={handleSaveEdit}
+                    >
+                      <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                        {t('common.save') || '저장'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -358,7 +471,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 12,
   },
-  urlItemContent: {
+  urlItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -368,16 +481,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 10,
   },
-  urlItemActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   urlItemSwitch: {
     transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
   },
-  deleteButton: {
-    padding: 6,
+  urlItemButtonRow: {
+    flexDirection: 'row',
+    marginTop: 10,
+    paddingTop: 10,
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
   urlListInfo: {
     fontSize: 12,
@@ -403,5 +528,61 @@ const styles = StyleSheet.create({
   exampleDesc: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  // 모달 스타일
+  modalKeyboardView: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  modalInput: {
+    padding: 14,
+    borderRadius: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    borderWidth: 1,
+  },
+  modalSaveButton: {},
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
