@@ -44,33 +44,6 @@ const qrAnalyzerHtml = `
       sendResult({ type: 'ready', zxingLoaded: zxingLoaded });
     }
 
-    // 이미지 대비 조정 함수
-    function adjustContrast(ctx, width, height, contrast) {
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const data = imageData.data;
-      const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
-
-      for (let i = 0; i < data.length; i += 4) {
-        data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128));
-        data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128));
-        data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128));
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-    }
-
-    // 디코딩 시도 함수
-    function tryDecode(canvas, useGlobalHistogram, hints) {
-      const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-      const binarizer = useGlobalHistogram
-        ? new ZXing.GlobalHistogramBinarizer(luminanceSource)
-        : new ZXing.HybridBinarizer(luminanceSource);
-      const binaryBitmap = new ZXing.BinaryBitmap(binarizer);
-
-      const reader = new ZXing.QRCodeReader();
-      return reader.decode(binaryBitmap, hints);
-    }
-
     async function analyzeQR(base64Image) {
       log('analyzeQR called, image length: ' + (base64Image ? base64Image.length : 0));
 
@@ -95,72 +68,21 @@ const qrAnalyzerHtml = `
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
 
+            log('Creating BrowserQRCodeReader...');
+            const codeReader = new ZXing.BrowserQRCodeReader();
+
+            log('Decoding from canvas...');
+            const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+            const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+
             const hints = new Map();
             hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-            hints.set(ZXing.DecodeHintType.PURE_BARCODE, false);
 
-            let result = null;
-            let attemptCount = 0;
-
-            // 시도 1: HybridBinarizer (원본)
-            attemptCount++;
-            log('Attempt ' + attemptCount + ': HybridBinarizer (original)');
-            try {
-              result = tryDecode(canvas, false, hints);
-            } catch (e) {
-              log('Attempt ' + attemptCount + ' failed: ' + e.message);
-            }
-
-            // 시도 2: GlobalHistogramBinarizer (원본)
-            if (!result) {
-              attemptCount++;
-              log('Attempt ' + attemptCount + ': GlobalHistogramBinarizer (original)');
-              try {
-                result = tryDecode(canvas, true, hints);
-              } catch (e) {
-                log('Attempt ' + attemptCount + ' failed: ' + e.message);
-              }
-            }
-
-            // 시도 3: HybridBinarizer (대비 증가)
-            if (!result) {
-              attemptCount++;
-              log('Attempt ' + attemptCount + ': HybridBinarizer (high contrast)');
-              ctx.drawImage(img, 0, 0);
-              adjustContrast(ctx, canvas.width, canvas.height, 50);
-              try {
-                result = tryDecode(canvas, false, hints);
-              } catch (e) {
-                log('Attempt ' + attemptCount + ' failed: ' + e.message);
-              }
-            }
-
-            // 시도 4: GlobalHistogramBinarizer (대비 증가)
-            if (!result) {
-              attemptCount++;
-              log('Attempt ' + attemptCount + ': GlobalHistogramBinarizer (high contrast)');
-              try {
-                result = tryDecode(canvas, true, hints);
-              } catch (e) {
-                log('Attempt ' + attemptCount + ' failed: ' + e.message);
-              }
-            }
-
-            // 시도 5: HybridBinarizer (강한 대비)
-            if (!result) {
-              attemptCount++;
-              log('Attempt ' + attemptCount + ': HybridBinarizer (very high contrast)');
-              ctx.drawImage(img, 0, 0);
-              adjustContrast(ctx, canvas.width, canvas.height, 100);
-              try {
-                result = tryDecode(canvas, false, hints);
-              } catch (e) {
-                log('Attempt ' + attemptCount + ' failed: ' + e.message);
-              }
-            }
+            const reader = new ZXing.QRCodeReader();
+            const result = reader.decode(binaryBitmap, hints);
 
             if (result) {
-              log('QR decoded after ' + attemptCount + ' attempts: ' + result.getText());
+              log('QR decoded: ' + result.getText());
               const metadata = result.getResultMetadata();
               let ecLevel = null;
 
@@ -193,8 +115,8 @@ const qrAnalyzerHtml = `
                 format: 'QR_CODE'
               });
             } else {
-              log('All ' + attemptCount + ' attempts failed');
-              sendResult({ type: 'result', success: false, error: 'No QR code found after multiple attempts' });
+              log('No result from decoder');
+              sendResult({ type: 'result', success: false, error: 'No QR code found' });
             }
           } catch (decodeErr) {
             log('Decode error: ' + decodeErr.message);
