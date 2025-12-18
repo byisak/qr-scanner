@@ -652,22 +652,33 @@ function ScannerScreen() {
       let finalUri = photo.uri;
 
       // QR 코드 bounds가 있으면 해당 영역만 crop
-      if (bounds) {
+      if (bounds && photo.width && photo.height) {
         try {
           const normalized = normalizeBounds(bounds);
           if (normalized) {
-            // 여유 공간 추가 (QR 코드 주변 10% 여백)
-            const padding = Math.max(normalized.width, normalized.height) * 0.1;
-            const cropX = Math.max(0, normalized.x - padding);
-            const cropY = Math.max(0, normalized.y - padding);
+            // 화면 좌표를 카메라 사진 좌표로 변환
+            const scaleX = photo.width / winWidth;
+            const scaleY = photo.height / winHeight;
+
+            console.log(`Photo size: ${photo.width}x${photo.height}, Screen size: ${winWidth}x${winHeight}`);
+            console.log(`Scale factors: X=${scaleX.toFixed(2)}, Y=${scaleY.toFixed(2)}`);
+
+            // 여유 공간 추가 (QR 코드 주변 20% 여백)
+            const padding = Math.max(normalized.width, normalized.height) * 0.2;
+
+            // 화면 좌표를 이미지 좌표로 변환
+            const cropX = Math.max(0, (normalized.x - padding) * scaleX);
+            const cropY = Math.max(0, (normalized.y - padding) * scaleY);
             const cropWidth = Math.min(
-              winWidth - cropX,
-              normalized.width + padding * 2
+              photo.width - cropX,
+              (normalized.width + padding * 2) * scaleX
             );
             const cropHeight = Math.min(
-              winHeight - cropY,
-              normalized.height + padding * 2
+              photo.height - cropY,
+              (normalized.height + padding * 2) * scaleY
             );
+
+            console.log(`Crop area: x=${cropX.toFixed(0)}, y=${cropY.toFixed(0)}, w=${cropWidth.toFixed(0)}, h=${cropHeight.toFixed(0)}`);
 
             // 이미지 crop
             const croppedImage = await ImageManipulator.manipulateAsync(
@@ -675,10 +686,10 @@ function ScannerScreen() {
               [
                 {
                   crop: {
-                    originX: cropX,
-                    originY: cropY,
-                    width: cropWidth,
-                    height: cropHeight,
+                    originX: Math.round(cropX),
+                    originY: Math.round(cropY),
+                    width: Math.round(cropWidth),
+                    height: Math.round(cropHeight),
                   },
                 },
               ],
