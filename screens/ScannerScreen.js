@@ -634,19 +634,16 @@ function ScannerScreen() {
         await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
       }
 
-      // 카메라 안정화를 위한 추가 대기 (손 흔들림 감소)
-      await new Promise(resolve => setTimeout(resolve, 150));
-
       // 사진 촬영 전 한번 더 체크
       if (!cameraRef.current) {
         console.log('Camera unmounted before capture');
         return null;
       }
 
-      // 고품질 사진 촬영 (무음)
+      // 사진 촬영 (무음)
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.9,
-        skipProcessing: false, // 이미지 처리 활성화 (선명도 향상)
+        quality: 0.7,
+        skipProcessing: true,
         shutterSound: false,
       });
 
