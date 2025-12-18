@@ -23,9 +23,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
-import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
-import { captureRef } from 'react-native-view-shot';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DEBOUNCE_DELAY = 500;
@@ -98,11 +96,9 @@ function ScannerScreen() {
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
-  const qrCodeRef = useRef(null); // QR 코드 생성용 ref
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
 
   const [qrBounds, setQrBounds] = useState(null);
-  const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -612,60 +608,6 @@ function ScannerScreen() {
     }, delay);
   }, []);
 
-  // QR 코드 재생성 방식으로 이미지 저장
-  const generateQRCodeImage = useCallback(async (qrData, barcodeType = 'qr') => {
-    try {
-      // 사진 디렉토리 생성
-      const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
-      const dirInfo = await FileSystem.getInfoAsync(photoDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
-      }
-
-      // QR 코드 렌더링 트리거
-      setQrCodeToCapture({ data: qrData, type: barcodeType });
-
-      // 렌더링 완료 대기
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      // QR 코드 뷰가 준비되었는지 확인
-      if (!qrCodeRef.current) {
-        console.log('QR code view not ready');
-        setQrCodeToCapture(null);
-        return null;
-      }
-
-      // QR 코드 뷰를 이미지로 캡처 (base64 데이터로 받음)
-      const dataUri = await captureRef(qrCodeRef, {
-        format: 'jpg',
-        quality: 0.9,
-        result: 'data-uri',
-      });
-
-      // 파일명 생성 (타임스탬프 사용)
-      const fileName = `qr_${Date.now()}.jpg`;
-      const newPath = photoDir + fileName;
-
-      // base64 데이터를 파일로 저장
-      // data:image/jpeg;base64,/9j/4AAQ... 형식에서 base64 부분만 추출
-      const base64Data = dataUri.split(',')[1];
-      await FileSystem.writeAsStringAsync(newPath, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      console.log('QR code image saved:', newPath);
-
-      // 초기화
-      setQrCodeToCapture(null);
-
-      return newPath;
-    } catch (error) {
-      console.error('QR code generation error:', error);
-      setQrCodeToCapture(null);
-      return null;
-    }
-  }, []);
-
   const capturePhoto = useCallback(async (bounds = null) => {
     isCapturingPhotoRef.current = true; // 동기적으로 즉시 설정
     setIsCapturingPhoto(true);
@@ -983,8 +925,8 @@ function ScannerScreen() {
         setQrBounds({ ...smoothBounds.current });
       }
 
-      // QR 코드 이미지 생성 (카메라 사진 대신 깨끗한 QR 코드 생성)
-      const photoPromise = photoSaveEnabledRef.current ? generateQRCodeImage(data, type) : Promise.resolve(null);
+      // 실제 카메라 사진 촬영 (무음, 바코드 영역 크롭)
+      const photoPromise = photoSaveEnabledRef.current ? capturePhoto(effectiveBounds) : Promise.resolve(null);
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
@@ -1336,27 +1278,6 @@ function ScannerScreen() {
         )}
       </TouchableOpacity>
 
-      {/* 숨겨진 QR 코드 생성용 View */}
-      {qrCodeToCapture && (
-        <View
-          ref={qrCodeRef}
-          style={{
-            position: 'absolute',
-            left: -9999, // 화면 밖으로 숨김
-            top: 0,
-            backgroundColor: 'white',
-            padding: 20,
-          }}
-          collapsable={false}
-        >
-          <QRCode
-            value={qrCodeToCapture.data}
-            size={300}
-            backgroundColor="white"
-            color="black"
-          />
-        </View>
-      )}
 
       {/* 그룹 선택 모달 */}
       <Modal
