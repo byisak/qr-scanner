@@ -667,19 +667,42 @@ function ScannerScreen() {
             console.log(`Photo size: ${photo.width}x${photo.height}, Screen size: ${winWidth}x${winHeight}`);
             console.log(`Scale factors: X=${scaleX.toFixed(2)}, Y=${scaleY.toFixed(2)}`);
 
-            // 여유 공간 추가 (QR 코드 주변 20% 여백)
-            const padding = Math.max(normalized.width, normalized.height) * 0.2;
+            // 최소 크롭 크기 설정 (EC 레벨 분석을 위해 최소 500픽셀 필요)
+            const MIN_CROP_SIZE = 500;
+
+            // 기본 여유 공간 (QR 코드 주변 20% 여백)
+            let padding = Math.max(normalized.width, normalized.height) * 0.2;
+
+            // 예상 크롭 크기 계산
+            const estimatedCropSize = (Math.max(normalized.width, normalized.height) + padding * 2) * Math.max(scaleX, scaleY);
+
+            // 크롭 크기가 최소 크기보다 작으면 padding 확장
+            if (estimatedCropSize < MIN_CROP_SIZE) {
+              // 최소 크기를 만족하기 위해 필요한 화면 좌표 기준 크기
+              const neededScreenSize = MIN_CROP_SIZE / Math.max(scaleX, scaleY);
+              // 추가로 필요한 padding 계산
+              const currentSize = Math.max(normalized.width, normalized.height);
+              padding = (neededScreenSize - currentSize) / 2;
+              console.log(`Crop too small (${estimatedCropSize.toFixed(0)}px), expanding padding to get ${MIN_CROP_SIZE}px`);
+            }
+
+            // QR 코드 중심점 계산
+            const centerX = normalized.x + normalized.width / 2;
+            const centerY = normalized.y + normalized.height / 2;
+
+            // 중심점 기준으로 크롭 영역 계산
+            const halfSize = Math.max(normalized.width, normalized.height) / 2 + padding;
 
             // 화면 좌표를 이미지 좌표로 변환
-            const cropX = Math.max(0, (normalized.x - padding) * scaleX);
-            const cropY = Math.max(0, (normalized.y - padding) * scaleY);
+            const cropX = Math.max(0, (centerX - halfSize) * scaleX);
+            const cropY = Math.max(0, (centerY - halfSize) * scaleY);
             const cropWidth = Math.min(
               photo.width - cropX,
-              (normalized.width + padding * 2) * scaleX
+              halfSize * 2 * scaleX
             );
             const cropHeight = Math.min(
               photo.height - cropY,
-              (normalized.height + padding * 2) * scaleY
+              halfSize * 2 * scaleY
             );
 
             console.log(`Crop area: x=${cropX.toFixed(0)}, y=${cropY.toFixed(0)}, w=${cropWidth.toFixed(0)}, h=${cropHeight.toFixed(0)}`);
