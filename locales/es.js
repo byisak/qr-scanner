@@ -161,6 +161,9 @@ export default {
     ecLevelM: 'Medio (Medium)',
     ecLevelQ: 'Alto (Quartile)',
     ecLevelH: 'Máximo (High)',
+    ecLevelAnalysisFailed: 'Error en detección del nivel de corrección',
+    ecLevelFailedReason: 'No se pudo analizar el nivel de corrección de errores debido a la baja calidad de imagen o código QR dañado. Por favor, escanea de nuevo para obtener una foto más clara.',
+    rescanForVerification: 'Escanear de nuevo para verificar',
   },
 
   // Pantalla de configuración

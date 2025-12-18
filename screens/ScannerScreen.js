@@ -23,10 +23,9 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
-import QRCode from 'react-native-qrcode-svg';
 import { BlurView } from 'expo-blur';
-import { captureRef } from 'react-native-view-shot';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQRAnalyzer } from '../components/QRAnalyzer';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -42,6 +41,9 @@ function ScannerScreen() {
   const { t, fonts } = useLanguage();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+
+  // QR 코드 EC 레벨 분석용 훅
+  const { analyzeImage, QRAnalyzerView } = useQRAnalyzer();
 
   // iOS는 기존 값 유지, Android는 SafeArea insets 사용
   const topOffset = Platform.OS === 'ios' ? 60 : insets.top + 10;
@@ -98,11 +100,9 @@ function ScannerScreen() {
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
-  const qrCodeRef = useRef(null); // QR 코드 생성용 ref
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
 
   const [qrBounds, setQrBounds] = useState(null);
-  const [qrCodeToCapture, setQrCodeToCapture] = useState(null); // QR 코드 생성용 데이터
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -612,70 +612,16 @@ function ScannerScreen() {
     }, delay);
   }, []);
 
-  // QR 코드 재생성 방식으로 이미지 저장
-  const generateQRCodeImage = useCallback(async (qrData, barcodeType = 'qr') => {
-    try {
-      // 사진 디렉토리 생성
-      const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
-      const dirInfo = await FileSystem.getInfoAsync(photoDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
-      }
-
-      // QR 코드 렌더링 트리거
-      setQrCodeToCapture({ data: qrData, type: barcodeType });
-
-      // 렌더링 완료 대기
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      // QR 코드 뷰가 준비되었는지 확인
-      if (!qrCodeRef.current) {
-        console.log('QR code view not ready');
-        setQrCodeToCapture(null);
-        return null;
-      }
-
-      // QR 코드 뷰를 이미지로 캡처 (base64 데이터로 받음)
-      const dataUri = await captureRef(qrCodeRef, {
-        format: 'jpg',
-        quality: 0.9,
-        result: 'data-uri',
-      });
-
-      // 파일명 생성 (타임스탬프 사용)
-      const fileName = `qr_${Date.now()}.jpg`;
-      const newPath = photoDir + fileName;
-
-      // base64 데이터를 파일로 저장
-      // data:image/jpeg;base64,/9j/4AAQ... 형식에서 base64 부분만 추출
-      const base64Data = dataUri.split(',')[1];
-      await FileSystem.writeAsStringAsync(newPath, base64Data, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      console.log('QR code image saved:', newPath);
-
-      // 초기화
-      setQrCodeToCapture(null);
-
-      return newPath;
-    } catch (error) {
-      console.error('QR code generation error:', error);
-      setQrCodeToCapture(null);
-      return null;
-    }
-  }, []);
-
   const capturePhoto = useCallback(async (bounds = null) => {
     isCapturingPhotoRef.current = true; // 동기적으로 즉시 설정
     setIsCapturingPhoto(true);
 
     // React state 업데이트가 렌더링에 반영될 시간 제공
-    // 이렇게 하면 카메라가 마운트 상태를 유지하도록 보장
-    await new Promise(resolve => setTimeout(resolve, 0));
+    // 카메라가 마운트 상태를 유지하도록 충분한 시간 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
-      // 카메라 ref 체크 (isActive 체크 제거 - ref로 관리)
+      // 카메라 ref 체크
       if (!cameraRef.current) {
         console.log('Camera not ready');
         return null;
@@ -694,10 +640,11 @@ function ScannerScreen() {
         return null;
       }
 
-      // 사진 촬영
+      // 사진 촬영 (무음, 이미지 처리 활성화 - 손떨림 보정 등)
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-        skipProcessing: true,
+        quality: 1.0,
+        skipProcessing: false,
+        shutterSound: false,
       });
 
       // 사진 촬영 후에도 체크
@@ -709,22 +656,36 @@ function ScannerScreen() {
       let finalUri = photo.uri;
 
       // QR 코드 bounds가 있으면 해당 영역만 crop
-      if (bounds) {
+      if (bounds && photo.width && photo.height) {
         try {
           const normalized = normalizeBounds(bounds);
           if (normalized) {
-            // 여유 공간 추가 (QR 코드 주변 10% 여백)
-            const padding = Math.max(normalized.width, normalized.height) * 0.1;
-            const cropX = Math.max(0, normalized.x - padding);
-            const cropY = Math.max(0, normalized.y - padding);
+            // 화면 좌표를 카메라 사진 좌표로 변환
+            const scaleX = photo.width / winWidth;
+            const scaleY = photo.height / winHeight;
+
+            console.log(`Photo size: ${photo.width}x${photo.height}, Screen size: ${winWidth}x${winHeight}`);
+            console.log(`Scale factors: X=${scaleX.toFixed(2)}, Y=${scaleY.toFixed(2)}`);
+
+            // 여유 공간 (QR 코드 주변 20% 여백) - 화면 좌표 기준
+            const padding = Math.max(normalized.width, normalized.height) * 0.2;
+
+            // 화면 좌표를 이미지 좌표로 변환 (원본 해상도 그대로 크롭)
+            const cropX = Math.max(0, (normalized.x - padding) * scaleX);
+            const cropY = Math.max(0, (normalized.y - padding) * scaleY);
             const cropWidth = Math.min(
-              winWidth - cropX,
-              normalized.width + padding * 2
+              photo.width - cropX,
+              (normalized.width + padding * 2) * scaleX
             );
             const cropHeight = Math.min(
-              winHeight - cropY,
-              normalized.height + padding * 2
+              photo.height - cropY,
+              (normalized.height + padding * 2) * scaleY
             );
+
+            console.log(`Screen bounds: x=${normalized.x.toFixed(0)}, y=${normalized.y.toFixed(0)}, w=${normalized.width.toFixed(0)}, h=${normalized.height.toFixed(0)}`);
+            console.log(`Padding (screen): ${padding.toFixed(0)}px`);
+
+            console.log(`Crop area: x=${cropX.toFixed(0)}, y=${cropY.toFixed(0)}, w=${cropWidth.toFixed(0)}, h=${cropHeight.toFixed(0)}`);
 
             // 이미지 crop
             const croppedImage = await ImageManipulator.manipulateAsync(
@@ -732,14 +693,14 @@ function ScannerScreen() {
               [
                 {
                   crop: {
-                    originX: cropX,
-                    originY: cropY,
-                    width: cropWidth,
-                    height: cropHeight,
+                    originX: Math.round(cropX),
+                    originY: Math.round(cropY),
+                    width: Math.round(cropWidth),
+                    height: Math.round(cropHeight),
                   },
                 },
               ],
-              { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+              { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
             );
 
             finalUri = croppedImage.uri;
@@ -752,17 +713,30 @@ function ScannerScreen() {
       }
 
       // 파일명 생성 (타임스탬프 사용)
-      const fileName = `scan_${Date.now()}.jpg`;
+      const timestamp = Date.now();
+      const fileName = `scan_${timestamp}.jpg`;
       const newPath = photoDir + fileName;
 
-      // 사진 이동
+      // 크롭된 사진 저장
       await FileSystem.moveAsync({
         from: finalUri,
         to: newPath,
       });
 
+      // 원본 이미지도 저장 (EC 레벨 분석용)
+      let originalPath = null;
+      if (finalUri !== photo.uri) {
+        const originalFileName = `scan_${timestamp}_original.jpg`;
+        originalPath = photoDir + originalFileName;
+        await FileSystem.copyAsync({
+          from: photo.uri,
+          to: originalPath,
+        });
+        console.log('Original photo saved:', originalPath);
+      }
+
       console.log('Photo saved:', newPath);
-      return newPath;
+      return { croppedUri: newPath, originalUri: originalPath || newPath };
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
@@ -775,7 +749,8 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw } = scanResult;
-      if (!isActive || !canScan) return; // canScan 추가 확인
+      // 사진 촬영 중이면 스캔 무시
+      if (!isActive || !canScan || isCapturingPhotoRef.current) return;
 
       // 전체 스캔 결과 로깅 (디버깅용)
       console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
@@ -909,6 +884,9 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
+      // 스캔 즉시 차단 (중복 스캔 방지)
+      setCanScan(false);
+
       // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
       if (batchScanEnabled) {
         const isDuplicate = batchScannedItems.some(item => item.code === data);
@@ -982,8 +960,8 @@ function ScannerScreen() {
         setQrBounds({ ...smoothBounds.current });
       }
 
-      // QR 코드 이미지 생성 (카메라 사진 대신 깨끗한 QR 코드 생성)
-      const photoPromise = photoSaveEnabledRef.current ? generateQRCodeImage(data, type) : Promise.resolve(null);
+      // 실제 카메라 사진 촬영 (무음, 바코드 영역 크롭)
+      const photoPromise = photoSaveEnabledRef.current ? capturePhoto(effectiveBounds) : Promise.resolve(null);
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
@@ -992,7 +970,53 @@ function ScannerScreen() {
       navigationTimerRef.current = setTimeout(async () => {
         try {
           // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
-          const photoUri = await photoPromise;
+          const photoResult = await photoPromise;
+          const photoUri = photoResult?.croppedUri || photoResult;
+          const originalUri = photoResult?.originalUri || photoResult;
+
+          // QR 코드인 경우, 원본 사진에서 EC 레벨 분석 (2단계 시도)
+          let detectedEcLevel = errorCorrectionLevel;
+          let ecLevelAnalysisFailed = false;
+          const isQRCodeType = normalizedType === 'qr' || normalizedType === 'qrcode';
+
+          if (originalUri && isQRCodeType) {
+            try {
+              // 1단계: 원본 이미지로 직접 분석
+              console.log('Analyzing EC level from original image:', originalUri);
+              let analysisResult = await analyzeImage(originalUri);
+              console.log('Analysis result (original):', analysisResult);
+
+              // 2단계: 실패시 이미지 개선 후 재시도
+              if (!analysisResult.success || !analysisResult.ecLevel) {
+                console.log('Original analysis failed, trying with improved image...');
+                try {
+                  // 이미지 개선: 적절한 크기로 리사이즈 + PNG 무손실 포맷
+                  const improvedImage = await ImageManipulator.manipulateAsync(
+                    originalUri,
+                    [{ resize: { width: 800 } }],
+                    { compress: 1, format: ImageManipulator.SaveFormat.PNG }
+                  );
+                  console.log('Improved image created:', improvedImage.uri);
+
+                  analysisResult = await analyzeImage(improvedImage.uri);
+                  console.log('Analysis result (improved):', analysisResult);
+                } catch (improveError) {
+                  console.log('Image improvement error:', improveError);
+                }
+              }
+
+              if (analysisResult.success && analysisResult.ecLevel) {
+                detectedEcLevel = analysisResult.ecLevel;
+                console.log(`EC Level detected from image: ${detectedEcLevel}`);
+              } else {
+                console.log('EC Level analysis failed after all attempts');
+                ecLevelAnalysisFailed = true;
+              }
+            } catch (analysisError) {
+              console.log('EC Level analysis error:', analysisError);
+              ecLevelAnalysisFailed = true;
+            }
+          }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
           if (realtimeSyncEnabled && activeSessionId) {
@@ -1013,7 +1037,7 @@ function ScannerScreen() {
               timestamp: Date.now(),
               photoUri: photoUri || null,
               type: normalizedType,
-              errorCorrectionLevel: errorCorrectionLevel,
+              errorCorrectionLevel: detectedEcLevel,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -1035,16 +1059,14 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri, normalizedType, errorCorrectionLevel);
-              setCanScan(false);
+              await saveHistory(data, url, photoUri, normalizedType, detectedEcLevel);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri, normalizedType, errorCorrectionLevel);
-          setCanScan(false);
+          const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
           router.push({
             pathname: '/result',
             params: {
@@ -1053,7 +1075,8 @@ function ScannerScreen() {
               scanCount: historyResult.count.toString(),
               photoUri: photoUri || '',
               type: normalizedType,
-              errorCorrectionLevel: errorCorrectionLevel || '',
+              errorCorrectionLevel: detectedEcLevel || '',
+              ecLevelAnalysisFailed: ecLevelAnalysisFailed ? 'true' : 'false',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);
@@ -1066,7 +1089,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
+    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, analyzeImage],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -1170,6 +1193,9 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
+      {/* QR 코드 EC 레벨 분석용 숨겨진 WebView */}
+      <QRAnalyzerView />
+
       {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
         <CameraView
           ref={cameraRef}
@@ -1335,27 +1361,6 @@ function ScannerScreen() {
         )}
       </TouchableOpacity>
 
-      {/* 숨겨진 QR 코드 생성용 View */}
-      {qrCodeToCapture && (
-        <View
-          ref={qrCodeRef}
-          style={{
-            position: 'absolute',
-            left: -9999, // 화면 밖으로 숨김
-            top: 0,
-            backgroundColor: 'white',
-            padding: 20,
-          }}
-          collapsable={false}
-        >
-          <QRCode
-            value={qrCodeToCapture.data}
-            size={300}
-            backgroundColor="white"
-            color="black"
-          />
-        </View>
-      )}
 
       {/* 그룹 선택 모달 */}
       <Modal

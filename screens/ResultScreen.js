@@ -16,7 +16,7 @@ export default function ResultScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
@@ -26,6 +26,8 @@ export default function ResultScreen() {
   const isFromHistory = fromHistory === 'true';
   const barcodeType = type || 'qr';
   const ecLevel = errorCorrectionLevel || null;
+  const ecAnalysisFailed = ecLevelAnalysisFailed === 'true';
+  const isQRCode = barcodeType === 'qr' || barcodeType === 'qrcode';
 
   // 오류 검증 레벨 설명 함수
   const getECLevelDescription = (level) => {
@@ -413,7 +415,7 @@ export default function ResultScreen() {
         )}
 
         {/* QR 코드 오류 검증 레벨 표시 */}
-        {ecLevelInfo && (barcodeType === 'qr' || barcodeType === 'qrcode') && (
+        {ecLevelInfo && isQRCode && (
           <View style={[styles.ecLevelContainer, {
             backgroundColor: isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)',
             borderColor: colors.primary
@@ -435,6 +437,31 @@ export default function ResultScreen() {
                 </Text>
               </View>
             </View>
+          </View>
+        )}
+
+        {/* QR 코드 오류 검증 실패 - 재스캔 안내 */}
+        {!ecLevelInfo && ecAnalysisFailed && isQRCode && hasPhoto && (
+          <View style={[styles.ecLevelContainer, {
+            backgroundColor: isDark ? 'rgba(255, 149, 0, 0.15)' : 'rgba(255, 149, 0, 0.1)',
+            borderColor: '#FF9500'
+          }]}>
+            <View style={styles.ecLevelHeader}>
+              <Ionicons name="warning" size={18} color="#FF9500" />
+              <Text style={[styles.ecLevelTitle, { color: '#FF9500' }]}>
+                {t('result.ecLevelAnalysisFailed')}
+              </Text>
+            </View>
+            <Text style={[styles.ecLevelFailedDesc, { color: colors.textSecondary }]}>
+              {t('result.ecLevelFailedReason')}
+            </Text>
+            <TouchableOpacity
+              style={styles.rescanButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="scan" size={18} color="#fff" />
+              <Text style={styles.rescanButtonText}>{t('result.rescanForVerification')}</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -729,6 +756,26 @@ const styles = StyleSheet.create({
   ecLevelPercent: {
     fontSize: 12,
     marginTop: 2,
+  },
+  ecLevelFailedDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  rescanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF9500',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 6,
+  },
+  rescanButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   editToggleButton: {
     flexDirection: 'row',
