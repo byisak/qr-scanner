@@ -164,6 +164,12 @@ export default {
     ecLevelAnalysisFailed: '오류 검증 레벨 인식 실패',
     ecLevelFailedReason: '이미지 품질이 낮거나 QR 코드가 손상되어 오류 검증 레벨을 분석할 수 없습니다. 더 선명한 사진을 위해 다시 스캔해 주세요.',
     rescanForVerification: '다시 스캔하여 검증',
+    showDetails: '상세 정보',
+    hideDetails: '접기',
+    ecLevelLDesc: '약 7%의 데이터 복원 가능',
+    ecLevelMDesc: '약 15%의 데이터 복원 가능 (가장 일반적으로 사용됨)',
+    ecLevelQDesc: '약 25%의 데이터 복원 가능',
+    ecLevelHDesc: '약 30%의 데이터 복원 가능 (로고 삽입 등 손상 위험이 큰 경우 권장)',
   },
 
   // 설정 화면
@@ -176,7 +182,7 @@ export default {
     scanSoundDesc: '스캔 시 소리로 알림',
     enabled: '활성화됨',
     photoSave: '스캔 사진 저장',
-    photoSaveDesc: 'QR 코드 스캔 시 사진 저장',
+    photoSaveDesc: '활성화시 오류검증 레벨 값이 출력',
     batchScanMode: '배치 스캔 모드',
     batchScanModeDesc: '여러 QR/바코드를 연속으로 스캔합니다',
     selectBarcodes: '인식할 바코드 선택',

@@ -164,6 +164,12 @@ export default {
     ecLevelAnalysisFailed: 'Error en detección del nivel de corrección',
     ecLevelFailedReason: 'No se pudo analizar el nivel de corrección de errores debido a la baja calidad de imagen o código QR dañado. Por favor, escanea de nuevo para obtener una foto más clara.',
     rescanForVerification: 'Escanear de nuevo para verificar',
+    showDetails: 'Ver detalles',
+    hideDetails: 'Ocultar',
+    ecLevelLDesc: 'Aproximadamente 7% de recuperación de datos posible',
+    ecLevelMDesc: 'Aproximadamente 15% de recuperación de datos posible (más comúnmente usado)',
+    ecLevelQDesc: 'Aproximadamente 25% de recuperación de datos posible',
+    ecLevelHDesc: 'Aproximadamente 30% de recuperación de datos posible (recomendado para inserción de logo o alto riesgo de daño)',
   },
 
   // Pantalla de configuración
@@ -174,7 +180,7 @@ export default {
     hapticDesc: 'Vibrar al escanear',
     enabled: 'Activado',
     photoSave: 'Guardar foto del escaneo',
-    photoSaveDesc: 'Guardar foto al escanear código QR',
+    photoSaveDesc: 'Al activar, se mostrará el nivel de corrección de errores',
     batchScanMode: 'Modo de escaneo por lotes',
     batchScanModeDesc: 'Escanear múltiples códigos QR/barras continuamente',
     selectBarcodes: 'Seleccionar códigos de barras',

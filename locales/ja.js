@@ -164,6 +164,12 @@ export default {
     ecLevelAnalysisFailed: '誤り訂正レベル認識失敗',
     ecLevelFailedReason: '画像品質が低いかQRコードが損傷しているため、誤り訂正レベルを分析できません。より鮮明な写真を撮るために再スキャンしてください。',
     rescanForVerification: '再スキャンして検証',
+    showDetails: '詳細情報',
+    hideDetails: '閉じる',
+    ecLevelLDesc: '約7%のデータ復元が可能',
+    ecLevelMDesc: '約15%のデータ復元が可能（最も一般的に使用）',
+    ecLevelQDesc: '約25%のデータ復元が可能',
+    ecLevelHDesc: '約30%のデータ復元が可能（ロゴ挿入など損傷リスクが高い場合に推奨）',
   },
 
   // 設定画面
@@ -174,7 +180,7 @@ export default {
     hapticDesc: 'スキャン時に振動で通知',
     enabled: '有効',
     photoSave: 'スキャン写真を保存',
-    photoSaveDesc: 'QRコードスキャン時に写真を保存',
+    photoSaveDesc: '有効にすると誤り訂正レベル値が出力',
     batchScanMode: 'バッチスキャンモード',
     batchScanModeDesc: '複数のQR/バーコードを連続してスキャンします',
     selectBarcodes: '認識するバーコードを選択',

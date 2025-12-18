@@ -164,6 +164,12 @@ export default {
     ecLevelAnalysisFailed: '纠错等级识别失败',
     ecLevelFailedReason: '由于图像质量低或二维码损坏，无法分析纠错等级。请重新扫描以获取更清晰的照片。',
     rescanForVerification: '重新扫描以验证',
+    showDetails: '详细信息',
+    hideDetails: '收起',
+    ecLevelLDesc: '约7%数据恢复可能',
+    ecLevelMDesc: '约15%数据恢复可能（最常用）',
+    ecLevelQDesc: '约25%数据恢复可能',
+    ecLevelHDesc: '约30%数据恢复可能（建议用于插入logo等高损坏风险情况）',
   },
 
   // 设置界面
@@ -174,7 +180,7 @@ export default {
     hapticDesc: '扫描时通过振动提示',
     enabled: '已启用',
     photoSave: '保存扫描照片',
-    photoSaveDesc: '扫描二维码时保存照片',
+    photoSaveDesc: '启用时输出纠错等级值',
     batchScanMode: '批量扫描模式',
     batchScanModeDesc: '连续扫描多个二维码/条形码',
     selectBarcodes: '选择要识别的条形码',

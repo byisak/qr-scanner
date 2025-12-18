@@ -164,6 +164,12 @@ export default {
     ecLevelAnalysisFailed: 'Error Correction Level Detection Failed',
     ecLevelFailedReason: 'Unable to analyze error correction level due to low image quality or damaged QR code. Please scan again for a clearer photo.',
     rescanForVerification: 'Scan Again to Verify',
+    showDetails: 'Show Details',
+    hideDetails: 'Hide',
+    ecLevelLDesc: 'About 7% data recovery possible',
+    ecLevelMDesc: 'About 15% data recovery possible (most commonly used)',
+    ecLevelQDesc: 'About 25% data recovery possible',
+    ecLevelHDesc: 'About 30% data recovery possible (recommended when logo insertion or high damage risk)',
   },
 
   // Settings screen
@@ -174,7 +180,7 @@ export default {
     hapticDesc: 'Vibrate on scan',
     enabled: 'Enabled',
     photoSave: 'Save Scan Photo',
-    photoSaveDesc: 'Save photo when scanning QR code',
+    photoSaveDesc: 'When enabled, error correction level will be shown',
     batchScanMode: 'Batch Scan Mode',
     batchScanModeDesc: 'Scan multiple QR/barcodes continuously',
     selectBarcodes: 'Select Barcodes',

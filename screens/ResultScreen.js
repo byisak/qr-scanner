@@ -52,6 +52,7 @@ export default function ResultScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
 
   // URL 열기 방식 설정 로드
   useEffect(() => {
@@ -437,6 +438,70 @@ export default function ResultScreen() {
                 </Text>
               </View>
             </View>
+            {/* 펼침/접힘 버튼 */}
+            <TouchableOpacity
+              style={styles.ecLevelExpandButton}
+              onPress={() => setEcLevelExpanded(!ecLevelExpanded)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.ecLevelExpandText, { color: colors.primary }]}>
+                {ecLevelExpanded ? t('result.hideDetails') : t('result.showDetails')}
+              </Text>
+              <Ionicons
+                name={ecLevelExpanded ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+            {/* 펼쳐진 상세 설명 */}
+            {ecLevelExpanded && (
+              <View style={[styles.ecLevelDetails, { borderTopColor: colors.primary + '40' }]}>
+                <View style={styles.ecLevelDetailItem}>
+                  <View style={[styles.ecLevelDetailBadge, { backgroundColor: ecLevel === 'L' ? colors.primary : colors.textTertiary }]}>
+                    <Text style={styles.ecLevelDetailBadgeText}>L</Text>
+                  </View>
+                  <View style={styles.ecLevelDetailInfo}>
+                    <Text style={[styles.ecLevelDetailTitle, { color: colors.text }]}>Low</Text>
+                    <Text style={[styles.ecLevelDetailDesc, { color: colors.textSecondary }]}>
+                      {t('result.ecLevelLDesc')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.ecLevelDetailItem}>
+                  <View style={[styles.ecLevelDetailBadge, { backgroundColor: ecLevel === 'M' ? colors.primary : colors.textTertiary }]}>
+                    <Text style={styles.ecLevelDetailBadgeText}>M</Text>
+                  </View>
+                  <View style={styles.ecLevelDetailInfo}>
+                    <Text style={[styles.ecLevelDetailTitle, { color: colors.text }]}>Medium</Text>
+                    <Text style={[styles.ecLevelDetailDesc, { color: colors.textSecondary }]}>
+                      {t('result.ecLevelMDesc')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.ecLevelDetailItem}>
+                  <View style={[styles.ecLevelDetailBadge, { backgroundColor: ecLevel === 'Q' ? colors.primary : colors.textTertiary }]}>
+                    <Text style={styles.ecLevelDetailBadgeText}>Q</Text>
+                  </View>
+                  <View style={styles.ecLevelDetailInfo}>
+                    <Text style={[styles.ecLevelDetailTitle, { color: colors.text }]}>Quartile</Text>
+                    <Text style={[styles.ecLevelDetailDesc, { color: colors.textSecondary }]}>
+                      {t('result.ecLevelQDesc')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.ecLevelDetailItem}>
+                  <View style={[styles.ecLevelDetailBadge, { backgroundColor: ecLevel === 'H' ? colors.primary : colors.textTertiary }]}>
+                    <Text style={styles.ecLevelDetailBadgeText}>H</Text>
+                  </View>
+                  <View style={styles.ecLevelDetailInfo}>
+                    <Text style={[styles.ecLevelDetailTitle, { color: colors.text }]}>High</Text>
+                    <Text style={[styles.ecLevelDetailDesc, { color: colors.textSecondary }]}>
+                      {t('result.ecLevelHDesc')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -756,6 +821,53 @@ const styles = StyleSheet.create({
   ecLevelPercent: {
     fontSize: 12,
     marginTop: 2,
+  },
+  ecLevelExpandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingTop: 10,
+    gap: 4,
+  },
+  ecLevelExpandText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  ecLevelDetails: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  ecLevelDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  ecLevelDetailBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecLevelDetailBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  ecLevelDetailInfo: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  ecLevelDetailTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ecLevelDetailDesc: {
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16,
   },
   ecLevelFailedDesc: {
     fontSize: 13,
