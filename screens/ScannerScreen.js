@@ -694,10 +694,11 @@ function ScannerScreen() {
         return null;
       }
 
-      // 사진 촬영
+      // 사진 촬영 (무음)
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.7,
         skipProcessing: true,
+        shutterSound: false,
       });
 
       // 사진 촬영 후에도 체크
