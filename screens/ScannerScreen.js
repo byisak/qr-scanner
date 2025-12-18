@@ -25,6 +25,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQRAnalyzer } from '../components/QRAnalyzer';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -40,6 +41,9 @@ function ScannerScreen() {
   const { t, fonts } = useLanguage();
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+
+  // QR 코드 EC 레벨 분석용 훅
+  const { analyzeImage, QRAnalyzerView } = useQRAnalyzer();
 
   // iOS는 기존 값 유지, Android는 SafeArea insets 사용
   const topOffset = Platform.OS === 'ios' ? 60 : insets.top + 10;
@@ -949,6 +953,20 @@ function ScannerScreen() {
           // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
           const photoUri = await photoPromise;
 
+          // QR 코드인 경우, 저장된 사진에서 EC 레벨 분석
+          let detectedEcLevel = errorCorrectionLevel;
+          if (photoUri && (normalizedType === 'qr' || normalizedType === 'qrcode')) {
+            try {
+              const analysisResult = await analyzeImage(photoUri);
+              if (analysisResult.success && analysisResult.ecLevel) {
+                detectedEcLevel = analysisResult.ecLevel;
+                console.log(`EC Level detected from image: ${detectedEcLevel}`);
+              }
+            } catch (analysisError) {
+              console.log('EC Level analysis failed:', analysisError);
+            }
+          }
+
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
           if (realtimeSyncEnabled && activeSessionId) {
             const success = websocketClient.sendScanData({
@@ -968,7 +986,7 @@ function ScannerScreen() {
               timestamp: Date.now(),
               photoUri: photoUri || null,
               type: normalizedType,
-              errorCorrectionLevel: errorCorrectionLevel,
+              errorCorrectionLevel: detectedEcLevel,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -990,7 +1008,7 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri, normalizedType, errorCorrectionLevel);
+              await saveHistory(data, url, photoUri, normalizedType, detectedEcLevel);
               setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
@@ -998,7 +1016,7 @@ function ScannerScreen() {
             }
           }
 
-          const historyResult = await saveHistory(data, null, photoUri, normalizedType, errorCorrectionLevel);
+          const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
           setCanScan(false);
           router.push({
             pathname: '/result',
@@ -1008,7 +1026,7 @@ function ScannerScreen() {
               scanCount: historyResult.count.toString(),
               photoUri: photoUri || '',
               type: normalizedType,
-              errorCorrectionLevel: errorCorrectionLevel || '',
+              errorCorrectionLevel: detectedEcLevel || '',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);
@@ -1021,7 +1039,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
+    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, analyzeImage],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -1125,6 +1143,9 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
+      {/* QR 코드 EC 레벨 분석용 숨겨진 WebView */}
+      <QRAnalyzerView />
+
       {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
         <CameraView
           ref={cameraRef}
