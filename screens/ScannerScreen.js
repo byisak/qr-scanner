@@ -640,10 +640,10 @@ function ScannerScreen() {
         return null;
       }
 
-      // 사진 촬영 (무음)
+      // 사진 촬영 (무음, 이미지 처리 활성화 - 손떨림 보정 등)
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-        skipProcessing: true,
+        quality: 1.0,
+        skipProcessing: false,
         shutterSound: false,
       });
 
