@@ -294,6 +294,11 @@ export default function HistoryScreen() {
                     <Text style={[s.typeBadgeText, { color: colors.primary, fontFamily: fonts.bold }]}>{item.type.toUpperCase()}</Text>
                   </View>
                 )}
+                {item.errorCorrectionLevel && (
+                  <View style={[s.ecLevelBadge, { backgroundColor: 'rgba(90, 200, 250, 0.15)', borderColor: '#5AC8FA' }]}>
+                    <Text style={s.ecLevelBadgeText}>EC:{item.errorCorrectionLevel}</Text>
+                  </View>
+                )}
                 {item.count && item.count > 1 && (
                   <View style={[s.countBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: '#FF9500' }]}>
                     <Ionicons name="repeat" size={12} color="#FF9500" />
@@ -480,6 +485,18 @@ const s = StyleSheet.create({
   typeBadgeText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  ecLevelBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
+    borderWidth: 1,
+  },
+  ecLevelBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#5AC8FA',
   },
   time: {
     fontSize: 13,
