@@ -904,6 +904,9 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
+      // 스캔 즉시 차단 (중복 스캔 방지)
+      setCanScan(false);
+
       // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
       if (batchScanEnabled) {
         const isDuplicate = batchScannedItems.some(item => item.code === data);
@@ -1051,7 +1054,6 @@ function ScannerScreen() {
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
               await saveHistory(data, url, photoUri, normalizedType, detectedEcLevel);
-              setCanScan(false);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -1059,7 +1061,6 @@ function ScannerScreen() {
           }
 
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
-          setCanScan(false);
           router.push({
             pathname: '/result',
             params: {
