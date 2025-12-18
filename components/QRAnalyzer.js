@@ -54,51 +54,84 @@ const qrAnalyzerHtml = `
       }
 
       try {
-        log('Creating BrowserQRCodeReader...');
-        const codeReader = new ZXing.BrowserQRCodeReader();
+        // 이미지를 canvas에 그리기
+        log('Loading image to canvas...');
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
 
-        log('Decoding image...');
-        const result = await codeReader.decodeFromImageUrl(base64Image);
+        img.onload = async function() {
+          try {
+            log('Image loaded: ' + img.width + 'x' + img.height);
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
 
-        if (result) {
-          log('QR decoded: ' + result.getText());
-          const metadata = result.getResultMetadata();
-          let ecLevel = null;
+            log('Creating BrowserQRCodeReader...');
+            const codeReader = new ZXing.BrowserQRCodeReader();
 
-          if (metadata) {
-            log('Metadata keys: ' + Array.from(metadata.keys()).join(', '));
+            log('Decoding from canvas...');
+            const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+            const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
 
-            // EC Level은 key 3에 있음
-            if (metadata.has(3)) {
-              ecLevel = String(metadata.get(3));
-              log('EC Level from key 3: ' + ecLevel);
-            }
+            const hints = new Map();
+            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
-            // 모든 메타데이터 출력
-            metadata.forEach((val, key) => {
-              log('Metadata[' + key + '] = ' + val);
-              const strVal = String(val);
-              if (['L', 'M', 'Q', 'H'].includes(strVal) && !ecLevel) {
-                ecLevel = strVal;
+            const reader = new ZXing.QRCodeReader();
+            const result = reader.decode(binaryBitmap, hints);
+
+            if (result) {
+              log('QR decoded: ' + result.getText());
+              const metadata = result.getResultMetadata();
+              let ecLevel = null;
+
+              if (metadata) {
+                log('Metadata size: ' + metadata.size);
+
+                // EC Level은 key 3 (ERROR_CORRECTION_LEVEL)
+                if (metadata.has(3)) {
+                  ecLevel = String(metadata.get(3));
+                  log('EC Level from key 3: ' + ecLevel);
+                }
+
+                // 모든 메타데이터 출력
+                metadata.forEach((val, key) => {
+                  log('Metadata[' + key + '] = ' + val);
+                  const strVal = String(val);
+                  if (['L', 'M', 'Q', 'H'].includes(strVal) && !ecLevel) {
+                    ecLevel = strVal;
+                  }
+                });
+              } else {
+                log('No metadata found');
               }
-            });
-          } else {
-            log('No metadata found');
-          }
 
-          sendResult({
-            type: 'result',
-            success: true,
-            data: result.getText(),
-            ecLevel: ecLevel,
-            format: String(result.getBarcodeFormat())
-          });
-        } else {
-          log('No result from decoder');
-          sendResult({ type: 'result', success: false, error: 'No QR code found' });
-        }
+              sendResult({
+                type: 'result',
+                success: true,
+                data: result.getText(),
+                ecLevel: ecLevel,
+                format: 'QR_CODE'
+              });
+            } else {
+              log('No result from decoder');
+              sendResult({ type: 'result', success: false, error: 'No QR code found' });
+            }
+          } catch (decodeErr) {
+            log('Decode error: ' + decodeErr.message);
+            sendResult({ type: 'result', success: false, error: decodeErr.message });
+          }
+        };
+
+        img.onerror = function(err) {
+          log('Image load error');
+          sendResult({ type: 'result', success: false, error: 'Failed to load image' });
+        };
+
+        img.src = base64Image;
       } catch (err) {
-        log('Decode error: ' + err.message);
+        log('analyzeQR error: ' + err.message);
         sendResult({ type: 'result', success: false, error: err.message });
       }
     }
