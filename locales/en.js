@@ -197,6 +197,8 @@ export default {
     urlListTitle: 'URL List',
     urlEmptyError: 'Please enter a URL',
     urlDuplicateError: 'This URL has already been added',
+    editUrl: 'Edit URL',
+    editUrlDesc: 'Enter the new URL',
     deleteUrlConfirm: 'Do you want to delete this URL?',
     urlToggleInfo: 'Only enabled URLs will be used when scanning',
     // Realtime Server Sync

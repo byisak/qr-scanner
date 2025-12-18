@@ -197,6 +197,8 @@ export default {
     urlListTitle: 'URLリスト',
     urlEmptyError: 'URLを入力してください',
     urlDuplicateError: 'このURLは既に追加されています',
+    editUrl: 'URLを編集',
+    editUrlDesc: '新しいURLを入力してください',
     deleteUrlConfirm: 'このURLを削除しますか？',
     urlToggleInfo: '有効なURLのみがスキャン時に使用されます',
     // リアルタイムサーバー送信

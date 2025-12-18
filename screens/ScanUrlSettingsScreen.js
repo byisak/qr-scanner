@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
+  Modal,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,6 +30,11 @@ export default function ScanUrlSettingsScreen() {
   const [enabled, setEnabled] = useState(false);
   const [inputUrl, setInputUrl] = useState('');
   const [urlList, setUrlList] = useState([]); // [{ id: string, url: string, enabled: boolean }]
+
+  // 수정 모달 상태
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editingUrl, setEditingUrl] = useState('');
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -122,6 +128,41 @@ export default function ScanUrlSettingsScreen() {
         },
       ]
     );
+  };
+
+  // URL 수정 모달 열기
+  const handleEditUrl = (item) => {
+    setEditingItem(item);
+    setEditingUrl(item.url);
+    setEditModalVisible(true);
+  };
+
+  // URL 수정 저장
+  const handleSaveEdit = () => {
+    const trimmedUrl = editingUrl?.trim();
+    if (!trimmedUrl) {
+      Alert.alert(t('settings.error'), t('settings.urlEmptyError'));
+      return;
+    }
+    // 중복 체크 (자기 자신 제외)
+    const isDuplicate = urlList.some(u => u.url === trimmedUrl && u.id !== editingItem.id);
+    if (isDuplicate) {
+      Alert.alert(t('settings.error'), t('settings.urlDuplicateError'));
+      return;
+    }
+    setUrlList(prev => prev.map(u =>
+      u.id === editingItem.id ? { ...u, url: trimmedUrl } : u
+    ));
+    setEditModalVisible(false);
+    setEditingItem(null);
+    setEditingUrl('');
+  };
+
+  // 수정 모달 닫기
+  const handleCancelEdit = () => {
+    setEditModalVisible(false);
+    setEditingItem(null);
+    setEditingUrl('');
   };
 
   // URL 활성화 토글 (단일 선택만 허용)
@@ -231,6 +272,13 @@ export default function ScanUrlSettingsScreen() {
                               style={styles.urlItemSwitch}
                             />
                             <TouchableOpacity
+                              onPress={() => handleEditUrl(item)}
+                              style={styles.editButton}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="pencil-outline" size={20} color={colors.primary} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
                               onPress={() => handleDeleteUrl(item.id)}
                               style={styles.deleteButton}
                               activeOpacity={0.7}
@@ -259,6 +307,57 @@ export default function ScanUrlSettingsScreen() {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+
+      {/* URL 수정 모달 */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelEdit}
+      >
+        <TouchableWithoutFeedback onPress={handleCancelEdit}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {t('settings.editUrl') || 'URL 수정'}
+                </Text>
+                <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+                  {t('settings.editUrlDesc') || '새로운 URL을 입력하세요'}
+                </Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                  value={editingUrl}
+                  onChangeText={setEditingUrl}
+                  placeholder={t('settings.urlPlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                  autoFocus
+                />
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
+                    onPress={handleCancelEdit}
+                  >
+                    <Text style={[styles.modalButtonText, { color: colors.textSecondary }]}>
+                      {t('common.cancel')}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalSaveButton, { backgroundColor: colors.primary }]}
+                    onPress={handleSaveEdit}
+                  >
+                    <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                      {t('common.save') || '저장'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -376,6 +475,9 @@ const styles = StyleSheet.create({
   urlItemSwitch: {
     transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
   },
+  editButton: {
+    padding: 6,
+  },
   deleteButton: {
     padding: 6,
   },
@@ -403,5 +505,58 @@ const styles = StyleSheet.create({
   exampleDesc: {
     fontSize: 12,
     lineHeight: 18,
+  },
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  modalInput: {
+    padding: 14,
+    borderRadius: 10,
+    fontSize: 15,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    borderWidth: 1,
+  },
+  modalSaveButton: {},
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
