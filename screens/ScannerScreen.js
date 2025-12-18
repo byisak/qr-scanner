@@ -729,7 +729,8 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw } = scanResult;
-      if (!isActive || !canScan) return; // canScan 추가 확인
+      // 사진 촬영 중이면 스캔 무시
+      if (!isActive || !canScan || isCapturingPhotoRef.current) return;
 
       // 전체 스캔 결과 로깅 (디버깅용)
       console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
