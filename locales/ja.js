@@ -161,7 +161,7 @@ export default {
     ecLevelM: '中 (Medium)',
     ecLevelQ: '高 (Quartile)',
     ecLevelH: '最高 (High)',
-    ecLevelAnalysisFailed: '検証失敗',
+    ecLevelAnalysisFailed: '誤り訂正レベル認識失敗',
     ecLevelFailedReason: '画像品質が低いかQRコードが損傷しているため、誤り訂正レベルを分析できません。より鮮明な写真を撮るために再スキャンしてください。',
     rescanForVerification: '再スキャンして検証',
   },
