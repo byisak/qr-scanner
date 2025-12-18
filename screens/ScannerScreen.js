@@ -974,18 +974,39 @@ function ScannerScreen() {
           const photoUri = photoResult?.croppedUri || photoResult;
           const originalUri = photoResult?.originalUri || photoResult;
 
-          // QR 코드인 경우, 원본 사진에서 EC 레벨 분석
+          // QR 코드인 경우, 원본 사진에서 EC 레벨 분석 (2단계 시도)
           let detectedEcLevel = errorCorrectionLevel;
           if (originalUri && (normalizedType === 'qr' || normalizedType === 'qrcode')) {
             try {
+              // 1단계: 원본 이미지로 직접 분석
               console.log('Analyzing EC level from original image:', originalUri);
-              const analysisResult = await analyzeImage(originalUri);
-              console.log('Analysis result:', analysisResult);
+              let analysisResult = await analyzeImage(originalUri);
+              console.log('Analysis result (original):', analysisResult);
+
+              // 2단계: 실패시 이미지 개선 후 재시도
+              if (!analysisResult.success || !analysisResult.ecLevel) {
+                console.log('Original analysis failed, trying with improved image...');
+                try {
+                  // 이미지 개선: 적절한 크기로 리사이즈 + PNG 무손실 포맷
+                  const improvedImage = await ImageManipulator.manipulateAsync(
+                    originalUri,
+                    [{ resize: { width: 800 } }],
+                    { compress: 1, format: ImageManipulator.SaveFormat.PNG }
+                  );
+                  console.log('Improved image created:', improvedImage.uri);
+
+                  analysisResult = await analyzeImage(improvedImage.uri);
+                  console.log('Analysis result (improved):', analysisResult);
+                } catch (improveError) {
+                  console.log('Image improvement error:', improveError);
+                }
+              }
+
               if (analysisResult.success && analysisResult.ecLevel) {
                 detectedEcLevel = analysisResult.ecLevel;
                 console.log(`EC Level detected from image: ${detectedEcLevel}`);
               } else {
-                console.log('EC Level analysis failed:', analysisResult.error);
+                console.log('EC Level analysis failed after all attempts');
               }
             } catch (analysisError) {
               console.log('EC Level analysis error:', analysisError);
