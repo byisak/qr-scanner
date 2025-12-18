@@ -613,11 +613,11 @@ function ScannerScreen() {
     setIsCapturingPhoto(true);
 
     // React state 업데이트가 렌더링에 반영될 시간 제공
-    // 이렇게 하면 카메라가 마운트 상태를 유지하도록 보장
-    await new Promise(resolve => setTimeout(resolve, 0));
+    // 카메라가 마운트 상태를 유지하도록 충분한 시간 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
-      // 카메라 ref 체크 (isActive 체크 제거 - ref로 관리)
+      // 카메라 ref 체크
       if (!cameraRef.current) {
         console.log('Camera not ready');
         return null;
