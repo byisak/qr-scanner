@@ -710,17 +710,30 @@ function ScannerScreen() {
       }
 
       // 파일명 생성 (타임스탬프 사용)
-      const fileName = `scan_${Date.now()}.jpg`;
+      const timestamp = Date.now();
+      const fileName = `scan_${timestamp}.jpg`;
       const newPath = photoDir + fileName;
 
-      // 사진 이동
+      // 크롭된 사진 저장
       await FileSystem.moveAsync({
         from: finalUri,
         to: newPath,
       });
 
+      // 원본 이미지도 저장 (EC 레벨 분석용)
+      let originalPath = null;
+      if (finalUri !== photo.uri) {
+        const originalFileName = `scan_${timestamp}_original.jpg`;
+        originalPath = photoDir + originalFileName;
+        await FileSystem.copyAsync({
+          from: photo.uri,
+          to: originalPath,
+        });
+        console.log('Original photo saved:', originalPath);
+      }
+
       console.log('Photo saved:', newPath);
-      return newPath;
+      return { croppedUri: newPath, originalUri: originalPath || newPath };
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
@@ -951,19 +964,25 @@ function ScannerScreen() {
       navigationTimerRef.current = setTimeout(async () => {
         try {
           // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
-          const photoUri = await photoPromise;
+          const photoResult = await photoPromise;
+          const photoUri = photoResult?.croppedUri || photoResult;
+          const originalUri = photoResult?.originalUri || photoResult;
 
-          // QR 코드인 경우, 저장된 사진에서 EC 레벨 분석
+          // QR 코드인 경우, 원본 사진에서 EC 레벨 분석
           let detectedEcLevel = errorCorrectionLevel;
-          if (photoUri && (normalizedType === 'qr' || normalizedType === 'qrcode')) {
+          if (originalUri && (normalizedType === 'qr' || normalizedType === 'qrcode')) {
             try {
-              const analysisResult = await analyzeImage(photoUri);
+              console.log('Analyzing EC level from original image:', originalUri);
+              const analysisResult = await analyzeImage(originalUri);
+              console.log('Analysis result:', analysisResult);
               if (analysisResult.success && analysisResult.ecLevel) {
                 detectedEcLevel = analysisResult.ecLevel;
                 console.log(`EC Level detected from image: ${detectedEcLevel}`);
+              } else {
+                console.log('EC Level analysis failed:', analysisResult.error);
               }
             } catch (analysisError) {
-              console.log('EC Level analysis failed:', analysisError);
+              console.log('EC Level analysis error:', analysisError);
             }
           }
 
