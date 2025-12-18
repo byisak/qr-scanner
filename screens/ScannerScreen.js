@@ -976,7 +976,10 @@ function ScannerScreen() {
 
           // QR 코드인 경우, 원본 사진에서 EC 레벨 분석 (2단계 시도)
           let detectedEcLevel = errorCorrectionLevel;
-          if (originalUri && (normalizedType === 'qr' || normalizedType === 'qrcode')) {
+          let ecLevelAnalysisFailed = false;
+          const isQRCodeType = normalizedType === 'qr' || normalizedType === 'qrcode';
+
+          if (originalUri && isQRCodeType) {
             try {
               // 1단계: 원본 이미지로 직접 분석
               console.log('Analyzing EC level from original image:', originalUri);
@@ -1007,9 +1010,11 @@ function ScannerScreen() {
                 console.log(`EC Level detected from image: ${detectedEcLevel}`);
               } else {
                 console.log('EC Level analysis failed after all attempts');
+                ecLevelAnalysisFailed = true;
               }
             } catch (analysisError) {
               console.log('EC Level analysis error:', analysisError);
+              ecLevelAnalysisFailed = true;
             }
           }
 
@@ -1071,6 +1076,7 @@ function ScannerScreen() {
               photoUri: photoUri || '',
               type: normalizedType,
               errorCorrectionLevel: detectedEcLevel || '',
+              ecLevelAnalysisFailed: ecLevelAnalysisFailed ? 'true' : 'false',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);

@@ -161,6 +161,9 @@ export default {
     ecLevelM: '中 (Medium)',
     ecLevelQ: '较高 (Quartile)',
     ecLevelH: '最高 (High)',
+    ecLevelAnalysisFailed: '验证失败',
+    ecLevelFailedReason: '由于图像质量低或二维码损坏，无法分析纠错等级。请重新扫描以获取更清晰的照片。',
+    rescanForVerification: '重新扫描以验证',
   },
 
   // 设置界面

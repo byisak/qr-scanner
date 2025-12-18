@@ -161,6 +161,9 @@ export default {
     ecLevelM: '중간 (Medium)',
     ecLevelQ: '높음 (Quartile)',
     ecLevelH: '최고 (High)',
+    ecLevelAnalysisFailed: '검증 실패',
+    ecLevelFailedReason: '이미지 품질이 낮거나 QR 코드가 손상되어 오류 검증 레벨을 분석할 수 없습니다. 더 선명한 사진을 위해 다시 스캔해 주세요.',
+    rescanForVerification: '다시 스캔하여 검증',
   },
 
   // 설정 화면
