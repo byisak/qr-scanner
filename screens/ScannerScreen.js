@@ -643,17 +643,11 @@ function ScannerScreen() {
         return null;
       }
 
-      // Vision Camera 사진 촬영 (무음, 고품질)
-      const photo = await cameraRef.current.takePhoto({
-        qualityPrioritization: 'quality',
-        flash: 'off',
-        enableShutterSound: false,
+      // Vision Camera 사진 촬영 (무음, 고품질) - NativeQRScanner의 ref 메서드 사용
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 1.0,
+        shutterSound: false,
       });
-
-      // Vision Camera는 path를 반환하므로 uri 형식으로 변환
-      if (photo && photo.path) {
-        photo.uri = `file://${photo.path}`;
-      }
 
       // 사진 촬영 후에도 체크
       if (!photo || !photo.uri) {
@@ -1206,7 +1200,7 @@ function ScannerScreen() {
 
       {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
         <NativeQRScanner
-          cameraRef={cameraRef}
+          ref={cameraRef}
           isActive={isActive}
           facing={cameraFacing}
           torch={torchOn ? 'on' : 'off'}
