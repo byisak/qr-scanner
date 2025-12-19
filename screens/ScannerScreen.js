@@ -1,4 +1,4 @@
-// screens/ScannerScreen.js - Expo Router 버전
+// screens/ScannerScreen.js - Expo Router 버전 (Vision Camera 적용)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
@@ -12,7 +12,9 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import { CameraView, Camera } from 'expo-camera';
+// Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
+import { Camera } from 'react-native-vision-camera';
+import { NativeQRScanner, useNativeCamera } from '../components/NativeQRScanner';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer } from 'expo-audio';
@@ -140,7 +142,8 @@ function ScannerScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const { status } = await Camera.requestCameraPermissionsAsync();
+        // Vision Camera 권한 요청
+        const status = await Camera.requestCameraPermission();
         setHasPermission(status === 'granted');
 
         const saved = await AsyncStorage.getItem('selectedBarcodes');
@@ -640,12 +643,17 @@ function ScannerScreen() {
         return null;
       }
 
-      // 사진 촬영 (무음, 이미지 처리 활성화 - 손떨림 보정 등)
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: 1.0,
-        skipProcessing: false,
-        shutterSound: false,
+      // Vision Camera 사진 촬영 (무음, 고품질)
+      const photo = await cameraRef.current.takePhoto({
+        qualityPrioritization: 'quality',
+        flash: 'off',
+        enableShutterSound: false,
       });
+
+      // Vision Camera는 path를 반환하므로 uri 형식으로 변환
+      if (photo && photo.path) {
+        photo.uri = `file://${photo.path}`;
+      }
 
       // 사진 촬영 후에도 체크
       if (!photo || !photo.uri) {
@@ -1197,15 +1205,14 @@ function ScannerScreen() {
       <QRAnalyzerView />
 
       {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
-        <CameraView
-          ref={cameraRef}
-          style={StyleSheet.absoluteFillObject}
+        <NativeQRScanner
+          cameraRef={cameraRef}
+          isActive={isActive}
           facing={cameraFacing}
-          onBarcodeScanned={handleBarCodeScanned}
-          enableTorch={torchOn}
-          barcodeScannerSettings={Platform.OS === 'ios' ? {
-            barcodeTypes: barcodeTypes,
-          } : undefined}
+          torch={torchOn ? 'on' : 'off'}
+          barcodeTypes={barcodeTypes}
+          onCodeScanned={handleBarCodeScanned}
+          style={StyleSheet.absoluteFillObject}
         />
       )}
 

@@ -56,6 +56,14 @@
         {
           "locationWhenInUsePermission": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다."
         }
+      ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
+          "enableMicrophonePermission": false,
+          "enableCodeScanner": true
+        }
       ]
     ],
     "experiments": {
