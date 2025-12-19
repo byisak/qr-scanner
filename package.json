@@ -55,6 +55,7 @@
   },
   "private": true,
   "devDependencies": {
+    "@babel/plugin-transform-optional-chaining": "^7.28.5",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/noto-sans-jp": "^5.2.8",
     "@fontsource/noto-sans-sc": "^5.2.8",
