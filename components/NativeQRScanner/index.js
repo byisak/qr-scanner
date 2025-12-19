@@ -6,7 +6,6 @@ import { StyleSheet, View, Platform, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
-  useCameraFormat,
   useCodeScanner,
 } from 'react-native-vision-camera';
 
@@ -46,80 +45,92 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const cameraRef = useRef(null);
   const [hasPermission, setHasPermission] = useState(false);
 
+  // onCodeScanned의 최신 참조를 유지하기 위한 ref
+  const onCodeScannedRef = useRef(onCodeScanned);
+  useEffect(() => {
+    onCodeScannedRef.current = onCodeScanned;
+  }, [onCodeScanned]);
+
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
-  // 최적 포맷 선택 (1080p, 30fps)
-  const format = useCameraFormat(device, [
-    { videoResolution: { width: 1920, height: 1080 } },
-    { fps: 30 },
-  ]);
-
   // 바코드 타입 변환 (expo-camera 형식 -> Vision Camera 형식)
   const visionCameraCodeTypes = useMemo(() => {
-    return barcodeTypes
+    const types = barcodeTypes
       .map(type => BARCODE_TYPE_MAP[type])
       .filter(Boolean);
+    console.log('[NativeQRScanner] Code types:', types);
+    return types.length > 0 ? types : ['qr'];
   }, [barcodeTypes]);
 
-  // 코드 스캐너 설정 (디바운싱 제거 - ScannerScreen에서 처리)
+  // 코드 스캐너 콜백
+  const handleCodeScanned = useCallback((codes) => {
+    console.log('[NativeQRScanner] Codes detected:', codes.length);
+
+    if (!onCodeScannedRef.current || codes.length === 0) {
+      console.log('[NativeQRScanner] No callback or no codes');
+      return;
+    }
+
+    const code = codes[0];
+    console.log('[NativeQRScanner] First code:', code.value, 'Type:', code.type);
+
+    // expo-camera 형식으로 변환하여 콜백 호출
+    const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
+
+    // cornerPoints를 bounds 형식으로 변환
+    let bounds = null;
+    let cornerPoints = null;
+
+    if (code.corners && code.corners.length >= 4) {
+      cornerPoints = code.corners;
+      const xCoords = code.corners.map(c => c.x);
+      const yCoords = code.corners.map(c => c.y);
+      const minX = Math.min(...xCoords);
+      const maxX = Math.max(...xCoords);
+      const minY = Math.min(...yCoords);
+      const maxY = Math.max(...yCoords);
+
+      bounds = {
+        origin: { x: minX, y: minY },
+        size: { width: maxX - minX, height: maxY - minY },
+      };
+    } else if (code.frame) {
+      bounds = {
+        origin: { x: code.frame.x, y: code.frame.y },
+        size: { width: code.frame.width, height: code.frame.height },
+      };
+    }
+
+    console.log('[NativeQRScanner] Calling onCodeScanned with:', code.value);
+
+    onCodeScannedRef.current({
+      data: code.value,
+      type: normalizedType,
+      bounds,
+      cornerPoints,
+      raw: code.value,
+    });
+  }, []);
+
+  // 코드 스캐너 설정
   const codeScanner = useCodeScanner({
-    codeTypes: visionCameraCodeTypes.length > 0 ? visionCameraCodeTypes : ['qr'],
-    onCodeScanned: (codes) => {
-      if (!onCodeScanned || codes.length === 0) return;
-
-      const code = codes[0];
-
-      // expo-camera 형식으로 변환하여 콜백 호출
-      const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
-
-      // cornerPoints를 bounds 형식으로 변환 (화면 좌표로 변환)
-      let bounds = null;
-      let cornerPoints = null;
-
-      if (code.corners && code.corners.length >= 4) {
-        // Vision Camera의 corners는 이미 화면 좌표
-        cornerPoints = code.corners;
-        const xCoords = code.corners.map(c => c.x);
-        const yCoords = code.corners.map(c => c.y);
-        const minX = Math.min(...xCoords);
-        const maxX = Math.max(...xCoords);
-        const minY = Math.min(...yCoords);
-        const maxY = Math.max(...yCoords);
-
-        bounds = {
-          origin: { x: minX, y: minY },
-          size: { width: maxX - minX, height: maxY - minY },
-        };
-      } else if (code.frame) {
-        bounds = {
-          origin: { x: code.frame.x, y: code.frame.y },
-          size: { width: code.frame.width, height: code.frame.height },
-        };
-      }
-
-      console.log('[NativeQRScanner] Code scanned:', code.value, 'Type:', normalizedType, 'Bounds:', bounds);
-
-      onCodeScanned({
-        data: code.value,
-        type: normalizedType,
-        bounds,
-        cornerPoints,
-        raw: code.value,
-      });
-    },
+    codeTypes: visionCameraCodeTypes,
+    onCodeScanned: handleCodeScanned,
   });
 
   // 카메라 권한 요청
   useEffect(() => {
     (async () => {
+      console.log('[NativeQRScanner] Requesting camera permission...');
       const status = await Camera.requestCameraPermission();
+      console.log('[NativeQRScanner] Permission status:', status);
       setHasPermission(status === 'granted');
       if (status !== 'granted' && onError) {
         onError({ message: 'Camera permission denied' });
       }
     })();
-  }, [onError]);
+  }, []);
 
   // ref를 통해 메서드 노출
   useImperativeHandle(ref, () => ({
@@ -147,7 +158,6 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return null;
       }
     },
-    // expo-camera 호환성을 위한 별칭
     takePictureAsync: async (options = {}) => {
       if (!cameraRef.current) {
         console.log('[NativeQRScanner] Camera not ready for capture');
@@ -174,7 +184,15 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     },
   }), []);
 
-  if (!device || !hasPermission) {
+  console.log('[NativeQRScanner] Render - device:', !!device, 'hasPermission:', hasPermission, 'isActive:', isActive);
+
+  if (!device) {
+    console.log('[NativeQRScanner] No camera device available');
+    return <View style={[styles.container, style]} />;
+  }
+
+  if (!hasPermission) {
+    console.log('[NativeQRScanner] No camera permission');
     return <View style={[styles.container, style]} />;
   }
 
@@ -183,22 +201,15 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       ref={cameraRef}
       style={[StyleSheet.absoluteFill, style]}
       device={device}
-      format={format}
       isActive={isActive}
       torch={torch}
       codeScanner={codeScanner}
       photo={true}
       enableZoomGesture={true}
-      exposure={0}
-      // Android 최적화
-      androidPreviewViewType="surface-view"
-      // iOS 최적화
-      videoStabilizationMode="auto"
     />
   );
 });
 
-// takePictureAsync를 외부에서 호출할 수 있도록 하는 훅
 export function useNativeCamera() {
   const cameraRef = useRef(null);
 
