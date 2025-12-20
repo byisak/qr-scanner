@@ -164,6 +164,10 @@ export default {
     ecLevelAnalysisFailed: '誤り訂正レベル認識失敗',
     ecLevelFailedReason: '画像品質が低いかQRコードが損傷しているため、誤り訂正レベルを分析できません。より鮮明な写真を撮るために再スキャンしてください。',
     rescanForVerification: '再スキャンして検証',
+    showEcLevelInfo: '誤り訂正レベルの説明を表示',
+    hideEcLevelInfo: '説明を非表示',
+    ecLevelTypes: '誤り訂正レベルの種類',
+    recoverable: '復元可能',
   },
 
   // 設定画面

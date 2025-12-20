@@ -52,6 +52,7 @@ export default function ResultScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
 
   // URL 열기 방식 설정 로드
   useEffect(() => {
@@ -437,6 +438,68 @@ export default function ResultScreen() {
                 </Text>
               </View>
             </View>
+
+            {/* 펼침 버튼 */}
+            <TouchableOpacity
+              style={styles.ecLevelExpandButton}
+              onPress={() => setEcLevelExpanded(!ecLevelExpanded)}
+            >
+              <Text style={[styles.ecLevelExpandText, { color: colors.textSecondary }]}>
+                {ecLevelExpanded ? t('result.hideEcLevelInfo') : t('result.showEcLevelInfo')}
+              </Text>
+              <Ionicons
+                name={ecLevelExpanded ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {/* 펼쳐진 EC 레벨 설명 */}
+            {ecLevelExpanded && (
+              <View style={[styles.ecLevelExpandedContent, { borderTopColor: colors.border }]}>
+                <Text style={[styles.ecLevelExpandedTitle, { color: colors.text }]}>
+                  {t('result.ecLevelTypes')}
+                </Text>
+                <View style={styles.ecLevelList}>
+                  <View style={[styles.ecLevelListItem, ecLevel === 'L' && styles.ecLevelListItemActive, ecLevel === 'L' && { backgroundColor: colors.primary + '20' }]}>
+                    <View style={[styles.ecLevelListBadge, { backgroundColor: ecLevel === 'L' ? colors.primary : colors.textSecondary }]}>
+                      <Text style={styles.ecLevelListBadgeText}>L</Text>
+                    </View>
+                    <View style={styles.ecLevelListInfo}>
+                      <Text style={[styles.ecLevelListName, { color: colors.text }]}>Low</Text>
+                      <Text style={[styles.ecLevelListPercent, { color: colors.textSecondary }]}>~7% {t('result.recoverable')}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.ecLevelListItem, ecLevel === 'M' && styles.ecLevelListItemActive, ecLevel === 'M' && { backgroundColor: colors.primary + '20' }]}>
+                    <View style={[styles.ecLevelListBadge, { backgroundColor: ecLevel === 'M' ? colors.primary : colors.textSecondary }]}>
+                      <Text style={styles.ecLevelListBadgeText}>M</Text>
+                    </View>
+                    <View style={styles.ecLevelListInfo}>
+                      <Text style={[styles.ecLevelListName, { color: colors.text }]}>Medium</Text>
+                      <Text style={[styles.ecLevelListPercent, { color: colors.textSecondary }]}>~15% {t('result.recoverable')}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.ecLevelListItem, ecLevel === 'Q' && styles.ecLevelListItemActive, ecLevel === 'Q' && { backgroundColor: colors.primary + '20' }]}>
+                    <View style={[styles.ecLevelListBadge, { backgroundColor: ecLevel === 'Q' ? colors.primary : colors.textSecondary }]}>
+                      <Text style={styles.ecLevelListBadgeText}>Q</Text>
+                    </View>
+                    <View style={styles.ecLevelListInfo}>
+                      <Text style={[styles.ecLevelListName, { color: colors.text }]}>Quartile</Text>
+                      <Text style={[styles.ecLevelListPercent, { color: colors.textSecondary }]}>~25% {t('result.recoverable')}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.ecLevelListItem, ecLevel === 'H' && styles.ecLevelListItemActive, ecLevel === 'H' && { backgroundColor: colors.primary + '20' }]}>
+                    <View style={[styles.ecLevelListBadge, { backgroundColor: ecLevel === 'H' ? colors.primary : colors.textSecondary }]}>
+                      <Text style={styles.ecLevelListBadgeText}>H</Text>
+                    </View>
+                    <View style={styles.ecLevelListInfo}>
+                      <Text style={[styles.ecLevelListName, { color: colors.text }]}>High</Text>
+                      <Text style={[styles.ecLevelListPercent, { color: colors.textSecondary }]}>~30% {t('result.recoverable')}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
         )}
 
@@ -776,6 +839,65 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  ecLevelExpandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingTop: 10,
+  },
+  ecLevelExpandText: {
+    fontSize: 13,
+    marginRight: 4,
+  },
+  ecLevelExpandedContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  ecLevelExpandedTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  ecLevelList: {
+    gap: 8,
+  },
+  ecLevelListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  ecLevelListItemActive: {
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  ecLevelListBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecLevelListBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  ecLevelListInfo: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  ecLevelListName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ecLevelListPercent: {
+    fontSize: 12,
+    marginTop: 1,
   },
   editToggleButton: {
     flexDirection: 'row',

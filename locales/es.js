@@ -164,6 +164,10 @@ export default {
     ecLevelAnalysisFailed: 'Error en detección del nivel de corrección',
     ecLevelFailedReason: 'No se pudo analizar el nivel de corrección de errores debido a la baja calidad de imagen o código QR dañado. Por favor, escanea de nuevo para obtener una foto más clara.',
     rescanForVerification: 'Escanear de nuevo para verificar',
+    showEcLevelInfo: 'Ver info de nivel de corrección',
+    hideEcLevelInfo: 'Ocultar info',
+    ecLevelTypes: 'Tipos de nivel de corrección',
+    recoverable: 'recuperable',
   },
 
   // Pantalla de configuración

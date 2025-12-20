@@ -164,6 +164,10 @@ export default {
     ecLevelAnalysisFailed: 'Error Correction Level Detection Failed',
     ecLevelFailedReason: 'Unable to analyze error correction level due to low image quality or damaged QR code. Please scan again for a clearer photo.',
     rescanForVerification: 'Scan Again to Verify',
+    showEcLevelInfo: 'Show EC Level Info',
+    hideEcLevelInfo: 'Hide Info',
+    ecLevelTypes: 'Error Correction Level Types',
+    recoverable: 'recoverable',
   },
 
   // Settings screen

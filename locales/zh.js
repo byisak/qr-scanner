@@ -164,6 +164,10 @@ export default {
     ecLevelAnalysisFailed: '纠错等级识别失败',
     ecLevelFailedReason: '由于图像质量低或二维码损坏，无法分析纠错等级。请重新扫描以获取更清晰的照片。',
     rescanForVerification: '重新扫描以验证',
+    showEcLevelInfo: '查看纠错等级说明',
+    hideEcLevelInfo: '隐藏说明',
+    ecLevelTypes: '纠错等级类型',
+    recoverable: '可恢复',
   },
 
   // 设置界面
