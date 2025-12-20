@@ -1038,8 +1038,10 @@ function ScannerScreen() {
           isNavigatingRef.current = true;
           setIsActive(false);
 
-          // 사진 저장 설정이 꺼져있으면 히스토리와 결과 화면에는 사진 전달 안함
+          // 히스토리 저장용 (설정에 따라)
           const photoUriForSave = photoSaveEnabledRef.current ? photoUri : null;
+          // 결과 화면 표시용 (QR 코드는 크롭된 사진 항상 표시)
+          const photoUriForDisplay = isQRCodeType ? photoUri : photoUriForSave;
 
           if (enabled === 'true') {
             const base = await SecureStore.getItemAsync('baseUrl');
@@ -1056,14 +1058,14 @@ function ScannerScreen() {
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUriForSave, normalizedType, detectedEcLevel);
 
-          // 즉시 네비게이션
+          // 즉시 네비게이션 (QR 코드는 크롭된 사진 표시)
           router.push({
             pathname: '/result',
             params: {
               code: data,
               isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
               scanCount: historyResult.count.toString(),
-              photoUri: photoUriForSave || '',
+              photoUri: photoUriForDisplay || '',
               type: normalizedType,
               errorCorrectionLevel: detectedEcLevel || '',
               ecLevelAnalysisFailed: ecLevelAnalysisFailed ? 'true' : 'false',
