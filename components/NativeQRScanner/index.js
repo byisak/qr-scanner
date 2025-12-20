@@ -202,6 +202,22 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     },
   }), []);
 
+  // 컴포넌트 마운트/언마운트 로그
+  useEffect(() => {
+    console.log('[NativeQRScanner] Component MOUNTED');
+    return () => {
+      console.log('[NativeQRScanner] Component UNMOUNTING...');
+    };
+  }, []);
+
+  // isActive 변경 감지 로그
+  useEffect(() => {
+    console.log('[NativeQRScanner] isActive CHANGED to:', isActive);
+    if (!isActive) {
+      console.log('[NativeQRScanner] Camera will stop processing frames');
+    }
+  }, [isActive]);
+
   console.log('[NativeQRScanner] === RENDER ===');
   console.log('[NativeQRScanner] device:', device ? device.id : 'null');
   console.log('[NativeQRScanner] hasPermission:', hasPermission);

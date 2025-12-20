@@ -400,16 +400,26 @@ function ScannerScreen() {
       })();
 
       return () => {
+        console.log('[ScannerScreen] === CLEANUP START ===');
+
         // 먼저 콜백 차단 (새로운 스캔 결과 무시)
         isNavigatingRef.current = true;
         isCapturingPhotoRef.current = false;
+        console.log('[ScannerScreen] Callbacks blocked');
+
         clearAllTimers();
+        console.log('[ScannerScreen] Timers cleared');
 
         // 카메라 비활성화를 지연시켜 탭 전환 애니메이션이 먼저 실행되도록 함
-        // InteractionManager를 사용하여 네비게이션 완료 후 카메라 중지
-        InteractionManager.runAfterInteractions(() => {
+        // setTimeout을 사용하여 다음 프레임에서 카메라 중지
+        console.log('[ScannerScreen] Scheduling camera deactivation...');
+        setTimeout(() => {
+          console.log('[ScannerScreen] Deactivating camera NOW');
           setIsActive(false);
-        });
+          console.log('[ScannerScreen] Camera deactivated');
+        }, 50);
+
+        console.log('[ScannerScreen] === CLEANUP END ===');
       };
     }, [resetAll, clearAllTimers]),
   );
