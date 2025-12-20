@@ -561,20 +561,20 @@ function ScannerScreen() {
   const frameDimensionsRef = useRef({ width: 1920, height: 1440 });
 
   // Vision Camera 좌표 변환 헬퍼 함수
+  // mgcrea/vision-camera-barcode-scanner 라이브러리의 로직 참조
+  // https://github.com/mgcrea/vision-camera-barcode-scanner
   const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
-    // 콜백에서 받은 실제 프레임 크기 사용 (없으면 저장된 값 사용)
     const dims = frameDimensions || frameDimensionsRef.current;
-    const RAW_FRAME_W = dims.width;   // 센서 원본 가로 (예: 4032)
-    const RAW_FRAME_H = dims.height;  // 센서 원본 세로 (예: 3024)
+    const frameW = dims.width;   // 센서 원본 가로 (예: 4032)
+    const frameH = dims.height;  // 센서 원본 세로 (예: 3024)
 
     console.log('[convertVisionCameraCoords] ========================================');
     console.log('[convertVisionCameraCoords] Input:', { x: x.toFixed(1), y: y.toFixed(1), w: width.toFixed(1), h: height.toFixed(1) });
     console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
-    console.log('[convertVisionCameraCoords] RawFrame:', { RAW_FRAME_W, RAW_FRAME_H });
+    console.log('[convertVisionCameraCoords] Frame:', { frameW, frameH });
 
     // 좌표가 0-1 사이면 정규화된 좌표
     if (x <= 1 && y <= 1 && width <= 1 && height <= 1) {
-      console.log('[convertVisionCameraCoords] Normalized coords');
       return {
         x: x * winWidth,
         y: y * winHeight,
@@ -583,57 +583,50 @@ function ScannerScreen() {
       };
     }
 
-    // 화면이 portrait이고 프레임이 landscape면 좌표 회전 + 차원 스왑 필요
-    // Vision Camera는 좌표를 센서 방향(landscape)으로 반환하므로
-    // portrait 화면에 맞게 90도 회전 변환 필요
-    const isScreenPortrait = winHeight > winWidth;
-    const isFrameLandscape = RAW_FRAME_W > RAW_FRAME_H;
-
-    let FRAME_W, FRAME_H;
-    let rotatedX, rotatedY, rotatedW, rotatedH;
-
-    if (isScreenPortrait && isFrameLandscape) {
-      // Vision Camera는 좌표를 이미 portrait 방향으로 반환할 수 있음
-      // 프레임 크기만 스왑하고 좌표는 그대로 사용
-      // x, y를 스왑하여 portrait 방향에 맞춤
-      rotatedX = y;     // 센서 y → 화면 x
-      rotatedY = x;     // 센서 x → 화면 y
-      rotatedW = height;
-      rotatedH = width;
-
-      // 프레임 차원 스왑 (landscape → portrait)
-      FRAME_W = RAW_FRAME_H;  // 3024
-      FRAME_H = RAW_FRAME_W;  // 4032
-      console.log('[convertVisionCameraCoords] Swapped coords for portrait:', { rotatedX: rotatedX.toFixed(1), rotatedY: rotatedY.toFixed(1) });
-      console.log('[convertVisionCameraCoords] Swapped frame dims:', { FRAME_W, FRAME_H });
-    } else {
-      rotatedX = x;
-      rotatedY = y;
-      rotatedW = width;
-      rotatedH = height;
-      FRAME_W = RAW_FRAME_W;
-      FRAME_H = RAW_FRAME_H;
-    }
-
-    // aspectFill 스케일링
-    const scaleX = winWidth / FRAME_W;
-    const scaleY = winHeight / FRAME_H;
-    const scale = Math.max(scaleX, scaleY);
-
-    // 크롭 오프셋 (화면 중앙 정렬)
-    const offsetX = (FRAME_W * scale - winWidth) / 2;
-    const offsetY = (FRAME_H * scale - winHeight) / 2;
-
-    const result = {
-      x: rotatedX * scale - offsetX,
-      y: rotatedY * scale - offsetY,
-      width: rotatedW * scale,
-      height: rotatedH * scale,
+    // mgcrea 방식: 레이아웃을 스왑하여 사용 (프레임은 그대로)
+    const adjustedLayout = {
+      width: winHeight,   // 화면 높이 → 조정된 너비
+      height: winWidth,   // 화면 너비 → 조정된 높이
     };
 
-    console.log('[convertVisionCameraCoords] Scale:', scale.toFixed(4), 'Offset:', { x: offsetX.toFixed(1), y: offsetY.toFixed(1) });
-    console.log('[convertVisionCameraCoords] Result:', { x: result.x.toFixed(1), y: result.y.toFixed(1), w: result.width.toFixed(1), h: result.height.toFixed(1) });
-    return result;
+    // 스케일 팩터 계산 (cover 모드)
+    const ratioW = adjustedLayout.width / frameW;
+    const ratioH = adjustedLayout.height / frameH;
+    const scaleFactor = Math.max(ratioW, ratioH);
+
+    console.log('[convertVisionCameraCoords] Ratios:', { ratioW: ratioW.toFixed(4), ratioH: ratioH.toFixed(4) });
+    console.log('[convertVisionCameraCoords] ScaleFactor:', scaleFactor.toFixed(4));
+
+    // 좌표 스케일링
+    let newX = x * scaleFactor;
+    let newY = y * scaleFactor;
+    let newW = width * scaleFactor;
+    let newH = height * scaleFactor;
+
+    // 센터링 오프셋 (cover 모드)
+    if (ratioW > ratioH) {
+      // 높이 방향으로 크롭됨
+      newY += (adjustedLayout.height - frameH * scaleFactor) / 2;
+    } else {
+      // 너비 방향으로 크롭됨
+      newX += (adjustedLayout.width - frameW * scaleFactor) / 2;
+    }
+
+    console.log('[convertVisionCameraCoords] After scale+offset:', { newX: newX.toFixed(1), newY: newY.toFixed(1) });
+
+    // iOS: x와 y 스왑 (mgcrea 라이브러리 방식)
+    if (Platform.OS === 'ios') {
+      const result = {
+        x: newY,
+        y: newX,
+        width: newH,
+        height: newW,
+      };
+      console.log('[convertVisionCameraCoords] iOS swap result:', { x: result.x.toFixed(1), y: result.y.toFixed(1) });
+      return result;
+    }
+
+    return { x: newX, y: newY, width: newW, height: newH };
   }, [winWidth, winHeight]);
 
   const normalizeBounds = useCallback(
