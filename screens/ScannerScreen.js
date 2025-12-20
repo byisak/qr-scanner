@@ -568,25 +568,45 @@ function ScannerScreen() {
     console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
     console.log('[convertVisionCameraCoords] Sensor:', { SENSOR_WIDTH, SENSOR_HEIGHT });
 
-    // 좌표가 화면 크기보다 크면 Vision Camera 센서 좌표로 판단
-    const maxCoord = Math.max(x, y, x + width, y + height);
-    if (maxCoord > Math.max(winWidth, winHeight) * 1.2) {
+    // 센서 크기가 화면보다 2배 이상 크면 Vision Camera 센서 좌표로 판단
+    // (좌표 값이 아닌 프레임 크기로 판단)
+    const isSensorCoords = SENSOR_WIDTH > winWidth * 2 || SENSOR_HEIGHT > winHeight * 2;
+
+    if (isSensorCoords) {
       // Vision Camera iOS: 센서 좌표를 화면 좌표로 변환
       // 센서는 landscape (예: 4032x3024), 화면은 portrait (예: 390x844)
       //
       // 카메라 프리뷰는 aspectFill 모드로 화면을 채움
       // 센서의 landscape 이미지가 portrait 화면에 맞게 회전되어 표시됨
-      //
-      // iOS에서 portrait 모드일 때:
-      // - 센서의 y축이 화면의 x축에 대응 (좌우)
-      // - 센서의 x축이 화면의 y축에 대응 (상하, 뒤집힘)
 
-      // 센서 좌표를 화면 좌표로 변환 (90도 시계방향 회전)
-      // 센서 (x, y) -> 화면 (sensorHeight - y - height, x)
-      const screenX = (SENSOR_HEIGHT - y - height) * (winWidth / SENSOR_HEIGHT);
-      const screenY = x * (winHeight / SENSOR_WIDTH);
-      const screenWidth = height * (winWidth / SENSOR_HEIGHT);
-      const screenHeight = width * (winHeight / SENSOR_WIDTH);
+      // Step 1: 90도 시계방향 회전
+      // 센서 (x, y, w, h) → 회전 후 (sensorH - y - h, x, h, w)
+      const rotatedX = SENSOR_HEIGHT - y - height;
+      const rotatedY = x;
+      const rotatedW = height;
+      const rotatedH = width;
+
+      // Step 2: aspectFill 변환 적용
+      // 회전 후 프레임 크기: SENSOR_HEIGHT x SENSOR_WIDTH (예: 3024 x 4032)
+      const rotatedFrameW = SENSOR_HEIGHT;
+      const rotatedFrameH = SENSOR_WIDTH;
+
+      // aspectFill 스케일 계산 (더 큰 스케일 사용하여 화면을 채움)
+      const scaleX = winWidth / rotatedFrameW;
+      const scaleY = winHeight / rotatedFrameH;
+      const scale = Math.max(scaleX, scaleY);
+
+      // 크롭 오프셋 계산 (화면 중앙에 맞추기 위해 잘리는 부분)
+      const scaledFrameW = rotatedFrameW * scale;
+      const scaledFrameH = rotatedFrameH * scale;
+      const offsetX = (scaledFrameW - winWidth) / 2;
+      const offsetY = (scaledFrameH - winHeight) / 2;
+
+      // 최종 화면 좌표
+      const screenX = rotatedX * scale - offsetX;
+      const screenY = rotatedY * scale - offsetY;
+      const screenWidth = rotatedW * scale;
+      const screenHeight = rotatedH * scale;
 
       const result = {
         x: screenX,
@@ -595,6 +615,8 @@ function ScannerScreen() {
         height: screenHeight,
       };
 
+      console.log('[convertVisionCameraCoords] AspectFill scale:', scale.toFixed(4));
+      console.log('[convertVisionCameraCoords] Offset:', { offsetX: offsetX.toFixed(1), offsetY: offsetY.toFixed(1) });
       console.log('[convertVisionCameraCoords] Transformed:', result);
       return result;
     }
