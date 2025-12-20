@@ -64,8 +64,7 @@
           "enableMicrophonePermission": false,
           "enableCodeScanner": true
         }
-      ],
-      "./modules/qr-ec-analyzer"
+      ]
     ],
     "experiments": {
       "typedRoutes": true
