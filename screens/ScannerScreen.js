@@ -825,9 +825,11 @@ function ScannerScreen() {
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
-      // 사진 저장이 활성화되어 있으면 백그라운드에서 촬영 시작 (네비게이션 차단 안함)
+      // 사진 저장이 활성화되어 있거나, QR 코드 EC 레벨 분석이 필요하면 촬영
+      // (EC 레벨이 네이티브에서 안 오면 사진으로 분석해야 함)
+      const needsPhotoForEcLevel = (normalizedType === 'qr' || normalizedType === 'qrcode') && !errorCorrectionLevel;
       let photoPromise = null;
-      if (photoSaveEnabledRef.current) {
+      if (photoSaveEnabledRef.current || needsPhotoForEcLevel) {
         // 사진 촬영을 백그라운드에서 시작하고 결과는 나중에 처리
         photoPromise = capturePhoto(effectiveBounds).catch(err => {
           console.log('Background photo capture error:', err);
@@ -842,7 +844,7 @@ function ScannerScreen() {
       // 네비게이션 타이머 (사진 촬영 완료를 기다리지 않음)
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // EC 레벨 분석은 스킵하고 네비게이션 우선
+          // EC 레벨: 네이티브에서 받은 값 사용, 없으면 QRAnalyzer로 분석
           let detectedEcLevel = errorCorrectionLevel;
           let ecLevelAnalysisFailed = false;
           const isQRCodeType = normalizedType === 'qr' || normalizedType === 'qrcode';
@@ -855,6 +857,25 @@ function ScannerScreen() {
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             photoUri = photoResult?.croppedUri || photoResult;
             originalUri = photoResult?.originalUri || photoResult;
+          }
+
+          // EC 레벨이 없고, QR 코드이고, 사진이 있으면 QRAnalyzer로 분석
+          if (!detectedEcLevel && isQRCodeType && originalUri) {
+            console.log('[ScannerScreen] Analyzing EC level with QRAnalyzer...');
+            try {
+              const analysisResult = await analyzeImage(originalUri);
+              console.log('[ScannerScreen] QRAnalyzer result:', JSON.stringify(analysisResult));
+              if (analysisResult.success && analysisResult.ecLevel) {
+                detectedEcLevel = analysisResult.ecLevel;
+                console.log('[ScannerScreen] EC level detected:', detectedEcLevel);
+              } else {
+                ecLevelAnalysisFailed = true;
+                console.log('[ScannerScreen] EC level analysis failed');
+              }
+            } catch (analysisError) {
+              console.error('[ScannerScreen] EC level analysis error:', analysisError);
+              ecLevelAnalysisFailed = true;
+            }
           }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
