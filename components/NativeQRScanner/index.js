@@ -92,7 +92,6 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     const types = barcodeTypes
       .map(type => BARCODE_TYPE_MAP[type])
       .filter(Boolean);
-    console.log('[NativeQRScanner] Converted code types:', types);
     return types.length > 0 ? types : ['qr'];
   }, [barcodeTypes]);
 
@@ -100,37 +99,26 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const frameDimensions = useMemo(() => {
     if (!device) return null;
 
-    // 디바이스의 활성 포맷 또는 첫 번째 포맷에서 해상도 가져오기
     const formats = device.formats;
     if (formats && formats.length > 0) {
-      // 가장 높은 해상도 포맷 찾기 (보통 코드 스캐너가 사용하는 해상도)
       const bestFormat = formats.reduce((best, current) => {
         const bestPixels = (best.videoWidth || 0) * (best.videoHeight || 0);
         const currentPixels = (current.videoWidth || 0) * (current.videoHeight || 0);
         return currentPixels > bestPixels ? current : best;
       }, formats[0]);
 
-      console.log('[NativeQRScanner] Best format:', bestFormat.videoWidth, 'x', bestFormat.videoHeight);
       return {
         width: bestFormat.videoWidth || 1920,
         height: bestFormat.videoHeight || 1440,
       };
     }
 
-    // 기본값 (iOS 일반적인 4:3 해상도)
     return { width: 1920, height: 1440 };
   }, [device]);
 
   // 바코드 스캔 콜백 핸들러 (JS 스레드에서 실행)
   const handleBarcodeDetected = useCallback((barcodeData) => {
-    console.log('[NativeQRScanner] ===== CODE SCANNED =====');
-    console.log('[NativeQRScanner] Code value:', barcodeData.value);
-    console.log('[NativeQRScanner] Code type:', barcodeData.type);
-    console.log('[NativeQRScanner] DEBUG - Native keys:', barcodeData._debug_nativeKeys);
-    console.log('[NativeQRScanner] DEBUG - Native EC level:', barcodeData._debug_nativeEcLevel);
-
     if (!onCodeScannedRef.current) {
-      console.log('[NativeQRScanner] No callback registered');
       return;
     }
 
@@ -161,17 +149,14 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       };
     }
 
-    console.log('[NativeQRScanner] Calling parent callback...');
-    console.log('[NativeQRScanner] Error Correction Level:', barcodeData.errorCorrectionLevel);
     onCodeScannedRef.current({
       data: barcodeData.value,
       type: normalizedType,
       bounds,
       cornerPoints,
       raw: barcodeData.value,
-      // 카메라 프레임 크기 정보 추가 (좌표 변환용)
       frameDimensions: barcodeData.frameDimensions,
-      // QR 코드 오류복원 레벨 (iOS에서만 지원, Android는 undefined)
+      // EC level: native에서 직접 가져옴
       errorCorrectionLevel: barcodeData.errorCorrectionLevel,
     });
   }, []);
@@ -181,7 +166,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
-    fps: 5,
+    fps: 10,
     barcodeTypes: visionCameraCodeTypes,
     scanMode: 'continuous',
     onBarcodeScanned: (barcodes) => {
@@ -193,9 +178,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       const barcode = barcodes[0];
 
-      // Worklet에서 JS 스레드로 콜백 실행
-      // 디버깅: native 객체의 키들을 확인
-      const nativeKeys = barcode.native ? Object.keys(barcode.native) : [];
+      // EC level: 라이브러리 패치로 barcode.errorCorrectionLevel에 있거나,
+      // native 객체에서 직접 가져옴
+      const ecLevel = barcode.errorCorrectionLevel || barcode.native?.errorCorrectionLevel;
 
       runOnJSCallback({
         value: barcode.value,
@@ -203,10 +188,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         frame: barcode.frame,
         cornerPoints: barcode.cornerPoints,
         frameDimensions: frameDimensions,
-        errorCorrectionLevel: barcode.errorCorrectionLevel,
-        // 디버깅용
-        _debug_nativeKeys: nativeKeys,
-        _debug_nativeEcLevel: barcode.native?.errorCorrectionLevel,
+        errorCorrectionLevel: ecLevel,
       });
     },
   });
@@ -214,11 +196,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 카메라 권한 요청
   useEffect(() => {
     (async () => {
-      console.log('[NativeQRScanner] Current permission status:', hasPermission);
       if (!hasPermission) {
-        console.log('[NativeQRScanner] Requesting camera permission...');
         const granted = await requestPermission();
-        console.log('[NativeQRScanner] Permission granted:', granted);
         if (!granted && onError) {
           onError({ message: 'Camera permission denied' });
         }
@@ -286,35 +265,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     },
   }), []);
 
-  // 컴포넌트 마운트/언마운트 로그
-  useEffect(() => {
-    console.log('[NativeQRScanner] Component MOUNTED');
-    return () => {
-      console.log('[NativeQRScanner] Component UNMOUNTING...');
-    };
-  }, []);
-
-  // isActive 변경 감지 로그
-  useEffect(() => {
-    console.log('[NativeQRScanner] isActive CHANGED to:', isActive);
-    if (!isActive) {
-      console.log('[NativeQRScanner] Camera will stop processing frames');
-    }
-  }, [isActive]);
-
-  console.log('[NativeQRScanner] === RENDER ===');
-  console.log('[NativeQRScanner] device:', device ? device.id : 'null');
-  console.log('[NativeQRScanner] hasPermission:', hasPermission);
-  console.log('[NativeQRScanner] isActive:', isActive);
-  console.log('[NativeQRScanner] torch:', torch);
-
-  if (!device) {
-    console.log('[NativeQRScanner] Waiting for camera device...');
-    return <View style={[styles.container, style]} />;
-  }
-
-  if (!hasPermission) {
-    console.log('[NativeQRScanner] Waiting for camera permission...');
+  if (!device || !hasPermission) {
     return <View style={[styles.container, style]} />;
   }
 
