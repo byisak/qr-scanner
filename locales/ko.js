@@ -168,6 +168,11 @@ export default {
     hideEcLevelInfo: '안내 숨기기',
     ecLevelTypes: '오류 검증 레벨 종류',
     recoverable: '복원 가능',
+    // QR 코드 상세 정보
+    qrCodeDetails: 'QR 코드 상세 정보',
+    qrVersion: '버전',
+    maskPattern: '마스크 패턴',
+    segmentData: '세그먼트 데이터',
   },
 
   // 설정 화면

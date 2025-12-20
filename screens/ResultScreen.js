@@ -16,7 +16,7 @@ export default function ResultScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed, symbolVersion, maskPattern, rawBytes, rawBytesLength } = params;
   const displayText = code || url || '';
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
@@ -28,6 +28,12 @@ export default function ResultScreen() {
   const ecLevel = errorCorrectionLevel || null;
   const ecAnalysisFailed = ecLevelAnalysisFailed === 'true';
   const isQRCode = barcodeType === 'qr' || barcodeType === 'qrcode';
+
+  // QR 코드 상세 정보
+  const qrVersion = symbolVersion ? parseInt(symbolVersion, 10) : null;
+  const qrMaskPattern = maskPattern ? parseInt(maskPattern, 10) : null;
+  const qrRawBytes = rawBytes || null;
+  const qrRawBytesLen = rawBytesLength ? parseInt(rawBytesLength, 10) : null;
 
   // 오류 검증 레벨 설명 함수
   const getECLevelDescription = (level) => {
@@ -49,10 +55,34 @@ export default function ResultScreen() {
 
   const ecLevelInfo = getECLevelDescription(ecLevel);
 
+  // QR 버전에 따른 모듈 크기 계산 (Version * 4 + 17)
+  const getQRVersionSize = (version) => {
+    if (!version || version < 1 || version > 40) return null;
+    const size = version * 4 + 17;
+    return `${size}×${size}`;
+  };
+
+  // 마스크 패턴 설명
+  const getMaskPatternDesc = (pattern) => {
+    if (pattern === null || pattern === undefined) return null;
+    const patterns = {
+      0: '(i + j) mod 2 = 0',
+      1: 'i mod 2 = 0',
+      2: 'j mod 3 = 0',
+      3: '(i + j) mod 3 = 0',
+      4: '(i/2 + j/3) mod 2 = 0',
+      5: '(i*j) mod 2 + (i*j) mod 3 = 0',
+      6: '((i*j) mod 2 + (i*j) mod 3) mod 2 = 0',
+      7: '((i+j) mod 2 + (i*j) mod 3) mod 2 = 0',
+    };
+    return patterns[pattern] || null;
+  };
+
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
+  const [qrDetailExpanded, setQrDetailExpanded] = useState(false);
 
   // URL 열기 방식 설정 로드
   useEffect(() => {
@@ -528,6 +558,84 @@ export default function ResultScreen() {
           </View>
         )}
 
+        {/* QR 코드 상세 정보 (버전, 마스크 패턴, 세그먼트) */}
+        {isQRCode && (qrVersion || qrMaskPattern !== null || qrRawBytes) && (
+          <View style={[styles.qrDetailContainer, {
+            backgroundColor: isDark ? 'rgba(88, 86, 214, 0.15)' : 'rgba(88, 86, 214, 0.1)',
+            borderColor: '#5856D6'
+          }]}>
+            <TouchableOpacity
+              style={styles.qrDetailHeader}
+              onPress={() => setQrDetailExpanded(!qrDetailExpanded)}
+            >
+              <View style={styles.qrDetailHeaderLeft}>
+                <Ionicons name="qr-code" size={18} color="#5856D6" />
+                <Text style={[styles.qrDetailTitle, { color: '#5856D6' }]}>
+                  {t('result.qrCodeDetails')}
+                </Text>
+              </View>
+              <Ionicons
+                name={qrDetailExpanded ? "chevron-up" : "chevron-down"}
+                size={20}
+                color="#5856D6"
+              />
+            </TouchableOpacity>
+
+            {qrDetailExpanded && (
+              <View style={[styles.qrDetailContent, { borderTopColor: colors.border }]}>
+                {/* 버전 정보 */}
+                {qrVersion && (
+                  <View style={styles.qrDetailRow}>
+                    <Text style={[styles.qrDetailLabel, { color: colors.textSecondary }]}>
+                      {t('result.qrVersion')}
+                    </Text>
+                    <Text style={[styles.qrDetailValue, { color: colors.text }]}>
+                      Version {qrVersion} ({getQRVersionSize(qrVersion)})
+                    </Text>
+                  </View>
+                )}
+
+                {/* 마스크 패턴 */}
+                {qrMaskPattern !== null && (
+                  <View style={styles.qrDetailRow}>
+                    <Text style={[styles.qrDetailLabel, { color: colors.textSecondary }]}>
+                      {t('result.maskPattern')}
+                    </Text>
+                    <View style={styles.qrDetailValueColumn}>
+                      <Text style={[styles.qrDetailValue, { color: colors.text }]}>
+                        Pattern {qrMaskPattern}
+                      </Text>
+                      {getMaskPatternDesc(qrMaskPattern) && (
+                        <Text style={[styles.qrDetailFormula, { color: colors.textSecondary }]}>
+                          {getMaskPatternDesc(qrMaskPattern)}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* 세그먼트 데이터 */}
+                {qrRawBytes && (
+                  <View style={styles.qrDetailRow}>
+                    <Text style={[styles.qrDetailLabel, { color: colors.textSecondary }]}>
+                      {t('result.segmentData')} {qrRawBytesLen ? `(${qrRawBytesLen} bytes)` : ''}
+                    </Text>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={true}
+                      style={styles.qrRawBytesScroll}
+                    >
+                      <Text style={[styles.qrRawBytesText, { color: colors.text, backgroundColor: colors.inputBackground }]}>
+                        {qrRawBytes}
+                      </Text>
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.labelRow}>
           <View style={styles.labelWithType}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
@@ -898,6 +1006,62 @@ const styles = StyleSheet.create({
   ecLevelListPercent: {
     fontSize: 12,
     marginTop: 1,
+  },
+  // QR 코드 상세 정보 스타일
+  qrDetailContainer: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 20,
+  },
+  qrDetailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  qrDetailHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  qrDetailTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  qrDetailContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  qrDetailRow: {
+    marginBottom: 12,
+  },
+  qrDetailLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  qrDetailValue: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  qrDetailValueColumn: {
+    flexDirection: 'column',
+  },
+  qrDetailFormula: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginTop: 2,
+  },
+  qrRawBytesScroll: {
+    maxWidth: '100%',
+  },
+  qrRawBytesText: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 6,
   },
   editToggleButton: {
     flexDirection: 'row',

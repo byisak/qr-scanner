@@ -168,6 +168,11 @@ export default {
     hideEcLevelInfo: 'Ocultar info',
     ecLevelTypes: 'Tipos de nivel de corrección',
     recoverable: 'recuperable',
+    // Detalles del código QR
+    qrCodeDetails: 'Detalles del código QR',
+    qrVersion: 'Versión',
+    maskPattern: 'Patrón de máscara',
+    segmentData: 'Datos de segmento',
   },
 
   // Pantalla de configuración

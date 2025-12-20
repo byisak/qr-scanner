@@ -46,16 +46,14 @@ index 28f1634..034abd3 100644
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
  
-+  // Extract error correction level for QR codes
++  // Extract QR code detailed information
 +  if (@available(iOS 11.0, *)) {
-+    RCTLogInfo(@"[EC Level] Checking symbology: %@", observation.symbology);
 +    if ([observation.symbology isEqualToString:VNBarcodeSymbologyQR]) {
-+      RCTLogInfo(@"[EC Level] Is QR code, getting barcodeDescriptor...");
 +      CIBarcodeDescriptor* descriptor = observation.barcodeDescriptor;
-+      RCTLogInfo(@"[EC Level] barcodeDescriptor: %@", descriptor);
 +      if (descriptor && [descriptor isKindOfClass:[CIQRCodeDescriptor class]]) {
 +        CIQRCodeDescriptor* qrDescriptor = (CIQRCodeDescriptor*)descriptor;
-+        RCTLogInfo(@"[EC Level] errorCorrectionLevel raw: %ld", (long)qrDescriptor.errorCorrectionLevel);
++
++        // Error correction level (L, M, Q, H)
 +        NSString* ecLevel = nil;
 +        switch (qrDescriptor.errorCorrectionLevel) {
 +          case CIQRCodeErrorCorrectionLevelL:
@@ -74,12 +72,32 @@ index 28f1634..034abd3 100644
 +            ecLevel = nil;
 +            break;
 +        }
-+        RCTLogInfo(@"[EC Level] Final ecLevel: %@", ecLevel);
 +        if (ecLevel) {
 +          observationRepresentation[@"errorCorrectionLevel"] = ecLevel;
 +        }
-+      } else {
-+        RCTLogInfo(@"[EC Level] descriptor is nil or not CIQRCodeDescriptor");
++
++        // Symbol version (1-40)
++        NSInteger version = qrDescriptor.symbolVersion;
++        observationRepresentation[@"symbolVersion"] = @(version);
++
++        // Mask pattern (0-7)
++        NSInteger maskPattern = qrDescriptor.maskPattern;
++        observationRepresentation[@"maskPattern"] = @(maskPattern);
++
++        // Error corrected payload (raw bytes as hex string)
++        NSData* payload = qrDescriptor.errorCorrectedPayload;
++        if (payload && payload.length > 0) {
++          NSMutableString* hexString = [NSMutableString stringWithCapacity:payload.length * 3];
++          const unsigned char* bytes = (const unsigned char*)payload.bytes;
++          for (NSUInteger i = 0; i < payload.length; i++) {
++            if (i > 0) {
++              [hexString appendString:@" "];
++            }
++            [hexString appendFormat:@"%02X", bytes[i]];
++          }
++          observationRepresentation[@"rawBytes"] = hexString;
++          observationRepresentation[@"rawBytesLength"] = @(payload.length);
++        }
 +      }
 +    }
 +  }
@@ -100,11 +118,15 @@ index 3c9c10e..9c1fe07 100644
  export type iOSBarcode = {
    boundingBox: iOSBoundingBox;
    timeRange?: { start: number; duration: number } /* iOS 14.0+ */;
-@@ -52,4 +54,5 @@ export type iOSBarcode = {
+@@ -52,4 +54,9 @@ export type iOSBarcode = {
    payload: string;
    supplementalPayload?: string /* iOS 17.0+ */;
    corners: iOSCorners;
 +  errorCorrectionLevel?: iOSErrorCorrectionLevel /* iOS 11.0+ for QR codes */;
++  symbolVersion?: number /* iOS 11.0+ for QR codes, 1-40 */;
++  maskPattern?: number /* iOS 11.0+ for QR codes, 0-7 */;
++  rawBytes?: string /* iOS 11.0+ for QR codes, hex string */;
++  rawBytesLength?: number /* iOS 11.0+ for QR codes */;
  };
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts
 index 099662d..bbc575d 100644
@@ -122,6 +144,10 @@ index 099662d..bbc575d 100644
    boundingBox: BoundingBox;
    cornerPoints: Point[];
 +  errorCorrectionLevel?: ErrorCorrectionLevel;
++  symbolVersion?: number;
++  maskPattern?: number;
++  rawBytes?: string;
++  rawBytesLength?: number;
    native: iOSBarcode | AndroidBarcode;
  };
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/utils/convert.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/utils/convert.ts
@@ -133,24 +159,32 @@ index 160a029..23aa1fd 100644
    "worklet";
    if (isIOSBarcode(barcode)) {
 -    const { payload, symbology, boundingBox, corners } = barcode;
-+    const { payload, symbology, boundingBox, corners, errorCorrectionLevel } = barcode;
++    const { payload, symbology, boundingBox, corners, errorCorrectionLevel, symbolVersion, maskPattern, rawBytes, rawBytesLength } = barcode;
      return {
        value: payload,
        type: normalizeiOSCodeType(symbology),
-@@ -72,6 +72,7 @@ export const normalizeNativeBarcode = (
+@@ -72,6 +72,11 @@ export const normalizeNativeBarcode = (
          x: normalizePrecision(x * frame.width),
          y: normalizePrecision(y * frame.height),
        })),
 +      errorCorrectionLevel,
++      symbolVersion,
++      maskPattern,
++      rawBytes,
++      rawBytesLength,
        native: barcode,
      };
    } else if (isAndroidBarcode(barcode)) {
-@@ -81,6 +82,8 @@ export const normalizeNativeBarcode = (
+@@ -81,6 +86,12 @@ export const normalizeNativeBarcode = (
        type: normalizeAndroidCodeType(format),
        boundingBox: computeBoundingBoxFromCornerPoints(cornerPoints),
        cornerPoints,
-+      // Android ML Kit doesn't expose error correction level
++      // Android ML Kit doesn't expose these QR code details
 +      errorCorrectionLevel: undefined,
++      symbolVersion: undefined,
++      maskPattern: undefined,
++      rawBytes: undefined,
++      rawBytesLength: undefined,
        native: barcode,
      };
    } else {
