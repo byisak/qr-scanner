@@ -684,47 +684,17 @@ function ScannerScreen() {
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
-      const { data, bounds, type, cornerPoints, raw, frameDimensions } = scanResult;
+      const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
       // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
       if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
 
       // 카메라 프레임 크기 저장 (좌표 변환용)
       if (frameDimensions) {
         frameDimensionsRef.current = frameDimensions;
-        console.log('[handleBarCodeScanned] Frame dimensions updated:', frameDimensions);
-      }
-
-      // 전체 스캔 결과 로깅 (디버깅용)
-      console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
-
-      // bounds 정보 로깅 (디버깅용)
-      console.log(`Barcode detected - Type: ${type}, Has bounds: ${!!bounds}, Has cornerPoints: ${!!cornerPoints}`);
-      if (bounds) {
-        console.log(`Bounds data:`, JSON.stringify(bounds));
-      }
-      if (cornerPoints) {
-        console.log(`Corner points:`, cornerPoints);
       }
 
       // 바코드 타입 정규화 (org.iso.Code39 -> code39)
       const normalizedType = type.toLowerCase().replace(/^org\.(iso|gs1)\./, '');
-      console.log(`Normalized type: ${normalizedType}`);
-
-      // QR 코드 메타데이터 추출 (오류 검증 레벨 등)
-      let errorCorrectionLevel = null;
-      if (normalizedType === 'qr' || normalizedType === 'qrcode') {
-        // 스캔 결과에서 errorCorrectionLevel 추출 시도
-        if (scanResult.errorCorrectionLevel) {
-          errorCorrectionLevel = scanResult.errorCorrectionLevel;
-        } else if (scanResult.ecLevel) {
-          errorCorrectionLevel = scanResult.ecLevel;
-        } else if (raw) {
-          // raw 데이터에서 EC 레벨 추출 시도 (QR 코드 포맷 분석)
-          // QR 코드의 첫 번째 바이트에서 EC 레벨 힌트를 얻을 수 있음
-          console.log('Raw data available:', raw);
-        }
-        console.log(`QR Error Correction Level: ${errorCorrectionLevel || 'Unknown'}`);
-      }
 
       // 바코드가 화면 중앙 십자가 근처에 있을 때만 스캔
       // 1D 바코드 여부 확인
