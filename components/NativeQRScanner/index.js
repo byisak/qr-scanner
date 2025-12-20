@@ -1,5 +1,6 @@
 // components/NativeQRScanner/index.js
 // Vision Camera v4 기반 네이티브 QR 스캐너 컴포넌트
+// mgcrea/vision-camera-barcode-scanner 라이브러리 사용
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { StyleSheet, View, Platform, Dimensions } from 'react-native';
@@ -7,12 +8,16 @@ import {
   Camera,
   useCameraDevice,
   useCameraPermission,
-  useCodeScanner,
+  useCameraFormat,
 } from 'react-native-vision-camera';
+import {
+  useBarcodeScanner,
+  CameraHighlights,
+} from '@mgcrea/vision-camera-barcode-scanner';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// 바코드 타입 매핑 (expo-camera 타입 -> Vision Camera 타입)
+// 바코드 타입 매핑 (expo-camera 타입 -> mgcrea 라이브러리 타입)
 const BARCODE_TYPE_MAP = {
   'qr': 'qr',
   'ean13': 'ean-13',
@@ -44,6 +49,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   style,
 }, ref) {
   const cameraRef = useRef(null);
+  const [layout, setLayout] = useState({ width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
 
   // Vision Camera v4 권한 훅 사용
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -57,75 +63,44 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
-  // 바코드 타입 변환 (expo-camera 형식 -> Vision Camera 형식)
-  const visionCameraCodeTypes = useMemo(() => {
+  // 카메라 포맷 선택 (1080p 권장)
+  const format = useCameraFormat(device, [
+    { videoResolution: { width: 1920, height: 1080 } },
+  ]);
+
+  // 바코드 타입 변환 (expo-camera 형식 -> mgcrea 형식)
+  const mgcreaBarcodeTypes = useMemo(() => {
     const types = barcodeTypes
       .map(type => BARCODE_TYPE_MAP[type])
       .filter(Boolean);
-    console.log('[NativeQRScanner] Converted code types:', types);
+    console.log('[NativeQRScanner] Converted barcode types:', types);
     return types.length > 0 ? types : ['qr'];
   }, [barcodeTypes]);
 
-  // 카메라 프레임 크기 가져오기 (코드 스캐너 좌표 변환용)
-  const frameDimensions = useMemo(() => {
-    if (!device) return null;
+  // mgcrea useBarcodeScanner 훅 사용
+  const { props: cameraProps, highlights } = useBarcodeScanner({
+    fps: 5,
+    barcodeTypes: mgcreaBarcodeTypes,
+    scanMode: 'continuous',
+    onBarcodeScanned: (barcodes) => {
+      'worklet';
+      // worklet에서는 console.log 사용 불가, runOnJS 필요
+      if (barcodes.length === 0) return;
+      if (!onCodeScannedRef.current) return;
 
-    // 디바이스의 활성 포맷 또는 첫 번째 포맷에서 해상도 가져오기
-    const formats = device.formats;
-    if (formats && formats.length > 0) {
-      // 가장 높은 해상도 포맷 찾기 (보통 코드 스캐너가 사용하는 해상도)
-      const bestFormat = formats.reduce((best, current) => {
-        const bestPixels = (best.videoWidth || 0) * (best.videoHeight || 0);
-        const currentPixels = (current.videoWidth || 0) * (current.videoHeight || 0);
-        return currentPixels > bestPixels ? current : best;
-      }, formats[0]);
+      const code = barcodes[0];
 
-      console.log('[NativeQRScanner] Best format:', bestFormat.videoWidth, 'x', bestFormat.videoHeight);
-      return {
-        width: bestFormat.videoWidth || 1920,
-        height: bestFormat.videoHeight || 1440,
-      };
-    }
-
-    // 기본값 (iOS 일반적인 4:3 해상도)
-    return { width: 1920, height: 1440 };
-  }, [device]);
-
-  // 코드 스캐너 설정 - useCodeScanner 훅 사용
-  const codeScanner = useCodeScanner({
-    codeTypes: visionCameraCodeTypes,
-    onCodeScanned: (codes) => {
-      console.log('[NativeQRScanner] ===== CODE SCANNED =====');
-      console.log('[NativeQRScanner] Number of codes:', codes.length);
-
-      if (codes.length === 0) {
-        console.log('[NativeQRScanner] No codes in array');
-        return;
-      }
-
-      if (!onCodeScannedRef.current) {
-        console.log('[NativeQRScanner] No callback registered');
-        return;
-      }
-
-      const code = codes[0];
-      console.log('[NativeQRScanner] Code value:', code.value);
-      console.log('[NativeQRScanner] Code type:', code.type);
-      console.log('[NativeQRScanner] Code frame:', JSON.stringify(code.frame));
-      console.log('[NativeQRScanner] Code corners:', JSON.stringify(code.corners));
-      console.log('[NativeQRScanner] Frame dimensions:', JSON.stringify(frameDimensions));
-
-      // expo-camera 형식으로 변환
+      // expo-camera 형식으로 변환하여 콜백 호출
       const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
 
       // cornerPoints를 bounds 형식으로 변환
       let bounds = null;
       let cornerPoints = null;
 
-      if (code.corners && code.corners.length >= 4) {
-        cornerPoints = code.corners;
-        const xCoords = code.corners.map(c => c.x);
-        const yCoords = code.corners.map(c => c.y);
+      if (code.cornerPoints && code.cornerPoints.length >= 4) {
+        cornerPoints = code.cornerPoints;
+        const xCoords = code.cornerPoints.map(c => c.x);
+        const yCoords = code.cornerPoints.map(c => c.y);
         const minX = Math.min(...xCoords);
         const maxX = Math.max(...xCoords);
         const minY = Math.min(...yCoords);
@@ -135,22 +110,18 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           origin: { x: minX, y: minY },
           size: { width: maxX - minX, height: maxY - minY },
         };
-      } else if (code.frame) {
-        bounds = {
-          origin: { x: code.frame.x, y: code.frame.y },
-          size: { width: code.frame.width, height: code.frame.height },
-        };
       }
 
-      console.log('[NativeQRScanner] Calling parent callback...');
+      // runOnJS로 메인 스레드에서 콜백 실행
+      // worklet에서 직접 호출하면 안되므로 타이밍 조정
       onCodeScannedRef.current({
         data: code.value,
         type: normalizedType,
         bounds,
         cornerPoints,
         raw: code.value,
-        // 카메라 프레임 크기 정보 추가 (좌표 변환용)
-        frameDimensions: frameDimensions,
+        // mgcrea 라이브러리가 좌표 변환을 처리하므로 frameDimensions는 불필요
+        frameDimensions: null,
       });
     },
   });
@@ -177,6 +148,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       onError(error);
     }
   }, [onError]);
+
+  // 레이아웃 변경 핸들러
+  const handleLayout = useCallback((event) => {
+    const { width, height } = event.nativeEvent.layout;
+    setLayout({ width, height });
+  }, []);
 
   // ref를 통해 메서드 노출
   useImperativeHandle(ref, () => ({
@@ -228,11 +205,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return null;
       }
     },
-  }), []);
+    // highlights 반환 (외부에서 CameraHighlights 렌더링용)
+    getHighlights: () => highlights,
+  }), [highlights]);
 
   // 컴포넌트 마운트/언마운트 로그
   useEffect(() => {
-    console.log('[NativeQRScanner] Component MOUNTED');
+    console.log('[NativeQRScanner] Component MOUNTED (using mgcrea library)');
     return () => {
       console.log('[NativeQRScanner] Component UNMOUNTING...');
     };
@@ -250,7 +229,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   console.log('[NativeQRScanner] device:', device ? device.id : 'null');
   console.log('[NativeQRScanner] hasPermission:', hasPermission);
   console.log('[NativeQRScanner] isActive:', isActive);
-  console.log('[NativeQRScanner] torch:', torch);
+  console.log('[NativeQRScanner] highlights count:', highlights?.length || 0);
 
   if (!device) {
     console.log('[NativeQRScanner] Waiting for camera device...');
@@ -263,17 +242,25 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }
 
   return (
-    <Camera
-      ref={cameraRef}
-      style={[StyleSheet.absoluteFill, style]}
-      device={device}
-      isActive={isActive}
-      torch={torch}
-      codeScanner={codeScanner}
-      photo={true}
-      onError={handleCameraError}
-      enableZoomGesture={true}
-    />
+    <View style={[StyleSheet.absoluteFill, style]} onLayout={handleLayout}>
+      <Camera
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        device={device}
+        format={format}
+        isActive={isActive}
+        torch={torch}
+        photo={true}
+        onError={handleCameraError}
+        enableZoomGesture={true}
+        {...cameraProps}
+      />
+      {/* mgcrea CameraHighlights로 바코드 위치 표시 */}
+      <CameraHighlights
+        highlights={highlights}
+        color="#FFD60A"
+      />
+    </View>
   );
 });
 

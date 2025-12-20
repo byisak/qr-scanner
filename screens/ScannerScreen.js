@@ -5,13 +5,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
   useWindowDimensions,
   Platform,
-  Alert,
   Modal,
   ScrollView,
-  InteractionManager,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -90,14 +87,10 @@ function ScannerScreen() {
   const [activeSessionId, setActiveSessionId] = useState('');
   const [showSendMessage, setShowSendMessage] = useState(false); // "전송" 메시지 표시 여부
 
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
-  const smoothBounds = useRef(null);
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
@@ -106,8 +99,6 @@ function ScannerScreen() {
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
-
-  const [qrBounds, setQrBounds] = useState(null);
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -269,8 +260,6 @@ function ScannerScreen() {
   }, []);
 
   const resetAll = useCallback(() => {
-    setQrBounds(null);
-    smoothBounds.current = null;
     lastScannedData.current = null;
     lastScannedTime.current = 0;
     clearAllTimers();
@@ -427,33 +416,7 @@ function ScannerScreen() {
     }, [resetAll, clearAllTimers]),
   );
 
-  useEffect(() => {
-    setQrBounds(null);
-    smoothBounds.current = null;
-  }, [winWidth, winHeight]);
-
-  useEffect(() => {
-    if (qrBounds) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1.05,
-          friction: 6,
-          tension: 80,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [qrBounds, scaleAnim, opacityAnim]);
+  // mgcrea 라이브러리가 highlights를 자동 관리하므로 qrBounds 관련 로직 제거됨
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null) => {
     try {
@@ -557,133 +520,12 @@ function ScannerScreen() {
     []
   );
 
-  // 현재 카메라 프레임 크기 (콜백에서 업데이트됨)
-  const frameDimensionsRef = useRef({ width: 1920, height: 1440 });
-
-  // mgcrea/vision-camera-barcode-scanner 라이브러리의 좌표 변환 로직
-  // cornerPoints를 화면 좌표로 변환하여 highlights 배열 생성
-  const computeHighlightsFromCornerPoints = useCallback((cornerPoints, frameDimensions) => {
-    if (!cornerPoints || cornerPoints.length < 4) return null;
-
-    // Vision Camera iOS: 프레임은 항상 landscape (4032x3024)
-    // 하지만 cornerPoints의 좌표는 이미 portrait 기준으로 반환됨
-    // 따라서 프레임 차원을 스왑하여 portrait로 맞춤
-    const rawFrameW = frameDimensions?.width || 4032;
-    const rawFrameH = frameDimensions?.height || 3024;
-
-    // iOS에서 프레임 차원을 스왑 (landscape -> portrait)
-    const frameW = Platform.OS === 'ios' ? rawFrameH : rawFrameW;
-    const frameH = Platform.OS === 'ios' ? rawFrameW : rawFrameH;
-
-    // 화면 크기 (portrait)
-    const screenW = winWidth;
-    const screenH = winHeight;
-
-    // 스케일 팩터 계산 (aspectFill/cover 모드)
-    const scaleX = screenW / frameW;
-    const scaleY = screenH / frameH;
-    const scaleFactor = Math.max(scaleX, scaleY); // cover 모드
-
-    // 센터링 오프셋 계산 (크롭된 영역의 오프셋)
-    const offsetX = (frameW * scaleFactor - screenW) / 2;
-    const offsetY = (frameH * scaleFactor - screenH) / 2;
-
-    console.log('[computeHighlights] Raw Frame:', rawFrameW, 'x', rawFrameH);
-    console.log('[computeHighlights] Swapped Frame:', frameW, 'x', frameH);
-    console.log('[computeHighlights] Screen:', screenW, 'x', screenH);
-    console.log('[computeHighlights] ScaleFactor:', scaleFactor, 'OffsetX:', offsetX, 'OffsetY:', offsetY);
-
-    // cornerPoints 변환
-    const transformedPoints = cornerPoints.map(point => {
-      // 1. 스케일 적용 후 오프셋 빼기 (aspectFill 크롭 보정)
-      const newX = point.x * scaleFactor - offsetX;
-      const newY = point.y * scaleFactor - offsetY;
-
-      return { x: newX, y: newY };
-    });
-
-    console.log('[computeHighlights] Original points:', cornerPoints.slice(0, 2));
-    console.log('[computeHighlights] Transformed points:', transformedPoints.slice(0, 2));
-
-    // 변환된 points에서 bounding box 계산
-    const xCoords = transformedPoints.map(p => p.x);
-    const yCoords = transformedPoints.map(p => p.y);
-    const minX = Math.min(...xCoords);
-    const maxX = Math.max(...xCoords);
-    const minY = Math.min(...yCoords);
-    const maxY = Math.max(...yCoords);
-
-    const result = {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    };
-
-    console.log('[computeHighlights] Result:', result);
-    return result;
-  }, [winWidth, winHeight]);
-
-  // 기존 convertVisionCameraCoords를 computeHighlightsFromCornerPoints로 대체
-  const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
-    // cornerPoints가 없는 경우 bounds에서 임시 cornerPoints 생성
-    const cornerPoints = [
-      { x: x, y: y },
-      { x: x + width, y: y },
-      { x: x + width, y: y + height },
-      { x: x, y: y + height },
-    ];
-    return computeHighlightsFromCornerPoints(cornerPoints, frameDimensions);
-  }, [computeHighlightsFromCornerPoints]);
-
-  const normalizeBounds = useCallback(
-    (bounds, frameDimensions = null) => {
-      // bounds 형식 확인 및 로깅
-      if (!bounds) {
-        console.log('No bounds provided');
-        return null;
-      }
-
-      console.log('[normalizeBounds] Input:', JSON.stringify(bounds));
-
-      // 형식 1: { origin: { x, y }, size: { width, height } } (iOS / Vision Camera)
-      if (bounds.origin && bounds.size) {
-        const { origin, size } = bounds;
-        return convertVisionCameraCoords(origin.x, origin.y, size.width, size.height, frameDimensions);
-      }
-
-      // 형식 2: { x, y, width, height } (일부 1차원 바코드)
-      if (bounds.x !== undefined && bounds.y !== undefined && bounds.width && bounds.height) {
-        return convertVisionCameraCoords(bounds.x, bounds.y, bounds.width, bounds.height, frameDimensions);
-      }
-
-      // 형식 3: { boundingBox: { x, y, width, height } }
-      if (bounds.boundingBox) {
-        const box = bounds.boundingBox;
-        return convertVisionCameraCoords(box.x, box.y, box.width, box.height, frameDimensions);
-      }
-
-      // 형식 4: Android CameraView { left, top, right, bottom }
-      if (bounds.left !== undefined && bounds.top !== undefined && bounds.right !== undefined && bounds.bottom !== undefined) {
-        return {
-          x: bounds.left,
-          y: bounds.top,
-          width: bounds.right - bounds.left,
-          height: bounds.bottom - bounds.top,
-        };
-      }
-
-      console.log('Unknown bounds format:', JSON.stringify(bounds));
-      return null;
-    },
-    [convertVisionCameraCoords],
-  );
+  // mgcrea 라이브러리가 좌표 변환을 처리하므로 커스텀 변환 함수 불필요
 
   const startResetTimer = useCallback((delay) => {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
-      setQrBounds(null);
-      smoothBounds.current = null;
+      // mgcrea 라이브러리가 highlights를 자동 관리하므로 별도 리셋 불필요
       resetTimerRef.current = null;
     }, delay);
   }, []);
@@ -814,23 +656,9 @@ function ScannerScreen() {
       }
 
       if (lastScannedData.current !== data) {
-        setQrBounds(null);
-        smoothBounds.current = null;
         if (navigationTimerRef.current) {
           clearTimeout(navigationTimerRef.current);
           navigationTimerRef.current = null;
-        }
-      }
-
-      if (lastScannedData.current === data && smoothBounds.current) {
-        const newB = normalizeBounds(bounds, frameDimensions);
-        if (newB) {
-          const dx = Math.abs(newB.x - smoothBounds.current.x);
-          const dy = Math.abs(newB.y - smoothBounds.current.y);
-          const dw = Math.abs(newB.width - smoothBounds.current.width);
-          const dh = Math.abs(newB.height - smoothBounds.current.height);
-
-          if (dx < 10 && dy < 10 && dw < 10 && dh < 10) return;
         }
       }
 
@@ -881,44 +709,14 @@ function ScannerScreen() {
         console.log('[ScannerScreen] Scan sound skipped');
       }
 
-      // cornerPoints가 있으면 직접 변환 (가장 정확)
-      // bounds만 있으면 normalizeBounds 사용
-      let normalized = null;
-      if (cornerPoints && cornerPoints.length >= 4) {
-        console.log('[handleBarCodeScanned] Using cornerPoints directly');
-        normalized = computeHighlightsFromCornerPoints(cornerPoints, frameDimensions);
-      } else if (bounds) {
-        console.log('[handleBarCodeScanned] Using bounds (no cornerPoints)');
-        normalized = normalizeBounds(bounds, frameDimensions);
-      }
-
-      // bounds와 cornerPoints 모두 없는 경우, 코너 라인 없이 스캔 (십자가만 표시)
-      if (!normalized && !bounds && !cornerPoints) {
-        console.log(`No position data available for barcode type: ${normalizedType}, scanning without corner lines`);
-      }
-
-      if (normalized) {
-        if (!smoothBounds.current) {
-          smoothBounds.current = normalized;
-        } else {
-          smoothBounds.current = {
-            x: smoothBounds.current.x + (normalized.x - smoothBounds.current.x) * 0.35,
-            y: smoothBounds.current.y + (normalized.y - smoothBounds.current.y) * 0.35,
-            width:
-              smoothBounds.current.width + (normalized.width - smoothBounds.current.width) * 0.35,
-            height:
-              smoothBounds.current.height +
-              (normalized.height - smoothBounds.current.height) * 0.35,
-          };
-        }
-        setQrBounds({ ...smoothBounds.current });
-      }
+      // mgcrea 라이브러리가 CameraHighlights로 바코드 위치를 직접 표시하므로
+      // 좌표 변환 및 qrBounds 업데이트는 더 이상 필요 없음
 
       // 사진 저장이 활성화되어 있으면 백그라운드에서 촬영 시작 (네비게이션 차단 안함)
       let photoPromise = null;
       if (photoSaveEnabledRef.current) {
         // 사진 촬영을 백그라운드에서 시작하고 결과는 나중에 처리
-        photoPromise = capturePhoto(normalized).catch(err => {
+        photoPromise = capturePhoto(bounds).catch(err => {
           console.log('Background photo capture error:', err);
           return null;
         });
@@ -1028,7 +826,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, computeHighlightsFromCornerPoints, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, analyzeImage],
+    [isActive, canScan, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, fullScreenScanMode, analyzeImage],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -1182,73 +980,18 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 중앙 십자가 타겟 (항상 표시) */}
-        {!qrBounds && (
-          <View style={styles.centerTarget} pointerEvents="none">
-            {/* 수평선 */}
-            <View style={styles.targetLineHorizontal} />
-            {/* 수직선 */}
-            <View style={styles.targetLineVertical} />
-            {/* 중심 원 */}
-            <View style={styles.targetCenter} />
-          </View>
-        )}
+        {/* 중앙 십자가 타겟 (항상 표시 - mgcrea가 바코드 하이라이트 별도 렌더링) */}
+        <View style={styles.centerTarget} pointerEvents="none">
+          {/* 수평선 */}
+          <View style={styles.targetLineHorizontal} />
+          {/* 수직선 */}
+          <View style={styles.targetLineVertical} />
+          {/* 중심 원 */}
+          <View style={styles.targetCenter} />
+        </View>
       </View>
 
-      {qrBounds && (() => {
-        // QR 코드 크기에 비례하는 코너 크기 계산
-        const cornerSize = Math.max(20, Math.min(qrBounds.width * 0.18, 40));
-        const borderWidth = Math.max(1.5, Math.min(cornerSize * 0.08, 2.5));
-        const offset = borderWidth * 0.7;
-
-        return (
-          <Animated.View
-            style={[
-              styles.qrBorder,
-              {
-                left: qrBounds.x - 8,
-                top: qrBounds.y - 8,
-                width: qrBounds.width + 16,
-                height: qrBounds.height + 16,
-                opacity: opacityAnim,
-                transform: [{ scale: scaleAnim }],
-                borderRadius: qrBounds.width * 0.08,
-              },
-            ]}
-            pointerEvents="none"
-            accessibilityLabel="QR 코드 감지됨"
-          >
-            <View
-              style={[
-                styles.corner,
-                styles.topLeft,
-                { width: cornerSize, height: cornerSize, top: -offset, left: -offset },
-              ]}
-            />
-            <View
-              style={[
-                styles.corner,
-                styles.topRight,
-                { width: cornerSize, height: cornerSize, top: -offset, right: -offset },
-              ]}
-            />
-            <View
-              style={[
-                styles.corner,
-                styles.bottomLeft,
-                { width: cornerSize, height: cornerSize, bottom: -offset, left: -offset },
-              ]}
-            />
-            <View
-              style={[
-                styles.corner,
-                styles.bottomRight,
-                { width: cornerSize, height: cornerSize, bottom: -offset, right: -offset },
-              ]}
-            />
-          </Animated.View>
-        );
-      })()}
+      {/* mgcrea CameraHighlights가 NativeQRScanner 내부에서 렌더링됨 */}
 
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
@@ -1505,33 +1248,8 @@ const styles = StyleSheet.create({
     marginBottom: 50,
     textAlign: 'center',
   },
-  frame: {
-    borderWidth: 3,
-    borderColor: '#00FF00',
-    backgroundColor: 'transparent',
-  },
-  qrBorder: {
-    position: 'absolute',
-    borderWidth: 0,
-    borderColor: 'transparent',
-    backgroundColor: 'transparent',
-  },
-  corner: {
-    position: 'absolute',
-    borderColor: '#FFD60A',
-  },
-  topLeft: { borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 },
-  topRight: { borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 },
-  bottomLeft: {
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 6,
-  },
-  bottomRight: {
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 6,
-  },
+  // mgcrea CameraHighlights가 바코드 위치 표시를 처리하므로
+  // qrBorder, corner 관련 스타일 제거됨
   torchButtonContainer: {
     position: 'absolute',
     // top은 인라인 스타일로 동적 설정
