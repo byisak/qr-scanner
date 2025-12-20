@@ -1,13 +1,14 @@
 // components/QRAnalyzer.js
-// QR 코드 이미지에서 EC 레벨을 분석하는 컴포넌트
+// QR 코드 이미지에서 EC 레벨을 분석하는 컴포넌트 (로컬 ZXing 번들)
 
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
+import { Asset } from 'expo-asset';
 
-// ZXing-js를 사용한 QR 분석 HTML (jsdelivr CDN 사용)
-const qrAnalyzerHtml = `
+// ZXing-js를 사용한 QR 분석 HTML 생성 함수
+const getQRAnalyzerHtml = (zxingCode) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -22,6 +23,11 @@ const qrAnalyzerHtml = `
   <div id="status">Loading...</div>
   <canvas id="canvas" style="display:none;"></canvas>
   <canvas id="processedCanvas" style="display:none;"></canvas>
+
+  <script>
+    // ZXing 라이브러리 인라인
+    ${zxingCode}
+  </script>
 
   <script>
     let zxingLoaded = false;
@@ -45,22 +51,17 @@ const qrAnalyzerHtml = `
       sendResult({ type: 'ready', zxingLoaded: zxingLoaded });
     }
 
-    // 이미지 전처리 함수 (대비 증가, 샤프닝)
+    // 이미지 전처리 함수 (대비 증가)
     function preprocessImage(canvas) {
       const ctx = canvas.getContext('2d');
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
-      // 1. 그레이스케일 변환 + 대비 증가
       for (let i = 0; i < data.length; i += 4) {
-        // 그레이스케일
         const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-
-        // 대비 증가 (1.3배)
         const contrast = 1.3;
         const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
         const enhanced = factor * (gray - 128) + 128;
-
         const finalValue = Math.max(0, Math.min(255, enhanced));
         data[i] = finalValue;
         data[i + 1] = finalValue;
@@ -202,26 +203,17 @@ const qrAnalyzerHtml = `
 
     window.analyzeQR = analyzeQR;
 
-    // 스크립트 로드 완료 체크
-    function checkZXing() {
-      if (typeof ZXing !== 'undefined') {
-        zxingLoaded = true;
-        log('ZXing loaded successfully');
-        notifyReady();
-      } else {
-        log('Waiting for ZXing...');
-        setTimeout(checkZXing, 500);
-      }
-    }
-
+    // ZXing 로드 확인
     log('Starting...');
+    if (typeof ZXing !== 'undefined') {
+      zxingLoaded = true;
+      log('ZXing loaded successfully (local bundle)');
+      notifyReady();
+    } else {
+      log('ZXing not found');
+      sendResult({ type: 'ready', zxingLoaded: false });
+    }
   </script>
-
-  <script
-    src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"
-    onerror="log('Failed to load ZXing'); notifyReady();"
-    onload="log('ZXing script loaded'); checkZXing();"
-  ></script>
 </body>
 </html>
 `;
@@ -230,8 +222,112 @@ const qrAnalyzerHtml = `
 export function useQRAnalyzer() {
   const webViewRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
+  const [htmlContent, setHtmlContent] = useState(null);
   const pendingCallbacks = useRef({});
   const callbackId = useRef(0);
+
+  // ZXing 라이브러리 로드
+  useEffect(() => {
+    async function loadZXing() {
+      try {
+        console.log('[QRAnalyzer] Loading ZXing library from local bundle...');
+
+        // ZXing 라이브러리를 asset에서 로드
+        const asset = Asset.fromModule(require('../assets/libs/zxing.min.txt'));
+        await asset.downloadAsync();
+
+        const zxingCode = await FileSystem.readAsStringAsync(asset.localUri);
+        console.log('[QRAnalyzer] ZXing library loaded, size:', zxingCode.length);
+
+        const html = getQRAnalyzerHtml(zxingCode);
+        setHtmlContent(html);
+      } catch (err) {
+        console.error('[QRAnalyzer] Failed to load ZXing:', err);
+        // Fallback: CDN에서 로드
+        console.log('[QRAnalyzer] Falling back to CDN...');
+        const fallbackHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div id="status">Loading from CDN...</div>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <canvas id="processedCanvas" style="display:none;"></canvas>
+  <script>
+    let zxingLoaded = false;
+    function log(msg) { console.log('[QRAnalyzer HTML] ' + msg); document.getElementById('status').innerText = msg; }
+    function sendResult(result) { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(result)); }
+    function notifyReady() { zxingLoaded = true; sendResult({ type: 'ready', zxingLoaded: true }); }
+    function preprocessImage(canvas) {
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        const enhanced = 1.3 * (gray - 128) + 128;
+        const finalValue = Math.max(0, Math.min(255, enhanced));
+        data[i] = data[i + 1] = data[i + 2] = finalValue;
+      }
+      ctx.putImageData(imageData, 0, 0);
+    }
+    async function tryDecodeWithSettings(canvas, settings) {
+      try {
+        const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+        const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
+        if (settings.alsoInverted) hints.set(ZXing.DecodeHintType.ALSO_INVERTED, true);
+        return new ZXing.QRCodeReader().decode(binaryBitmap, hints);
+      } catch (e) { return null; }
+    }
+    async function analyzeQR(base64Image) {
+      if (!zxingLoaded) { sendResult({ type: 'result', success: false, error: 'ZXing not loaded' }); return; }
+      const img = new Image();
+      img.onload = async function() {
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width; canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        let result = await tryDecodeWithSettings(canvas, { alsoInverted: false });
+        if (!result) result = await tryDecodeWithSettings(canvas, { alsoInverted: true });
+        if (!result) {
+          const pCanvas = document.getElementById('processedCanvas');
+          pCanvas.width = img.width; pCanvas.height = img.height;
+          pCanvas.getContext('2d').drawImage(img, 0, 0);
+          preprocessImage(pCanvas);
+          result = await tryDecodeWithSettings(pCanvas, { alsoInverted: true });
+        }
+        if (result) {
+          let ecLevel = null;
+          const metadata = result.getResultMetadata();
+          if (metadata && metadata.has(3)) ecLevel = String(metadata.get(3));
+          sendResult({ type: 'result', success: true, data: result.getText(), ecLevel: ecLevel, format: 'QR_CODE' });
+        } else {
+          sendResult({ type: 'result', success: false, error: 'No QR code found' });
+        }
+      };
+      img.onerror = function() { sendResult({ type: 'result', success: false, error: 'Image load error' }); };
+      img.src = base64Image;
+    }
+    window.analyzeQR = analyzeQR;
+    function checkZXing() {
+      if (typeof ZXing !== 'undefined') { notifyReady(); }
+      else { setTimeout(checkZXing, 500); }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js" onload="checkZXing();" onerror="sendResult({ type: 'ready', zxingLoaded: false });"></script>
+</body>
+</html>`;
+        setHtmlContent(fallbackHtml);
+      }
+    }
+
+    loadZXing();
+  }, []);
 
   const handleMessage = useCallback((event) => {
     try {
@@ -240,13 +336,12 @@ export function useQRAnalyzer() {
 
       if (data.type === 'ready') {
         console.log('[QRAnalyzer] WebView ready, ZXing loaded:', data.zxingLoaded);
-        setIsReady(true);
+        setIsReady(data.zxingLoaded === true);
         return;
       }
 
       if (data.type === 'result') {
         console.log('[QRAnalyzer] Analysis result - success:', data.success, 'ecLevel:', data.ecLevel);
-        // 모든 대기 중인 콜백 실행
         Object.values(pendingCallbacks.current).forEach(callback => {
           callback(data);
         });
@@ -262,7 +357,6 @@ export function useQRAnalyzer() {
 
     return new Promise(async (resolve) => {
       try {
-        // 파일을 base64로 변환
         console.log('[QRAnalyzer] Reading image file...');
         const base64 = await FileSystem.readAsStringAsync(imageUri, {
           encoding: FileSystem.EncodingType.Base64,
@@ -271,7 +365,6 @@ export function useQRAnalyzer() {
 
         const base64Image = `data:image/jpeg;base64,${base64}`;
 
-        // 콜백 등록
         const id = callbackId.current++;
         pendingCallbacks.current[id] = (result) => {
           console.log('[QRAnalyzer] Callback executed for id:', id);
@@ -279,7 +372,6 @@ export function useQRAnalyzer() {
           resolve(result);
         };
 
-        // 타임아웃 설정 (10초)
         setTimeout(() => {
           if (pendingCallbacks.current[id]) {
             console.log('[QRAnalyzer] Analysis timeout for id:', id);
@@ -288,7 +380,6 @@ export function useQRAnalyzer() {
           }
         }, 10000);
 
-        // WebView에서 분석 실행
         if (webViewRef.current) {
           console.log('[QRAnalyzer] Injecting JavaScript...');
           webViewRef.current.injectJavaScript(`
@@ -306,24 +397,30 @@ export function useQRAnalyzer() {
     });
   }, [isReady]);
 
-  const QRAnalyzerView = useCallback(() => (
-    <View style={styles.hidden}>
-      <WebView
-        ref={webViewRef}
-        source={{ html: qrAnalyzerHtml }}
-        onMessage={handleMessage}
-        onError={(e) => console.error('[QRAnalyzer] WebView error:', e.nativeEvent)}
-        onHttpError={(e) => console.error('[QRAnalyzer] HTTP error:', e.nativeEvent)}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        allowFileAccess={true}
-        allowUniversalAccessFromFileURLs={true}
-        mixedContentMode="always"
-        originWhitelist={['*']}
-        style={styles.webview}
-      />
-    </View>
-  ), [handleMessage]);
+  const QRAnalyzerView = useCallback(() => {
+    if (!htmlContent) {
+      return <View style={styles.hidden} />;
+    }
+
+    return (
+      <View style={styles.hidden}>
+        <WebView
+          ref={webViewRef}
+          source={{ html: htmlContent }}
+          onMessage={handleMessage}
+          onError={(e) => console.error('[QRAnalyzer] WebView error:', e.nativeEvent)}
+          onHttpError={(e) => console.error('[QRAnalyzer] HTTP error:', e.nativeEvent)}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          allowFileAccess={true}
+          allowUniversalAccessFromFileURLs={true}
+          mixedContentMode="always"
+          originWhitelist={['*']}
+          style={styles.webview}
+        />
+      </View>
+    );
+  }, [handleMessage, htmlContent]);
 
   return {
     analyzeImage,
