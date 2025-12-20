@@ -96,6 +96,7 @@ function ScannerScreen() {
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
   const smoothBounds = useRef(null);
+  const frameDimensionsRef = useRef({ width: 1920, height: 1440 });
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
