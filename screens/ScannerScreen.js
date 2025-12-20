@@ -682,48 +682,28 @@ function ScannerScreen() {
       let finalCroppedPath = originalPath;
       if (bounds && bounds.origin && bounds.size) {
         try {
-          // 카메라 프레임 크기와 사진 크기
+          // 사진 크기와 프레임 크기
           const photoWidth = photo.width || 4032;
           const photoHeight = photo.height || 3024;
-          const screenWidth = winWidth;
-          const screenHeight = winHeight;
 
-          console.log(`[capturePhoto] Photo: ${photoWidth}x${photoHeight}, Screen: ${screenWidth}x${screenHeight}`);
+          // bounds는 프레임 좌표 (카메라 센서 좌표)
+          // frameDimensionsRef에서 프레임 크기 가져오기
+          const frameWidth = frameDimensionsRef.current?.width || 1920;
+          const frameHeight = frameDimensionsRef.current?.height || 1440;
+
+          console.log(`[capturePhoto] Photo: ${photoWidth}x${photoHeight}, Frame: ${frameWidth}x${frameHeight}`);
           console.log(`[capturePhoto] Bounds: origin=(${bounds.origin.x}, ${bounds.origin.y}), size=(${bounds.size.width}x${bounds.size.height})`);
 
-          // iOS에서 사진은 가로(landscape), 화면은 세로(portrait)
-          // 화면 좌표를 사진 좌표로 변환 필요
-          // 화면 X → 사진 Y (비율 적용)
-          // 화면 Y → 사진 X (비율 적용, 방향 반전)
-          const isPhotoLandscape = photoWidth > photoHeight;
-          const isScreenPortrait = screenHeight > screenWidth;
+          // 프레임 좌표 → 사진 좌표 변환
+          // iOS에서 프레임은 가로, 사진도 가로 (같은 방향)
+          // 단순 비율 변환
+          const scaleX = photoWidth / frameWidth;
+          const scaleY = photoHeight / frameHeight;
 
-          let cropX, cropY, cropWidth, cropHeight;
-
-          if (Platform.OS === 'ios' && isPhotoLandscape && isScreenPortrait) {
-            // iOS: 화면 세로 → 사진 가로 변환
-            // 사진의 가로 길이가 화면의 세로 길이에 대응
-            const scaleX = photoWidth / screenHeight;
-            const scaleY = photoHeight / screenWidth;
-
-            // bounds 좌표 변환 (90도 회전)
-            // 화면의 (x, y) → 사진의 (y', photoWidth - x')
-            cropX = bounds.origin.y * scaleY;
-            cropY = photoWidth - (bounds.origin.x + bounds.size.width) * scaleX;
-            cropWidth = bounds.size.height * scaleY;
-            cropHeight = bounds.size.width * scaleX;
-
-            // Y가 음수가 되지 않도록 조정
-            if (cropY < 0) cropY = 0;
-          } else {
-            // 일반적인 경우 (Android 또는 같은 방향)
-            const scaleX = photoWidth / screenWidth;
-            const scaleY = photoHeight / screenHeight;
-            cropX = bounds.origin.x * scaleX;
-            cropY = bounds.origin.y * scaleY;
-            cropWidth = bounds.size.width * scaleX;
-            cropHeight = bounds.size.height * scaleY;
-          }
+          let cropX = bounds.origin.x * scaleX;
+          let cropY = bounds.origin.y * scaleY;
+          let cropWidth = bounds.size.width * scaleX;
+          let cropHeight = bounds.size.height * scaleY;
 
           // 마진 추가 (QR 코드 주변 여백 50%)
           const margin = Math.min(cropWidth, cropHeight) * 0.5;
@@ -737,6 +717,14 @@ function ScannerScreen() {
           cropY = Math.round(cropY);
           cropWidth = Math.round(cropWidth);
           cropHeight = Math.round(cropHeight);
+
+          // 최종 검증: 크롭 영역이 사진 범위 내인지 확인
+          if (cropX + cropWidth > photoWidth) {
+            cropWidth = photoWidth - cropX;
+          }
+          if (cropY + cropHeight > photoHeight) {
+            cropHeight = photoHeight - cropY;
+          }
 
           console.log(`[capturePhoto] Crop region: x=${cropX}, y=${cropY}, w=${cropWidth}, h=${cropHeight}`);
 
