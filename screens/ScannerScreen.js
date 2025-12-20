@@ -1021,12 +1021,16 @@ function ScannerScreen() {
           // 일반 모드 (기존 로직)
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
+          // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
+          isNavigatingRef.current = true;
+          setIsActive(false);
+          await new Promise(resolve => setTimeout(resolve, 100)); // 카메라 중지 대기
+
           if (enabled === 'true') {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
               await saveHistory(data, url, photoUri, normalizedType, detectedEcLevel);
-              isNavigatingRef.current = true; // 네비게이션 시작 전 플래그 설정
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -1034,7 +1038,6 @@ function ScannerScreen() {
           }
 
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
-          isNavigatingRef.current = true; // 네비게이션 시작 전 플래그 설정
           router.push({
             pathname: '/result',
             params: {
@@ -1075,8 +1078,12 @@ function ScannerScreen() {
       // 배치 항목 초기화
       setBatchScannedItems([]);
 
-      // 히스토리 화면으로 이동
+      // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
       isNavigatingRef.current = true;
+      setIsActive(false);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 히스토리 화면으로 이동
       router.push('/(tabs)/history');
     } catch (error) {
       console.error('Finish batch error:', error);
