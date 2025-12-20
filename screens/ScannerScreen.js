@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Animated,
   useWindowDimensions,
   Platform,
   Alert,
@@ -90,14 +89,10 @@ function ScannerScreen() {
   const [activeSessionId, setActiveSessionId] = useState('');
   const [showSendMessage, setShowSendMessage] = useState(false); // "전송" 메시지 표시 여부
 
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
-  const smoothBounds = useRef(null);
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
@@ -106,8 +101,6 @@ function ScannerScreen() {
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
-
-  const [qrBounds, setQrBounds] = useState(null);
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -269,8 +262,6 @@ function ScannerScreen() {
   }, []);
 
   const resetAll = useCallback(() => {
-    setQrBounds(null);
-    smoothBounds.current = null;
     lastScannedData.current = null;
     lastScannedTime.current = 0;
     clearAllTimers();
@@ -426,34 +417,6 @@ function ScannerScreen() {
       };
     }, [resetAll, clearAllTimers]),
   );
-
-  useEffect(() => {
-    setQrBounds(null);
-    smoothBounds.current = null;
-  }, [winWidth, winHeight]);
-
-  useEffect(() => {
-    if (qrBounds) {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
-          toValue: 1.05,
-          friction: 6,
-          tension: 80,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    } else {
-      Animated.parallel([
-        Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [qrBounds, scaleAnim, opacityAnim]);
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null) => {
     try {
@@ -667,8 +630,6 @@ function ScannerScreen() {
   const startResetTimer = useCallback((delay) => {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
-      setQrBounds(null);
-      smoothBounds.current = null;
       resetTimerRef.current = null;
     }, delay);
   }, []);
@@ -799,23 +760,9 @@ function ScannerScreen() {
       }
 
       if (lastScannedData.current !== data) {
-        setQrBounds(null);
-        smoothBounds.current = null;
         if (navigationTimerRef.current) {
           clearTimeout(navigationTimerRef.current);
           navigationTimerRef.current = null;
-        }
-      }
-
-      if (lastScannedData.current === data && smoothBounds.current) {
-        const newB = normalizeBounds(bounds, frameDimensions);
-        if (newB) {
-          const dx = Math.abs(newB.x - smoothBounds.current.x);
-          const dy = Math.abs(newB.y - smoothBounds.current.y);
-          const dw = Math.abs(newB.width - smoothBounds.current.width);
-          const dh = Math.abs(newB.height - smoothBounds.current.height);
-
-          if (dx < 10 && dy < 10 && dw < 10 && dh < 10) return;
         }
       }
 
@@ -876,30 +823,6 @@ function ScannerScreen() {
       } else if (!bounds && cornerPoints) {
         console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
-      }
-
-      let normalized = normalizeBounds(effectiveBounds, frameDimensions);
-
-      // bounds와 cornerPoints 모두 없는 경우, 코너 라인 없이 스캔 (십자가만 표시)
-      if (!normalized && !bounds && !cornerPoints) {
-        console.log(`No position data available for barcode type: ${normalizedType}, scanning without corner lines`);
-      }
-
-      if (normalized) {
-        if (!smoothBounds.current) {
-          smoothBounds.current = normalized;
-        } else {
-          smoothBounds.current = {
-            x: smoothBounds.current.x + (normalized.x - smoothBounds.current.x) * 0.35,
-            y: smoothBounds.current.y + (normalized.y - smoothBounds.current.y) * 0.35,
-            width:
-              smoothBounds.current.width + (normalized.width - smoothBounds.current.width) * 0.35,
-            height:
-              smoothBounds.current.height +
-              (normalized.height - smoothBounds.current.height) * 0.35,
-          };
-        }
-        setQrBounds({ ...smoothBounds.current });
       }
 
       // 사진 저장이 활성화되어 있으면 백그라운드에서 촬영 시작 (네비게이션 차단 안함)
@@ -1173,16 +1096,14 @@ function ScannerScreen() {
         )}
 
         {/* 중앙 십자가 타겟 (항상 표시) */}
-        {!qrBounds && (
-          <View style={styles.centerTarget} pointerEvents="none">
-            {/* 수평선 */}
-            <View style={styles.targetLineHorizontal} />
-            {/* 수직선 */}
-            <View style={styles.targetLineVertical} />
-            {/* 중심 원 */}
-            <View style={styles.targetCenter} />
-          </View>
-        )}
+        <View style={styles.centerTarget} pointerEvents="none">
+          {/* 수평선 */}
+          <View style={styles.targetLineHorizontal} />
+          {/* 수직선 */}
+          <View style={styles.targetLineVertical} />
+          {/* 중심 원 */}
+          <View style={styles.targetCenter} />
+        </View>
       </View>
 
       {/* 배치 스캔 컨트롤 패널 */}
@@ -1444,28 +1365,6 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#00FF00',
     backgroundColor: 'transparent',
-  },
-  qrBorder: {
-    position: 'absolute',
-    borderWidth: 0,
-    borderColor: 'transparent',
-    backgroundColor: 'transparent',
-  },
-  corner: {
-    position: 'absolute',
-    borderColor: '#FFD60A',
-  },
-  topLeft: { borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 },
-  topRight: { borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 },
-  bottomLeft: {
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderBottomLeftRadius: 6,
-  },
-  bottomRight: {
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderBottomRightRadius: 6,
   },
   torchButtonContainer: {
     position: 'absolute',
