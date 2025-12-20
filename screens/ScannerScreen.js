@@ -827,9 +827,11 @@ function ScannerScreen() {
         }
       }
 
-      // 사진 저장이 활성화되어 있으면 백그라운드에서 촬영 시작 (네비게이션 차단 안함)
+      // QR 코드이거나 사진 저장이 활성화되어 있으면 백그라운드에서 촬영 시작
+      // QR 코드는 EC 레벨 분석을 위해 항상 사진 촬영
+      const isQRCodeForPhoto = normalizedType === 'qr' || normalizedType === 'qrcode';
       let photoPromise = null;
-      if (photoSaveEnabledRef.current) {
+      if (photoSaveEnabledRef.current || isQRCodeForPhoto) {
         // 사진 촬영을 백그라운드에서 시작하고 결과는 나중에 처리
         photoPromise = capturePhoto(bounds).catch(err => {
           console.log('Background photo capture error:', err);
@@ -844,19 +846,37 @@ function ScannerScreen() {
       // 네비게이션 타이머 (사진 촬영 완료를 기다리지 않음)
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // EC 레벨 분석은 스킵하고 네비게이션 우선
           let detectedEcLevel = errorCorrectionLevel;
           let ecLevelAnalysisFailed = false;
           const isQRCodeType = normalizedType === 'qr' || normalizedType === 'qrcode';
 
-          // 사진 촬영 완료를 짧게만 기다림 (최대 200ms)
+          // 사진 촬영 완료를 기다림 (EC 레벨 분석을 위해)
           let photoUri = null;
           let originalUri = null;
           if (photoPromise) {
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 200));
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 500));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             photoUri = photoResult?.croppedUri || photoResult;
             originalUri = photoResult?.originalUri || photoResult;
+          }
+
+          // QR 코드이고 EC 레벨이 없으면 분석 시도
+          if (isQRCodeType && !detectedEcLevel && originalUri) {
+            try {
+              console.log('[ScannerScreen] Analyzing EC level from photo...');
+              const analysisResult = await analyzeImage(originalUri);
+              console.log('[ScannerScreen] EC level analysis result:', analysisResult);
+              if (analysisResult && analysisResult.success && analysisResult.ecLevel) {
+                detectedEcLevel = analysisResult.ecLevel;
+                console.log('[ScannerScreen] EC level detected:', detectedEcLevel);
+              } else {
+                ecLevelAnalysisFailed = true;
+                console.log('[ScannerScreen] EC level analysis failed');
+              }
+            } catch (ecError) {
+              console.log('[ScannerScreen] EC level analysis error:', ecError);
+              ecLevelAnalysisFailed = true;
+            }
           }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
@@ -903,12 +923,15 @@ function ScannerScreen() {
           isNavigatingRef.current = true;
           setIsActive(false);
 
+          // 사진 저장 설정이 꺼져있으면 히스토리와 결과 화면에는 사진 전달 안함
+          const photoUriForSave = photoSaveEnabledRef.current ? photoUri : null;
+
           if (enabled === 'true') {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
               // 히스토리 저장은 백그라운드에서
-              saveHistory(data, url, photoUri, normalizedType, detectedEcLevel).catch(console.error);
+              saveHistory(data, url, photoUriForSave, normalizedType, detectedEcLevel).catch(console.error);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -916,7 +939,7 @@ function ScannerScreen() {
           }
 
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
-          const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
+          const historyResult = await saveHistory(data, null, photoUriForSave, normalizedType, detectedEcLevel);
 
           // 즉시 네비게이션
           router.push({
@@ -925,7 +948,7 @@ function ScannerScreen() {
               code: data,
               isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
               scanCount: historyResult.count.toString(),
-              photoUri: photoUri || '',
+              photoUri: photoUriForSave || '',
               type: normalizedType,
               errorCorrectionLevel: detectedEcLevel || '',
               ecLevelAnalysisFailed: ecLevelAnalysisFailed ? 'true' : 'false',
