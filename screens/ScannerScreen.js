@@ -790,61 +790,15 @@ function ScannerScreen() {
       // 1D 바코드 여부 확인
       const is1DBarcode = ONE_D_BARCODE_TYPES.includes(normalizedType);
 
-      // Android에서는 bounds 검증을 건너뛰고 바로 스캔 허용 (bounds 형식 호환성 문제)
+      // Vision Camera는 카메라 센서 좌표를 반환하므로 타겟 영역 검사 스킵
+      // (카메라 센서 해상도 ≠ 화면 해상도)
+      // Android에서도 bounds 형식 호환성 문제로 스킵
       if (Platform.OS === 'android') {
         console.log('[Android] Skipping bounds validation, allowing scan');
-      } else if (bounds) {
-        // iOS: bounds 기반 타겟 영역 검사
-        const normalized = normalizeBounds(bounds);
-        if (normalized) {
-          // 바코드의 중심점 계산
-          const barcodeCenterX = normalized.x + normalized.width / 2;
-          const barcodeCenterY = normalized.y + normalized.height / 2;
-
-          // 화면 중앙점
-          const screenCenterX = winWidth / 2;
-          const screenCenterY = winHeight / 2;
-
-          // 1D 바코드는 수평 방향으로 더 넓은 타겟 영역 적용
-          // Code 39 등 1D 바코드: 가로 150px, 세로 80px 타원형 영역
-          // QR 등 2D 바코드: 기존 50px 원형 영역
-          let isInTargetArea = false;
-          if (is1DBarcode) {
-            // 1D 바코드용 타원형 타겟 영역 (가로로 긴 바코드 특성 반영)
-            const targetRadiusX = 150; // 수평 방향 확대
-            const targetRadiusY = 80;  // 수직 방향도 적당히 확대
-            const normalizedDistX = Math.abs(barcodeCenterX - screenCenterX) / targetRadiusX;
-            const normalizedDistY = Math.abs(barcodeCenterY - screenCenterY) / targetRadiusY;
-            isInTargetArea = (normalizedDistX * normalizedDistX + normalizedDistY * normalizedDistY) <= 1;
-          } else {
-            // 2D 바코드용 원형 타겟 영역
-            const targetRadius = 50;
-            const distanceFromCenter = Math.sqrt(
-              Math.pow(barcodeCenterX - screenCenterX, 2) + Math.pow(barcodeCenterY - screenCenterY, 2)
-            );
-            isInTargetArea = distanceFromCenter <= targetRadius;
-          }
-
-          if (!isInTargetArea) {
-            return; // 타겟 영역 밖이면 스캔하지 않음
-          }
-        } else {
-          // bounds는 있지만 정규화 실패
-          // 1D 바코드는 bounds 정보가 불완전할 수 있으므로 허용 (디바운스만 적용)
-          if (is1DBarcode) {
-            console.log(`Cannot normalize bounds for ${normalizedType}, but allowing 1D barcode scan`);
-          } else {
-            console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
-            return;
-          }
-        }
       } else {
-        // bounds가 없는 경우 - 1D 바코드는 허용, 2D 바코드는 더 긴 디바운스 적용
-        if (is1DBarcode) {
-          console.log(`No bounds for 1D barcode ${normalizedType}, allowing scan with debounce`);
-        } else {
-          console.log(`No bounds for ${normalizedType}, relying on extended debounce`);
-        }
+        // iOS Vision Camera: 타겟 영역 검사 스킵 (좌표계 불일치)
+        // 대신 디바운스로 중복 스캔 방지
+        console.log('[iOS Vision Camera] Skipping target area check, using debounce only');
       }
 
       const now = Date.now();
