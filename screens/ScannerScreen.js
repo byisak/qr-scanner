@@ -559,14 +559,10 @@ function ScannerScreen() {
 
   // Vision Camera 좌표 변환 헬퍼 함수
   const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
-    // Vision Camera는 카메라 센서 좌표를 반환
-    // iOS에서 센서는 landscape 방향이지만 화면은 portrait
-    // 따라서 x, y를 회전시켜야 함
-
     // 콜백에서 받은 실제 프레임 크기 사용 (없으면 저장된 값 사용)
     const dims = frameDimensions || frameDimensionsRef.current;
-    const SENSOR_WIDTH = dims.width;   // 실제 센서 가로 (landscape 기준)
-    const SENSOR_HEIGHT = dims.height; // 실제 센서 세로 (landscape 기준)
+    const SENSOR_WIDTH = dims.width;   // 센서 가로 (landscape 기준, 예: 4032)
+    const SENSOR_HEIGHT = dims.height; // 센서 세로 (landscape 기준, 예: 3024)
 
     console.log('[convertVisionCameraCoords] Input:', { x, y, width, height });
     console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
@@ -575,28 +571,31 @@ function ScannerScreen() {
     // 좌표가 화면 크기보다 크면 Vision Camera 센서 좌표로 판단
     const maxCoord = Math.max(x, y, x + width, y + height);
     if (maxCoord > Math.max(winWidth, winHeight) * 1.2) {
-      // iOS Vision Camera: 센서는 landscape, 화면은 portrait
-      // 센서 좌표를 90도 회전시켜야 함
-      // landscape 센서에서 (x, y) -> portrait 화면에서 (y, SENSOR_WIDTH - x - width)
+      // Vision Camera iOS: 센서 좌표를 화면 좌표로 변환
+      // 센서는 landscape (예: 4032x3024), 화면은 portrait (예: 390x844)
+      //
+      // 카메라 프리뷰는 aspectFill 모드로 화면을 채움
+      // 센서의 landscape 이미지가 portrait 화면에 맞게 회전되어 표시됨
+      //
+      // iOS에서 portrait 모드일 때:
+      // - 센서의 y축이 화면의 x축에 대응 (좌우)
+      // - 센서의 x축이 화면의 y축에 대응 (상하, 뒤집힘)
 
-      // 회전된 좌표 계산
-      const rotatedX = y;
-      const rotatedY = SENSOR_WIDTH - x - width;
-      const rotatedWidth = height;
-      const rotatedHeight = width;
-
-      // 화면 비율로 스케일
-      const scaleX = winWidth / SENSOR_HEIGHT;  // 회전 후 센서 가로 = 원래 센서 세로
-      const scaleY = winHeight / SENSOR_WIDTH;  // 회전 후 센서 세로 = 원래 센서 가로
+      // 센서 좌표를 화면 좌표로 변환 (90도 시계방향 회전)
+      // 센서 (x, y) -> 화면 (sensorHeight - y - height, x)
+      const screenX = (SENSOR_HEIGHT - y - height) * (winWidth / SENSOR_HEIGHT);
+      const screenY = x * (winHeight / SENSOR_WIDTH);
+      const screenWidth = height * (winWidth / SENSOR_HEIGHT);
+      const screenHeight = width * (winHeight / SENSOR_WIDTH);
 
       const result = {
-        x: rotatedX * scaleX,
-        y: rotatedY * scaleY,
-        width: rotatedWidth * scaleX,
-        height: rotatedHeight * scaleY,
+        x: screenX,
+        y: screenY,
+        width: screenWidth,
+        height: screenHeight,
       };
 
-      console.log('[convertVisionCameraCoords] Rotated & scaled:', result);
+      console.log('[convertVisionCameraCoords] Transformed:', result);
       return result;
     }
 
