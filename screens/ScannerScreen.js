@@ -105,6 +105,7 @@ function ScannerScreen() {
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
+  const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
 
   const [qrBounds, setQrBounds] = useState(null);
 
@@ -280,6 +281,7 @@ function ScannerScreen() {
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
+      isProcessingRef.current = false; // 처리 중 플래그 리셋
       resetAll();
 
       (async () => {
@@ -404,6 +406,7 @@ function ScannerScreen() {
 
         // 먼저 콜백 차단 (새로운 스캔 결과 무시)
         isNavigatingRef.current = true;
+        isProcessingRef.current = true; // 처리 중 플래그도 설정하여 완전 차단
         isCapturingPhotoRef.current = false;
         console.log('[ScannerScreen] Callbacks blocked');
 
@@ -877,8 +880,8 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw, frameDimensions } = scanResult;
-      // 사진 촬영 중이거나 네비게이션 중이면 스캔 무시
-      if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current) return;
+      // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
+      if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
 
       // 카메라 프레임 크기 저장 (좌표 변환용)
       if (frameDimensions) {
@@ -972,7 +975,8 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
-      // 스캔 즉시 차단 (중복 스캔 방지)
+      // 스캔 즉시 차단 (중복 스캔 방지) - ref로 동기적 차단
+      isProcessingRef.current = true;
       setCanScan(false);
 
       // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
@@ -980,7 +984,10 @@ function ScannerScreen() {
         const isDuplicate = batchScannedItems.some(item => item.code === data);
         if (isDuplicate) {
           // 중복이면 아무 피드백 없이 스캔만 재활성화
-          setTimeout(() => setCanScan(true), 500);
+          setTimeout(() => {
+            isProcessingRef.current = false;
+            setCanScan(true);
+          }, 500);
           startResetTimer(RESET_DELAY_NORMAL);
           return;
         }
@@ -1135,7 +1142,10 @@ function ScannerScreen() {
             }
 
             // 스캔 재활성화 (계속 스캔 가능)
-            setTimeout(() => setCanScan(true), 500);
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 500);
             startResetTimer(RESET_DELAY_NORMAL);
             return;
           }
