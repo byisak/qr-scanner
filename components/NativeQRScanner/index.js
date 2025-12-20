@@ -1,6 +1,6 @@
 // components/NativeQRScanner/index.js
 // Vision Camera v4 기반 네이티브 QR 스캐너 컴포넌트
-// mgcrea/vision-camera-barcode-scanner 라이브러리 사용
+// useCodeScanner 사용 (내장 바코드 스캐너)
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { StyleSheet, View, Platform, Dimensions } from 'react-native';
@@ -9,16 +9,12 @@ import {
   useCameraDevice,
   useCameraPermission,
   useCameraFormat,
+  useCodeScanner,
 } from 'react-native-vision-camera';
-import {
-  useBarcodeScanner,
-  CameraHighlights,
-} from '@mgcrea/vision-camera-barcode-scanner';
-import { runOnJS } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// 바코드 타입 매핑 (expo-camera 타입 -> mgcrea 라이브러리 타입)
+// 바코드 타입 매핑 (expo-camera 타입 -> Vision Camera 타입)
 const BARCODE_TYPE_MAP = {
   'qr': 'qr',
   'ean13': 'ean-13',
@@ -51,6 +47,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 }, ref) {
   const cameraRef = useRef(null);
   const [layout, setLayout] = useState({ width: SCREEN_WIDTH, height: SCREEN_HEIGHT });
+  const frameDimensionsRef = useRef({ width: 1920, height: 1440 });
 
   // Vision Camera v4 권한 훅 사용
   const { hasPermission, requestPermission } = useCameraPermission();
@@ -61,6 +58,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     onCodeScannedRef.current = onCodeScanned;
   }, [onCodeScanned]);
 
+  // layout ref 유지
+  const layoutRef = useRef(layout);
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
+
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
@@ -69,8 +72,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     { videoResolution: { width: 1920, height: 1080 } },
   ]);
 
-  // 바코드 타입 변환 (expo-camera 형식 -> mgcrea 형식)
-  const mgcreaBarcodeTypes = useMemo(() => {
+  // 바코드 타입 변환 (expo-camera 형식 -> Vision Camera 형식)
+  const visionCameraBarcodeTypes = useMemo(() => {
     const types = barcodeTypes
       .map(type => BARCODE_TYPE_MAP[type])
       .filter(Boolean);
@@ -78,56 +81,52 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     return types.length > 0 ? types : ['qr'];
   }, [barcodeTypes]);
 
-  // JS 스레드에서 콜백 실행하는 함수
-  const handleBarcodeScanned = useCallback((barcodes) => {
-    if (barcodes.length === 0) return;
-    if (!onCodeScannedRef.current) return;
+  // Vision Camera useCodeScanner 훅 사용
+  const codeScanner = useCodeScanner({
+    codeTypes: visionCameraBarcodeTypes,
+    onCodeScanned: (codes, frame) => {
+      if (codes.length === 0) return;
+      if (!onCodeScannedRef.current) return;
 
-    const code = barcodes[0];
-    console.log('[NativeQRScanner] Barcode scanned:', code.value, code.type);
+      const code = codes[0];
+      console.log('[NativeQRScanner] Code scanned:', code.value, code.type);
 
-    // expo-camera 형식으로 변환하여 콜백 호출
-    const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
+      // 프레임 크기 저장
+      if (frame) {
+        frameDimensionsRef.current = { width: frame.width, height: frame.height };
+      }
 
-    // cornerPoints를 bounds 형식으로 변환
-    let bounds = null;
-    let cornerPoints = null;
+      // expo-camera 형식으로 변환하여 콜백 호출
+      const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
 
-    if (code.cornerPoints && code.cornerPoints.length >= 4) {
-      cornerPoints = code.cornerPoints;
-      const xCoords = code.cornerPoints.map(c => c.x);
-      const yCoords = code.cornerPoints.map(c => c.y);
-      const minX = Math.min(...xCoords);
-      const maxX = Math.max(...xCoords);
-      const minY = Math.min(...yCoords);
-      const maxY = Math.max(...yCoords);
+      // cornerPoints를 bounds 형식으로 변환
+      let bounds = null;
+      let cornerPoints = null;
 
-      bounds = {
-        origin: { x: minX, y: minY },
-        size: { width: maxX - minX, height: maxY - minY },
-      };
-    }
+      if (code.corners && code.corners.length >= 4) {
+        cornerPoints = code.corners;
+        const xCoords = code.corners.map(c => c.x);
+        const yCoords = code.corners.map(c => c.y);
+        const minX = Math.min(...xCoords);
+        const maxX = Math.max(...xCoords);
+        const minY = Math.min(...yCoords);
+        const maxY = Math.max(...yCoords);
 
-    onCodeScannedRef.current({
-      data: code.value,
-      type: normalizedType,
-      bounds,
-      cornerPoints,
-      raw: code.value,
-      frameDimensions: null,
-      layout: layout,
-    });
-  }, [layout]);
+        bounds = {
+          origin: { x: minX, y: minY },
+          size: { width: maxX - minX, height: maxY - minY },
+        };
+      }
 
-  // mgcrea useBarcodeScanner 훅 사용
-  const { props: cameraProps, highlights } = useBarcodeScanner({
-    fps: 5,
-    barcodeTypes: mgcreaBarcodeTypes,
-    scanMode: 'continuous',
-    onBarcodeScanned: (barcodes) => {
-      'worklet';
-      // worklet에서 JS 스레드로 콜백 실행
-      runOnJS(handleBarcodeScanned)(barcodes);
+      onCodeScannedRef.current({
+        data: code.value,
+        type: normalizedType,
+        bounds,
+        cornerPoints,
+        raw: code.value,
+        frameDimensions: frameDimensionsRef.current,
+        layout: layoutRef.current,
+      });
     },
   });
 
@@ -211,12 +210,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return null;
       }
     },
-    getHighlights: () => highlights,
-  }), [highlights]);
+  }), []);
 
   // 컴포넌트 마운트/언마운트 로그
   useEffect(() => {
-    console.log('[NativeQRScanner] Component MOUNTED (using mgcrea library)');
+    console.log('[NativeQRScanner] Component MOUNTED (using useCodeScanner)');
     return () => {
       console.log('[NativeQRScanner] Component UNMOUNTING...');
     };
@@ -234,7 +232,6 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   console.log('[NativeQRScanner] device:', device ? device.id : 'null');
   console.log('[NativeQRScanner] hasPermission:', hasPermission);
   console.log('[NativeQRScanner] isActive:', isActive);
-  console.log('[NativeQRScanner] highlights count:', highlights?.length || 0);
 
   if (!device) {
     console.log('[NativeQRScanner] Waiting for camera device...');
@@ -258,12 +255,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         photo={true}
         onError={handleCameraError}
         enableZoomGesture={true}
-        {...cameraProps}
-      />
-      {/* mgcrea CameraHighlights로 바코드 위치 표시 */}
-      <CameraHighlights
-        highlights={highlights}
-        color="#FFD60A"
+        codeScanner={codeScanner}
       />
     </View>
   );
