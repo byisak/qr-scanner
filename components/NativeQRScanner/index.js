@@ -12,7 +12,7 @@ import {
   useBarcodeScanner,
   CameraHighlights,
 } from '@mgcrea/vision-camera-barcode-scanner';
-import { runOnJS } from 'react-native-worklets-core';
+import { Worklets } from 'react-native-worklets-core';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -98,13 +98,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }, [device]);
 
   // 바코드 스캔 콜백 핸들러 (JS 스레드에서 실행)
-  const handleBarcodeDetected = useCallback((barcode, currentFrameDimensions) => {
+  const handleBarcodeDetected = useCallback((barcodeData) => {
     console.log('[NativeQRScanner] ===== CODE SCANNED =====');
-    console.log('[NativeQRScanner] Code value:', barcode.value);
-    console.log('[NativeQRScanner] Code type:', barcode.type);
-    console.log('[NativeQRScanner] Code frame:', JSON.stringify(barcode.frame));
-    console.log('[NativeQRScanner] Code cornerPoints:', JSON.stringify(barcode.cornerPoints));
-    console.log('[NativeQRScanner] Frame dimensions:', JSON.stringify(currentFrameDimensions));
+    console.log('[NativeQRScanner] Code value:', barcodeData.value);
+    console.log('[NativeQRScanner] Code type:', barcodeData.type);
 
     if (!onCodeScannedRef.current) {
       console.log('[NativeQRScanner] No callback registered');
@@ -112,16 +109,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     }
 
     // 바코드 타입 역매핑 (expo-camera 형식으로 변환)
-    const normalizedType = BARCODE_TYPE_REVERSE_MAP[barcode.type] || barcode.type;
+    const normalizedType = BARCODE_TYPE_REVERSE_MAP[barcodeData.type] || barcodeData.type;
 
     // cornerPoints를 bounds 형식으로 변환
     let bounds = null;
     let cornerPoints = null;
 
-    if (barcode.cornerPoints && barcode.cornerPoints.length >= 4) {
-      cornerPoints = barcode.cornerPoints;
-      const xCoords = barcode.cornerPoints.map(c => c.x);
-      const yCoords = barcode.cornerPoints.map(c => c.y);
+    if (barcodeData.cornerPoints && barcodeData.cornerPoints.length >= 4) {
+      cornerPoints = barcodeData.cornerPoints;
+      const xCoords = barcodeData.cornerPoints.map(c => c.x);
+      const yCoords = barcodeData.cornerPoints.map(c => c.y);
       const minX = Math.min(...xCoords);
       const maxX = Math.max(...xCoords);
       const minY = Math.min(...yCoords);
@@ -131,24 +128,27 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         origin: { x: minX, y: minY },
         size: { width: maxX - minX, height: maxY - minY },
       };
-    } else if (barcode.frame) {
+    } else if (barcodeData.frame) {
       bounds = {
-        origin: { x: barcode.frame.x, y: barcode.frame.y },
-        size: { width: barcode.frame.width, height: barcode.frame.height },
+        origin: { x: barcodeData.frame.x, y: barcodeData.frame.y },
+        size: { width: barcodeData.frame.width, height: barcodeData.frame.height },
       };
     }
 
     console.log('[NativeQRScanner] Calling parent callback...');
     onCodeScannedRef.current({
-      data: barcode.value,
+      data: barcodeData.value,
       type: normalizedType,
       bounds,
       cornerPoints,
-      raw: barcode.value,
+      raw: barcodeData.value,
       // 카메라 프레임 크기 정보 추가 (좌표 변환용)
-      frameDimensions: currentFrameDimensions,
+      frameDimensions: barcodeData.frameDimensions,
     });
   }, []);
+
+  // Worklets.createRunOnJS로 JS 스레드에서 실행할 함수 생성
+  const runOnJSCallback = Worklets.createRunOnJS(handleBarcodeDetected);
 
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
@@ -164,8 +164,14 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       const barcode = barcodes[0];
 
-      // runOnJS를 사용하여 JS 스레드에서 콜백 실행
-      runOnJS(handleBarcodeDetected)(barcode, frameDimensions);
+      // Worklet에서 JS 스레드로 콜백 실행
+      runOnJSCallback({
+        value: barcode.value,
+        type: barcode.type,
+        frame: barcode.frame,
+        cornerPoints: barcode.cornerPoints,
+        frameDimensions: frameDimensions,
+      });
     },
   });
 
