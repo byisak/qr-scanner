@@ -1189,17 +1189,17 @@ function ScannerScreen() {
       {/* QR 코드 EC 레벨 분석용 숨겨진 WebView */}
       <QRAnalyzerView />
 
-      {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
-        <NativeQRScanner
-          ref={cameraRef}
-          isActive={isActive}
-          facing={cameraFacing}
-          torch={torchOn ? 'on' : 'off'}
-          barcodeTypes={barcodeTypes}
-          onCodeScanned={handleBarCodeScanned}
-          style={StyleSheet.absoluteFillObject}
-        />
-      )}
+      {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
+      {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
+      <NativeQRScanner
+        ref={cameraRef}
+        isActive={isActive}
+        facing={cameraFacing}
+        torch={torchOn ? 'on' : 'off'}
+        barcodeTypes={barcodeTypes}
+        onCodeScanned={handleBarCodeScanned}
+        style={StyleSheet.absoluteFillObject}
+      />
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) */}
