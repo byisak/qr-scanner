@@ -1,0 +1,9 @@
+{
+  "platforms": ["ios", "android"],
+  "ios": {
+    "modules": ["QrEcAnalyzerModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.qrecanalyzer.QrEcAnalyzerModule"]
+  }
+}

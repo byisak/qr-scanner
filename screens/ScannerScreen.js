@@ -26,7 +26,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQRAnalyzer } from '../components/QRAnalyzer';
+// 네이티브 ZXing 모듈로 EC 레벨 분석 (WebView 방식 대체)
+import { analyzeQrCode as analyzeQrCodeNative } from 'qr-ec-analyzer';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -43,8 +44,16 @@ function ScannerScreen() {
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // QR 코드 EC 레벨 분석용 훅
-  const { analyzeImage, QRAnalyzerView } = useQRAnalyzer();
+  // 네이티브 ZXing 모듈로 EC 레벨 분석
+  const analyzeImage = useCallback(async (imageUri) => {
+    try {
+      const result = await analyzeQrCodeNative(imageUri);
+      return result;
+    } catch (error) {
+      console.log('[ScannerScreen] Native EC analysis error:', error);
+      return { success: false, error: error.message };
+    }
+  }, []);
 
   // iOS는 기존 값 유지, Android는 SafeArea insets 사용
   const topOffset = Platform.OS === 'ios' ? 60 : insets.top + 10;
@@ -1073,9 +1082,6 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* QR 코드 EC 레벨 분석용 숨겨진 WebView */}
-      <QRAnalyzerView />
-
       {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
       {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
       <NativeQRScanner
