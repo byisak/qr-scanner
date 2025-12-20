@@ -657,7 +657,7 @@ function ScannerScreen() {
 
       // Vision Camera 사진 촬영 (무음)
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8, // 품질 약간 낮춰서 속도 향상
+        quality: 0.9, // EC 분석을 위해 품질 높임
         shutterSound: false,
       });
 
@@ -666,19 +666,97 @@ function ScannerScreen() {
         return null;
       }
 
-      // 파일명 생성 및 저장 (크롭 없이 원본 직접 저장)
       const timestamp = Date.now();
-      const fileName = `scan_${timestamp}.jpg`;
-      const newPath = photoDir + fileName;
+      const originalFileName = `scan_original_${timestamp}.jpg`;
+      const croppedFileName = `scan_cropped_${timestamp}.jpg`;
+      const originalPath = photoDir + originalFileName;
+      const croppedPath = photoDir + croppedFileName;
 
-      // 원본 사진 바로 저장 (크롭 스킵하여 속도 향상)
+      // 원본 사진 저장
       await FileSystem.copyAsync({
         from: photo.uri,
-        to: newPath,
+        to: originalPath,
       });
 
-      console.log('Photo saved:', newPath);
-      return { croppedUri: newPath, originalUri: newPath };
+      // bounds가 있으면 QR 코드 영역 크롭
+      let finalCroppedPath = originalPath;
+      if (bounds && bounds.origin && bounds.size) {
+        try {
+          // 카메라 프레임 크기와 사진 크기 비율 계산
+          const photoWidth = photo.width || 4032;
+          const photoHeight = photo.height || 3024;
+
+          // 화면 좌표를 사진 좌표로 변환
+          // Vision Camera는 센서 좌표(가로)를 사용하므로 변환 필요
+          const screenWidth = layoutRef.current?.width || winWidth;
+          const screenHeight = layoutRef.current?.height || winHeight;
+
+          // aspectFill 스케일 계산
+          const scaleX = photoWidth / screenWidth;
+          const scaleY = photoHeight / screenHeight;
+          const scale = Math.max(scaleX, scaleY);
+
+          // 크롭 오프셋 계산 (aspectFill로 잘리는 부분)
+          const offsetX = (photoWidth - screenWidth * scale) / 2;
+          const offsetY = (photoHeight - screenHeight * scale) / 2;
+
+          // bounds를 사진 좌표로 변환
+          let cropX = bounds.origin.x * scale + offsetX;
+          let cropY = bounds.origin.y * scale + offsetY;
+          let cropWidth = bounds.size.width * scale;
+          let cropHeight = bounds.size.height * scale;
+
+          // 마진 추가 (QR 코드 주변 여백)
+          const margin = Math.min(cropWidth, cropHeight) * 0.3;
+          cropX = Math.max(0, cropX - margin);
+          cropY = Math.max(0, cropY - margin);
+          cropWidth = Math.min(photoWidth - cropX, cropWidth + margin * 2);
+          cropHeight = Math.min(photoHeight - cropY, cropHeight + margin * 2);
+
+          // 정수로 변환
+          cropX = Math.round(cropX);
+          cropY = Math.round(cropY);
+          cropWidth = Math.round(cropWidth);
+          cropHeight = Math.round(cropHeight);
+
+          console.log(`[capturePhoto] Cropping - Photo: ${photoWidth}x${photoHeight}, Screen: ${screenWidth}x${screenHeight}`);
+          console.log(`[capturePhoto] Crop region: x=${cropX}, y=${cropY}, w=${cropWidth}, h=${cropHeight}`);
+
+          // 유효한 크롭 영역인지 확인
+          if (cropWidth > 50 && cropHeight > 50 && cropX >= 0 && cropY >= 0) {
+            const croppedResult = await ImageManipulator.manipulateAsync(
+              originalPath,
+              [
+                {
+                  crop: {
+                    originX: cropX,
+                    originY: cropY,
+                    width: cropWidth,
+                    height: cropHeight,
+                  },
+                },
+              ],
+              { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+            );
+
+            // 크롭된 이미지 저장
+            await FileSystem.moveAsync({
+              from: croppedResult.uri,
+              to: croppedPath,
+            });
+
+            finalCroppedPath = croppedPath;
+            console.log('[capturePhoto] QR code cropped successfully:', croppedPath);
+          } else {
+            console.log('[capturePhoto] Invalid crop region, using original');
+          }
+        } catch (cropError) {
+          console.log('[capturePhoto] Crop failed, using original:', cropError);
+        }
+      }
+
+      console.log('Photo saved - Original:', originalPath, 'Cropped:', finalCroppedPath);
+      return { croppedUri: finalCroppedPath, originalUri: originalPath };
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
@@ -686,7 +764,7 @@ function ScannerScreen() {
       isCapturingPhotoRef.current = false;
       setIsCapturingPhoto(false);
     }
-  }, []);
+  }, [winWidth, winHeight]);
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
@@ -869,12 +947,22 @@ function ScannerScreen() {
             originalUri = photoResult?.originalUri || photoResult;
           }
 
-          // QR 코드이고 EC 레벨이 없으면 분석 시도
-          if (isQRCodeType && !detectedEcLevel && originalUri) {
+          // QR 코드이고 EC 레벨이 없으면 분석 시도 (크롭된 이미지 우선 사용)
+          if (isQRCodeType && !detectedEcLevel && (photoUri || originalUri)) {
             try {
-              console.log('[ScannerScreen] Analyzing EC level from photo...');
-              const analysisResult = await analyzeImage(originalUri);
+              // 크롭된 이미지를 우선 사용하고, 실패하면 원본으로 재시도
+              const imageToAnalyze = photoUri || originalUri;
+              console.log('[ScannerScreen] Analyzing EC level from photo:', imageToAnalyze);
+              let analysisResult = await analyzeImage(imageToAnalyze);
               console.log('[ScannerScreen] EC level analysis result:', analysisResult);
+
+              // 크롭된 이미지에서 실패하면 원본으로 재시도
+              if ((!analysisResult || !analysisResult.success) && photoUri && originalUri && photoUri !== originalUri) {
+                console.log('[ScannerScreen] Retrying with original image...');
+                analysisResult = await analyzeImage(originalUri);
+                console.log('[ScannerScreen] EC level analysis (original) result:', analysisResult);
+              }
+
               if (analysisResult && analysisResult.success && analysisResult.ecLevel) {
                 detectedEcLevel = analysisResult.ecLevel;
                 console.log('[ScannerScreen] EC level detected:', detectedEcLevel);
