@@ -688,8 +688,8 @@ function ScannerScreen() {
 
           // 화면 좌표를 사진 좌표로 변환
           // Vision Camera는 센서 좌표(가로)를 사용하므로 변환 필요
-          const screenWidth = layoutRef.current?.width || winWidth;
-          const screenHeight = layoutRef.current?.height || winHeight;
+          const screenWidth = winWidth;
+          const screenHeight = winHeight;
 
           // aspectFill 스케일 계산
           const scaleX = photoWidth / screenWidth;
