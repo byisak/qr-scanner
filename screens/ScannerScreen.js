@@ -5,6 +5,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  Animated,
   useWindowDimensions,
   Platform,
   Modal,
@@ -87,10 +88,14 @@ function ScannerScreen() {
   const [activeSessionId, setActiveSessionId] = useState('');
   const [showSendMessage, setShowSendMessage] = useState(false); // "전송" 메시지 표시 여부
 
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
+  const smoothBounds = useRef(null);
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
@@ -99,6 +104,8 @@ function ScannerScreen() {
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
+
+  const [qrBounds, setQrBounds] = useState(null);
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -260,6 +267,8 @@ function ScannerScreen() {
   }, []);
 
   const resetAll = useCallback(() => {
+    setQrBounds(null);
+    smoothBounds.current = null;
     lastScannedData.current = null;
     lastScannedTime.current = 0;
     clearAllTimers();
@@ -416,7 +425,33 @@ function ScannerScreen() {
     }, [resetAll, clearAllTimers]),
   );
 
-  // mgcrea 라이브러리가 highlights를 자동 관리하므로 qrBounds 관련 로직 제거됨
+  useEffect(() => {
+    setQrBounds(null);
+    smoothBounds.current = null;
+  }, [winWidth, winHeight]);
+
+  useEffect(() => {
+    if (qrBounds) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1.05,
+          friction: 6,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(scaleAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [qrBounds, scaleAnim, opacityAnim]);
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null) => {
     try {
@@ -520,12 +555,74 @@ function ScannerScreen() {
     []
   );
 
-  // mgcrea 라이브러리가 좌표 변환을 처리하므로 커스텀 변환 함수 불필요
+  // Vision Camera 좌표 변환 함수
+  // 카메라 프레임 좌표를 화면 좌표로 변환
+  const convertVisionCameraCoords = useCallback((cornerPoints, frameDimensions, layout) => {
+    if (!cornerPoints || cornerPoints.length < 4) return null;
+
+    // 프레임과 레이아웃 크기
+    const frameW = frameDimensions?.width || 4032;
+    const frameH = frameDimensions?.height || 3024;
+    const layoutW = layout?.width || winWidth;
+    const layoutH = layout?.height || winHeight;
+
+    console.log('[convertCoords] Frame:', frameW, 'x', frameH, 'Layout:', layoutW, 'x', layoutH);
+
+    // iOS에서는 프레임이 landscape (4032x3024)이지만
+    // 화면은 portrait (390x844)이므로 좌표 변환 필요
+
+    // 스케일 팩터 계산 (aspectFill/cover 모드)
+    // 프레임을 화면에 맞추기 위해 더 큰 스케일 사용
+    const scaleX = layoutW / frameH; // 프레임 높이가 화면 너비에 대응
+    const scaleY = layoutH / frameW; // 프레임 너비가 화면 높이에 대응
+    const scaleFactor = Math.max(scaleX, scaleY);
+
+    // 크롭 오프셋 계산
+    const scaledFrameW = frameH * scaleFactor;
+    const scaledFrameH = frameW * scaleFactor;
+    const offsetX = (scaledFrameW - layoutW) / 2;
+    const offsetY = (scaledFrameH - layoutH) / 2;
+
+    console.log('[convertCoords] Scale:', scaleFactor, 'Offset:', offsetX, offsetY);
+
+    // cornerPoints 변환
+    const transformedPoints = cornerPoints.map(point => {
+      // iOS: x와 y를 스왑하고 스케일 적용
+      if (Platform.OS === 'ios') {
+        const newX = point.y * scaleFactor - offsetX;
+        const newY = point.x * scaleFactor - offsetY;
+        return { x: newX, y: newY };
+      }
+      // Android: 직접 스케일 적용
+      const newX = point.x * scaleFactor - offsetX;
+      const newY = point.y * scaleFactor - offsetY;
+      return { x: newX, y: newY };
+    });
+
+    // bounding box 계산
+    const xCoords = transformedPoints.map(p => p.x);
+    const yCoords = transformedPoints.map(p => p.y);
+    const minX = Math.min(...xCoords);
+    const maxX = Math.max(...xCoords);
+    const minY = Math.min(...yCoords);
+    const maxY = Math.max(...yCoords);
+
+    const result = {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+
+    console.log('[convertCoords] Input:', cornerPoints[0], 'Result:', result);
+    return result;
+  }, [winWidth, winHeight]);
 
   const startResetTimer = useCallback((delay) => {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
-      // mgcrea 라이브러리가 highlights를 자동 관리하므로 별도 리셋 불필요
+      setQrBounds(null);
+      smoothBounds.current = null;
       resetTimerRef.current = null;
     }, delay);
   }, []);
@@ -583,7 +680,7 @@ function ScannerScreen() {
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
-      const { data, bounds, type, cornerPoints, raw, frameDimensions } = scanResult;
+      const { data, bounds, type, cornerPoints, raw, frameDimensions, layout } = scanResult;
       // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
       if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
 
@@ -656,6 +753,8 @@ function ScannerScreen() {
       }
 
       if (lastScannedData.current !== data) {
+        setQrBounds(null);
+        smoothBounds.current = null;
         if (navigationTimerRef.current) {
           clearTimeout(navigationTimerRef.current);
           navigationTimerRef.current = null;
@@ -709,8 +808,23 @@ function ScannerScreen() {
         console.log('[ScannerScreen] Scan sound skipped');
       }
 
-      // mgcrea 라이브러리가 CameraHighlights로 바코드 위치를 직접 표시하므로
-      // 좌표 변환 및 qrBounds 업데이트는 더 이상 필요 없음
+      // cornerPoints가 있으면 좌표 변환하여 qrBounds 업데이트
+      if (cornerPoints && cornerPoints.length >= 4) {
+        const normalized = convertVisionCameraCoords(cornerPoints, frameDimensions, layout);
+        if (normalized) {
+          if (!smoothBounds.current) {
+            smoothBounds.current = normalized;
+          } else {
+            smoothBounds.current = {
+              x: smoothBounds.current.x + (normalized.x - smoothBounds.current.x) * 0.35,
+              y: smoothBounds.current.y + (normalized.y - smoothBounds.current.y) * 0.35,
+              width: smoothBounds.current.width + (normalized.width - smoothBounds.current.width) * 0.35,
+              height: smoothBounds.current.height + (normalized.height - smoothBounds.current.height) * 0.35,
+            };
+          }
+          setQrBounds({ ...smoothBounds.current });
+        }
+      }
 
       // 사진 저장이 활성화되어 있으면 백그라운드에서 촬영 시작 (네비게이션 차단 안함)
       let photoPromise = null;
@@ -826,7 +940,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, fullScreenScanMode, analyzeImage],
+    [isActive, canScan, convertVisionCameraCoords, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, fullScreenScanMode, analyzeImage],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -980,18 +1094,49 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 중앙 십자가 타겟 (항상 표시 - mgcrea가 바코드 하이라이트 별도 렌더링) */}
-        <View style={styles.centerTarget} pointerEvents="none">
-          {/* 수평선 */}
-          <View style={styles.targetLineHorizontal} />
-          {/* 수직선 */}
-          <View style={styles.targetLineVertical} />
-          {/* 중심 원 */}
-          <View style={styles.targetCenter} />
-        </View>
+        {/* 중앙 십자가 타겟 (QR 감지 전 표시) */}
+        {!qrBounds && (
+          <View style={styles.centerTarget} pointerEvents="none">
+            {/* 수평선 */}
+            <View style={styles.targetLineHorizontal} />
+            {/* 수직선 */}
+            <View style={styles.targetLineVertical} />
+            {/* 중심 원 */}
+            <View style={styles.targetCenter} />
+          </View>
+        )}
       </View>
 
-      {/* mgcrea CameraHighlights가 NativeQRScanner 내부에서 렌더링됨 */}
+      {/* QR 코드 감지 시 테두리 표시 */}
+      {qrBounds && (() => {
+        const cornerSize = Math.max(20, Math.min(qrBounds.width * 0.18, 40));
+        const borderWidth = Math.max(1.5, Math.min(cornerSize * 0.08, 2.5));
+        const offset = borderWidth * 0.7;
+
+        return (
+          <Animated.View
+            style={[
+              styles.qrBorder,
+              {
+                left: qrBounds.x - 8,
+                top: qrBounds.y - 8,
+                width: qrBounds.width + 16,
+                height: qrBounds.height + 16,
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+                borderRadius: qrBounds.width * 0.08,
+              },
+            ]}
+            pointerEvents="none"
+            accessibilityLabel="QR 코드 감지됨"
+          >
+            <View style={[styles.corner, styles.topLeft, { width: cornerSize, height: cornerSize, top: -offset, left: -offset }]} />
+            <View style={[styles.corner, styles.topRight, { width: cornerSize, height: cornerSize, top: -offset, right: -offset }]} />
+            <View style={[styles.corner, styles.bottomLeft, { width: cornerSize, height: cornerSize, bottom: -offset, left: -offset }]} />
+            <View style={[styles.corner, styles.bottomRight, { width: cornerSize, height: cornerSize, bottom: -offset, right: -offset }]} />
+          </Animated.View>
+        );
+      })()}
 
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
@@ -1248,8 +1393,28 @@ const styles = StyleSheet.create({
     marginBottom: 50,
     textAlign: 'center',
   },
-  // mgcrea CameraHighlights가 바코드 위치 표시를 처리하므로
-  // qrBorder, corner 관련 스타일 제거됨
+  qrBorder: {
+    position: 'absolute',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+  },
+  corner: {
+    position: 'absolute',
+    borderColor: '#FFD60A',
+  },
+  topLeft: { borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 6 },
+  topRight: { borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 6 },
+  bottomLeft: {
+    borderBottomWidth: 3,
+    borderLeftWidth: 3,
+    borderBottomLeftRadius: 6,
+  },
+  bottomRight: {
+    borderBottomWidth: 3,
+    borderRightWidth: 3,
+    borderBottomRightRadius: 6,
+  },
   torchButtonContainer: {
     position: 'absolute',
     // top은 인라인 스타일로 동적 설정
