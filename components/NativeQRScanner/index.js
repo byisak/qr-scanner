@@ -126,6 +126,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     console.log('[NativeQRScanner] ===== CODE SCANNED =====');
     console.log('[NativeQRScanner] Code value:', barcodeData.value);
     console.log('[NativeQRScanner] Code type:', barcodeData.type);
+    console.log('[NativeQRScanner] DEBUG - Native keys:', barcodeData._debug_nativeKeys);
+    console.log('[NativeQRScanner] DEBUG - Native EC level:', barcodeData._debug_nativeEcLevel);
 
     if (!onCodeScannedRef.current) {
       console.log('[NativeQRScanner] No callback registered');
@@ -192,6 +194,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       const barcode = barcodes[0];
 
       // Worklet에서 JS 스레드로 콜백 실행
+      // 디버깅: native 객체의 키들을 확인
+      const nativeKeys = barcode.native ? Object.keys(barcode.native) : [];
+
       runOnJSCallback({
         value: barcode.value,
         type: barcode.type,
@@ -199,6 +204,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         cornerPoints: barcode.cornerPoints,
         frameDimensions: frameDimensions,
         errorCorrectionLevel: barcode.errorCorrectionLevel,
+        // 디버깅용
+        _debug_nativeKeys: nativeKeys,
+        _debug_nativeEcLevel: barcode.native?.errorCorrectionLevel,
       });
     },
   });
