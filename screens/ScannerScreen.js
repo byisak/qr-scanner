@@ -593,10 +593,11 @@ function ScannerScreen() {
     let rotatedX, rotatedY, rotatedW, rotatedH;
 
     if (isScreenPortrait && isFrameLandscape) {
-      // 센서 좌표 (landscape)를 화면 좌표 (portrait)로 90도 회전
-      // 반시계 방향 90도 회전: (sensorX, sensorY) → (sensorY, frameW - sensorX)
-      rotatedX = y;                 // 센서 y를 화면 x로
-      rotatedY = RAW_FRAME_W - x;   // 센서 x를 반전하여 화면 y로
+      // 센서 좌표 (landscape)를 화면 좌표 (portrait)로 변환
+      // iOS Vision Camera: 센서 y → 화면 x, 센서 x → 화면 y (반전 필요)
+      // 프레임 스왑 후 좌표도 스왑
+      rotatedX = RAW_FRAME_H - y;   // 센서 y를 반전하여 화면 x로
+      rotatedY = x;                 // 센서 x를 화면 y로
       rotatedW = height;            // 너비/높이도 스왑
       rotatedH = width;
 
