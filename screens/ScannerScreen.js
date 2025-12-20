@@ -556,28 +556,47 @@ function ScannerScreen() {
 
   // Vision Camera 좌표 변환 헬퍼 함수
   const convertVisionCameraCoords = useCallback((x, y, width, height) => {
-    // Vision Camera는 카메라 센서 좌표를 반환 (예: 1920x1080)
-    // 화면 좌표로 변환 필요
-    // 카메라 센서 크기 추정 (일반적인 iOS 카메라)
-    const SENSOR_WIDTH = 1920;
-    const SENSOR_HEIGHT = 1440; // 4:3 비율
+    // Vision Camera는 카메라 센서 좌표를 반환 (예: 1920x1440)
+    // iOS에서 센서는 landscape 방향이지만 화면은 portrait
+    // 따라서 x, y를 회전시켜야 함
 
-    // 좌표가 화면 크기보다 크면 Vision Camera 좌표로 판단
-    if (x > winWidth * 1.5 || y > winHeight * 1.5) {
-      const scaleX = winWidth / SENSOR_WIDTH;
-      const scaleY = winHeight / SENSOR_HEIGHT;
-      console.log('[normalizeBounds] Vision Camera coords detected, scale:', scaleX.toFixed(3), scaleY.toFixed(3));
+    // 일반적인 iOS 카메라 센서 크기 (landscape 방향)
+    const SENSOR_WIDTH = 1920;  // 실제 센서 가로 (landscape 기준)
+    const SENSOR_HEIGHT = 1440; // 실제 센서 세로 (landscape 기준)
 
-      return {
-        x: x * scaleX,
-        y: y * scaleY,
-        width: width * scaleX,
-        height: height * scaleY,
+    console.log('[convertVisionCameraCoords] Input:', { x, y, width, height });
+    console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
+
+    // 좌표가 화면 크기보다 크면 Vision Camera 센서 좌표로 판단
+    const maxCoord = Math.max(x, y, x + width, y + height);
+    if (maxCoord > Math.max(winWidth, winHeight) * 1.2) {
+      // iOS Vision Camera: 센서는 landscape, 화면은 portrait
+      // 센서 좌표를 90도 회전시켜야 함
+      // landscape 센서에서 (x, y) -> portrait 화면에서 (y, SENSOR_WIDTH - x - width)
+
+      // 회전된 좌표 계산
+      const rotatedX = y;
+      const rotatedY = SENSOR_WIDTH - x - width;
+      const rotatedWidth = height;
+      const rotatedHeight = width;
+
+      // 화면 비율로 스케일
+      const scaleX = winWidth / SENSOR_HEIGHT;  // 회전 후 센서 가로 = 원래 센서 세로
+      const scaleY = winHeight / SENSOR_WIDTH;  // 회전 후 센서 세로 = 원래 센서 가로
+
+      const result = {
+        x: rotatedX * scaleX,
+        y: rotatedY * scaleY,
+        width: rotatedWidth * scaleX,
+        height: rotatedHeight * scaleY,
       };
+
+      console.log('[convertVisionCameraCoords] Rotated & scaled:', result);
+      return result;
     }
 
     // 일반 좌표 (0-1 정규화 또는 화면 좌표)
-    if (x <= 1 && y <= 1) {
+    if (x <= 1 && y <= 1 && width <= 1 && height <= 1) {
       return {
         x: x * winWidth,
         y: y * winHeight,
@@ -587,6 +606,7 @@ function ScannerScreen() {
     }
 
     // 이미 화면 좌표
+    console.log('[convertVisionCameraCoords] Already screen coords');
     return { x, y, width, height };
   }, [winWidth, winHeight]);
 
@@ -688,52 +708,80 @@ function ScannerScreen() {
       if (bounds && photo.width && photo.height) {
         try {
           const normalized = normalizeBounds(bounds);
-          if (normalized) {
-            // 화면 좌표를 카메라 사진 좌표로 변환
-            const scaleX = photo.width / winWidth;
-            const scaleY = photo.height / winHeight;
-
+          if (normalized && normalized.width > 0 && normalized.height > 0) {
             console.log(`Photo size: ${photo.width}x${photo.height}, Screen size: ${winWidth}x${winHeight}`);
+
+            // 사진이 portrait인지 landscape인지 확인
+            const photoIsPortrait = photo.height > photo.width;
+            const screenIsPortrait = winHeight > winWidth;
+
+            let scaleX, scaleY;
+            if (photoIsPortrait === screenIsPortrait) {
+              // 같은 방향
+              scaleX = photo.width / winWidth;
+              scaleY = photo.height / winHeight;
+            } else {
+              // 사진과 화면 방향이 다름 (보통 사진은 landscape로 저장됨)
+              scaleX = photo.width / winHeight;
+              scaleY = photo.height / winWidth;
+            }
+
+            console.log(`Photo orientation: ${photoIsPortrait ? 'portrait' : 'landscape'}, Screen: ${screenIsPortrait ? 'portrait' : 'landscape'}`);
             console.log(`Scale factors: X=${scaleX.toFixed(2)}, Y=${scaleY.toFixed(2)}`);
 
-            // 여유 공간 (QR 코드 주변 20% 여백) - 화면 좌표 기준
-            const padding = Math.max(normalized.width, normalized.height) * 0.2;
+            // 여유 공간 (QR 코드 주변 30% 여백)
+            const padding = Math.max(normalized.width, normalized.height) * 0.3;
 
-            // 화면 좌표를 이미지 좌표로 변환 (원본 해상도 그대로 크롭)
-            const cropX = Math.max(0, (normalized.x - padding) * scaleX);
-            const cropY = Math.max(0, (normalized.y - padding) * scaleY);
-            const cropWidth = Math.min(
-              photo.width - cropX,
-              (normalized.width + padding * 2) * scaleX
-            );
-            const cropHeight = Math.min(
-              photo.height - cropY,
-              (normalized.height + padding * 2) * scaleY
-            );
+            // 화면 좌표를 이미지 좌표로 변환
+            let cropX = Math.round((normalized.x - padding) * scaleX);
+            let cropY = Math.round((normalized.y - padding) * scaleY);
+            let cropWidth = Math.round((normalized.width + padding * 2) * scaleX);
+            let cropHeight = Math.round((normalized.height + padding * 2) * scaleY);
+
+            // 경계 체크 및 보정
+            cropX = Math.max(0, cropX);
+            cropY = Math.max(0, cropY);
+            cropWidth = Math.min(photo.width - cropX, cropWidth);
+            cropHeight = Math.min(photo.height - cropY, cropHeight);
+
+            // 최소 크기 보장
+            cropWidth = Math.max(50, cropWidth);
+            cropHeight = Math.max(50, cropHeight);
+
+            // 최종 경계 확인
+            if (cropX + cropWidth > photo.width) {
+              cropX = Math.max(0, photo.width - cropWidth);
+            }
+            if (cropY + cropHeight > photo.height) {
+              cropY = Math.max(0, photo.height - cropHeight);
+            }
 
             console.log(`Screen bounds: x=${normalized.x.toFixed(0)}, y=${normalized.y.toFixed(0)}, w=${normalized.width.toFixed(0)}, h=${normalized.height.toFixed(0)}`);
-            console.log(`Padding (screen): ${padding.toFixed(0)}px`);
+            console.log(`Crop area (validated): x=${cropX}, y=${cropY}, w=${cropWidth}, h=${cropHeight}`);
 
-            console.log(`Crop area: x=${cropX.toFixed(0)}, y=${cropY.toFixed(0)}, w=${cropWidth.toFixed(0)}, h=${cropHeight.toFixed(0)}`);
-
-            // 이미지 crop
-            const croppedImage = await ImageManipulator.manipulateAsync(
-              photo.uri,
-              [
-                {
-                  crop: {
-                    originX: Math.round(cropX),
-                    originY: Math.round(cropY),
-                    width: Math.round(cropWidth),
-                    height: Math.round(cropHeight),
+            // 유효한 crop 영역인지 최종 확인
+            if (cropX >= 0 && cropY >= 0 && cropWidth > 0 && cropHeight > 0 &&
+                cropX + cropWidth <= photo.width && cropY + cropHeight <= photo.height) {
+              const croppedImage = await ImageManipulator.manipulateAsync(
+                photo.uri,
+                [
+                  {
+                    crop: {
+                      originX: cropX,
+                      originY: cropY,
+                      width: cropWidth,
+                      height: cropHeight,
+                    },
                   },
-                },
-              ],
-              { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
-            );
+                ],
+                { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
+              );
 
-            finalUri = croppedImage.uri;
-            console.log('QR code area cropped successfully');
+              finalUri = croppedImage.uri;
+              console.log('QR code area cropped successfully');
+            } else {
+              console.log('Invalid crop area, using full image');
+            }
           }
         } catch (cropError) {
           console.error('Crop error, using full image:', cropError);
@@ -746,22 +794,46 @@ function ScannerScreen() {
       const fileName = `scan_${timestamp}.jpg`;
       const newPath = photoDir + fileName;
 
-      // 크롭된 사진 저장
-      await FileSystem.moveAsync({
-        from: finalUri,
-        to: newPath,
-      });
+      console.log('Source URI:', finalUri);
+      console.log('Target path:', newPath);
+
+      // URI 정리 (file:// 접두사 처리)
+      let sourceUri = finalUri;
+      if (sourceUri.startsWith('file://')) {
+        sourceUri = sourceUri; // expo-file-system은 file:// 형식 사용
+      }
+
+      // 사진 저장 (copyAsync가 더 안정적)
+      try {
+        await FileSystem.copyAsync({
+          from: sourceUri,
+          to: newPath,
+        });
+      } catch (copyError) {
+        console.error('Copy failed, trying with path cleanup:', copyError);
+        // file:// 접두사 없이 시도
+        const cleanUri = sourceUri.replace('file://', '');
+        await FileSystem.copyAsync({
+          from: `file://${cleanUri}`,
+          to: newPath,
+        });
+      }
 
       // 원본 이미지도 저장 (EC 레벨 분석용)
       let originalPath = null;
       if (finalUri !== photo.uri) {
         const originalFileName = `scan_${timestamp}_original.jpg`;
         originalPath = photoDir + originalFileName;
-        await FileSystem.copyAsync({
-          from: photo.uri,
-          to: originalPath,
-        });
-        console.log('Original photo saved:', originalPath);
+        try {
+          await FileSystem.copyAsync({
+            from: photo.uri,
+            to: originalPath,
+          });
+          console.log('Original photo saved:', originalPath);
+        } catch (origCopyError) {
+          console.error('Original photo copy failed:', origCopyError);
+          originalPath = newPath; // 실패 시 크롭된 이미지 사용
+        }
       }
 
       console.log('Photo saved:', newPath);
