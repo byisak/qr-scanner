@@ -160,6 +160,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     }
 
     console.log('[NativeQRScanner] Calling parent callback...');
+    console.log('[NativeQRScanner] Error Correction Level:', barcodeData.errorCorrectionLevel);
     onCodeScannedRef.current({
       data: barcodeData.value,
       type: normalizedType,
@@ -168,6 +169,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       raw: barcodeData.value,
       // 카메라 프레임 크기 정보 추가 (좌표 변환용)
       frameDimensions: barcodeData.frameDimensions,
+      // QR 코드 오류복원 레벨 (iOS에서만 지원, Android는 undefined)
+      errorCorrectionLevel: barcodeData.errorCorrectionLevel,
     });
   }, []);
 
@@ -195,6 +198,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         frame: barcode.frame,
         cornerPoints: barcode.cornerPoints,
         frameDimensions: frameDimensions,
+        errorCorrectionLevel: barcode.errorCorrectionLevel,
       });
     },
   });

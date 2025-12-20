@@ -1,0 +1,149 @@
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeConverter.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeConverter.java
+index ee706f6..eb97775 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeConverter.java
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeConverter.java
+@@ -316,6 +316,27 @@ public class BarcodeConverter {
+     map.put("format", barcode.getFormat());
+     map.put("content", convertContent(barcode));
+ 
++    // Add rawBytes for QR codes
++    byte[] rawBytes = barcode.getRawBytes();
++    if (rawBytes != null && rawBytes.length > 0) {
++      // Convert to list of integers for JS interop
++      List<Object> byteList = new ArrayList<>();
++      for (byte b : rawBytes) {
++        byteList.add((int) b & 0xFF);
++      }
++      map.put("rawBytes", byteList);
++
++      // For QR codes, try to extract error correction level from mode indicator
++      // QR codes format: first byte contains mode indicator in upper nibble
++      // Note: This is a simplified approach; EC level is in format info, not data
++      if (barcode.getFormat() == Barcode.FORMAT_QR_CODE && rawBytes.length >= 1) {
++        // QR code raw bytes start with mode indicator
++        // The EC level is actually in the format pattern (not raw data)
++        // We'll pass null to indicate Android doesn't directly provide EC level
++        map.put("errorCorrectionLevel", null);
++      }
++    }
++
+     return map;
+   }
+ }
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
+index 28f1634..6e09726 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
+@@ -1,6 +1,7 @@
+ #import "CodeScannerProcessorPlugin.h"
+ #include <Foundation/Foundation.h>
+ #import <React/RCTLog.h>
++#import <CoreImage/CoreImage.h>
+ 
+ static RCTEventEmitter* eventEmitter = nil;
+ 
+@@ -174,6 +175,37 @@ static RCTEventEmitter* eventEmitter = nil;
+     observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
+   }
+ 
++  // Extract error correction level for QR codes
++  if (@available(iOS 11.0, *)) {
++    if ([observation.symbology isEqualToString:VNBarcodeSymbologyQR]) {
++      CIBarcodeDescriptor* descriptor = observation.barcodeDescriptor;
++      if (descriptor && [descriptor isKindOfClass:[CIQRCodeDescriptor class]]) {
++        CIQRCodeDescriptor* qrDescriptor = (CIQRCodeDescriptor*)descriptor;
++        NSString* ecLevel = nil;
++        switch (qrDescriptor.errorCorrectionLevel) {
++          case CIQRCodeErrorCorrectionLevelL:
++            ecLevel = @"L";
++            break;
++          case CIQRCodeErrorCorrectionLevelM:
++            ecLevel = @"M";
++            break;
++          case CIQRCodeErrorCorrectionLevelQ:
++            ecLevel = @"Q";
++            break;
++          case CIQRCodeErrorCorrectionLevelH:
++            ecLevel = @"H";
++            break;
++          default:
++            ecLevel = nil;
++            break;
++        }
++        if (ecLevel) {
++          observationRepresentation[@"errorCorrectionLevel"] = ecLevel;
++        }
++      }
++    }
++  }
++
+   return [observationRepresentation copy];
+ }
+ 
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/ios.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/ios.ts
+index 3c9c10e..9c1fe07 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/ios.ts
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/ios.ts
+@@ -43,6 +43,8 @@ export type iOSSymbology =
+ /**
+  * {@link https://developer.apple.com/documentation/vision/vnbarcodeobservation}
+  */
++export type iOSErrorCorrectionLevel = "L" | "M" | "Q" | "H";
++
+ export type iOSBarcode = {
+   boundingBox: iOSBoundingBox;
+   timeRange?: { start: number; duration: number } /* iOS 14.0+ */;
+@@ -52,4 +54,5 @@ export type iOSBarcode = {
+   payload: string;
+   supplementalPayload?: string /* iOS 17.0+ */;
+   corners: iOSCorners;
++  errorCorrectionLevel?: iOSErrorCorrectionLevel /* iOS 11.0+ for QR codes */;
+ };
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts
+index 099662d..bbc575d 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts
+@@ -14,10 +14,13 @@ export type CornerPoints = Point[];
+ export type Highlight = BoundingBox & { key: Key };
+ export type BarcodeType = CodeType | "msi-plessey" | "unknown";
+ 
++export type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
++
+ export type Barcode = {
+   value: string | null;
+   type: BarcodeType;
+   boundingBox: BoundingBox;
+   cornerPoints: Point[];
++  errorCorrectionLevel?: ErrorCorrectionLevel;
+   native: iOSBarcode | AndroidBarcode;
+ };
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/utils/convert.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/utils/convert.ts
+index 160a029..23aa1fd 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/utils/convert.ts
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/utils/convert.ts
+@@ -54,7 +54,7 @@ export const normalizeNativeBarcode = (
+ ): Barcode => {
+   "worklet";
+   if (isIOSBarcode(barcode)) {
+-    const { payload, symbology, boundingBox, corners } = barcode;
++    const { payload, symbology, boundingBox, corners, errorCorrectionLevel } = barcode;
+     return {
+       value: payload,
+       type: normalizeiOSCodeType(symbology),
+@@ -72,6 +72,7 @@ export const normalizeNativeBarcode = (
+         x: normalizePrecision(x * frame.width),
+         y: normalizePrecision(y * frame.height),
+       })),
++      errorCorrectionLevel,
+       native: barcode,
+     };
+   } else if (isAndroidBarcode(barcode)) {
+@@ -81,6 +82,8 @@ export const normalizeNativeBarcode = (
+       type: normalizeAndroidCodeType(format),
+       boundingBox: computeBoundingBoxFromCornerPoints(cornerPoints),
+       cornerPoints,
++      // Android ML Kit doesn't expose error correction level
++      errorCorrectionLevel: undefined,
+       native: barcode,
+     };
+   } else {
