@@ -594,9 +594,9 @@ function ScannerScreen() {
 
     if (isScreenPortrait && isFrameLandscape) {
       // 센서 좌표 (landscape)를 화면 좌표 (portrait)로 90도 회전
-      // 시계 방향 90도 회전: (sensorX, sensorY) → (frameH - sensorY, sensorX)
-      rotatedX = RAW_FRAME_H - y;  // 센서 y를 반전하여 화면 x로
-      rotatedY = x;                 // 센서 x를 화면 y로
+      // 반시계 방향 90도 회전: (sensorX, sensorY) → (sensorY, frameW - sensorX)
+      rotatedX = y;                 // 센서 y를 화면 x로
+      rotatedY = RAW_FRAME_W - x;   // 센서 x를 반전하여 화면 y로
       rotatedW = height;            // 너비/높이도 스왑
       rotatedH = width;
 
