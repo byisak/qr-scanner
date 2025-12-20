@@ -583,24 +583,38 @@ function ScannerScreen() {
       };
     }
 
-    // 화면이 portrait이고 프레임이 landscape면 차원 스왑
-    // Vision Camera는 좌표를 이미 프리뷰 방향에 맞춰 반환하지만
-    // 프레임 차원은 센서 원본 방향으로 보고됨
+    // 화면이 portrait이고 프레임이 landscape면 좌표 회전 + 차원 스왑 필요
+    // Vision Camera는 좌표를 센서 방향(landscape)으로 반환하므로
+    // portrait 화면에 맞게 90도 회전 변환 필요
     const isScreenPortrait = winHeight > winWidth;
     const isFrameLandscape = RAW_FRAME_W > RAW_FRAME_H;
 
     let FRAME_W, FRAME_H;
+    let rotatedX, rotatedY, rotatedW, rotatedH;
+
     if (isScreenPortrait && isFrameLandscape) {
+      // 센서 좌표 (landscape)를 화면 좌표 (portrait)로 90도 회전
+      // 시계 방향 90도 회전: (sensorX, sensorY) → (frameH - sensorY, sensorX)
+      rotatedX = RAW_FRAME_H - y;  // 센서 y를 반전하여 화면 x로
+      rotatedY = x;                 // 센서 x를 화면 y로
+      rotatedW = height;            // 너비/높이도 스왑
+      rotatedH = width;
+
       // 프레임 차원 스왑 (landscape → portrait)
       FRAME_W = RAW_FRAME_H;  // 3024
       FRAME_H = RAW_FRAME_W;  // 4032
-      console.log('[convertVisionCameraCoords] Swapped frame dims for portrait:', { FRAME_W, FRAME_H });
+      console.log('[convertVisionCameraCoords] Rotated coords for portrait:', { rotatedX: rotatedX.toFixed(1), rotatedY: rotatedY.toFixed(1) });
+      console.log('[convertVisionCameraCoords] Swapped frame dims:', { FRAME_W, FRAME_H });
     } else {
+      rotatedX = x;
+      rotatedY = y;
+      rotatedW = width;
+      rotatedH = height;
       FRAME_W = RAW_FRAME_W;
       FRAME_H = RAW_FRAME_H;
     }
 
-    // aspectFill 스케일링 (회전 없이 직접 스케일링)
+    // aspectFill 스케일링
     const scaleX = winWidth / FRAME_W;
     const scaleY = winHeight / FRAME_H;
     const scale = Math.max(scaleX, scaleY);
@@ -610,10 +624,10 @@ function ScannerScreen() {
     const offsetY = (FRAME_H * scale - winHeight) / 2;
 
     const result = {
-      x: x * scale - offsetX,
-      y: y * scale - offsetY,
-      width: width * scale,
-      height: height * scale,
+      x: rotatedX * scale - offsetX,
+      y: rotatedY * scale - offsetY,
+      width: rotatedW * scale,
+      height: rotatedH * scale,
     };
 
     console.log('[convertVisionCameraCoords] Scale:', scale.toFixed(4), 'Offset:', { x: offsetX.toFixed(1), y: offsetY.toFixed(1) });
