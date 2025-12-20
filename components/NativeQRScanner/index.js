@@ -8,11 +8,34 @@ import {
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import {
-  useBarcodeScanner,
-  CameraHighlights,
-} from '@mgcrea/vision-camera-barcode-scanner';
+import { useBarcodeScanner } from '@mgcrea/vision-camera-barcode-scanner';
 import { Worklets } from 'react-native-worklets-core';
+
+// 커스텀 하이라이트 컴포넌트 (테두리 + 반투명 배경)
+const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.2)' }) => {
+  if (!highlights || highlights.length === 0) return null;
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {highlights.map((highlight, index) => (
+        <View
+          key={highlight.key || index}
+          style={{
+            position: 'absolute',
+            left: highlight.origin.x,
+            top: highlight.origin.y,
+            width: highlight.size.width,
+            height: highlight.size.height,
+            borderWidth: 2,
+            borderColor: borderColor,
+            backgroundColor: fillColor,
+            borderRadius: 4,
+          }}
+        />
+      ))}
+    </View>
+  );
+};
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -48,6 +71,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   style,
   showHighlights = false, // 하이라이트 표시 여부 (기본값: false)
   highlightColor = 'lime',
+  highlightFillColor = 'rgba(0, 255, 0, 0.2)', // 하이라이트 내부 채우기 색상
 }, ref) {
   const cameraRef = useRef(null);
 
@@ -296,7 +320,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         {...cameraProps}
       />
       {showHighlights && (
-        <CameraHighlights highlights={highlights} color={highlightColor} />
+        <CustomHighlights
+          highlights={highlights}
+          borderColor={highlightColor}
+          fillColor={highlightFillColor}
+        />
       )}
     </View>
   );
