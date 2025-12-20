@@ -66,6 +66,31 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     return types.length > 0 ? types : ['qr'];
   }, [barcodeTypes]);
 
+  // 카메라 프레임 크기 가져오기 (코드 스캐너 좌표 변환용)
+  const frameDimensions = useMemo(() => {
+    if (!device) return null;
+
+    // 디바이스의 활성 포맷 또는 첫 번째 포맷에서 해상도 가져오기
+    const formats = device.formats;
+    if (formats && formats.length > 0) {
+      // 가장 높은 해상도 포맷 찾기 (보통 코드 스캐너가 사용하는 해상도)
+      const bestFormat = formats.reduce((best, current) => {
+        const bestPixels = (best.videoWidth || 0) * (best.videoHeight || 0);
+        const currentPixels = (current.videoWidth || 0) * (current.videoHeight || 0);
+        return currentPixels > bestPixels ? current : best;
+      }, formats[0]);
+
+      console.log('[NativeQRScanner] Best format:', bestFormat.videoWidth, 'x', bestFormat.videoHeight);
+      return {
+        width: bestFormat.videoWidth || 1920,
+        height: bestFormat.videoHeight || 1440,
+      };
+    }
+
+    // 기본값 (iOS 일반적인 4:3 해상도)
+    return { width: 1920, height: 1440 };
+  }, [device]);
+
   // 코드 스캐너 설정 - useCodeScanner 훅 사용
   const codeScanner = useCodeScanner({
     codeTypes: visionCameraCodeTypes,
@@ -88,6 +113,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       console.log('[NativeQRScanner] Code type:', code.type);
       console.log('[NativeQRScanner] Code frame:', JSON.stringify(code.frame));
       console.log('[NativeQRScanner] Code corners:', JSON.stringify(code.corners));
+      console.log('[NativeQRScanner] Frame dimensions:', JSON.stringify(frameDimensions));
 
       // expo-camera 형식으로 변환
       const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
@@ -123,6 +149,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         bounds,
         cornerPoints,
         raw: code.value,
+        // 카메라 프레임 크기 정보 추가 (좌표 변환용)
+        frameDimensions: frameDimensions,
       });
     },
   });

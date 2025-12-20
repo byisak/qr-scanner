@@ -554,18 +554,23 @@ function ScannerScreen() {
     []
   );
 
+  // 현재 카메라 프레임 크기 (콜백에서 업데이트됨)
+  const frameDimensionsRef = useRef({ width: 1920, height: 1440 });
+
   // Vision Camera 좌표 변환 헬퍼 함수
-  const convertVisionCameraCoords = useCallback((x, y, width, height) => {
-    // Vision Camera는 카메라 센서 좌표를 반환 (예: 1920x1440)
+  const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
+    // Vision Camera는 카메라 센서 좌표를 반환
     // iOS에서 센서는 landscape 방향이지만 화면은 portrait
     // 따라서 x, y를 회전시켜야 함
 
-    // 일반적인 iOS 카메라 센서 크기 (landscape 방향)
-    const SENSOR_WIDTH = 1920;  // 실제 센서 가로 (landscape 기준)
-    const SENSOR_HEIGHT = 1440; // 실제 센서 세로 (landscape 기준)
+    // 콜백에서 받은 실제 프레임 크기 사용 (없으면 저장된 값 사용)
+    const dims = frameDimensions || frameDimensionsRef.current;
+    const SENSOR_WIDTH = dims.width;   // 실제 센서 가로 (landscape 기준)
+    const SENSOR_HEIGHT = dims.height; // 실제 센서 세로 (landscape 기준)
 
     console.log('[convertVisionCameraCoords] Input:', { x, y, width, height });
     console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
+    console.log('[convertVisionCameraCoords] Sensor:', { SENSOR_WIDTH, SENSOR_HEIGHT });
 
     // 좌표가 화면 크기보다 크면 Vision Camera 센서 좌표로 판단
     const maxCoord = Math.max(x, y, x + width, y + height);
@@ -611,7 +616,7 @@ function ScannerScreen() {
   }, [winWidth, winHeight]);
 
   const normalizeBounds = useCallback(
-    (bounds) => {
+    (bounds, frameDimensions = null) => {
       // bounds 형식 확인 및 로깅
       if (!bounds) {
         console.log('No bounds provided');
@@ -623,18 +628,18 @@ function ScannerScreen() {
       // 형식 1: { origin: { x, y }, size: { width, height } } (iOS / Vision Camera)
       if (bounds.origin && bounds.size) {
         const { origin, size } = bounds;
-        return convertVisionCameraCoords(origin.x, origin.y, size.width, size.height);
+        return convertVisionCameraCoords(origin.x, origin.y, size.width, size.height, frameDimensions);
       }
 
       // 형식 2: { x, y, width, height } (일부 1차원 바코드)
       if (bounds.x !== undefined && bounds.y !== undefined && bounds.width && bounds.height) {
-        return convertVisionCameraCoords(bounds.x, bounds.y, bounds.width, bounds.height);
+        return convertVisionCameraCoords(bounds.x, bounds.y, bounds.width, bounds.height, frameDimensions);
       }
 
       // 형식 3: { boundingBox: { x, y, width, height } }
       if (bounds.boundingBox) {
         const box = bounds.boundingBox;
-        return convertVisionCameraCoords(box.x, box.y, box.width, box.height);
+        return convertVisionCameraCoords(box.x, box.y, box.width, box.height, frameDimensions);
       }
 
       // 형식 4: Android CameraView { left, top, right, bottom }
@@ -707,7 +712,8 @@ function ScannerScreen() {
       // QR 코드 bounds가 있으면 해당 영역만 crop
       if (bounds && photo.width && photo.height) {
         try {
-          const normalized = normalizeBounds(bounds);
+          // frameDimensionsRef에서 저장된 프레임 크기 사용
+          const normalized = normalizeBounds(bounds, frameDimensionsRef.current);
           if (normalized && normalized.width > 0 && normalized.height > 0) {
             console.log(`Photo size: ${photo.width}x${photo.height}, Screen size: ${winWidth}x${winHeight}`);
 
@@ -849,9 +855,15 @@ function ScannerScreen() {
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
-      const { data, bounds, type, cornerPoints, raw } = scanResult;
+      const { data, bounds, type, cornerPoints, raw, frameDimensions } = scanResult;
       // 사진 촬영 중이거나 네비게이션 중이면 스캔 무시
       if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current) return;
+
+      // 카메라 프레임 크기 저장 (좌표 변환용)
+      if (frameDimensions) {
+        frameDimensionsRef.current = frameDimensions;
+        console.log('[handleBarCodeScanned] Frame dimensions updated:', frameDimensions);
+      }
 
       // 전체 스캔 결과 로깅 (디버깅용)
       console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
@@ -925,7 +937,7 @@ function ScannerScreen() {
       }
 
       if (lastScannedData.current === data && smoothBounds.current) {
-        const newB = normalizeBounds(bounds);
+        const newB = normalizeBounds(bounds, frameDimensions);
         if (newB) {
           const dx = Math.abs(newB.x - smoothBounds.current.x);
           const dy = Math.abs(newB.y - smoothBounds.current.y);
@@ -991,7 +1003,7 @@ function ScannerScreen() {
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
-      let normalized = normalizeBounds(effectiveBounds);
+      let normalized = normalizeBounds(effectiveBounds, frameDimensions);
 
       // bounds와 cornerPoints 모두 없는 경우, 코너 라인 없이 스캔 (십자가만 표시)
       if (!normalized && !bounds && !cornerPoints) {
