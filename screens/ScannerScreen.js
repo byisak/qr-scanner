@@ -1138,6 +1138,8 @@ function ScannerScreen() {
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         style={StyleSheet.absoluteFillObject}
+        showHighlights={true}
+        highlightColor="lime"
       />
 
       <View style={styles.overlay} pointerEvents="box-none">
