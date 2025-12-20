@@ -27,7 +27,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQRAnalyzer } from '../components/QRAnalyzer';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -44,8 +43,6 @@ function ScannerScreen() {
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  // QR 코드 EC 레벨 분석용 훅
-  const { analyzeImage, QRAnalyzerView } = useQRAnalyzer();
 
   // iOS는 기존 값 유지, Android는 SafeArea insets 사용
   const topOffset = Platform.OS === 'ios' ? 60 : insets.top + 10;
@@ -825,12 +822,9 @@ function ScannerScreen() {
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
-      // 사진 저장이 활성화되어 있거나, QR 코드 EC 레벨 분석이 필요하면 촬영
-      // (EC 레벨이 네이티브에서 안 오면 사진으로 분석해야 함)
-      const needsPhotoForEcLevel = (normalizedType === 'qr' || normalizedType === 'qrcode') && !errorCorrectionLevel;
+      // 사진 저장이 활성화되어 있으면 촬영
       let photoPromise = null;
-      if (photoSaveEnabledRef.current || needsPhotoForEcLevel) {
-        // 사진 촬영을 백그라운드에서 시작하고 결과는 나중에 처리
+      if (photoSaveEnabledRef.current) {
         photoPromise = capturePhoto(effectiveBounds).catch(err => {
           console.log('Background photo capture error:', err);
           return null;
@@ -841,43 +835,18 @@ function ScannerScreen() {
         clearTimeout(navigationTimerRef.current);
       }
 
-      // 네비게이션 타이머 (사진 촬영 완료를 기다리지 않음)
+      // 네비게이션 타이머
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // EC 레벨: 네이티브에서 받은 값 사용, 없으면 QRAnalyzer로 분석
-          let detectedEcLevel = errorCorrectionLevel;
-          let ecLevelAnalysisFailed = false;
-          const isQRCodeType = normalizedType === 'qr' || normalizedType === 'qrcode';
+          // EC 레벨: 네이티브에서 받은 값 사용
+          const detectedEcLevel = errorCorrectionLevel;
 
-          // 사진 촬영 완료를 기다림 (최대 2초 - EC 분석에 충분한 시간)
+          // 사진 촬영 완료를 기다림
           let photoUri = null;
-          let originalUri = null;
           if (photoPromise) {
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 2000));
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 500));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
-            console.log('[ScannerScreen] Photo capture result:', photoResult ? 'success' : 'timeout/null');
             photoUri = photoResult?.croppedUri || photoResult;
-            originalUri = photoResult?.originalUri || photoResult;
-            console.log('[ScannerScreen] originalUri:', originalUri ? 'available' : 'null');
-          }
-
-          // EC 레벨이 없고, QR 코드이고, 사진이 있으면 QRAnalyzer로 분석
-          if (!detectedEcLevel && isQRCodeType && originalUri) {
-            console.log('[ScannerScreen] Analyzing EC level with QRAnalyzer...');
-            try {
-              const analysisResult = await analyzeImage(originalUri);
-              console.log('[ScannerScreen] QRAnalyzer result:', JSON.stringify(analysisResult));
-              if (analysisResult.success && analysisResult.ecLevel) {
-                detectedEcLevel = analysisResult.ecLevel;
-                console.log('[ScannerScreen] EC level detected:', detectedEcLevel);
-              } else {
-                ecLevelAnalysisFailed = true;
-                console.log('[ScannerScreen] EC level analysis failed');
-              }
-            } catch (analysisError) {
-              console.error('[ScannerScreen] EC level analysis error:', analysisError);
-              ecLevelAnalysisFailed = true;
-            }
           }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
@@ -949,7 +918,6 @@ function ScannerScreen() {
               photoUri: photoUri || '',
               type: normalizedType,
               errorCorrectionLevel: detectedEcLevel || '',
-              ecLevelAnalysisFailed: ecLevelAnalysisFailed ? 'true' : 'false',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);
@@ -962,7 +930,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, analyzeImage],
+    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -1071,9 +1039,6 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* QR 코드 EC 레벨 분석용 숨겨진 WebView */}
-      <QRAnalyzerView />
-
       {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
       {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
       <NativeQRScanner
