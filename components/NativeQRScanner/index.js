@@ -1,18 +1,22 @@
 // components/NativeQRScanner/index.js
-// Vision Camera v4 기반 네이티브 QR 스캐너 컴포넌트
+// @mgcrea/vision-camera-barcode-scanner 기반 네이티브 QR 스캐너 컴포넌트
 
-import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { StyleSheet, View, Platform, Dimensions } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
+import { StyleSheet, View, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
   useCameraPermission,
-  useCodeScanner,
 } from 'react-native-vision-camera';
+import {
+  useBarcodeScanner,
+  CameraHighlights,
+} from '@mgcrea/vision-camera-barcode-scanner';
+import { runOnJS } from 'react-native-worklets-core';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// 바코드 타입 매핑 (expo-camera 타입 -> Vision Camera 타입)
+// 바코드 타입 매핑 (expo-camera 타입 -> @mgcrea/vision-camera-barcode-scanner 타입)
 const BARCODE_TYPE_MAP = {
   'qr': 'qr',
   'ean13': 'ean-13',
@@ -42,6 +46,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   onCodeScanned,
   onError,
   style,
+  showHighlights = false, // 하이라이트 표시 여부 (기본값: false)
+  highlightColor = 'lime',
 }, ref) {
   const cameraRef = useRef(null);
 
@@ -57,7 +63,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
-  // 바코드 타입 변환 (expo-camera 형식 -> Vision Camera 형식)
+  // 바코드 타입 변환 (expo-camera 형식 -> vision-camera-barcode-scanner 형식)
   const visionCameraCodeTypes = useMemo(() => {
     const types = barcodeTypes
       .map(type => BARCODE_TYPE_MAP[type])
@@ -91,67 +97,75 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     return { width: 1920, height: 1440 };
   }, [device]);
 
-  // 코드 스캐너 설정 - useCodeScanner 훅 사용
-  const codeScanner = useCodeScanner({
-    codeTypes: visionCameraCodeTypes,
-    onCodeScanned: (codes) => {
-      console.log('[NativeQRScanner] ===== CODE SCANNED =====');
-      console.log('[NativeQRScanner] Number of codes:', codes.length);
+  // 바코드 스캔 콜백 핸들러 (JS 스레드에서 실행)
+  const handleBarcodeDetected = useCallback((barcode, currentFrameDimensions) => {
+    console.log('[NativeQRScanner] ===== CODE SCANNED =====');
+    console.log('[NativeQRScanner] Code value:', barcode.value);
+    console.log('[NativeQRScanner] Code type:', barcode.type);
+    console.log('[NativeQRScanner] Code frame:', JSON.stringify(barcode.frame));
+    console.log('[NativeQRScanner] Code cornerPoints:', JSON.stringify(barcode.cornerPoints));
+    console.log('[NativeQRScanner] Frame dimensions:', JSON.stringify(currentFrameDimensions));
 
-      if (codes.length === 0) {
-        console.log('[NativeQRScanner] No codes in array');
+    if (!onCodeScannedRef.current) {
+      console.log('[NativeQRScanner] No callback registered');
+      return;
+    }
+
+    // 바코드 타입 역매핑 (expo-camera 형식으로 변환)
+    const normalizedType = BARCODE_TYPE_REVERSE_MAP[barcode.type] || barcode.type;
+
+    // cornerPoints를 bounds 형식으로 변환
+    let bounds = null;
+    let cornerPoints = null;
+
+    if (barcode.cornerPoints && barcode.cornerPoints.length >= 4) {
+      cornerPoints = barcode.cornerPoints;
+      const xCoords = barcode.cornerPoints.map(c => c.x);
+      const yCoords = barcode.cornerPoints.map(c => c.y);
+      const minX = Math.min(...xCoords);
+      const maxX = Math.max(...xCoords);
+      const minY = Math.min(...yCoords);
+      const maxY = Math.max(...yCoords);
+
+      bounds = {
+        origin: { x: minX, y: minY },
+        size: { width: maxX - minX, height: maxY - minY },
+      };
+    } else if (barcode.frame) {
+      bounds = {
+        origin: { x: barcode.frame.x, y: barcode.frame.y },
+        size: { width: barcode.frame.width, height: barcode.frame.height },
+      };
+    }
+
+    console.log('[NativeQRScanner] Calling parent callback...');
+    onCodeScannedRef.current({
+      data: barcode.value,
+      type: normalizedType,
+      bounds,
+      cornerPoints,
+      raw: barcode.value,
+      // 카메라 프레임 크기 정보 추가 (좌표 변환용)
+      frameDimensions: currentFrameDimensions,
+    });
+  }, []);
+
+  // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
+  const { props: cameraProps, highlights } = useBarcodeScanner({
+    fps: 5,
+    barcodeTypes: visionCameraCodeTypes,
+    scanMode: 'continuous',
+    onBarcodeScanned: (barcodes) => {
+      'worklet';
+
+      if (barcodes.length === 0) {
         return;
       }
 
-      if (!onCodeScannedRef.current) {
-        console.log('[NativeQRScanner] No callback registered');
-        return;
-      }
+      const barcode = barcodes[0];
 
-      const code = codes[0];
-      console.log('[NativeQRScanner] Code value:', code.value);
-      console.log('[NativeQRScanner] Code type:', code.type);
-      console.log('[NativeQRScanner] Code frame:', JSON.stringify(code.frame));
-      console.log('[NativeQRScanner] Code corners:', JSON.stringify(code.corners));
-      console.log('[NativeQRScanner] Frame dimensions:', JSON.stringify(frameDimensions));
-
-      // expo-camera 형식으로 변환
-      const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
-
-      // cornerPoints를 bounds 형식으로 변환
-      let bounds = null;
-      let cornerPoints = null;
-
-      if (code.corners && code.corners.length >= 4) {
-        cornerPoints = code.corners;
-        const xCoords = code.corners.map(c => c.x);
-        const yCoords = code.corners.map(c => c.y);
-        const minX = Math.min(...xCoords);
-        const maxX = Math.max(...xCoords);
-        const minY = Math.min(...yCoords);
-        const maxY = Math.max(...yCoords);
-
-        bounds = {
-          origin: { x: minX, y: minY },
-          size: { width: maxX - minX, height: maxY - minY },
-        };
-      } else if (code.frame) {
-        bounds = {
-          origin: { x: code.frame.x, y: code.frame.y },
-          size: { width: code.frame.width, height: code.frame.height },
-        };
-      }
-
-      console.log('[NativeQRScanner] Calling parent callback...');
-      onCodeScannedRef.current({
-        data: code.value,
-        type: normalizedType,
-        bounds,
-        cornerPoints,
-        raw: code.value,
-        // 카메라 프레임 크기 정보 추가 (좌표 변환용)
-        frameDimensions: frameDimensions,
-      });
+      // runOnJS를 사용하여 JS 스레드에서 콜백 실행
+      runOnJS(handleBarcodeDetected)(barcode, frameDimensions);
     },
   });
 
@@ -263,17 +277,22 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }
 
   return (
-    <Camera
-      ref={cameraRef}
-      style={[StyleSheet.absoluteFill, style]}
-      device={device}
-      isActive={isActive}
-      torch={torch}
-      codeScanner={codeScanner}
-      photo={true}
-      onError={handleCameraError}
-      enableZoomGesture={true}
-    />
+    <View style={[StyleSheet.absoluteFill, style]}>
+      <Camera
+        ref={cameraRef}
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={isActive}
+        torch={torch}
+        photo={true}
+        onError={handleCameraError}
+        enableZoomGesture={true}
+        {...cameraProps}
+      />
+      {showHighlights && (
+        <CameraHighlights highlights={highlights} color={highlightColor} />
+      )}
+    </View>
   );
 });
 
