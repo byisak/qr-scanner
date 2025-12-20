@@ -560,74 +560,81 @@ function ScannerScreen() {
   // 현재 카메라 프레임 크기 (콜백에서 업데이트됨)
   const frameDimensionsRef = useRef({ width: 1920, height: 1440 });
 
-  // Vision Camera 좌표 변환 헬퍼 함수
-  // mgcrea/vision-camera-barcode-scanner 라이브러리의 로직 참조
-  // https://github.com/mgcrea/vision-camera-barcode-scanner
-  const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
-    const dims = frameDimensions || frameDimensionsRef.current;
-    const frameW = dims.width;   // 센서 원본 가로 (예: 4032)
-    const frameH = dims.height;  // 센서 원본 세로 (예: 3024)
+  // mgcrea/vision-camera-barcode-scanner 라이브러리의 좌표 변환 로직
+  // cornerPoints를 화면 좌표로 변환하여 highlights 배열 생성
+  const computeHighlightsFromCornerPoints = useCallback((cornerPoints, frameDimensions) => {
+    if (!cornerPoints || cornerPoints.length < 4) return null;
 
-    console.log('[convertVisionCameraCoords] ========================================');
-    console.log('[convertVisionCameraCoords] Input:', { x: x.toFixed(1), y: y.toFixed(1), w: width.toFixed(1), h: height.toFixed(1) });
-    console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
-    console.log('[convertVisionCameraCoords] Frame:', { frameW, frameH });
+    // Vision Camera iOS: 프레임은 항상 landscape (4032x3024)
+    // 하지만 cornerPoints의 좌표는 이미 portrait 기준으로 반환됨
+    // 따라서 프레임 차원을 스왑하여 portrait로 맞춤
+    const rawFrameW = frameDimensions?.width || 4032;
+    const rawFrameH = frameDimensions?.height || 3024;
 
-    // 좌표가 0-1 사이면 정규화된 좌표
-    if (x <= 1 && y <= 1 && width <= 1 && height <= 1) {
-      return {
-        x: x * winWidth,
-        y: y * winHeight,
-        width: width * winWidth,
-        height: height * winHeight,
-      };
-    }
+    // iOS에서 프레임 차원을 스왑 (landscape -> portrait)
+    const frameW = Platform.OS === 'ios' ? rawFrameH : rawFrameW;
+    const frameH = Platform.OS === 'ios' ? rawFrameW : rawFrameH;
 
-    // mgcrea 방식: 레이아웃을 스왑하여 사용 (프레임은 그대로)
-    const adjustedLayout = {
-      width: winHeight,   // 화면 높이 → 조정된 너비
-      height: winWidth,   // 화면 너비 → 조정된 높이
+    // 화면 크기 (portrait)
+    const screenW = winWidth;
+    const screenH = winHeight;
+
+    // 스케일 팩터 계산 (aspectFill/cover 모드)
+    const scaleX = screenW / frameW;
+    const scaleY = screenH / frameH;
+    const scaleFactor = Math.max(scaleX, scaleY); // cover 모드
+
+    // 센터링 오프셋 계산 (크롭된 영역의 오프셋)
+    const offsetX = (frameW * scaleFactor - screenW) / 2;
+    const offsetY = (frameH * scaleFactor - screenH) / 2;
+
+    console.log('[computeHighlights] Raw Frame:', rawFrameW, 'x', rawFrameH);
+    console.log('[computeHighlights] Swapped Frame:', frameW, 'x', frameH);
+    console.log('[computeHighlights] Screen:', screenW, 'x', screenH);
+    console.log('[computeHighlights] ScaleFactor:', scaleFactor, 'OffsetX:', offsetX, 'OffsetY:', offsetY);
+
+    // cornerPoints 변환
+    const transformedPoints = cornerPoints.map(point => {
+      // 1. 스케일 적용 후 오프셋 빼기 (aspectFill 크롭 보정)
+      const newX = point.x * scaleFactor - offsetX;
+      const newY = point.y * scaleFactor - offsetY;
+
+      return { x: newX, y: newY };
+    });
+
+    console.log('[computeHighlights] Original points:', cornerPoints.slice(0, 2));
+    console.log('[computeHighlights] Transformed points:', transformedPoints.slice(0, 2));
+
+    // 변환된 points에서 bounding box 계산
+    const xCoords = transformedPoints.map(p => p.x);
+    const yCoords = transformedPoints.map(p => p.y);
+    const minX = Math.min(...xCoords);
+    const maxX = Math.max(...xCoords);
+    const minY = Math.min(...yCoords);
+    const maxY = Math.max(...yCoords);
+
+    const result = {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
     };
 
-    // 스케일 팩터 계산 (cover 모드)
-    const ratioW = adjustedLayout.width / frameW;
-    const ratioH = adjustedLayout.height / frameH;
-    const scaleFactor = Math.max(ratioW, ratioH);
-
-    console.log('[convertVisionCameraCoords] Ratios:', { ratioW: ratioW.toFixed(4), ratioH: ratioH.toFixed(4) });
-    console.log('[convertVisionCameraCoords] ScaleFactor:', scaleFactor.toFixed(4));
-
-    // 좌표 스케일링
-    let newX = x * scaleFactor;
-    let newY = y * scaleFactor;
-    let newW = width * scaleFactor;
-    let newH = height * scaleFactor;
-
-    // 센터링 오프셋 (cover 모드)
-    if (ratioW > ratioH) {
-      // 높이 방향으로 크롭됨
-      newY += (adjustedLayout.height - frameH * scaleFactor) / 2;
-    } else {
-      // 너비 방향으로 크롭됨
-      newX += (adjustedLayout.width - frameW * scaleFactor) / 2;
-    }
-
-    console.log('[convertVisionCameraCoords] After scale+offset:', { newX: newX.toFixed(1), newY: newY.toFixed(1) });
-
-    // iOS: x와 y 스왑 (mgcrea 라이브러리 방식)
-    if (Platform.OS === 'ios') {
-      const result = {
-        x: newY,
-        y: newX,
-        width: newH,
-        height: newW,
-      };
-      console.log('[convertVisionCameraCoords] iOS swap result:', { x: result.x.toFixed(1), y: result.y.toFixed(1) });
-      return result;
-    }
-
-    return { x: newX, y: newY, width: newW, height: newH };
+    console.log('[computeHighlights] Result:', result);
+    return result;
   }, [winWidth, winHeight]);
+
+  // 기존 convertVisionCameraCoords를 computeHighlightsFromCornerPoints로 대체
+  const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
+    // cornerPoints가 없는 경우 bounds에서 임시 cornerPoints 생성
+    const cornerPoints = [
+      { x: x, y: y },
+      { x: x + width, y: y },
+      { x: x + width, y: y + height },
+      { x: x, y: y + height },
+    ];
+    return computeHighlightsFromCornerPoints(cornerPoints, frameDimensions);
+  }, [computeHighlightsFromCornerPoints]);
 
   const normalizeBounds = useCallback(
     (bounds, frameDimensions = null) => {
@@ -874,19 +881,16 @@ function ScannerScreen() {
         console.log('[ScannerScreen] Scan sound skipped');
       }
 
-      // Android: cornerPoints를 우선 사용 (더 정확한 위치)
-      // bounds가 없으면 cornerPoints에서 생성 시도
-      let effectiveBounds = bounds;
-      if (Platform.OS === 'android' && cornerPoints && cornerPoints.length >= 4) {
-        // Android에서는 cornerPoints가 더 정확함
-        console.log('[Android] Using cornerPoints for bounds');
-        effectiveBounds = boundsFromCornerPoints(cornerPoints);
-      } else if (!bounds && cornerPoints) {
-        console.log('Creating bounds from corner points');
-        effectiveBounds = boundsFromCornerPoints(cornerPoints);
+      // cornerPoints가 있으면 직접 변환 (가장 정확)
+      // bounds만 있으면 normalizeBounds 사용
+      let normalized = null;
+      if (cornerPoints && cornerPoints.length >= 4) {
+        console.log('[handleBarCodeScanned] Using cornerPoints directly');
+        normalized = computeHighlightsFromCornerPoints(cornerPoints, frameDimensions);
+      } else if (bounds) {
+        console.log('[handleBarCodeScanned] Using bounds (no cornerPoints)');
+        normalized = normalizeBounds(bounds, frameDimensions);
       }
-
-      let normalized = normalizeBounds(effectiveBounds, frameDimensions);
 
       // bounds와 cornerPoints 모두 없는 경우, 코너 라인 없이 스캔 (십자가만 표시)
       if (!normalized && !bounds && !cornerPoints) {
@@ -914,7 +918,7 @@ function ScannerScreen() {
       let photoPromise = null;
       if (photoSaveEnabledRef.current) {
         // 사진 촬영을 백그라운드에서 시작하고 결과는 나중에 처리
-        photoPromise = capturePhoto(effectiveBounds).catch(err => {
+        photoPromise = capturePhoto(normalized).catch(err => {
           console.log('Background photo capture error:', err);
           return null;
         });
@@ -1024,7 +1028,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, analyzeImage],
+    [isActive, canScan, normalizeBounds, computeHighlightsFromCornerPoints, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, analyzeImage],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
