@@ -57,7 +57,7 @@ public class QrEcAnalyzerModule: Module {
 
       // Configure hints
       let hints = ZXDecodeHints()
-      hints?.tryHarder = true
+      hints.tryHarder = true
 
       // Try to decode
       let reader = ZXQRCodeReader()
