@@ -1185,61 +1185,6 @@ function ScannerScreen() {
         )}
       </View>
 
-      {qrBounds && (() => {
-        // QR 코드 크기에 비례하는 코너 크기 계산
-        const cornerSize = Math.max(20, Math.min(qrBounds.width * 0.18, 40));
-        const borderWidth = Math.max(1.5, Math.min(cornerSize * 0.08, 2.5));
-        const offset = borderWidth * 0.7;
-
-        return (
-          <Animated.View
-            style={[
-              styles.qrBorder,
-              {
-                left: qrBounds.x - 8,
-                top: qrBounds.y - 8,
-                width: qrBounds.width + 16,
-                height: qrBounds.height + 16,
-                opacity: opacityAnim,
-                transform: [{ scale: scaleAnim }],
-                borderRadius: qrBounds.width * 0.08,
-              },
-            ]}
-            pointerEvents="none"
-            accessibilityLabel="QR 코드 감지됨"
-          >
-            <View
-              style={[
-                styles.corner,
-                styles.topLeft,
-                { width: cornerSize, height: cornerSize, top: -offset, left: -offset },
-              ]}
-            />
-            <View
-              style={[
-                styles.corner,
-                styles.topRight,
-                { width: cornerSize, height: cornerSize, top: -offset, right: -offset },
-              ]}
-            />
-            <View
-              style={[
-                styles.corner,
-                styles.bottomLeft,
-                { width: cornerSize, height: cornerSize, bottom: -offset, left: -offset },
-              ]}
-            />
-            <View
-              style={[
-                styles.corner,
-                styles.bottomRight,
-                { width: cornerSize, height: cornerSize, bottom: -offset, right: -offset },
-              ]}
-            />
-          </Animated.View>
-        );
-      })()}
-
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
         <View style={[styles.batchControlPanel, { bottom: bottomOffset }]}>
