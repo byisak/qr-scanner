@@ -593,18 +593,18 @@ function ScannerScreen() {
     let rotatedX, rotatedY, rotatedW, rotatedH;
 
     if (isScreenPortrait && isFrameLandscape) {
-      // 센서 좌표 (landscape)를 화면 좌표 (portrait)로 변환
-      // iOS Vision Camera: 센서 y → 화면 x, 센서 x → 화면 y (반전 필요)
-      // 프레임 스왑 후 좌표도 스왑
-      rotatedX = RAW_FRAME_H - y;   // 센서 y를 반전하여 화면 x로
-      rotatedY = x;                 // 센서 x를 화면 y로
-      rotatedW = height;            // 너비/높이도 스왑
+      // Vision Camera는 좌표를 이미 portrait 방향으로 반환할 수 있음
+      // 프레임 크기만 스왑하고 좌표는 그대로 사용
+      // x, y를 스왑하여 portrait 방향에 맞춤
+      rotatedX = y;     // 센서 y → 화면 x
+      rotatedY = x;     // 센서 x → 화면 y
+      rotatedW = height;
       rotatedH = width;
 
       // 프레임 차원 스왑 (landscape → portrait)
       FRAME_W = RAW_FRAME_H;  // 3024
       FRAME_H = RAW_FRAME_W;  // 4032
-      console.log('[convertVisionCameraCoords] Rotated coords for portrait:', { rotatedX: rotatedX.toFixed(1), rotatedY: rotatedY.toFixed(1) });
+      console.log('[convertVisionCameraCoords] Swapped coords for portrait:', { rotatedX: rotatedX.toFixed(1), rotatedY: rotatedY.toFixed(1) });
       console.log('[convertVisionCameraCoords] Swapped frame dims:', { FRAME_W, FRAME_H });
     } else {
       rotatedX = x;
