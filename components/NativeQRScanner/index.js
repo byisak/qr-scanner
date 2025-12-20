@@ -6,6 +6,7 @@ import { StyleSheet, View, Platform, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
+  useCameraPermission,
   useCodeScanner,
 } from 'react-native-vision-camera';
 
@@ -43,7 +44,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   style,
 }, ref) {
   const cameraRef = useRef(null);
-  const [hasPermission, setHasPermission] = useState(false);
+
+  // Vision Camera v4 권한 훅 사용
+  const { hasPermission, requestPermission } = useCameraPermission();
 
   // onCodeScanned의 최신 참조를 유지하기 위한 ref
   const onCodeScannedRef = useRef(onCodeScanned);
@@ -59,78 +62,93 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     const types = barcodeTypes
       .map(type => BARCODE_TYPE_MAP[type])
       .filter(Boolean);
-    console.log('[NativeQRScanner] Code types:', types);
+    console.log('[NativeQRScanner] Converted code types:', types);
     return types.length > 0 ? types : ['qr'];
   }, [barcodeTypes]);
 
-  // 코드 스캐너 콜백
-  const handleCodeScanned = useCallback((codes) => {
-    console.log('[NativeQRScanner] Codes detected:', codes.length);
-
-    if (!onCodeScannedRef.current || codes.length === 0) {
-      console.log('[NativeQRScanner] No callback or no codes');
-      return;
-    }
-
-    const code = codes[0];
-    console.log('[NativeQRScanner] First code:', code.value, 'Type:', code.type);
-
-    // expo-camera 형식으로 변환하여 콜백 호출
-    const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
-
-    // cornerPoints를 bounds 형식으로 변환
-    let bounds = null;
-    let cornerPoints = null;
-
-    if (code.corners && code.corners.length >= 4) {
-      cornerPoints = code.corners;
-      const xCoords = code.corners.map(c => c.x);
-      const yCoords = code.corners.map(c => c.y);
-      const minX = Math.min(...xCoords);
-      const maxX = Math.max(...xCoords);
-      const minY = Math.min(...yCoords);
-      const maxY = Math.max(...yCoords);
-
-      bounds = {
-        origin: { x: minX, y: minY },
-        size: { width: maxX - minX, height: maxY - minY },
-      };
-    } else if (code.frame) {
-      bounds = {
-        origin: { x: code.frame.x, y: code.frame.y },
-        size: { width: code.frame.width, height: code.frame.height },
-      };
-    }
-
-    console.log('[NativeQRScanner] Calling onCodeScanned with:', code.value);
-
-    onCodeScannedRef.current({
-      data: code.value,
-      type: normalizedType,
-      bounds,
-      cornerPoints,
-      raw: code.value,
-    });
-  }, []);
-
-  // 코드 스캐너 설정
+  // 코드 스캐너 설정 - useCodeScanner 훅 사용
   const codeScanner = useCodeScanner({
     codeTypes: visionCameraCodeTypes,
-    onCodeScanned: handleCodeScanned,
+    onCodeScanned: (codes) => {
+      console.log('[NativeQRScanner] ===== CODE SCANNED =====');
+      console.log('[NativeQRScanner] Number of codes:', codes.length);
+
+      if (codes.length === 0) {
+        console.log('[NativeQRScanner] No codes in array');
+        return;
+      }
+
+      if (!onCodeScannedRef.current) {
+        console.log('[NativeQRScanner] No callback registered');
+        return;
+      }
+
+      const code = codes[0];
+      console.log('[NativeQRScanner] Code value:', code.value);
+      console.log('[NativeQRScanner] Code type:', code.type);
+      console.log('[NativeQRScanner] Code frame:', JSON.stringify(code.frame));
+      console.log('[NativeQRScanner] Code corners:', JSON.stringify(code.corners));
+
+      // expo-camera 형식으로 변환
+      const normalizedType = BARCODE_TYPE_REVERSE_MAP[code.type] || code.type;
+
+      // cornerPoints를 bounds 형식으로 변환
+      let bounds = null;
+      let cornerPoints = null;
+
+      if (code.corners && code.corners.length >= 4) {
+        cornerPoints = code.corners;
+        const xCoords = code.corners.map(c => c.x);
+        const yCoords = code.corners.map(c => c.y);
+        const minX = Math.min(...xCoords);
+        const maxX = Math.max(...xCoords);
+        const minY = Math.min(...yCoords);
+        const maxY = Math.max(...yCoords);
+
+        bounds = {
+          origin: { x: minX, y: minY },
+          size: { width: maxX - minX, height: maxY - minY },
+        };
+      } else if (code.frame) {
+        bounds = {
+          origin: { x: code.frame.x, y: code.frame.y },
+          size: { width: code.frame.width, height: code.frame.height },
+        };
+      }
+
+      console.log('[NativeQRScanner] Calling parent callback...');
+      onCodeScannedRef.current({
+        data: code.value,
+        type: normalizedType,
+        bounds,
+        cornerPoints,
+        raw: code.value,
+      });
+    },
   });
 
   // 카메라 권한 요청
   useEffect(() => {
     (async () => {
-      console.log('[NativeQRScanner] Requesting camera permission...');
-      const status = await Camera.requestCameraPermission();
-      console.log('[NativeQRScanner] Permission status:', status);
-      setHasPermission(status === 'granted');
-      if (status !== 'granted' && onError) {
-        onError({ message: 'Camera permission denied' });
+      console.log('[NativeQRScanner] Current permission status:', hasPermission);
+      if (!hasPermission) {
+        console.log('[NativeQRScanner] Requesting camera permission...');
+        const granted = await requestPermission();
+        console.log('[NativeQRScanner] Permission granted:', granted);
+        if (!granted && onError) {
+          onError({ message: 'Camera permission denied' });
+        }
       }
     })();
-  }, []);
+  }, [hasPermission, requestPermission, onError]);
+
+  // 카메라 에러 핸들러
+  const handleCameraError = useCallback((error) => {
+    console.error('[NativeQRScanner] Camera error:', error);
+    if (onError) {
+      onError(error);
+    }
+  }, [onError]);
 
   // ref를 통해 메서드 노출
   useImperativeHandle(ref, () => ({
@@ -184,15 +202,19 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     },
   }), []);
 
-  console.log('[NativeQRScanner] Render - device:', !!device, 'hasPermission:', hasPermission, 'isActive:', isActive);
+  console.log('[NativeQRScanner] === RENDER ===');
+  console.log('[NativeQRScanner] device:', device ? device.id : 'null');
+  console.log('[NativeQRScanner] hasPermission:', hasPermission);
+  console.log('[NativeQRScanner] isActive:', isActive);
+  console.log('[NativeQRScanner] torch:', torch);
 
   if (!device) {
-    console.log('[NativeQRScanner] No camera device available');
+    console.log('[NativeQRScanner] Waiting for camera device...');
     return <View style={[styles.container, style]} />;
   }
 
   if (!hasPermission) {
-    console.log('[NativeQRScanner] No camera permission');
+    console.log('[NativeQRScanner] Waiting for camera permission...');
     return <View style={[styles.container, style]} />;
   }
 
@@ -205,6 +227,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       torch={torch}
       codeScanner={codeScanner}
       photo={true}
+      onError={handleCameraError}
       enableZoomGesture={true}
     />
   );
