@@ -103,6 +103,7 @@ function ScannerScreen() {
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
+  const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
 
   const [qrBounds, setQrBounds] = useState(null);
 
@@ -277,6 +278,7 @@ function ScannerScreen() {
     useCallback(() => {
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
+      isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       resetAll();
 
       (async () => {
@@ -535,6 +537,42 @@ function ScannerScreen() {
     []
   );
 
+  // Vision Camera 좌표 변환 헬퍼 함수
+  const convertVisionCameraCoords = useCallback((x, y, width, height) => {
+    // Vision Camera는 카메라 센서 좌표를 반환 (예: 1920x1080)
+    // 화면 좌표로 변환 필요
+    // 카메라 센서 크기 추정 (일반적인 iOS 카메라)
+    const SENSOR_WIDTH = 1920;
+    const SENSOR_HEIGHT = 1440; // 4:3 비율
+
+    // 좌표가 화면 크기보다 크면 Vision Camera 좌표로 판단
+    if (x > winWidth * 1.5 || y > winHeight * 1.5) {
+      const scaleX = winWidth / SENSOR_WIDTH;
+      const scaleY = winHeight / SENSOR_HEIGHT;
+      console.log('[normalizeBounds] Vision Camera coords detected, scale:', scaleX.toFixed(3), scaleY.toFixed(3));
+
+      return {
+        x: x * scaleX,
+        y: y * scaleY,
+        width: width * scaleX,
+        height: height * scaleY,
+      };
+    }
+
+    // 일반 좌표 (0-1 정규화 또는 화면 좌표)
+    if (x <= 1 && y <= 1) {
+      return {
+        x: x * winWidth,
+        y: y * winHeight,
+        width: width * winWidth,
+        height: height * winHeight,
+      };
+    }
+
+    // 이미 화면 좌표
+    return { x, y, width, height };
+  }, [winWidth, winHeight]);
+
   const normalizeBounds = useCallback(
     (bounds) => {
       // bounds 형식 확인 및 로깅
@@ -545,49 +583,21 @@ function ScannerScreen() {
 
       console.log('[normalizeBounds] Input:', JSON.stringify(bounds));
 
-      // 형식 1: { origin: { x, y }, size: { width, height } } (iOS)
+      // 형식 1: { origin: { x, y }, size: { width, height } } (iOS / Vision Camera)
       if (bounds.origin && bounds.size) {
         const { origin, size } = bounds;
-        const isPixel = origin.x > 1 || origin.y > 1;
-
-        const scaleX = isPixel ? 1 : winWidth;
-        const scaleY = isPixel ? 1 : winHeight;
-
-        return {
-          x: origin.x * scaleX,
-          y: origin.y * scaleY,
-          width: size.width * scaleX,
-          height: size.height * scaleY,
-        };
+        return convertVisionCameraCoords(origin.x, origin.y, size.width, size.height);
       }
 
       // 형식 2: { x, y, width, height } (일부 1차원 바코드)
       if (bounds.x !== undefined && bounds.y !== undefined && bounds.width && bounds.height) {
-        const isPixel = bounds.x > 1 || bounds.y > 1;
-        const scaleX = isPixel ? 1 : winWidth;
-        const scaleY = isPixel ? 1 : winHeight;
-
-        return {
-          x: bounds.x * scaleX,
-          y: bounds.y * scaleY,
-          width: bounds.width * scaleX,
-          height: bounds.height * scaleY,
-        };
+        return convertVisionCameraCoords(bounds.x, bounds.y, bounds.width, bounds.height);
       }
 
       // 형식 3: { boundingBox: { x, y, width, height } }
       if (bounds.boundingBox) {
         const box = bounds.boundingBox;
-        const isPixel = box.x > 1 || box.y > 1;
-        const scaleX = isPixel ? 1 : winWidth;
-        const scaleY = isPixel ? 1 : winHeight;
-
-        return {
-          x: box.x * scaleX,
-          y: box.y * scaleY,
-          width: box.width * scaleX,
-          height: box.height * scaleY,
-        };
+        return convertVisionCameraCoords(box.x, box.y, box.width, box.height);
       }
 
       // 형식 4: Android CameraView { left, top, right, bottom }
@@ -603,7 +613,7 @@ function ScannerScreen() {
       console.log('Unknown bounds format:', JSON.stringify(bounds));
       return null;
     },
-    [winWidth, winHeight],
+    [convertVisionCameraCoords],
   );
 
   const startResetTimer = useCallback((delay) => {
@@ -751,8 +761,8 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw } = scanResult;
-      // 사진 촬영 중이면 스캔 무시
-      if (!isActive || !canScan || isCapturingPhotoRef.current) return;
+      // 사진 촬영 중이거나 네비게이션 중이면 스캔 무시
+      if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current) return;
 
       // 전체 스캔 결과 로깅 (디버깅용)
       console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
@@ -1016,6 +1026,7 @@ function ScannerScreen() {
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
               await saveHistory(data, url, photoUri, normalizedType, detectedEcLevel);
+              isNavigatingRef.current = true; // 네비게이션 시작 전 플래그 설정
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -1023,6 +1034,7 @@ function ScannerScreen() {
           }
 
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
+          isNavigatingRef.current = true; // 네비게이션 시작 전 플래그 설정
           router.push({
             pathname: '/result',
             params: {
@@ -1064,6 +1076,7 @@ function ScannerScreen() {
       setBatchScannedItems([]);
 
       // 히스토리 화면으로 이동
+      isNavigatingRef.current = true;
       router.push('/(tabs)/history');
     } catch (error) {
       console.error('Finish batch error:', error);
