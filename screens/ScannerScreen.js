@@ -849,14 +849,16 @@ function ScannerScreen() {
           let ecLevelAnalysisFailed = false;
           const isQRCodeType = normalizedType === 'qr' || normalizedType === 'qrcode';
 
-          // 사진 촬영 완료를 짧게만 기다림 (최대 200ms)
+          // 사진 촬영 완료를 기다림 (최대 2초 - EC 분석에 충분한 시간)
           let photoUri = null;
           let originalUri = null;
           if (photoPromise) {
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 200));
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 2000));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
+            console.log('[ScannerScreen] Photo capture result:', photoResult ? 'success' : 'timeout/null');
             photoUri = photoResult?.croppedUri || photoResult;
             originalUri = photoResult?.originalUri || photoResult;
+            console.log('[ScannerScreen] originalUri:', originalUri ? 'available' : 'null');
           }
 
           // EC 레벨이 없고, QR 코드이고, 사진이 있으면 QRAnalyzer로 분석
