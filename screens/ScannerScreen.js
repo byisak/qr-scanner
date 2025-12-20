@@ -564,17 +564,17 @@ function ScannerScreen() {
   const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
     // 콜백에서 받은 실제 프레임 크기 사용 (없으면 저장된 값 사용)
     const dims = frameDimensions || frameDimensionsRef.current;
-    const FRAME_WIDTH = dims.width;   // 프레임 가로 (landscape 기준, 예: 4032)
-    const FRAME_HEIGHT = dims.height; // 프레임 세로 (landscape 기준, 예: 3024)
+    const RAW_FRAME_W = dims.width;   // 센서 원본 가로 (예: 4032)
+    const RAW_FRAME_H = dims.height;  // 센서 원본 세로 (예: 3024)
 
     console.log('[convertVisionCameraCoords] ========================================');
-    console.log('[convertVisionCameraCoords] Input coords:', { x: x.toFixed(1), y: y.toFixed(1), w: width.toFixed(1), h: height.toFixed(1) });
+    console.log('[convertVisionCameraCoords] Input:', { x: x.toFixed(1), y: y.toFixed(1), w: width.toFixed(1), h: height.toFixed(1) });
     console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
-    console.log('[convertVisionCameraCoords] Frame:', { FRAME_WIDTH, FRAME_HEIGHT });
+    console.log('[convertVisionCameraCoords] RawFrame:', { RAW_FRAME_W, RAW_FRAME_H });
 
     // 좌표가 0-1 사이면 정규화된 좌표
     if (x <= 1 && y <= 1 && width <= 1 && height <= 1) {
-      console.log('[convertVisionCameraCoords] Normalized coords detected');
+      console.log('[convertVisionCameraCoords] Normalized coords');
       return {
         x: x * winWidth,
         y: y * winHeight,
@@ -583,67 +583,42 @@ function ScannerScreen() {
       };
     }
 
-    // 좌표의 최대값 확인
-    const maxCoord = Math.max(x + width, y + height);
-    console.log('[convertVisionCameraCoords] Max coord:', maxCoord.toFixed(1));
+    // 화면이 portrait이고 프레임이 landscape면 차원 스왑
+    // Vision Camera는 좌표를 이미 프리뷰 방향에 맞춰 반환하지만
+    // 프레임 차원은 센서 원본 방향으로 보고됨
+    const isScreenPortrait = winHeight > winWidth;
+    const isFrameLandscape = RAW_FRAME_W > RAW_FRAME_H;
 
-    // 프레임이 화면보다 훨씬 크면 (센서 해상도) 변환 필요
-    if (FRAME_WIDTH > winWidth * 2 && FRAME_HEIGHT > winHeight * 2) {
-      console.log('[convertVisionCameraCoords] High-res frame detected, applying transform');
-
-      // Vision Camera iOS에서 portrait 모드:
-      // - 프레임은 landscape (예: 4032x3024)
-      // - 화면은 portrait (예: 393x852)
-      // - 프레임이 90도 회전되어 표시됨
-
-      // 90도 시계방향 회전 변환
-      // 프레임 좌표 (x, y) → 화면 좌표 (frameH - y - h, x)
-      const rotatedX = FRAME_HEIGHT - y - height;
-      const rotatedY = x;
-      const rotatedW = height;
-      const rotatedH = width;
-
-      // 회전 후 프레임 크기: FRAME_HEIGHT x FRAME_WIDTH
-      const rotatedFrameW = FRAME_HEIGHT;
-      const rotatedFrameH = FRAME_WIDTH;
-
-      // aspectFill: 더 큰 스케일 사용하여 화면 채움
-      const scaleX = winWidth / rotatedFrameW;
-      const scaleY = winHeight / rotatedFrameH;
-      const scale = Math.max(scaleX, scaleY);
-
-      // 크롭 오프셋 (화면 중앙 정렬)
-      const offsetX = (rotatedFrameW * scale - winWidth) / 2;
-      const offsetY = (rotatedFrameH * scale - winHeight) / 2;
-
-      const result = {
-        x: rotatedX * scale - offsetX,
-        y: rotatedY * scale - offsetY,
-        width: rotatedW * scale,
-        height: rotatedH * scale,
-      };
-
-      console.log('[convertVisionCameraCoords] Scale:', scale.toFixed(4), 'Offset:', { x: offsetX.toFixed(1), y: offsetY.toFixed(1) });
-      console.log('[convertVisionCameraCoords] Result:', { x: result.x.toFixed(1), y: result.y.toFixed(1), w: result.width.toFixed(1), h: result.height.toFixed(1) });
-      return result;
+    let FRAME_W, FRAME_H;
+    if (isScreenPortrait && isFrameLandscape) {
+      // 프레임 차원 스왑 (landscape → portrait)
+      FRAME_W = RAW_FRAME_H;  // 3024
+      FRAME_H = RAW_FRAME_W;  // 4032
+      console.log('[convertVisionCameraCoords] Swapped frame dims for portrait:', { FRAME_W, FRAME_H });
+    } else {
+      FRAME_W = RAW_FRAME_W;
+      FRAME_H = RAW_FRAME_H;
     }
 
-    // 좌표가 화면 크기에 가까우면 이미 화면 좌표
-    if (maxCoord < Math.max(winWidth, winHeight) * 1.5) {
-      console.log('[convertVisionCameraCoords] Already screen coords (small values)');
-      return { x, y, width, height };
-    }
+    // aspectFill 스케일링 (회전 없이 직접 스케일링)
+    const scaleX = winWidth / FRAME_W;
+    const scaleY = winHeight / FRAME_H;
+    const scale = Math.max(scaleX, scaleY);
 
-    // 그 외의 경우: 단순 스케일링 시도
-    console.log('[convertVisionCameraCoords] Unknown format, trying simple scale');
-    const scaleX = winWidth / FRAME_WIDTH;
-    const scaleY = winHeight / FRAME_HEIGHT;
-    return {
-      x: x * scaleX,
-      y: y * scaleY,
-      width: width * scaleX,
-      height: height * scaleY,
+    // 크롭 오프셋 (화면 중앙 정렬)
+    const offsetX = (FRAME_W * scale - winWidth) / 2;
+    const offsetY = (FRAME_H * scale - winHeight) / 2;
+
+    const result = {
+      x: x * scale - offsetX,
+      y: y * scale - offsetY,
+      width: width * scale,
+      height: height * scale,
     };
+
+    console.log('[convertVisionCameraCoords] Scale:', scale.toFixed(4), 'Offset:', { x: offsetX.toFixed(1), y: offsetY.toFixed(1) });
+    console.log('[convertVisionCameraCoords] Result:', { x: result.x.toFixed(1), y: result.y.toFixed(1), w: result.width.toFixed(1), h: result.height.toFixed(1) });
+    return result;
   }, [winWidth, winHeight]);
 
   const normalizeBounds = useCallback(
