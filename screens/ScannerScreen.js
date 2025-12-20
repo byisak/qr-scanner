@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  InteractionManager,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -399,10 +400,16 @@ function ScannerScreen() {
       })();
 
       return () => {
-        setIsActive(false); // 다른 탭으로 이동 시 카메라 비활성화
-        clearAllTimers();
-        // 사진 촬영 중이라도 cleanup 시 ref 초기화 (다음 활성화 시 새로 시작)
+        // 먼저 콜백 차단 (새로운 스캔 결과 무시)
+        isNavigatingRef.current = true;
         isCapturingPhotoRef.current = false;
+        clearAllTimers();
+
+        // 카메라 비활성화를 지연시켜 탭 전환 애니메이션이 먼저 실행되도록 함
+        // InteractionManager를 사용하여 네비게이션 완료 후 카메라 중지
+        InteractionManager.runAfterInteractions(() => {
+          setIsActive(false);
+        });
       };
     }, [resetAll, clearAllTimers]),
   );
