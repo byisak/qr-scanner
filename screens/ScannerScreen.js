@@ -1,4 +1,4 @@
-// screens/ScannerScreen.js - Expo Router 버전
+// screens/ScannerScreen.js - Expo Router 버전 (Vision Camera 적용)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
@@ -11,8 +11,11 @@ import {
   Alert,
   Modal,
   ScrollView,
+  InteractionManager,
 } from 'react-native';
-import { CameraView, Camera } from 'expo-camera';
+// Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
+import { Camera } from 'react-native-vision-camera';
+import { NativeQRScanner, useNativeCamera } from '../components/NativeQRScanner';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { createAudioPlayer } from 'expo-audio';
@@ -101,6 +104,8 @@ function ScannerScreen() {
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
+  const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
+  const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
 
   const [qrBounds, setQrBounds] = useState(null);
 
@@ -140,7 +145,8 @@ function ScannerScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const { status } = await Camera.requestCameraPermissionsAsync();
+        // Vision Camera 권한 요청
+        const status = await Camera.requestCameraPermission();
         setHasPermission(status === 'granted');
 
         const saved = await AsyncStorage.getItem('selectedBarcodes');
@@ -274,6 +280,8 @@ function ScannerScreen() {
     useCallback(() => {
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
+      isNavigatingRef.current = false; // 네비게이션 플래그 리셋
+      isProcessingRef.current = false; // 처리 중 플래그 리셋
       resetAll();
 
       (async () => {
@@ -394,10 +402,27 @@ function ScannerScreen() {
       })();
 
       return () => {
-        setIsActive(false); // 다른 탭으로 이동 시 카메라 비활성화
-        clearAllTimers();
-        // 사진 촬영 중이라도 cleanup 시 ref 초기화 (다음 활성화 시 새로 시작)
+        console.log('[ScannerScreen] === CLEANUP START ===');
+
+        // 먼저 콜백 차단 (새로운 스캔 결과 무시)
+        isNavigatingRef.current = true;
+        isProcessingRef.current = true; // 처리 중 플래그도 설정하여 완전 차단
         isCapturingPhotoRef.current = false;
+        console.log('[ScannerScreen] Callbacks blocked');
+
+        clearAllTimers();
+        console.log('[ScannerScreen] Timers cleared');
+
+        // 카메라 비활성화를 지연시켜 탭 전환 애니메이션이 먼저 실행되도록 함
+        // setTimeout을 사용하여 다음 프레임에서 카메라 중지
+        console.log('[ScannerScreen] Scheduling camera deactivation...');
+        setTimeout(() => {
+          console.log('[ScannerScreen] Deactivating camera NOW');
+          setIsActive(false);
+          console.log('[ScannerScreen] Camera deactivated');
+        }, 50);
+
+        console.log('[ScannerScreen] === CLEANUP END ===');
       };
     }, [resetAll, clearAllTimers]),
   );
@@ -532,8 +557,72 @@ function ScannerScreen() {
     []
   );
 
+  // 현재 카메라 프레임 크기 (콜백에서 업데이트됨)
+  const frameDimensionsRef = useRef({ width: 1920, height: 1440 });
+
+  // Vision Camera 좌표 변환 헬퍼 함수
+  const convertVisionCameraCoords = useCallback((x, y, width, height, frameDimensions = null) => {
+    // 콜백에서 받은 실제 프레임 크기 사용 (없으면 저장된 값 사용)
+    const dims = frameDimensions || frameDimensionsRef.current;
+    const RAW_FRAME_W = dims.width;   // 센서 원본 가로 (예: 4032)
+    const RAW_FRAME_H = dims.height;  // 센서 원본 세로 (예: 3024)
+
+    console.log('[convertVisionCameraCoords] ========================================');
+    console.log('[convertVisionCameraCoords] Input:', { x: x.toFixed(1), y: y.toFixed(1), w: width.toFixed(1), h: height.toFixed(1) });
+    console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
+    console.log('[convertVisionCameraCoords] RawFrame:', { RAW_FRAME_W, RAW_FRAME_H });
+
+    // 좌표가 0-1 사이면 정규화된 좌표
+    if (x <= 1 && y <= 1 && width <= 1 && height <= 1) {
+      console.log('[convertVisionCameraCoords] Normalized coords');
+      return {
+        x: x * winWidth,
+        y: y * winHeight,
+        width: width * winWidth,
+        height: height * winHeight,
+      };
+    }
+
+    // 화면이 portrait이고 프레임이 landscape면 차원 스왑
+    // Vision Camera는 좌표를 이미 프리뷰 방향에 맞춰 반환하지만
+    // 프레임 차원은 센서 원본 방향으로 보고됨
+    const isScreenPortrait = winHeight > winWidth;
+    const isFrameLandscape = RAW_FRAME_W > RAW_FRAME_H;
+
+    let FRAME_W, FRAME_H;
+    if (isScreenPortrait && isFrameLandscape) {
+      // 프레임 차원 스왑 (landscape → portrait)
+      FRAME_W = RAW_FRAME_H;  // 3024
+      FRAME_H = RAW_FRAME_W;  // 4032
+      console.log('[convertVisionCameraCoords] Swapped frame dims for portrait:', { FRAME_W, FRAME_H });
+    } else {
+      FRAME_W = RAW_FRAME_W;
+      FRAME_H = RAW_FRAME_H;
+    }
+
+    // aspectFill 스케일링 (회전 없이 직접 스케일링)
+    const scaleX = winWidth / FRAME_W;
+    const scaleY = winHeight / FRAME_H;
+    const scale = Math.max(scaleX, scaleY);
+
+    // 크롭 오프셋 (화면 중앙 정렬)
+    const offsetX = (FRAME_W * scale - winWidth) / 2;
+    const offsetY = (FRAME_H * scale - winHeight) / 2;
+
+    const result = {
+      x: x * scale - offsetX,
+      y: y * scale - offsetY,
+      width: width * scale,
+      height: height * scale,
+    };
+
+    console.log('[convertVisionCameraCoords] Scale:', scale.toFixed(4), 'Offset:', { x: offsetX.toFixed(1), y: offsetY.toFixed(1) });
+    console.log('[convertVisionCameraCoords] Result:', { x: result.x.toFixed(1), y: result.y.toFixed(1), w: result.width.toFixed(1), h: result.height.toFixed(1) });
+    return result;
+  }, [winWidth, winHeight]);
+
   const normalizeBounds = useCallback(
-    (bounds) => {
+    (bounds, frameDimensions = null) => {
       // bounds 형식 확인 및 로깅
       if (!bounds) {
         console.log('No bounds provided');
@@ -542,49 +631,21 @@ function ScannerScreen() {
 
       console.log('[normalizeBounds] Input:', JSON.stringify(bounds));
 
-      // 형식 1: { origin: { x, y }, size: { width, height } } (iOS)
+      // 형식 1: { origin: { x, y }, size: { width, height } } (iOS / Vision Camera)
       if (bounds.origin && bounds.size) {
         const { origin, size } = bounds;
-        const isPixel = origin.x > 1 || origin.y > 1;
-
-        const scaleX = isPixel ? 1 : winWidth;
-        const scaleY = isPixel ? 1 : winHeight;
-
-        return {
-          x: origin.x * scaleX,
-          y: origin.y * scaleY,
-          width: size.width * scaleX,
-          height: size.height * scaleY,
-        };
+        return convertVisionCameraCoords(origin.x, origin.y, size.width, size.height, frameDimensions);
       }
 
       // 형식 2: { x, y, width, height } (일부 1차원 바코드)
       if (bounds.x !== undefined && bounds.y !== undefined && bounds.width && bounds.height) {
-        const isPixel = bounds.x > 1 || bounds.y > 1;
-        const scaleX = isPixel ? 1 : winWidth;
-        const scaleY = isPixel ? 1 : winHeight;
-
-        return {
-          x: bounds.x * scaleX,
-          y: bounds.y * scaleY,
-          width: bounds.width * scaleX,
-          height: bounds.height * scaleY,
-        };
+        return convertVisionCameraCoords(bounds.x, bounds.y, bounds.width, bounds.height, frameDimensions);
       }
 
       // 형식 3: { boundingBox: { x, y, width, height } }
       if (bounds.boundingBox) {
         const box = bounds.boundingBox;
-        const isPixel = box.x > 1 || box.y > 1;
-        const scaleX = isPixel ? 1 : winWidth;
-        const scaleY = isPixel ? 1 : winHeight;
-
-        return {
-          x: box.x * scaleX,
-          y: box.y * scaleY,
-          width: box.width * scaleX,
-          height: box.height * scaleY,
-        };
+        return convertVisionCameraCoords(box.x, box.y, box.width, box.height, frameDimensions);
       }
 
       // 형식 4: Android CameraView { left, top, right, bottom }
@@ -600,7 +661,7 @@ function ScannerScreen() {
       console.log('Unknown bounds format:', JSON.stringify(bounds));
       return null;
     },
-    [winWidth, winHeight],
+    [convertVisionCameraCoords],
   );
 
   const startResetTimer = useCallback((delay) => {
@@ -613,12 +674,8 @@ function ScannerScreen() {
   }, []);
 
   const capturePhoto = useCallback(async (bounds = null) => {
-    isCapturingPhotoRef.current = true; // 동기적으로 즉시 설정
+    isCapturingPhotoRef.current = true;
     setIsCapturingPhoto(true);
-
-    // React state 업데이트가 렌더링에 반영될 시간 제공
-    // 카메라가 마운트 상태를 유지하도록 충분한 시간 대기
-    await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
       // 카메라 ref 체크
@@ -627,130 +684,57 @@ function ScannerScreen() {
         return null;
       }
 
-      // 사진 디렉토리 생성
+      // 사진 디렉토리 생성 (첫 실행 시에만 시간 소요)
       const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
       const dirInfo = await FileSystem.getInfoAsync(photoDir);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
       }
 
-      // 사진 촬영 전 한번 더 체크
-      if (!cameraRef.current) {
-        console.log('Camera unmounted before capture');
-        return null;
-      }
-
-      // 사진 촬영 (무음, 이미지 처리 활성화 - 손떨림 보정 등)
+      // Vision Camera 사진 촬영 (무음)
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 1.0,
-        skipProcessing: false,
+        quality: 0.8, // 품질 약간 낮춰서 속도 향상
         shutterSound: false,
       });
 
-      // 사진 촬영 후에도 체크
       if (!photo || !photo.uri) {
         console.log('Photo capture failed');
         return null;
       }
 
-      let finalUri = photo.uri;
-
-      // QR 코드 bounds가 있으면 해당 영역만 crop
-      if (bounds && photo.width && photo.height) {
-        try {
-          const normalized = normalizeBounds(bounds);
-          if (normalized) {
-            // 화면 좌표를 카메라 사진 좌표로 변환
-            const scaleX = photo.width / winWidth;
-            const scaleY = photo.height / winHeight;
-
-            console.log(`Photo size: ${photo.width}x${photo.height}, Screen size: ${winWidth}x${winHeight}`);
-            console.log(`Scale factors: X=${scaleX.toFixed(2)}, Y=${scaleY.toFixed(2)}`);
-
-            // 여유 공간 (QR 코드 주변 20% 여백) - 화면 좌표 기준
-            const padding = Math.max(normalized.width, normalized.height) * 0.2;
-
-            // 화면 좌표를 이미지 좌표로 변환 (원본 해상도 그대로 크롭)
-            const cropX = Math.max(0, (normalized.x - padding) * scaleX);
-            const cropY = Math.max(0, (normalized.y - padding) * scaleY);
-            const cropWidth = Math.min(
-              photo.width - cropX,
-              (normalized.width + padding * 2) * scaleX
-            );
-            const cropHeight = Math.min(
-              photo.height - cropY,
-              (normalized.height + padding * 2) * scaleY
-            );
-
-            console.log(`Screen bounds: x=${normalized.x.toFixed(0)}, y=${normalized.y.toFixed(0)}, w=${normalized.width.toFixed(0)}, h=${normalized.height.toFixed(0)}`);
-            console.log(`Padding (screen): ${padding.toFixed(0)}px`);
-
-            console.log(`Crop area: x=${cropX.toFixed(0)}, y=${cropY.toFixed(0)}, w=${cropWidth.toFixed(0)}, h=${cropHeight.toFixed(0)}`);
-
-            // 이미지 crop
-            const croppedImage = await ImageManipulator.manipulateAsync(
-              photo.uri,
-              [
-                {
-                  crop: {
-                    originX: Math.round(cropX),
-                    originY: Math.round(cropY),
-                    width: Math.round(cropWidth),
-                    height: Math.round(cropHeight),
-                  },
-                },
-              ],
-              { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
-            );
-
-            finalUri = croppedImage.uri;
-            console.log('QR code area cropped successfully');
-          }
-        } catch (cropError) {
-          console.error('Crop error, using full image:', cropError);
-          // crop 실패 시 원본 이미지 사용
-        }
-      }
-
-      // 파일명 생성 (타임스탬프 사용)
+      // 파일명 생성 및 저장 (크롭 없이 원본 직접 저장)
       const timestamp = Date.now();
       const fileName = `scan_${timestamp}.jpg`;
       const newPath = photoDir + fileName;
 
-      // 크롭된 사진 저장
-      await FileSystem.moveAsync({
-        from: finalUri,
+      // 원본 사진 바로 저장 (크롭 스킵하여 속도 향상)
+      await FileSystem.copyAsync({
+        from: photo.uri,
         to: newPath,
       });
 
-      // 원본 이미지도 저장 (EC 레벨 분석용)
-      let originalPath = null;
-      if (finalUri !== photo.uri) {
-        const originalFileName = `scan_${timestamp}_original.jpg`;
-        originalPath = photoDir + originalFileName;
-        await FileSystem.copyAsync({
-          from: photo.uri,
-          to: originalPath,
-        });
-        console.log('Original photo saved:', originalPath);
-      }
-
       console.log('Photo saved:', newPath);
-      return { croppedUri: newPath, originalUri: originalPath || newPath };
+      return { croppedUri: newPath, originalUri: newPath };
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
     } finally {
-      isCapturingPhotoRef.current = false; // 동기적으로 즉시 해제
+      isCapturingPhotoRef.current = false;
       setIsCapturingPhoto(false);
     }
-  }, [normalizeBounds, winWidth, winHeight]);
+  }, []);
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
-      const { data, bounds, type, cornerPoints, raw } = scanResult;
-      // 사진 촬영 중이면 스캔 무시
-      if (!isActive || !canScan || isCapturingPhotoRef.current) return;
+      const { data, bounds, type, cornerPoints, raw, frameDimensions } = scanResult;
+      // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
+      if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
+
+      // 카메라 프레임 크기 저장 (좌표 변환용)
+      if (frameDimensions) {
+        frameDimensionsRef.current = frameDimensions;
+        console.log('[handleBarCodeScanned] Frame dimensions updated:', frameDimensions);
+      }
 
       // 전체 스캔 결과 로깅 (디버깅용)
       console.log('Full scan result:', JSON.stringify(scanResult, null, 2));
@@ -788,61 +772,15 @@ function ScannerScreen() {
       // 1D 바코드 여부 확인
       const is1DBarcode = ONE_D_BARCODE_TYPES.includes(normalizedType);
 
-      // Android에서는 bounds 검증을 건너뛰고 바로 스캔 허용 (bounds 형식 호환성 문제)
+      // Vision Camera는 카메라 센서 좌표를 반환하므로 타겟 영역 검사 스킵
+      // (카메라 센서 해상도 ≠ 화면 해상도)
+      // Android에서도 bounds 형식 호환성 문제로 스킵
       if (Platform.OS === 'android') {
         console.log('[Android] Skipping bounds validation, allowing scan');
-      } else if (bounds) {
-        // iOS: bounds 기반 타겟 영역 검사
-        const normalized = normalizeBounds(bounds);
-        if (normalized) {
-          // 바코드의 중심점 계산
-          const barcodeCenterX = normalized.x + normalized.width / 2;
-          const barcodeCenterY = normalized.y + normalized.height / 2;
-
-          // 화면 중앙점
-          const screenCenterX = winWidth / 2;
-          const screenCenterY = winHeight / 2;
-
-          // 1D 바코드는 수평 방향으로 더 넓은 타겟 영역 적용
-          // Code 39 등 1D 바코드: 가로 150px, 세로 80px 타원형 영역
-          // QR 등 2D 바코드: 기존 50px 원형 영역
-          let isInTargetArea = false;
-          if (is1DBarcode) {
-            // 1D 바코드용 타원형 타겟 영역 (가로로 긴 바코드 특성 반영)
-            const targetRadiusX = 150; // 수평 방향 확대
-            const targetRadiusY = 80;  // 수직 방향도 적당히 확대
-            const normalizedDistX = Math.abs(barcodeCenterX - screenCenterX) / targetRadiusX;
-            const normalizedDistY = Math.abs(barcodeCenterY - screenCenterY) / targetRadiusY;
-            isInTargetArea = (normalizedDistX * normalizedDistX + normalizedDistY * normalizedDistY) <= 1;
-          } else {
-            // 2D 바코드용 원형 타겟 영역
-            const targetRadius = 50;
-            const distanceFromCenter = Math.sqrt(
-              Math.pow(barcodeCenterX - screenCenterX, 2) + Math.pow(barcodeCenterY - screenCenterY, 2)
-            );
-            isInTargetArea = distanceFromCenter <= targetRadius;
-          }
-
-          if (!isInTargetArea) {
-            return; // 타겟 영역 밖이면 스캔하지 않음
-          }
-        } else {
-          // bounds는 있지만 정규화 실패
-          // 1D 바코드는 bounds 정보가 불완전할 수 있으므로 허용 (디바운스만 적용)
-          if (is1DBarcode) {
-            console.log(`Cannot normalize bounds for ${normalizedType}, but allowing 1D barcode scan`);
-          } else {
-            console.log(`Cannot normalize bounds for ${normalizedType}, skipping scan`);
-            return;
-          }
-        }
       } else {
-        // bounds가 없는 경우 - 1D 바코드는 허용, 2D 바코드는 더 긴 디바운스 적용
-        if (is1DBarcode) {
-          console.log(`No bounds for 1D barcode ${normalizedType}, allowing scan with debounce`);
-        } else {
-          console.log(`No bounds for ${normalizedType}, relying on extended debounce`);
-        }
+        // iOS Vision Camera: 타겟 영역 검사 스킵 (좌표계 불일치)
+        // 대신 디바운스로 중복 스캔 방지
+        console.log('[iOS Vision Camera] Skipping target area check, using debounce only');
       }
 
       const now = Date.now();
@@ -870,7 +808,7 @@ function ScannerScreen() {
       }
 
       if (lastScannedData.current === data && smoothBounds.current) {
-        const newB = normalizeBounds(bounds);
+        const newB = normalizeBounds(bounds, frameDimensions);
         if (newB) {
           const dx = Math.abs(newB.x - smoothBounds.current.x);
           const dy = Math.abs(newB.y - smoothBounds.current.y);
@@ -884,7 +822,8 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
-      // 스캔 즉시 차단 (중복 스캔 방지)
+      // 스캔 즉시 차단 (중복 스캔 방지) - ref로 동기적 차단
+      isProcessingRef.current = true;
       setCanScan(false);
 
       // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
@@ -892,7 +831,10 @@ function ScannerScreen() {
         const isDuplicate = batchScannedItems.some(item => item.code === data);
         if (isDuplicate) {
           // 중복이면 아무 피드백 없이 스캔만 재활성화
-          setTimeout(() => setCanScan(true), 500);
+          setTimeout(() => {
+            isProcessingRef.current = false;
+            setCanScan(true);
+          }, 500);
           startResetTimer(RESET_DELAY_NORMAL);
           return;
         }
@@ -936,7 +878,7 @@ function ScannerScreen() {
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
-      let normalized = normalizeBounds(effectiveBounds);
+      let normalized = normalizeBounds(effectiveBounds, frameDimensions);
 
       // bounds와 cornerPoints 모두 없는 경우, 코너 라인 없이 스캔 (십자가만 표시)
       if (!normalized && !bounds && !cornerPoints) {
@@ -960,62 +902,36 @@ function ScannerScreen() {
         setQrBounds({ ...smoothBounds.current });
       }
 
-      // 실제 카메라 사진 촬영 (무음, 바코드 영역 크롭)
-      const photoPromise = photoSaveEnabledRef.current ? capturePhoto(effectiveBounds) : Promise.resolve(null);
+      // 사진 저장이 활성화되어 있으면 백그라운드에서 촬영 시작 (네비게이션 차단 안함)
+      let photoPromise = null;
+      if (photoSaveEnabledRef.current) {
+        // 사진 촬영을 백그라운드에서 시작하고 결과는 나중에 처리
+        photoPromise = capturePhoto(effectiveBounds).catch(err => {
+          console.log('Background photo capture error:', err);
+          return null;
+        });
+      }
 
       if (navigationTimerRef.current) {
         clearTimeout(navigationTimerRef.current);
       }
 
+      // 네비게이션 타이머 (사진 촬영 완료를 기다리지 않음)
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // 사진 촬영이 완료될 때까지 대기 (이미 시작됨)
-          const photoResult = await photoPromise;
-          const photoUri = photoResult?.croppedUri || photoResult;
-          const originalUri = photoResult?.originalUri || photoResult;
-
-          // QR 코드인 경우, 원본 사진에서 EC 레벨 분석 (2단계 시도)
+          // EC 레벨 분석은 스킵하고 네비게이션 우선
           let detectedEcLevel = errorCorrectionLevel;
           let ecLevelAnalysisFailed = false;
           const isQRCodeType = normalizedType === 'qr' || normalizedType === 'qrcode';
 
-          if (originalUri && isQRCodeType) {
-            try {
-              // 1단계: 원본 이미지로 직접 분석
-              console.log('Analyzing EC level from original image:', originalUri);
-              let analysisResult = await analyzeImage(originalUri);
-              console.log('Analysis result (original):', analysisResult);
-
-              // 2단계: 실패시 이미지 개선 후 재시도
-              if (!analysisResult.success || !analysisResult.ecLevel) {
-                console.log('Original analysis failed, trying with improved image...');
-                try {
-                  // 이미지 개선: 적절한 크기로 리사이즈 + PNG 무손실 포맷
-                  const improvedImage = await ImageManipulator.manipulateAsync(
-                    originalUri,
-                    [{ resize: { width: 800 } }],
-                    { compress: 1, format: ImageManipulator.SaveFormat.PNG }
-                  );
-                  console.log('Improved image created:', improvedImage.uri);
-
-                  analysisResult = await analyzeImage(improvedImage.uri);
-                  console.log('Analysis result (improved):', analysisResult);
-                } catch (improveError) {
-                  console.log('Image improvement error:', improveError);
-                }
-              }
-
-              if (analysisResult.success && analysisResult.ecLevel) {
-                detectedEcLevel = analysisResult.ecLevel;
-                console.log(`EC Level detected from image: ${detectedEcLevel}`);
-              } else {
-                console.log('EC Level analysis failed after all attempts');
-                ecLevelAnalysisFailed = true;
-              }
-            } catch (analysisError) {
-              console.log('EC Level analysis error:', analysisError);
-              ecLevelAnalysisFailed = true;
-            }
+          // 사진 촬영 완료를 짧게만 기다림 (최대 200ms)
+          let photoUri = null;
+          let originalUri = null;
+          if (photoPromise) {
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 200));
+            const photoResult = await Promise.race([photoPromise, timeoutPromise]);
+            photoUri = photoResult?.croppedUri || photoResult;
+            originalUri = photoResult?.originalUri || photoResult;
           }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
@@ -1047,7 +963,10 @@ function ScannerScreen() {
             }
 
             // 스캔 재활성화 (계속 스캔 가능)
-            setTimeout(() => setCanScan(true), 500);
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 500);
             startResetTimer(RESET_DELAY_NORMAL);
             return;
           }
@@ -1055,18 +974,26 @@ function ScannerScreen() {
           // 일반 모드 (기존 로직)
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
+          // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
+          isNavigatingRef.current = true;
+          setIsActive(false);
+
           if (enabled === 'true') {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              await saveHistory(data, url, photoUri, normalizedType, detectedEcLevel);
+              // 히스토리 저장은 백그라운드에서
+              saveHistory(data, url, photoUri, normalizedType, detectedEcLevel).catch(console.error);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
             }
           }
 
+          // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
+
+          // 즉시 네비게이션
           router.push({
             pathname: '/result',
             params: {
@@ -1106,6 +1033,11 @@ function ScannerScreen() {
 
       // 배치 항목 초기화
       setBatchScannedItems([]);
+
+      // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
+      isNavigatingRef.current = true;
+      setIsActive(false);
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // 히스토리 화면으로 이동
       router.push('/(tabs)/history');
@@ -1196,18 +1128,17 @@ function ScannerScreen() {
       {/* QR 코드 EC 레벨 분석용 숨겨진 WebView */}
       <QRAnalyzerView />
 
-      {(isActive || isCapturingPhoto || isCapturingPhotoRef.current) && (
-        <CameraView
-          ref={cameraRef}
-          style={StyleSheet.absoluteFillObject}
-          facing={cameraFacing}
-          onBarcodeScanned={handleBarCodeScanned}
-          enableTorch={torchOn}
-          barcodeScannerSettings={Platform.OS === 'ios' ? {
-            barcodeTypes: barcodeTypes,
-          } : undefined}
-        />
-      )}
+      {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
+      {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
+      <NativeQRScanner
+        ref={cameraRef}
+        isActive={isActive}
+        facing={cameraFacing}
+        torch={torchOn ? 'on' : 'off'}
+        barcodeTypes={barcodeTypes}
+        onCodeScanned={handleBarCodeScanned}
+        style={StyleSheet.absoluteFillObject}
+      />
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) */}

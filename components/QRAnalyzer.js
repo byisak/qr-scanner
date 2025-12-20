@@ -6,7 +6,7 @@ import { View, StyleSheet } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system/legacy';
 
-// ZXing-js를 사용한 QR 분석 HTML
+// ZXing-js를 사용한 QR 분석 HTML (최적화 버전)
 const qrAnalyzerHtml = `
 <!DOCTYPE html>
 <html>
@@ -21,6 +21,7 @@ const qrAnalyzerHtml = `
 <body>
   <div id="status">Loading...</div>
   <canvas id="canvas" style="display:none;"></canvas>
+  <canvas id="processedCanvas" style="display:none;"></canvas>
 
   <script>
     let zxingLoaded = false;
@@ -44,6 +45,54 @@ const qrAnalyzerHtml = `
       sendResult({ type: 'ready', zxingLoaded: zxingLoaded });
     }
 
+    // 이미지 전처리 함수 (대비 증가, 샤프닝)
+    function preprocessImage(canvas) {
+      const ctx = canvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      // 1. 그레이스케일 변환 + 대비 증가
+      for (let i = 0; i < data.length; i += 4) {
+        // 그레이스케일
+        const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+        // 대비 증가 (1.3배)
+        const contrast = 1.3;
+        const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
+        const enhanced = factor * (gray - 128) + 128;
+
+        const finalValue = Math.max(0, Math.min(255, enhanced));
+        data[i] = finalValue;
+        data[i + 1] = finalValue;
+        data[i + 2] = finalValue;
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      return canvas;
+    }
+
+    // 다양한 설정으로 디코딩 시도
+    async function tryDecodeWithSettings(canvas, settings) {
+      try {
+        const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+        const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+
+        const hints = new Map();
+        hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.QR_CODE]);
+        hints.set(ZXing.DecodeHintType.CHARACTER_SET, 'UTF-8');
+
+        if (settings.alsoInverted) {
+          hints.set(ZXing.DecodeHintType.ALSO_INVERTED, true);
+        }
+
+        const reader = new ZXing.QRCodeReader();
+        return reader.decode(binaryBitmap, hints);
+      } catch (e) {
+        return null;
+      }
+    }
+
     async function analyzeQR(base64Image) {
       log('analyzeQR called, image length: ' + (base64Image ? base64Image.length : 0));
 
@@ -54,7 +103,6 @@ const qrAnalyzerHtml = `
       }
 
       try {
-        // 이미지를 canvas에 그리기
         log('Loading image to canvas...');
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -68,21 +116,36 @@ const qrAnalyzerHtml = `
             canvas.height = img.height;
             ctx.drawImage(img, 0, 0);
 
-            log('Creating BrowserQRCodeReader...');
-            const codeReader = new ZXing.BrowserQRCodeReader();
+            let result = null;
+            let attempt = 0;
 
-            log('Decoding from canvas...');
-            const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-            const binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+            // 1차 시도: 원본 이미지
+            log('Attempt 1: Original image...');
+            result = await tryDecodeWithSettings(canvas, { alsoInverted: false });
+            attempt = 1;
 
-            const hints = new Map();
-            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+            // 2차 시도: 반전 포함
+            if (!result) {
+              log('Attempt 2: With inversion...');
+              result = await tryDecodeWithSettings(canvas, { alsoInverted: true });
+              attempt = 2;
+            }
 
-            const reader = new ZXing.QRCodeReader();
-            const result = reader.decode(binaryBitmap, hints);
+            // 3차 시도: 이미지 전처리 후
+            if (!result) {
+              log('Attempt 3: With preprocessing...');
+              const processedCanvas = document.getElementById('processedCanvas');
+              const pCtx = processedCanvas.getContext('2d');
+              processedCanvas.width = img.width;
+              processedCanvas.height = img.height;
+              pCtx.drawImage(img, 0, 0);
+              preprocessImage(processedCanvas);
+              result = await tryDecodeWithSettings(processedCanvas, { alsoInverted: true });
+              attempt = 3;
+            }
 
             if (result) {
-              log('QR decoded: ' + result.getText());
+              log('QR decoded at attempt ' + attempt + ': ' + result.getText());
               const metadata = result.getResultMetadata();
               let ecLevel = null;
 
@@ -112,10 +175,11 @@ const qrAnalyzerHtml = `
                 success: true,
                 data: result.getText(),
                 ecLevel: ecLevel,
-                format: 'QR_CODE'
+                format: 'QR_CODE',
+                attempt: attempt
               });
             } else {
-              log('No result from decoder');
+              log('No result from decoder after all attempts');
               sendResult({ type: 'result', success: false, error: 'No QR code found' });
             }
           } catch (decodeErr) {
@@ -154,12 +218,7 @@ const qrAnalyzerHtml = `
   </script>
 
   <script
-    src="https://unpkg.com/@aspect-software/barcode-scanner@0.0.5/dist/Decoders.min.js"
-    onerror="log('Failed to load barcode-scanner')"
-    onload="log('barcode-scanner loaded')"
-  ></script>
-  <script
-    src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"
+    src="https://unpkg.com/@zxing/library@0.21.2/umd/index.min.js"
     onerror="log('Failed to load ZXing'); notifyReady();"
     onload="log('ZXing script loaded'); checkZXing();"
   ></script>
