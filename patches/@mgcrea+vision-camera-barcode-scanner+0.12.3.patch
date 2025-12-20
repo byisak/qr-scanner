@@ -31,7 +31,7 @@ index ee706f6..eb97775 100644
    }
  }
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-index 28f1634..6e09726 100644
+index 28f1634..034abd3 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 @@ -1,6 +1,7 @@
@@ -42,16 +42,20 @@ index 28f1634..6e09726 100644
  
  static RCTEventEmitter* eventEmitter = nil;
  
-@@ -174,6 +175,37 @@ static RCTEventEmitter* eventEmitter = nil;
+@@ -174,6 +175,44 @@ static RCTEventEmitter* eventEmitter = nil;
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
  
 +  // Extract error correction level for QR codes
 +  if (@available(iOS 11.0, *)) {
++    RCTLogInfo(@"[EC Level] Checking symbology: %@", observation.symbology);
 +    if ([observation.symbology isEqualToString:VNBarcodeSymbologyQR]) {
++      RCTLogInfo(@"[EC Level] Is QR code, getting barcodeDescriptor...");
 +      CIBarcodeDescriptor* descriptor = observation.barcodeDescriptor;
++      RCTLogInfo(@"[EC Level] barcodeDescriptor: %@", descriptor);
 +      if (descriptor && [descriptor isKindOfClass:[CIQRCodeDescriptor class]]) {
 +        CIQRCodeDescriptor* qrDescriptor = (CIQRCodeDescriptor*)descriptor;
++        RCTLogInfo(@"[EC Level] errorCorrectionLevel raw: %ld", (long)qrDescriptor.errorCorrectionLevel);
 +        NSString* ecLevel = nil;
 +        switch (qrDescriptor.errorCorrectionLevel) {
 +          case CIQRCodeErrorCorrectionLevelL:
@@ -70,9 +74,12 @@ index 28f1634..6e09726 100644
 +            ecLevel = nil;
 +            break;
 +        }
++        RCTLogInfo(@"[EC Level] Final ecLevel: %@", ecLevel);
 +        if (ecLevel) {
 +          observationRepresentation[@"errorCorrectionLevel"] = ecLevel;
 +        }
++      } else {
++        RCTLogInfo(@"[EC Level] descriptor is nil or not CIQRCodeDescriptor");
 +      }
 +    }
 +  }
