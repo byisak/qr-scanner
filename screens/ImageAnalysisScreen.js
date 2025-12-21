@@ -449,8 +449,11 @@ function ImageAnalysisScreen() {
     return colorList[index % colorList.length];
   };
 
+  // 테스트: 고정 높이 사용
+  console.log('Screen dimensions:', screenWidth, screenHeight);
+
   return (
-    <View style={{ flex: 1, minHeight: screenHeight, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, height: 900, backgroundColor: colors.background }}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
         {/* 헤더 */}
       <View style={styles.header}>
