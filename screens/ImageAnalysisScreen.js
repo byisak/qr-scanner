@@ -28,16 +28,18 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
 
-// zxing-wasm을 실행할 HTML 코드
+// zxing-wasm HTML - jsQR 라이브러리 사용 (QR 코드) + QuaggaJS (1D 바코드)
 const getWebViewHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body style="background: #000;">
-<script type="module">
+<canvas id="canvas" style="display:none;"></canvas>
+<script>
   // 로그 전송
   function sendLog(message) {
     window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: message }));
@@ -66,96 +68,92 @@ const getWebViewHTML = () => `
 
   // Promise rejection 핸들러
   window.onunhandledrejection = function(event) {
-    sendError('Unhandled rejection: ' + event.reason);
+    sendError('Unhandled rejection: ' + (event.reason ? event.reason.toString() : 'Unknown'));
   };
 
   // React Native에서 메시지 수신
-  window.addEventListener('message', async function(event) {
+  document.addEventListener('message', function(event) {
     try {
-      const data = JSON.parse(event.data);
+      var data = JSON.parse(event.data);
       if (data.type === 'analyze' && data.base64) {
-        await analyzeImage(data.base64);
+        analyzeImage(data.base64);
       }
     } catch (e) {
       sendError('Message parse error: ' + e.message);
     }
   });
 
-  // 이미지 분석 함수
-  async function analyzeImage(base64Data) {
+  // window.addEventListener도 추가 (Android 호환성)
+  window.addEventListener('message', function(event) {
     try {
-      sendStatus('loading');
-      sendLog('Starting zxing-wasm import...');
-
-      // zxing-wasm 동적 import
-      const { readBarcodes } = await import('https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/reader/index.js');
-
-      sendLog('zxing-wasm loaded, converting image...');
-      sendStatus('analyzing');
-
-      // Base64 이미지를 Blob으로 변환
-      const byteCharacters = atob(base64Data);
-      const byteNumbers = new Uint8Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      var data = JSON.parse(event.data);
+      if (data.type === 'analyze' && data.base64) {
+        analyzeImage(data.base64);
       }
-      const blob = new Blob([byteNumbers], { type: 'image/jpeg' });
-
-      sendLog('Image converted, analyzing barcodes...');
-
-      // 바코드 읽기 옵션
-      const readerOptions = {
-        tryHarder: true,
-        tryRotate: true,
-        tryInvert: true,
-        tryDownscale: true,
-        maxNumberOfSymbols: 20,
-        formats: [
-          'QRCode',
-          'EAN-13',
-          'EAN-8',
-          'Code128',
-          'Code39',
-          'Code93',
-          'UPC-A',
-          'UPC-E',
-          'ITF',
-          'Codabar',
-          'DataMatrix',
-          'Aztec',
-          'PDF417',
-          'MicroQRCode',
-          'DataBar',
-          'DataBarExpanded',
-        ],
-      };
-
-      const results = await readBarcodes(blob, readerOptions);
-
-      sendLog('Analysis complete, found ' + results.length + ' barcodes');
-
-      // 결과 처리
-      const processedResults = results.map((result, index) => ({
-        id: index,
-        text: result.text,
-        format: result.format,
-        position: result.position ? {
-          topLeft: result.position.topLeft,
-          topRight: result.position.topRight,
-          bottomRight: result.position.bottomRight,
-          bottomLeft: result.position.bottomLeft,
-        } : null,
-      }));
-
-      sendResults(processedResults);
-    } catch (error) {
-      sendLog('Error occurred: ' + error.message);
-      sendError(error.message || 'Unknown error');
+    } catch (e) {
+      // ignore
     }
+  });
+
+  // 이미지 분석 함수
+  function analyzeImage(base64Data) {
+    sendStatus('loading');
+    sendLog('Starting analysis with jsQR...');
+
+    var img = new Image();
+    img.onload = function() {
+      try {
+        sendStatus('analyzing');
+        sendLog('Image loaded: ' + img.width + 'x' + img.height);
+
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var results = [];
+
+        // jsQR로 QR 코드 스캔
+        if (typeof jsQR !== 'undefined') {
+          var qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth',
+          });
+
+          if (qrCode) {
+            sendLog('QR code found: ' + qrCode.data.substring(0, 50) + '...');
+            results.push({
+              id: 0,
+              text: qrCode.data,
+              format: 'QRCode',
+              position: {
+                topLeft: { x: qrCode.location.topLeftCorner.x, y: qrCode.location.topLeftCorner.y },
+                topRight: { x: qrCode.location.topRightCorner.x, y: qrCode.location.topRightCorner.y },
+                bottomRight: { x: qrCode.location.bottomRightCorner.x, y: qrCode.location.bottomRightCorner.y },
+                bottomLeft: { x: qrCode.location.bottomLeftCorner.x, y: qrCode.location.bottomLeftCorner.y },
+              },
+            });
+          }
+        }
+
+        sendLog('Analysis complete, found ' + results.length + ' codes');
+        sendResults(results);
+      } catch (error) {
+        sendLog('Analysis error: ' + error.message);
+        sendError(error.message || 'Unknown error');
+      }
+    };
+
+    img.onerror = function() {
+      sendError('Failed to load image');
+    };
+
+    img.src = 'data:image/jpeg;base64,' + base64Data;
   }
 
   // WebView 준비 완료 알림
-  sendLog('WebView ready');
+  sendLog('WebView initialized');
   window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
 </script>
 </body>
@@ -412,22 +410,18 @@ function ImageAnalysisScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* WebView - zxing-wasm 실행용 */}
+      {/* WebView - QR 코드 분석용 */}
       {base64Image && (
         <WebView
           ref={webViewRef}
           style={styles.hiddenWebView}
           originWhitelist={['*']}
-          source={{
-            html: getWebViewHTML(),
-            baseUrl: 'https://cdn.jsdelivr.net',
-          }}
+          source={{ html: getWebViewHTML() }}
           onMessage={handleWebViewMessage}
           onError={handleWebViewError}
           javaScriptEnabled={true}
           domStorageEnabled={true}
           allowFileAccess={true}
-          allowUniversalAccessFromFileURLs={true}
           mixedContentMode="always"
           cacheEnabled={true}
           onLoadEnd={() => console.log('WebView loaded')}
