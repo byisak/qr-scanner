@@ -269,7 +269,7 @@ function ImageAnalysisScreen() {
           (width, height) => {
             setImageSize({ width, height });
             const maxWidth = screenWidth - 32;
-            const maxHeight = screenHeight * 0.5;
+            const maxHeight = screenHeight * 0.35;
             const ratio = Math.min(maxWidth / width, maxHeight / height);
             setDisplaySize({
               width: width * ratio,
@@ -452,7 +452,7 @@ function ImageAnalysisScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -653,11 +653,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 12,
   },
   imageSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   imageContainer: {
     position: 'relative',
