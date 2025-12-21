@@ -810,7 +810,9 @@ function ScannerScreen() {
 
       // 사진 저장이 활성화되어 있으면 촬영
       let photoPromise = null;
+      console.log('[ScannerScreen] Photo save enabled:', photoSaveEnabledRef.current);
       if (photoSaveEnabledRef.current) {
+        console.log('[ScannerScreen] Starting photo capture...');
         photoPromise = capturePhoto().catch(err => {
           console.log('Background photo capture error:', err);
           return null;
@@ -830,9 +832,10 @@ function ScannerScreen() {
           // 사진 촬영 완료를 기다림
           let photoUri = null;
           if (photoPromise) {
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 500));
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 1000));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             photoUri = photoResult?.croppedUri || photoResult;
+            console.log('[ScannerScreen] Photo capture result:', photoUri ? 'success' : 'timeout/failed');
           }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
