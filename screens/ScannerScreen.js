@@ -684,7 +684,7 @@ function ScannerScreen() {
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
-      const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel, symbolVersion, maskPattern, rawBytes, rawBytesLength } = scanResult;
+      const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
       // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
       if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
 
@@ -888,11 +888,6 @@ function ScannerScreen() {
               photoUri: photoUri || '',
               type: normalizedType,
               errorCorrectionLevel: detectedEcLevel || '',
-              // QR 코드 상세 정보
-              symbolVersion: symbolVersion?.toString() || '',
-              maskPattern: maskPattern?.toString() || '',
-              rawBytes: rawBytes || '',
-              rawBytesLength: rawBytesLength?.toString() || '',
             }
           });
           startResetTimer(RESET_DELAY_NORMAL);

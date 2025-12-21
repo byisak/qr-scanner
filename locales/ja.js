@@ -168,11 +168,6 @@ export default {
     hideEcLevelInfo: '説明を非表示',
     ecLevelTypes: '誤り訂正レベルの種類',
     recoverable: '復元可能',
-    // QRコード詳細情報
-    qrCodeDetails: 'QRコード詳細情報',
-    qrVersion: 'バージョン',
-    maskPattern: 'マスクパターン',
-    segmentData: 'セグメントデータ',
   },
 
   // 設定画面

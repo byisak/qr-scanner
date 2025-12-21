@@ -10,18 +10,16 @@ index 28f1634..034abd3 100644
 
  static RCTEventEmitter* eventEmitter = nil;
 
-@@ -174,6 +175,56 @@ static RCTEventEmitter* eventEmitter = nil;
+@@ -174,6 +175,32 @@ static RCTEventEmitter* eventEmitter = nil;
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
 
-+  // Extract QR code detailed information
++  // Extract error correction level for QR codes
 +  if (@available(iOS 11.0, *)) {
 +    if ([observation.symbology isEqualToString:VNBarcodeSymbologyQR]) {
 +      CIBarcodeDescriptor* descriptor = observation.barcodeDescriptor;
 +      if (descriptor && [descriptor isKindOfClass:[CIQRCodeDescriptor class]]) {
 +        CIQRCodeDescriptor* qrDescriptor = (CIQRCodeDescriptor*)descriptor;
-+
-+        // Error correction level (L, M, Q, H)
 +        NSString* ecLevel = nil;
 +        switch (qrDescriptor.errorCorrectionLevel) {
 +          case CIQRCodeErrorCorrectionLevelL:
@@ -36,35 +34,9 @@ index 28f1634..034abd3 100644
 +          case CIQRCodeErrorCorrectionLevelH:
 +            ecLevel = @"H";
 +            break;
-+          default:
-+            ecLevel = nil;
-+            break;
 +        }
 +        if (ecLevel) {
 +          observationRepresentation[@"errorCorrectionLevel"] = ecLevel;
-+        }
-+
-+        // Symbol version (1-40)
-+        NSInteger version = qrDescriptor.symbolVersion;
-+        observationRepresentation[@"symbolVersion"] = @(version);
-+
-+        // Mask pattern (0-7)
-+        NSInteger maskPattern = qrDescriptor.maskPattern;
-+        observationRepresentation[@"maskPattern"] = @(maskPattern);
-+
-+        // Error corrected payload (raw bytes as hex string)
-+        NSData* payload = qrDescriptor.errorCorrectedPayload;
-+        if (payload && payload.length > 0) {
-+          NSMutableString* hexString = [NSMutableString stringWithCapacity:payload.length * 3];
-+          const unsigned char* bytes = (const unsigned char*)payload.bytes;
-+          for (NSUInteger i = 0; i < payload.length; i++) {
-+            if (i > 0) {
-+              [hexString appendString:@" "];
-+            }
-+            [hexString appendFormat:@"%02X", bytes[i]];
-+          }
-+          observationRepresentation[@"rawBytes"] = hexString;
-+          observationRepresentation[@"rawBytesLength"] = @(payload.length);
 +        }
 +      }
 +    }

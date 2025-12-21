@@ -156,12 +156,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       cornerPoints,
       raw: barcodeData.value,
       frameDimensions: barcodeData.frameDimensions,
-      // QR 코드 상세 정보
+      // EC level: native에서 직접 가져옴
       errorCorrectionLevel: barcodeData.errorCorrectionLevel,
-      symbolVersion: barcodeData.symbolVersion,
-      maskPattern: barcodeData.maskPattern,
-      rawBytes: barcodeData.rawBytes,
-      rawBytesLength: barcodeData.rawBytesLength,
     });
   }, []);
 
@@ -182,12 +178,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       const barcode = barcodes[0];
 
-      // QR 코드 상세 정보 추출 (라이브러리 패치 또는 native 객체에서)
+      // EC level: 라이브러리 패치로 barcode.errorCorrectionLevel에 있거나,
+      // native 객체에서 직접 가져옴
       const ecLevel = barcode.errorCorrectionLevel || barcode.native?.errorCorrectionLevel;
-      const symbolVersion = barcode.symbolVersion ?? barcode.native?.symbolVersion;
-      const maskPattern = barcode.maskPattern ?? barcode.native?.maskPattern;
-      const rawBytes = barcode.rawBytes || barcode.native?.rawBytes;
-      const rawBytesLength = barcode.rawBytesLength ?? barcode.native?.rawBytesLength;
 
       runOnJSCallback({
         value: barcode.value,
@@ -195,12 +188,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         frame: barcode.frame,
         cornerPoints: barcode.cornerPoints,
         frameDimensions: frameDimensions,
-        // QR 코드 상세 정보
         errorCorrectionLevel: ecLevel,
-        symbolVersion: symbolVersion,
-        maskPattern: maskPattern,
-        rawBytes: rawBytes,
-        rawBytesLength: rawBytesLength,
       });
     },
   });

@@ -168,11 +168,6 @@ export default {
     hideEcLevelInfo: '隐藏说明',
     ecLevelTypes: '纠错等级类型',
     recoverable: '可恢复',
-    // 二维码详细信息
-    qrCodeDetails: '二维码详细信息',
-    qrVersion: '版本',
-    maskPattern: '掩码图案',
-    segmentData: '分段数据',
   },
 
   // 设置界面

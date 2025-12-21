@@ -168,11 +168,6 @@ export default {
     hideEcLevelInfo: 'Hide Info',
     ecLevelTypes: 'Error Correction Level Types',
     recoverable: 'recoverable',
-    // QR Code Details
-    qrCodeDetails: 'QR Code Details',
-    qrVersion: 'Version',
-    maskPattern: 'Mask Pattern',
-    segmentData: 'Segment Data',
   },
 
   // Settings screen
