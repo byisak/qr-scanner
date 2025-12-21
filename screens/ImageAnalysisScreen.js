@@ -7,11 +7,10 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
-  Dimensions,
+  useWindowDimensions,
   ActivityIndicator,
   Platform,
   Alert,
-  SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,8 +23,7 @@ import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
@@ -191,6 +189,7 @@ function ImageAnalysisScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -451,7 +450,7 @@ function ImageAnalysisScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -621,10 +620,11 @@ const styles = StyleSheet.create({
   },
   hiddenWebView: {
     position: 'absolute',
-    width: 0,
-    height: 0,
+    left: -9999,
+    top: -9999,
+    width: 1,
+    height: 1,
     opacity: 0,
-    zIndex: -1,
   },
   header: {
     flexDirection: 'row',
