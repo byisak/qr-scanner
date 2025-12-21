@@ -172,6 +172,7 @@ export default function HistoryScreen() {
         groupId: selectedGroupId, // 그룹 ID 전달
         fromHistory: 'true', // 히스토리에서 왔음을 표시
         type: item.type || 'qr', // 바코드 타입 전달
+        errorCorrectionLevel: item.errorCorrectionLevel || '', // EC 레벨 전달
       }
     });
   };
