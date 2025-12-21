@@ -75,6 +75,13 @@ export default function RootLayout() {
                 headerShown: false
               }}
             />
+            <Stack.Screen
+              name="image-analysis"
+              options={{
+                presentation: 'modal',
+                headerShown: false
+              }}
+            />
           </Stack>
         </AuthProvider>
       </ThemeProvider>

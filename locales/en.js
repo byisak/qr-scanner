@@ -102,6 +102,21 @@ export default {
     sending: 'Sending',
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
+    uploadImage: 'Scan from Image',
+  },
+
+  // Image analysis screen
+  imageAnalysis: {
+    title: 'Image Analysis',
+    noImage: 'No image to analyze.',
+    loadingWasm: 'Loading barcode scanner...',
+    loadingImage: 'Loading image...',
+    analyzing: 'Analyzing barcodes/QR codes...',
+    analysisError: 'An error occurred during image analysis.',
+    pickerError: 'An error occurred while selecting the image.',
+    results: 'Detected Codes',
+    noResults: 'No barcodes found',
+    noResultsDesc: 'No barcodes or QR codes were detected in this image.\nTry another image.',
   },
 
   // History screen

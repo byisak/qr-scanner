@@ -102,6 +102,21 @@ export default {
     sending: '送信中',
     noSessionUrl: '送信URLがありません',
     pleaseGenerateUrl: 'リアルタイム送信を使用するには、設定でURLを生成してください。',
+    uploadImage: '画像からスキャン',
+  },
+
+  // 画像分析画面
+  imageAnalysis: {
+    title: '画像分析',
+    noImage: '分析する画像がありません。',
+    loadingWasm: 'バーコードスキャナーを読み込み中...',
+    loadingImage: '画像を読み込み中...',
+    analyzing: 'バーコード/QRコードを分析中...',
+    analysisError: '画像分析中にエラーが発生しました。',
+    pickerError: '画像の選択中にエラーが発生しました。',
+    results: '検出されたコード',
+    noResults: 'バーコードが見つかりません',
+    noResultsDesc: 'この画像からバーコードやQRコードが検出されませんでした。\n別の画像をお試しください。',
   },
 
   // 履歴画面

@@ -102,6 +102,21 @@ export default {
     sending: 'Enviando',
     noSessionUrl: 'Sin URL de sesión',
     pleaseGenerateUrl: 'Por favor, genera una URL en configuración para usar la sincronización en tiempo real.',
+    uploadImage: 'Escanear desde imagen',
+  },
+
+  // Pantalla de análisis de imagen
+  imageAnalysis: {
+    title: 'Análisis de imagen',
+    noImage: 'No hay imagen para analizar.',
+    loadingWasm: 'Cargando escáner de códigos...',
+    loadingImage: 'Cargando imagen...',
+    analyzing: 'Analizando códigos de barras/QR...',
+    analysisError: 'Ocurrió un error durante el análisis de la imagen.',
+    pickerError: 'Ocurrió un error al seleccionar la imagen.',
+    results: 'Códigos detectados',
+    noResults: 'No se encontraron códigos',
+    noResultsDesc: 'No se detectaron códigos de barras ni QR en esta imagen.\nIntenta con otra imagen.',
   },
 
   // Pantalla de historial

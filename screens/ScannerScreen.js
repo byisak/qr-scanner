@@ -27,6 +27,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -1071,6 +1072,45 @@ function ScannerScreen() {
     }
   }, [realtimeSyncEnabled]);
 
+  // 이미지 선택 및 분석 화면으로 이동
+  const handlePickImage = useCallback(async () => {
+    try {
+      // 미디어 라이브러리 권한 요청
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('result.permissionDenied'),
+          t('result.permissionDeniedMessage')
+        );
+        return;
+      }
+
+      // 이미지 선택
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImage = result.assets[0];
+
+        // 네비게이션 전 카메라 중지
+        isNavigatingRef.current = true;
+        setIsActive(false);
+
+        // 이미지 분석 화면으로 이동
+        router.push({
+          pathname: '/image-analysis',
+          params: { imageUri: selectedImage.uri },
+        });
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
+    }
+  }, [router, t]);
+
   // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링, 기본 그룹 이름 다국어 적용)
   const displayGroups = useMemo(() => {
     const filtered = realtimeSyncEnabled
@@ -1213,6 +1253,29 @@ function ScannerScreen() {
         ) : (
           <View style={[styles.torchButton, styles.torchButtonAndroid, torchOn && styles.torchButtonActive]}>
             <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+          </View>
+        )}
+      </TouchableOpacity>
+
+      {/* 이미지 업로드 버튼 */}
+      <TouchableOpacity
+        onPress={handlePickImage}
+        activeOpacity={0.8}
+        accessibilityLabel={t('scanner.uploadImage')}
+        accessibilityRole="button"
+        style={[styles.imagePickerButtonContainer, { top: topOffset }]}
+      >
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={80}
+            tint="light"
+            style={styles.imagePickerButton}
+          >
+            <Ionicons name="images" size={20} color="rgba(255,255,255,0.95)" />
+          </BlurView>
+        ) : (
+          <View style={[styles.imagePickerButton, styles.imagePickerButtonAndroid]}>
+            <Ionicons name="images" size={20} color="rgba(255,255,255,0.95)" />
           </View>
         )}
       </TouchableOpacity>
@@ -1440,6 +1503,21 @@ const styles = StyleSheet.create({
   },
   torchButtonActive: {
     backgroundColor: 'rgba(255,214,10,0.15)',
+  },
+  imagePickerButtonContainer: {
+    position: 'absolute',
+    // top은 인라인 스타일로 동적 설정
+    right: 20,
+  },
+  imagePickerButton: {
+    padding: 12,
+    borderRadius: 22,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePickerButtonAndroid: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   msg: {
     flex: 1,
