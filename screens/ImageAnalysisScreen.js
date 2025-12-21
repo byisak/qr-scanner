@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -450,9 +451,9 @@ function ImageAnalysisScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -468,7 +469,7 @@ function ImageAnalysisScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* 이미지 영역 */}
@@ -610,7 +611,7 @@ function ImageAnalysisScreen() {
           onLoadEnd={() => console.log('WebView loaded')}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -655,6 +656,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 20,
   },
   imageSection: {
     alignItems: 'center',
