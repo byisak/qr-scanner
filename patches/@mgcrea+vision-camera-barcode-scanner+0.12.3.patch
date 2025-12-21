@@ -5,7 +5,7 @@ index ee706f6..eb97775 100644
 @@ -316,6 +316,27 @@ public class BarcodeConverter {
      map.put("format", barcode.getFormat());
      map.put("content", convertContent(barcode));
- 
+
 +    // Add rawBytes for QR codes
 +    byte[] rawBytes = barcode.getRawBytes();
 +    if (rawBytes != null && rawBytes.length > 0) {
@@ -39,13 +39,13 @@ index 28f1634..034abd3 100644
  #include <Foundation/Foundation.h>
  #import <React/RCTLog.h>
 +#import <CoreImage/CoreImage.h>
- 
+
  static RCTEventEmitter* eventEmitter = nil;
- 
-@@ -174,6 +175,44 @@ static RCTEventEmitter* eventEmitter = nil;
+
+@@ -174,6 +175,56 @@ static RCTEventEmitter* eventEmitter = nil;
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
- 
+
 +  // Extract QR code detailed information
 +  if (@available(iOS 11.0, *)) {
 +    if ([observation.symbology isEqualToString:VNBarcodeSymbologyQR]) {
@@ -104,7 +104,7 @@ index 28f1634..034abd3 100644
 +
    return [observationRepresentation copy];
  }
- 
+
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/ios.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/ios.ts
 index 3c9c10e..9c1fe07 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/ios.ts
@@ -132,10 +132,10 @@ diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module
 index 099662d..bbc575d 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/types/module.ts
-@@ -14,10 +14,13 @@ export type CornerPoints = Point[];
+@@ -14,10 +14,17 @@ export type CornerPoints = Point[];
  export type Highlight = BoundingBox & { key: Key };
  export type BarcodeType = CodeType | "msi-plessey" | "unknown";
- 
+
 +export type ErrorCorrectionLevel = "L" | "M" | "Q" | "H";
 +
  export type Barcode = {
