@@ -493,6 +493,43 @@ function ScannerScreen() {
     }
   }, [currentGroupId]);
 
+  // 히스토리에 사진 추가 (백그라운드에서 사진 캡처 완료 후 호출)
+  const updateHistoryWithPhoto = useCallback(async (code, photoUri) => {
+    if (!photoUri) return;
+
+    try {
+      const selectedGroupId = currentGroupId || 'default';
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      const historyByGroup = historyData ? JSON.parse(historyData) : {};
+      const currentHistory = historyByGroup[selectedGroupId] || [];
+
+      // 해당 코드의 가장 최근 항목 찾기
+      const existingIndex = currentHistory.findIndex(item => item.code === code);
+
+      if (existingIndex !== -1) {
+        const existingItem = currentHistory[existingIndex];
+        const photos = existingItem.photos || [];
+
+        // 이미 같은 사진이 있는지 확인
+        if (!photos.includes(photoUri)) {
+          photos.unshift(photoUri);
+          if (photos.length > 10) photos.pop();
+
+          currentHistory[existingIndex] = {
+            ...existingItem,
+            photos: photos,
+          };
+
+          historyByGroup[selectedGroupId] = currentHistory;
+          await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+          console.log('[updateHistoryWithPhoto] Photo added to history:', photoUri);
+        }
+      }
+    } catch (e) {
+      console.error('Update history with photo error:', e);
+    }
+  }, [currentGroupId]);
+
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(
     (cornerPoints) => {
@@ -835,16 +872,34 @@ function ScannerScreen() {
 
           // 사진 촬영 완료를 기다림
           let photoUri = null;
+          let photoTimedOut = false;
           if (photoPromise) {
             const waitStartTime = Date.now();
             const timeoutPromise = new Promise(resolve => setTimeout(() => {
               console.log('[ScannerScreen] Photo timeout triggered after 300ms');
-              resolve(null);
+              resolve({ timedOut: true });
             }, 300));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             const waitEndTime = Date.now();
-            photoUri = photoResult?.croppedUri || photoResult;
-            console.log('[ScannerScreen] Photo wait took:', waitEndTime - waitStartTime, 'ms, result:', photoUri ? 'success' : 'timeout/failed');
+
+            if (photoResult?.timedOut) {
+              photoTimedOut = true;
+              console.log('[ScannerScreen] Photo wait timed out after:', waitEndTime - waitStartTime, 'ms');
+
+              // 타임아웃되었지만 사진 캡처는 계속 진행 - 완료되면 히스토리에 추가
+              photoPromise.then(result => {
+                const uri = result?.croppedUri || result;
+                if (uri) {
+                  console.log('[ScannerScreen] Background photo ready, updating history:', uri);
+                  updateHistoryWithPhoto(data, uri);
+                }
+              }).catch(err => {
+                console.log('[ScannerScreen] Background photo failed:', err);
+              });
+            } else {
+              photoUri = photoResult?.croppedUri || photoResult;
+              console.log('[ScannerScreen] Photo ready in time:', waitEndTime - waitStartTime, 'ms');
+            }
           }
 
           // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
@@ -928,7 +983,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
