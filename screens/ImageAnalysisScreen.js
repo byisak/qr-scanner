@@ -24,6 +24,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
@@ -198,6 +199,7 @@ function ImageAnalysisScreen() {
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
   const [base64Image, setBase64Image] = useState(null);
+  const [normalizedImageUri, setNormalizedImageUri] = useState(null);
   const [webViewReady, setWebViewReady] = useState(false);
   const [zxingScript, setZxingScript] = useState(null);
 
@@ -251,7 +253,7 @@ function ImageAnalysisScreen() {
     };
   }, [clearTimeoutRef]);
 
-  // 이미지를 Base64로 변환
+  // 이미지를 Base64로 변환 (EXIF 회전 정규화 포함)
   useEffect(() => {
     const loadImage = async () => {
       if (!imageUri) {
@@ -263,27 +265,33 @@ function ImageAnalysisScreen() {
       try {
         setLoadingMessage(t('imageAnalysis.loadingImage'));
 
-        // 이미지 크기 가져오기
-        Image.getSize(
+        // EXIF 회전 정규화 - 빈 actions로 manipulateAsync 호출하면 EXIF orientation이 적용됨
+        console.log('Normalizing image orientation...');
+        const manipulatedImage = await ImageManipulator.manipulateAsync(
           imageUri,
-          (width, height) => {
-            setImageSize({ width, height });
-            const maxWidth = screenWidth - 32;
-            const maxHeight = screenHeight * 0.35;
-            const ratio = Math.min(maxWidth / width, maxHeight / height);
-            setDisplaySize({
-              width: width * ratio,
-              height: height * ratio,
-            });
-          },
-          (err) => {
-            console.error('Image size error:', err);
-            setDisplaySize({ width: screenWidth - 32, height: 300 });
-          }
+          [], // 빈 actions - EXIF rotation만 적용
+          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
         );
 
-        // 이미지를 Base64로 변환
-        const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        const normalizedUri = manipulatedImage.uri;
+        setNormalizedImageUri(normalizedUri);
+        console.log('Image normalized:', manipulatedImage.width, 'x', manipulatedImage.height);
+
+        // 정규화된 이미지 크기 사용
+        const width = manipulatedImage.width;
+        const height = manipulatedImage.height;
+        setImageSize({ width, height });
+
+        const maxWidth = screenWidth - 32;
+        const maxHeight = screenHeight * 0.35;
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        setDisplaySize({
+          width: width * ratio,
+          height: height * ratio,
+        });
+
+        // 정규화된 이미지를 Base64로 변환
+        const base64 = await FileSystem.readAsStringAsync(normalizedUri, {
           encoding: 'base64',
         });
 
@@ -474,9 +482,9 @@ function ImageAnalysisScreen() {
         {/* 이미지 영역 */}
         <View style={styles.imageSection}>
           <View style={[styles.imageContainer, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }]}>
-            {imageUri && (
+            {(normalizedImageUri || imageUri) && (
               <Image
-                source={{ uri: imageUri }}
+                source={{ uri: normalizedImageUri || imageUri }}
                 style={[styles.image, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }]}
                 resizeMode="contain"
               />
