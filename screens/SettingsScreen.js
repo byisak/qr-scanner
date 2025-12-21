@@ -47,6 +47,20 @@ export default function SettingsScreen() {
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   // URL 열기 방식 상태
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  // 사진 압축률 상태
+  const [photoQuality, setPhotoQuality] = useState('0.8');
+
+  // 압축률 라벨 반환
+  const getQualityLabel = (quality) => {
+    const qualityLabels = {
+      '1.0': t('photoSaveSettings.qualityOriginal'),
+      '0.8': t('photoSaveSettings.qualityHigh'),
+      '0.6': t('photoSaveSettings.qualityMedium'),
+      '0.4': t('photoSaveSettings.qualityLow'),
+      '0.2': t('photoSaveSettings.qualityMinimum'),
+    };
+    return qualityLabels[quality] || t('photoSaveSettings.qualityHigh');
+  };
 
   useEffect(() => {
     (async () => {
@@ -94,6 +108,12 @@ export default function SettingsScreen() {
         if (savedUrlOpenMode) {
           setUrlOpenMode(savedUrlOpenMode);
         }
+
+        // 사진 압축률 로드
+        const q = await AsyncStorage.getItem('photoQuality');
+        if (q !== null) {
+          setPhotoQuality(q);
+        }
       } catch (error) {
         console.error('Load settings error:', error);
       }
@@ -131,6 +151,17 @@ export default function SettingsScreen() {
           const savedUrlOpenMode = await AsyncStorage.getItem('urlOpenMode');
           if (savedUrlOpenMode) {
             setUrlOpenMode(savedUrlOpenMode);
+          }
+
+          // 사진 저장 설정 로드
+          const p = await AsyncStorage.getItem('photoSaveEnabled');
+          if (p !== null) {
+            setPhotoSaveEnabled(p === 'true');
+          }
+
+          const q = await AsyncStorage.getItem('photoQuality');
+          if (q !== null) {
+            setPhotoQuality(q);
           }
         } catch (error) {
           console.error('Load settings error:', error);
@@ -291,20 +322,20 @@ export default function SettingsScreen() {
 
           {/* 사진 저장 (하위 설정 페이지로 이동) */}
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0, marginTop: 0, paddingVertical: 8, marginBottom: 15 }]}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/photo-save-settings')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.photoSaveDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: photoSaveEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {photoSaveEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {photoSaveEnabled
+                  ? `${t('settings.statusOn')} · ${getQualityLabel(photoQuality)}`
+                  : t('settings.statusOff')
+                }
               </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
           {/* 배치 스캔 모드 */}
