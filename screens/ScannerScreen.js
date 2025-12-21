@@ -832,7 +832,7 @@ function ScannerScreen() {
           // 사진 촬영 완료를 기다림
           let photoUri = null;
           if (photoPromise) {
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 1000));
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 300));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             photoUri = photoResult?.croppedUri || photoResult;
             console.log('[ScannerScreen] Photo capture result:', photoUri ? 'success' : 'timeout/failed');
