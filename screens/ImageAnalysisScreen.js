@@ -1,4 +1,4 @@
-// screens/ImageAnalysisScreen.js - 이미지에서 바코드/QR코드 분석 화면
+// screens/ImageAnalysisScreen.js - 이미지에서 바코드/QR코드 분석 화면 (WebView 기반)
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -20,8 +20,98 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as FileSystem from 'expo-file-system';
+import { WebView } from 'react-native-webview';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// zxing-wasm을 실행할 HTML 코드
+const getWebViewHTML = (base64Image) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="module">
+    import { readBarcodes } from 'https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/reader/index.js';
+
+    async function analyzeImage() {
+      try {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'status', message: 'loading' }));
+
+        // Base64 이미지를 Blob으로 변환
+        const base64 = '${base64Image}';
+        const byteCharacters = atob(base64);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'status', message: 'analyzing' }));
+
+        // 바코드 읽기 옵션
+        const readerOptions = {
+          tryHarder: true,
+          tryRotate: true,
+          tryInvert: true,
+          tryDownscale: true,
+          maxNumberOfSymbols: 20,
+          formats: [
+            'QRCode',
+            'EAN-13',
+            'EAN-8',
+            'Code128',
+            'Code39',
+            'Code93',
+            'UPC-A',
+            'UPC-E',
+            'ITF',
+            'Codabar',
+            'DataMatrix',
+            'Aztec',
+            'PDF417',
+            'MicroQRCode',
+            'DataBar',
+            'DataBarExpanded',
+          ],
+        };
+
+        const results = await readBarcodes(blob, readerOptions);
+
+        // 결과 처리
+        const processedResults = results.map((result, index) => ({
+          id: index,
+          text: result.text,
+          format: result.format,
+          position: result.position ? {
+            topLeft: result.position.topLeft,
+            topRight: result.position.topRight,
+            bottomRight: result.position.bottomRight,
+            bottomLeft: result.position.bottomLeft,
+          } : null,
+        }));
+
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'results',
+          data: processedResults
+        }));
+      } catch (error) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          type: 'error',
+          message: error.message
+        }));
+      }
+    }
+
+    analyzeImage();
+  </script>
+</head>
+<body style="background: #000;">
+</body>
+</html>
+`;
 
 function ImageAnalysisScreen() {
   const router = useRouter();
@@ -38,35 +128,26 @@ function ImageAnalysisScreen() {
   const [error, setError] = useState(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
+  const [base64Image, setBase64Image] = useState(null);
+  const [webViewReady, setWebViewReady] = useState(false);
 
-  // zxing-wasm 분석 수행
-  const analyzeImage = useCallback(async () => {
-    if (!imageUri) {
-      setError(t('imageAnalysis.noImage'));
-      setIsLoading(false);
-      return;
-    }
+  // 이미지를 Base64로 변환
+  useEffect(() => {
+    const loadImage = async () => {
+      if (!imageUri) {
+        setError(t('imageAnalysis.noImage'));
+        setIsLoading(false);
+        return;
+      }
 
-    try {
-      setLoadingMessage(t('imageAnalysis.loadingWasm'));
+      try {
+        setLoadingMessage(t('imageAnalysis.loadingImage'));
 
-      // 동적 import로 zxing-wasm 로드
-      const { readBarcodes, prepareZXingModule } = await import('zxing-wasm/reader');
-
-      setLoadingMessage(t('imageAnalysis.loadingImage'));
-
-      // 이미지를 Blob으로 변환
-      const response = await fetch(imageUri);
-      const blob = await response.blob();
-
-      // 이미지 크기 가져오기
-      await new Promise((resolve) => {
+        // 이미지 크기 가져오기
         Image.getSize(
           imageUri,
           (width, height) => {
             setImageSize({ width, height });
-
-            // 화면에 맞게 크기 계산
             const maxWidth = screenWidth - 32;
             const maxHeight = screenHeight * 0.5;
             const ratio = Math.min(maxWidth / width, maxHeight / height);
@@ -74,78 +155,56 @@ function ImageAnalysisScreen() {
               width: width * ratio,
               height: height * ratio,
             });
-            resolve();
           },
           (err) => {
             console.error('Image size error:', err);
-            setDisplaySize({ width: maxWidth, height: 300 });
-            resolve();
+            setDisplaySize({ width: screenWidth - 32, height: 300 });
           }
         );
-      });
 
-      setLoadingMessage(t('imageAnalysis.analyzing'));
+        // 이미지를 Base64로 변환
+        const base64 = await FileSystem.readAsStringAsync(imageUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
 
-      // 바코드 읽기 옵션 - 모든 형식 지원
-      const readerOptions = {
-        tryHarder: true,
-        tryRotate: true,
-        tryInvert: true,
-        tryDownscale: true,
-        maxNumberOfSymbols: 20,
-        formats: [
-          'QRCode',
-          'EAN-13',
-          'EAN-8',
-          'Code128',
-          'Code39',
-          'Code93',
-          'UPC-A',
-          'UPC-E',
-          'ITF',
-          'Codabar',
-          'DataMatrix',
-          'Aztec',
-          'PDF417',
-          'MicroQRCode',
-          'DataBar',
-          'DataBarExpanded',
-        ],
-      };
-
-      const readResults = await readBarcodes(blob, readerOptions);
-
-      if (readResults && readResults.length > 0) {
-        // 결과 처리
-        const processedResults = readResults.map((result, index) => ({
-          id: index,
-          text: result.text,
-          format: result.format,
-          position: result.position,
-          // position에서 bounds 계산
-          bounds: result.position ? {
-            topLeft: result.position.topLeft,
-            topRight: result.position.topRight,
-            bottomRight: result.position.bottomRight,
-            bottomLeft: result.position.bottomLeft,
-          } : null,
-        }));
-        setResults(processedResults);
-      } else {
-        setResults([]);
+        setBase64Image(base64);
+        setLoadingMessage(t('imageAnalysis.analyzing'));
+        setWebViewReady(true);
+      } catch (err) {
+        console.error('Image load error:', err);
+        setError(t('imageAnalysis.analysisError'));
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Barcode analysis error:', err);
-      setError(t('imageAnalysis.analysisError'));
-    } finally {
-      setIsLoading(false);
-      setLoadingMessage('');
-    }
+    };
+
+    loadImage();
   }, [imageUri, t]);
 
-  useEffect(() => {
-    analyzeImage();
-  }, [analyzeImage]);
+  // WebView 메시지 처리
+  const handleWebViewMessage = useCallback((event) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+
+      if (data.type === 'status') {
+        if (data.message === 'loading') {
+          setLoadingMessage(t('imageAnalysis.loadingWasm'));
+        } else if (data.message === 'analyzing') {
+          setLoadingMessage(t('imageAnalysis.analyzing'));
+        }
+      } else if (data.type === 'results') {
+        setResults(data.data || []);
+        setIsLoading(false);
+        setLoadingMessage('');
+      } else if (data.type === 'error') {
+        console.error('WebView error:', data.message);
+        setError(t('imageAnalysis.analysisError'));
+        setIsLoading(false);
+        setLoadingMessage('');
+      }
+    } catch (err) {
+      console.error('Message parse error:', err);
+    }
+  }, [t]);
 
   // 결과 항목 복사
   const handleCopyResult = async (text) => {
@@ -188,7 +247,6 @@ function ImageAnalysisScreen() {
 
     if (!topLeft || !topRight || !bottomLeft || !bottomRight) return null;
 
-    // 모든 점의 x, y 최소/최대값 계산
     const minX = Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x);
     const maxX = Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x);
     const minY = Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y);
@@ -225,23 +283,35 @@ function ImageAnalysisScreen() {
     return formatMap[format] || format;
   };
 
-  // 바코드 색상 (인덱스 기반)
+  // 바코드 색상
   const getBarcodeColor = (index) => {
     const colorList = [
-      '#FF6B6B', // 빨간색
-      '#4ECDC4', // 청록색
-      '#FFE66D', // 노란색
-      '#95E1D3', // 민트색
-      '#F38181', // 연빨간색
-      '#AA96DA', // 보라색
-      '#FCBAD3', // 분홍색
-      '#A8D8EA', // 하늘색
+      '#FF6B6B',
+      '#4ECDC4',
+      '#FFE66D',
+      '#95E1D3',
+      '#F38181',
+      '#AA96DA',
+      '#FCBAD3',
+      '#A8D8EA',
     ];
     return colorList[index % colorList.length];
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* 숨겨진 WebView - zxing-wasm 실행용 */}
+      {webViewReady && base64Image && (
+        <WebView
+          style={styles.hiddenWebView}
+          originWhitelist={['*']}
+          source={{ html: getWebViewHTML(base64Image) }}
+          onMessage={handleWebViewMessage}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+        />
+      )}
+
       {/* 헤더 */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity
@@ -264,18 +334,18 @@ function ImageAnalysisScreen() {
       >
         {/* 이미지 영역 */}
         <View style={styles.imageSection}>
-          <View style={[styles.imageContainer, { width: displaySize.width, height: displaySize.height }]}>
+          <View style={[styles.imageContainer, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }]}>
             {imageUri && (
               <Image
                 source={{ uri: imageUri }}
-                style={[styles.image, { width: displaySize.width, height: displaySize.height }]}
+                style={[styles.image, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }]}
                 resizeMode="contain"
               />
             )}
 
             {/* 바코드 박스 오버레이 */}
             {!isLoading && results.map((result, index) => {
-              const displayCoords = convertToDisplayCoords(result.bounds);
+              const displayCoords = convertToDisplayCoords(result.position);
               if (!displayCoords) return null;
 
               const color = getBarcodeColor(index);
@@ -390,6 +460,12 @@ function ImageAnalysisScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  hiddenWebView: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    opacity: 0,
   },
   header: {
     flexDirection: 'row',
