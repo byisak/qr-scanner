@@ -450,4 +450,24 @@ export default {
     clipboardPasted: 'Clipboard content pasted',
     clipboardEmpty: 'Clipboard is empty',
   },
+
+  // Photo save settings
+  photoSaveSettings: {
+    title: 'Photo Save Settings',
+    enablePhotoSave: 'Save Photos',
+    enablePhotoSaveDesc: 'Automatically save photos when scanning',
+    compressionLevel: 'Compression Level',
+    compressionInfo: 'Lower compression reduces file size but decreases quality',
+    qualityOriginal: 'Original',
+    qualityOriginalDesc: 'No compression, original quality',
+    qualityHigh: 'High',
+    qualityHighDesc: 'High quality (Recommended)',
+    qualityMedium: 'Medium',
+    qualityMediumDesc: 'Balanced quality and size',
+    qualityLow: 'Low',
+    qualityLowDesc: 'Small size, some quality loss',
+    qualityMinimum: 'Minimum',
+    qualityMinimumDesc: 'Smallest size, noticeable quality loss',
+    note: 'Compression changes only apply to newly saved photos',
+  },
 };

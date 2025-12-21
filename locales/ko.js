@@ -450,4 +450,24 @@ export default {
     clipboardPasted: '클립보드 내용을 가져왔습니다',
     clipboardEmpty: '클립보드가 비어있습니다',
   },
+
+  // 사진 저장 설정
+  photoSaveSettings: {
+    title: '스캔 사진 저장',
+    enablePhotoSave: '사진 저장',
+    enablePhotoSaveDesc: '스캔 시 사진을 자동으로 저장합니다',
+    compressionLevel: '압축률',
+    compressionInfo: '압축률이 낮을수록 용량이 줄어들지만 화질이 저하됩니다',
+    qualityOriginal: '원본',
+    qualityOriginalDesc: '압축 없이 원본 화질 유지',
+    qualityHigh: '높음',
+    qualityHighDesc: '고화질 (권장)',
+    qualityMedium: '중간',
+    qualityMediumDesc: '적당한 화질과 용량',
+    qualityLow: '낮음',
+    qualityLowDesc: '저용량, 화질 다소 저하',
+    qualityMinimum: '최소',
+    qualityMinimumDesc: '최저 용량, 화질 저하',
+    note: '압축률 변경은 새로 저장되는 사진에만 적용됩니다',
+  },
 };

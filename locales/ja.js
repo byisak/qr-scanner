@@ -450,4 +450,24 @@ export default {
     clipboardPasted: 'クリップボードの内容を取得しました',
     clipboardEmpty: 'クリップボードが空です',
   },
+
+  // 写真保存設定
+  photoSaveSettings: {
+    title: '写真保存設定',
+    enablePhotoSave: '写真を保存',
+    enablePhotoSaveDesc: 'スキャン時に自動的に写真を保存します',
+    compressionLevel: '圧縮率',
+    compressionInfo: '圧縮率が低いほどファイルサイズは小さくなりますが、画質が低下します',
+    qualityOriginal: 'オリジナル',
+    qualityOriginalDesc: '圧縮なし、元の画質を維持',
+    qualityHigh: '高',
+    qualityHighDesc: '高画質（推奨）',
+    qualityMedium: '中',
+    qualityMediumDesc: '画質とサイズのバランス',
+    qualityLow: '低',
+    qualityLowDesc: '小サイズ、やや画質低下',
+    qualityMinimum: '最小',
+    qualityMinimumDesc: '最小サイズ、画質低下',
+    note: '圧縮率の変更は新しく保存する写真にのみ適用されます',
+  },
 };

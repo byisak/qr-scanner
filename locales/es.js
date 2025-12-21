@@ -450,4 +450,24 @@ export default {
     clipboardPasted: 'Contenido del portapapeles pegado',
     clipboardEmpty: 'El portapapeles está vacío',
   },
+
+  // Configuración de guardado de fotos
+  photoSaveSettings: {
+    title: 'Guardar fotos',
+    enablePhotoSave: 'Guardar fotos',
+    enablePhotoSaveDesc: 'Guardar fotos automáticamente al escanear',
+    compressionLevel: 'Nivel de compresión',
+    compressionInfo: 'Menor compresión reduce el tamaño pero disminuye la calidad',
+    qualityOriginal: 'Original',
+    qualityOriginalDesc: 'Sin compresión, calidad original',
+    qualityHigh: 'Alta',
+    qualityHighDesc: 'Alta calidad (Recomendado)',
+    qualityMedium: 'Media',
+    qualityMediumDesc: 'Balance entre calidad y tamaño',
+    qualityLow: 'Baja',
+    qualityLowDesc: 'Tamaño pequeño, algo de pérdida de calidad',
+    qualityMinimum: 'Mínima',
+    qualityMinimumDesc: 'Tamaño mínimo, pérdida notable de calidad',
+    note: 'Los cambios de compresión solo aplican a nuevas fotos',
+  },
 };

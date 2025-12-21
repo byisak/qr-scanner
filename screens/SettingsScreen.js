@@ -289,20 +289,23 @@ export default function SettingsScreen() {
             />
           </View>
 
-          {/* 사진 저장 */}
-          <View style={s.row}>
+          {/* 사진 저장 (하위 설정 페이지로 이동) */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0, marginTop: 0, paddingVertical: 8, marginBottom: 15 }]}
+            onPress={() => router.push('/photo-save-settings')}
+            activeOpacity={0.7}
+          >
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.photoSaveDesc')}</Text>
             </View>
-            <Switch
-              value={photoSaveEnabled}
-              onValueChange={setPhotoSaveEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.photoSave')}
-            />
-          </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: photoSaveEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {photoSaveEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
 
           {/* 배치 스캔 모드 */}
           <View style={s.row}>
