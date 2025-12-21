@@ -25,90 +25,139 @@ import { WebView } from 'react-native-webview';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// 분석 타임아웃 (30초)
+const ANALYSIS_TIMEOUT = 30000;
+
 // zxing-wasm을 실행할 HTML 코드
-const getWebViewHTML = (base64Image) => `
+const getWebViewHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script type="module">
-    import { readBarcodes } from 'https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/reader/index.js';
-
-    async function analyzeImage() {
-      try {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'status', message: 'loading' }));
-
-        // Base64 이미지를 Blob으로 변환
-        const base64 = '${base64Image}';
-        const byteCharacters = atob(base64);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'image/jpeg' });
-
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'status', message: 'analyzing' }));
-
-        // 바코드 읽기 옵션
-        const readerOptions = {
-          tryHarder: true,
-          tryRotate: true,
-          tryInvert: true,
-          tryDownscale: true,
-          maxNumberOfSymbols: 20,
-          formats: [
-            'QRCode',
-            'EAN-13',
-            'EAN-8',
-            'Code128',
-            'Code39',
-            'Code93',
-            'UPC-A',
-            'UPC-E',
-            'ITF',
-            'Codabar',
-            'DataMatrix',
-            'Aztec',
-            'PDF417',
-            'MicroQRCode',
-            'DataBar',
-            'DataBarExpanded',
-          ],
-        };
-
-        const results = await readBarcodes(blob, readerOptions);
-
-        // 결과 처리
-        const processedResults = results.map((result, index) => ({
-          id: index,
-          text: result.text,
-          format: result.format,
-          position: result.position ? {
-            topLeft: result.position.topLeft,
-            topRight: result.position.topRight,
-            bottomRight: result.position.bottomRight,
-            bottomLeft: result.position.bottomLeft,
-          } : null,
-        }));
-
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'results',
-          data: processedResults
-        }));
-      } catch (error) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          type: 'error',
-          message: error.message
-        }));
-      }
-    }
-
-    analyzeImage();
-  </script>
 </head>
 <body style="background: #000;">
+<script type="module">
+  // 로그 전송
+  function sendLog(message) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'log', message: message }));
+  }
+
+  // 에러 전송
+  function sendError(message) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: message }));
+  }
+
+  // 상태 전송
+  function sendStatus(status) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'status', message: status }));
+  }
+
+  // 결과 전송
+  function sendResults(results) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'results', data: results }));
+  }
+
+  // 글로벌 에러 핸들러
+  window.onerror = function(message, source, lineno, colno, error) {
+    sendError('Global error: ' + message);
+    return true;
+  };
+
+  // Promise rejection 핸들러
+  window.onunhandledrejection = function(event) {
+    sendError('Unhandled rejection: ' + event.reason);
+  };
+
+  // React Native에서 메시지 수신
+  window.addEventListener('message', async function(event) {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'analyze' && data.base64) {
+        await analyzeImage(data.base64);
+      }
+    } catch (e) {
+      sendError('Message parse error: ' + e.message);
+    }
+  });
+
+  // 이미지 분석 함수
+  async function analyzeImage(base64Data) {
+    try {
+      sendStatus('loading');
+      sendLog('Starting zxing-wasm import...');
+
+      // zxing-wasm 동적 import
+      const { readBarcodes } = await import('https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/reader/index.js');
+
+      sendLog('zxing-wasm loaded, converting image...');
+      sendStatus('analyzing');
+
+      // Base64 이미지를 Blob으로 변환
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Uint8Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const blob = new Blob([byteNumbers], { type: 'image/jpeg' });
+
+      sendLog('Image converted, analyzing barcodes...');
+
+      // 바코드 읽기 옵션
+      const readerOptions = {
+        tryHarder: true,
+        tryRotate: true,
+        tryInvert: true,
+        tryDownscale: true,
+        maxNumberOfSymbols: 20,
+        formats: [
+          'QRCode',
+          'EAN-13',
+          'EAN-8',
+          'Code128',
+          'Code39',
+          'Code93',
+          'UPC-A',
+          'UPC-E',
+          'ITF',
+          'Codabar',
+          'DataMatrix',
+          'Aztec',
+          'PDF417',
+          'MicroQRCode',
+          'DataBar',
+          'DataBarExpanded',
+        ],
+      };
+
+      const results = await readBarcodes(blob, readerOptions);
+
+      sendLog('Analysis complete, found ' + results.length + ' barcodes');
+
+      // 결과 처리
+      const processedResults = results.map((result, index) => ({
+        id: index,
+        text: result.text,
+        format: result.format,
+        position: result.position ? {
+          topLeft: result.position.topLeft,
+          topRight: result.position.topRight,
+          bottomRight: result.position.bottomRight,
+          bottomLeft: result.position.bottomLeft,
+        } : null,
+      }));
+
+      sendResults(processedResults);
+    } catch (error) {
+      sendLog('Error occurred: ' + error.message);
+      sendError(error.message || 'Unknown error');
+    }
+  }
+
+  // WebView 준비 완료 알림
+  sendLog('WebView ready');
+  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+</script>
 </body>
 </html>
 `;
@@ -130,6 +179,38 @@ function ImageAnalysisScreen() {
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
   const [base64Image, setBase64Image] = useState(null);
   const [webViewReady, setWebViewReady] = useState(false);
+
+  const webViewRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const analysisStartedRef = useRef(false);
+
+  // 타임아웃 설정
+  const startTimeout = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      if (isLoading) {
+        setError(t('imageAnalysis.analysisError') + ' (Timeout)');
+        setIsLoading(false);
+      }
+    }, ANALYSIS_TIMEOUT);
+  }, [isLoading, t]);
+
+  // 타임아웃 해제
+  const clearTimeoutRef = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
+
+  // 컴포넌트 언마운트 시 타임아웃 해제
+  useEffect(() => {
+    return () => {
+      clearTimeoutRef();
+    };
+  }, [clearTimeoutRef]);
 
   // 이미지를 Base64로 변환
   useEffect(() => {
@@ -167,9 +248,9 @@ function ImageAnalysisScreen() {
           encoding: 'base64',
         });
 
+        console.log('Base64 image loaded, length:', base64.length);
         setBase64Image(base64);
-        setLoadingMessage(t('imageAnalysis.analyzing'));
-        setWebViewReady(true);
+        setLoadingMessage(t('imageAnalysis.loadingWasm'));
       } catch (err) {
         console.error('Image load error:', err);
         setError(t('imageAnalysis.analysisError'));
@@ -180,22 +261,44 @@ function ImageAnalysisScreen() {
     loadImage();
   }, [imageUri, t]);
 
+  // WebView가 준비되면 분석 시작
+  useEffect(() => {
+    if (webViewReady && base64Image && webViewRef.current && !analysisStartedRef.current) {
+      analysisStartedRef.current = true;
+      console.log('Sending image to WebView for analysis...');
+
+      // WebView에 base64 이미지 전송
+      const message = JSON.stringify({ type: 'analyze', base64: base64Image });
+      webViewRef.current.postMessage(message);
+
+      // 타임아웃 시작
+      startTimeout();
+    }
+  }, [webViewReady, base64Image, startTimeout]);
+
   // WebView 메시지 처리
   const handleWebViewMessage = useCallback((event) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
 
-      if (data.type === 'status') {
+      if (data.type === 'ready') {
+        console.log('WebView is ready');
+        setWebViewReady(true);
+      } else if (data.type === 'log') {
+        console.log('WebView log:', data.message);
+      } else if (data.type === 'status') {
         if (data.message === 'loading') {
           setLoadingMessage(t('imageAnalysis.loadingWasm'));
         } else if (data.message === 'analyzing') {
           setLoadingMessage(t('imageAnalysis.analyzing'));
         }
       } else if (data.type === 'results') {
+        clearTimeoutRef();
         setResults(data.data || []);
         setIsLoading(false);
         setLoadingMessage('');
       } else if (data.type === 'error') {
+        clearTimeoutRef();
         console.error('WebView error:', data.message);
         setError(t('imageAnalysis.analysisError'));
         setIsLoading(false);
@@ -204,7 +307,16 @@ function ImageAnalysisScreen() {
     } catch (err) {
       console.error('Message parse error:', err);
     }
-  }, [t]);
+  }, [t, clearTimeoutRef]);
+
+  // WebView 에러 처리
+  const handleWebViewError = useCallback((syntheticEvent) => {
+    const { nativeEvent } = syntheticEvent;
+    console.error('WebView error:', nativeEvent);
+    clearTimeoutRef();
+    setError(t('imageAnalysis.analysisError'));
+    setIsLoading(false);
+  }, [t, clearTimeoutRef]);
 
   // 결과 항목 복사
   const handleCopyResult = async (text) => {
@@ -300,15 +412,21 @@ function ImageAnalysisScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* 숨겨진 WebView - zxing-wasm 실행용 */}
-      {webViewReady && base64Image && (
+      {/* WebView - zxing-wasm 실행용 */}
+      {base64Image && (
         <WebView
+          ref={webViewRef}
           style={styles.hiddenWebView}
           originWhitelist={['*']}
-          source={{ html: getWebViewHTML(base64Image) }}
+          source={{ html: getWebViewHTML() }}
           onMessage={handleWebViewMessage}
+          onError={handleWebViewError}
           javaScriptEnabled={true}
           domStorageEnabled={true}
+          allowFileAccess={true}
+          allowUniversalAccessFromFileURLs={true}
+          mixedContentMode="always"
+          onLoadEnd={() => console.log('WebView loaded')}
         />
       )}
 
@@ -463,9 +581,11 @@ const styles = StyleSheet.create({
   },
   hiddenWebView: {
     position: 'absolute',
-    width: 0,
-    height: 0,
+    width: 1,
+    height: 1,
     opacity: 0,
+    top: -100,
+    left: -100,
   },
   header: {
     flexDirection: 'row',
