@@ -418,7 +418,10 @@ function ImageAnalysisScreen() {
           ref={webViewRef}
           style={styles.hiddenWebView}
           originWhitelist={['*']}
-          source={{ html: getWebViewHTML() }}
+          source={{
+            html: getWebViewHTML(),
+            baseUrl: 'https://cdn.jsdelivr.net',
+          }}
           onMessage={handleWebViewMessage}
           onError={handleWebViewError}
           javaScriptEnabled={true}
@@ -426,6 +429,7 @@ function ImageAnalysisScreen() {
           allowFileAccess={true}
           allowUniversalAccessFromFileURLs={true}
           mixedContentMode="always"
+          cacheEnabled={true}
           onLoadEnd={() => console.log('WebView loaded')}
         />
       )}
