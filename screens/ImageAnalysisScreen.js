@@ -164,7 +164,7 @@ function ImageAnalysisScreen() {
 
         // 이미지를 Base64로 변환
         const base64 = await FileSystem.readAsStringAsync(imageUri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64',
         });
 
         setBase64Image(base64);
