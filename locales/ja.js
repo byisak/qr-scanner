@@ -108,6 +108,8 @@ export default {
   // 画像分析画面
   imageAnalysis: {
     title: '画像分析',
+    selectPhoto: '写真を選択',
+    noPhotos: '写真がありません',
     noImage: '分析する画像がありません。',
     loadingWasm: 'バーコードスキャナーを読み込み中...',
     loadingImage: '画像を読み込み中...',

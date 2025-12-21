@@ -108,6 +108,8 @@ export default {
   // 이미지 분석 화면
   imageAnalysis: {
     title: '이미지 분석',
+    selectPhoto: '사진 선택',
+    noPhotos: '사진이 없습니다',
     noImage: '분석할 이미지가 없습니다.',
     loadingWasm: '바코드 인식기 로드 중...',
     loadingImage: '이미지 로드 중...',

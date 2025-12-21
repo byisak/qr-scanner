@@ -108,6 +108,8 @@ export default {
   // 图片分析界面
   imageAnalysis: {
     title: '图片分析',
+    selectPhoto: '选择照片',
+    noPhotos: '没有照片',
     noImage: '没有可分析的图片。',
     loadingWasm: '正在加载条码扫描器...',
     loadingImage: '正在加载图片...',

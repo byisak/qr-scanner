@@ -108,6 +108,8 @@ export default {
   // Pantalla de análisis de imagen
   imageAnalysis: {
     title: 'Análisis de imagen',
+    selectPhoto: 'Seleccionar foto',
+    noPhotos: 'No hay fotos disponibles',
     noImage: 'No hay imagen para analizar.',
     loadingWasm: 'Cargando escáner de códigos...',
     loadingImage: 'Cargando imagen...',

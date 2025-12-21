@@ -108,6 +108,8 @@ export default {
   // Image analysis screen
   imageAnalysis: {
     title: 'Image Analysis',
+    selectPhoto: 'Select Photo',
+    noPhotos: 'No photos available',
     noImage: 'No image to analyze.',
     loadingWasm: 'Loading barcode scanner...',
     loadingImage: 'Loading image...',
