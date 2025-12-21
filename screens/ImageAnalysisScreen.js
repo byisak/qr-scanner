@@ -20,7 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
