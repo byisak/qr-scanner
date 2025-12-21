@@ -25,6 +25,7 @@ import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as MediaLibrary from 'expo-media-library';
 
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
@@ -202,6 +203,8 @@ function ImageAnalysisScreen() {
   const [normalizedImageUri, setNormalizedImageUri] = useState(null);
   const [webViewReady, setWebViewReady] = useState(false);
   const [zxingScript, setZxingScript] = useState(null);
+  const [savedCount, setSavedCount] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
 
   const webViewRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -392,6 +395,137 @@ function ImageAnalysisScreen() {
     });
   };
 
+  // 개별 바코드 이미지 저장
+  const handleSaveBarcode = async (result, index) => {
+    if (!normalizedImageUri || !result.position) {
+      Alert.alert(t('common.error'), t('imageAnalysis.saveError'));
+      return;
+    }
+
+    try {
+      // 미디어 라이브러리 권한 요청
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('common.error'), t('imageAnalysis.permissionDenied'));
+        return;
+      }
+
+      const pos = result.position;
+      const padding = 20; // 여백
+
+      // 바운딩 박스 계산
+      const minX = Math.min(pos.topLeft.x, pos.bottomLeft.x);
+      const maxX = Math.max(pos.topRight.x, pos.bottomRight.x);
+      const minY = Math.min(pos.topLeft.y, pos.topRight.y);
+      const maxY = Math.max(pos.bottomLeft.y, pos.bottomRight.y);
+
+      // 패딩 적용 (이미지 범위 내로 제한)
+      const cropX = Math.max(0, minX - padding);
+      const cropY = Math.max(0, minY - padding);
+      const cropWidth = Math.min(imageSize.width - cropX, maxX - minX + padding * 2);
+      const cropHeight = Math.min(imageSize.height - cropY, maxY - minY + padding * 2);
+
+      // 이미지 크롭
+      const croppedImage = await ImageManipulator.manipulateAsync(
+        normalizedImageUri,
+        [{ crop: { originX: cropX, originY: cropY, width: cropWidth, height: cropHeight } }],
+        { compress: 0.9, format: ImageManipulator.SaveFormat.PNG }
+      );
+
+      // 앨범에 저장
+      await MediaLibrary.saveToLibraryAsync(croppedImage.uri);
+
+      // 임시 파일 삭제
+      await FileSystem.deleteAsync(croppedImage.uri, { idempotent: true });
+
+      setSavedCount(prev => prev + 1);
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      Alert.alert(
+        t('imageAnalysis.saveSuccess'),
+        t('imageAnalysis.saveSuccessMessage', { number: index + 1 })
+      );
+    } catch (err) {
+      console.error('Save barcode error:', err);
+      Alert.alert(t('common.error'), t('imageAnalysis.saveError'));
+    }
+  };
+
+  // 모든 바코드 이미지 저장
+  const handleSaveAllBarcodes = async () => {
+    if (results.length === 0 || !normalizedImageUri) {
+      return;
+    }
+
+    try {
+      // 미디어 라이브러리 권한 요청
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('common.error'), t('imageAnalysis.permissionDenied'));
+        return;
+      }
+
+      setIsSaving(true);
+      let successCount = 0;
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        if (!result.position) continue;
+
+        try {
+          const pos = result.position;
+          const padding = 20;
+
+          const minX = Math.min(pos.topLeft.x, pos.bottomLeft.x);
+          const maxX = Math.max(pos.topRight.x, pos.bottomRight.x);
+          const minY = Math.min(pos.topLeft.y, pos.topRight.y);
+          const maxY = Math.max(pos.bottomLeft.y, pos.bottomRight.y);
+
+          const cropX = Math.max(0, minX - padding);
+          const cropY = Math.max(0, minY - padding);
+          const cropWidth = Math.min(imageSize.width - cropX, maxX - minX + padding * 2);
+          const cropHeight = Math.min(imageSize.height - cropY, maxY - minY + padding * 2);
+
+          const croppedImage = await ImageManipulator.manipulateAsync(
+            normalizedImageUri,
+            [{ crop: { originX: cropX, originY: cropY, width: cropWidth, height: cropHeight } }],
+            { compress: 0.9, format: ImageManipulator.SaveFormat.PNG }
+          );
+
+          await MediaLibrary.saveToLibraryAsync(croppedImage.uri);
+          await FileSystem.deleteAsync(croppedImage.uri, { idempotent: true });
+
+          successCount++;
+        } catch (err) {
+          console.error(`Save barcode ${i + 1} error:`, err);
+        }
+      }
+
+      setIsSaving(false);
+      setSavedCount(prev => prev + successCount);
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      Alert.alert(
+        t('imageAnalysis.saveAllSuccess'),
+        t('imageAnalysis.saveAllSuccessMessage', { count: successCount })
+      );
+    } catch (err) {
+      console.error('Save all barcodes error:', err);
+      setIsSaving(false);
+      Alert.alert(t('common.error'), t('imageAnalysis.saveError'));
+    }
+  };
+
   // bounds를 화면 좌표로 변환
   const convertToDisplayCoords = (position) => {
     if (!position || !imageSize.width || !displaySize.width) return null;
@@ -529,9 +663,28 @@ function ImageAnalysisScreen() {
 
         {/* 결과 섹션 */}
         <View style={styles.resultsSection}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {t('imageAnalysis.results')} ({results.length})
-          </Text>
+          <View style={styles.resultsSectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('imageAnalysis.results')} ({results.length})
+            </Text>
+            {results.length > 0 && results.some(r => r.position) && (
+              <TouchableOpacity
+                style={[styles.saveAllButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveAllBarcodes}
+                activeOpacity={0.7}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="download-outline" size={16} color="#fff" />
+                    <Text style={styles.saveAllButtonText}>{t('imageAnalysis.saveAll')}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
 
           {error && (
             <View style={[styles.errorCard, { backgroundColor: colors.surface }]}>
@@ -583,6 +736,19 @@ function ImageAnalysisScreen() {
                       {t('result.copy')}
                     </Text>
                   </TouchableOpacity>
+
+                  {result.position && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, { backgroundColor: colors.border }]}
+                      onPress={() => handleSaveBarcode(result, index)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="download-outline" size={18} color={colors.text} />
+                      <Text style={[styles.actionButtonText, { color: colors.text }]}>
+                        {t('result.save')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
 
                   <TouchableOpacity
                     style={[styles.actionButton, styles.primaryButton]}
@@ -727,10 +893,28 @@ const styles = StyleSheet.create({
   },
   resultsSection: {
   },
+  resultsSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 16,
+  },
+  saveAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  saveAllButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   errorCard: {
     flexDirection: 'row',

@@ -11,6 +11,7 @@ export default {
     confirm: 'Confirm',
     search: 'Search',
     loading: 'Loading...',
+    error: 'Error',
   },
 
   // Auth
@@ -119,6 +120,13 @@ export default {
     results: 'Detected Codes',
     noResults: 'No barcodes found',
     noResultsDesc: 'No barcodes or QR codes were detected in this image.\nTry another image.',
+    saveAll: 'Save All',
+    saveSuccess: 'Saved',
+    saveSuccessMessage: 'Barcode #{{number}} has been saved to album.',
+    saveAllSuccess: 'All Saved',
+    saveAllSuccessMessage: '{{count}} barcodes have been saved to album.',
+    saveError: 'An error occurred while saving.',
+    permissionDenied: 'Photo album access permission is required.',
   },
 
   // History screen
@@ -144,6 +152,7 @@ export default {
     duplicateCount: 'time',
     scanHistory: 'Scan History:',
     copy: 'Copy',
+    save: 'Save',
     share: 'Share',
     open: 'Open',
     scanAgain: 'Scan Again',
