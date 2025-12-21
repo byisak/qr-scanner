@@ -449,12 +449,10 @@ function ImageAnalysisScreen() {
     return colorList[index % colorList.length];
   };
 
-  // 테스트: 고정 높이 사용
-  console.log('Screen dimensions:', screenWidth, screenHeight);
-
   return (
-    <View style={{ flex: 1, height: 900, backgroundColor: colors.background }}>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'left', 'right', 'bottom']}>
+    <View style={styles.absoluteContainer}>
+      <View style={[styles.fullScreen, { backgroundColor: colors.background }]}>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
         {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -614,12 +612,19 @@ function ImageAnalysisScreen() {
           onLoadEnd={() => console.log('WebView loaded')}
         />
       )}
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  absoluteContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  fullScreen: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
