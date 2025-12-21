@@ -78,7 +78,7 @@ export default function RootLayout() {
             <Stack.Screen
               name="image-analysis"
               options={{
-                presentation: 'fullScreenModal',
+                presentation: 'containedModal',
                 headerShown: false
               }}
             />
