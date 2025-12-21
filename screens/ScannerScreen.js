@@ -631,7 +631,7 @@ function ScannerScreen() {
     }, delay);
   }, []);
 
-  const capturePhoto = useCallback(async (bounds = null) => {
+  const capturePhoto = useCallback(async (rawBounds = null, frameDims = null) => {
     isCapturingPhotoRef.current = true;
     setIsCapturingPhoto(true);
 
@@ -651,7 +651,7 @@ function ScannerScreen() {
 
       // Vision Camera 사진 촬영 (무음)
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8, // 품질 약간 낮춰서 속도 향상
+        quality: 0.9, // 크롭 시 품질 유지
         shutterSound: false,
       });
 
@@ -660,18 +660,133 @@ function ScannerScreen() {
         return null;
       }
 
-      // 파일명 생성 및 저장 (크롭 없이 원본 직접 저장)
       const timestamp = Date.now();
       const fileName = `scan_${timestamp}.jpg`;
       const newPath = photoDir + fileName;
 
-      // 원본 사진 바로 저장 (크롭 스킵하여 속도 향상)
+      // 바운드 정보가 있으면 크롭 수행
+      if (rawBounds && frameDims) {
+        try {
+          // 바운드에서 좌표 추출
+          let bx, by, bw, bh;
+          if (rawBounds.origin && rawBounds.size) {
+            bx = rawBounds.origin.x;
+            by = rawBounds.origin.y;
+            bw = rawBounds.size.width;
+            bh = rawBounds.size.height;
+          } else if (rawBounds.x !== undefined) {
+            bx = rawBounds.x;
+            by = rawBounds.y;
+            bw = rawBounds.width;
+            bh = rawBounds.height;
+          } else {
+            throw new Error('Unknown bounds format');
+          }
+
+          // 프레임 크기와 사진 크기 비교
+          const frameW = frameDims.width;
+          const frameH = frameDims.height;
+          const photoW = photo.width;
+          const photoH = photo.height;
+
+          console.log('[capturePhoto] Frame:', frameW, 'x', frameH, 'Photo:', photoW, 'x', photoH);
+          console.log('[capturePhoto] Raw bounds:', bx, by, bw, bh);
+
+          // 프레임 좌표를 사진 좌표로 변환
+          // Portrait 모드에서 프레임이 landscape면 스왑
+          const isPhotoPortrait = photoH > photoW;
+          const isFrameLandscape = frameW > frameH;
+
+          let cropX, cropY, cropW, cropH;
+
+          if (isPhotoPortrait && isFrameLandscape) {
+            // 프레임이 landscape, 사진이 portrait - 좌표 회전 필요
+            // 프레임 좌표 (x, y) → 사진 좌표 (y, frameW - x - w)
+            const scaleX = photoW / frameH;
+            const scaleY = photoH / frameW;
+
+            cropX = by * scaleX;
+            cropY = (frameW - bx - bw) * scaleY;
+            cropW = bh * scaleX;
+            cropH = bw * scaleY;
+          } else {
+            // 같은 방향 - 직접 스케일링
+            const scaleX = photoW / frameW;
+            const scaleY = photoH / frameH;
+
+            cropX = bx * scaleX;
+            cropY = by * scaleY;
+            cropW = bw * scaleX;
+            cropH = bh * scaleY;
+          }
+
+          // 패딩 추가 (바코드 주변 여백)
+          const paddingPercent = 0.3; // 30% 패딩
+          const padX = cropW * paddingPercent;
+          const padY = cropH * paddingPercent;
+
+          cropX = Math.max(0, cropX - padX);
+          cropY = Math.max(0, cropY - padY);
+          cropW = Math.min(photoW - cropX, cropW + padX * 2);
+          cropH = Math.min(photoH - cropY, cropH + padY * 2);
+
+          // 최소 크기 보장
+          const minSize = 100;
+          if (cropW < minSize) {
+            const diff = minSize - cropW;
+            cropX = Math.max(0, cropX - diff / 2);
+            cropW = Math.min(photoW - cropX, minSize);
+          }
+          if (cropH < minSize) {
+            const diff = minSize - cropH;
+            cropY = Math.max(0, cropY - diff / 2);
+            cropH = Math.min(photoH - cropY, minSize);
+          }
+
+          console.log('[capturePhoto] Crop region:', Math.round(cropX), Math.round(cropY), Math.round(cropW), Math.round(cropH));
+
+          // 이미지 크롭
+          const croppedImage = await ImageManipulator.manipulateAsync(
+            photo.uri,
+            [
+              {
+                crop: {
+                  originX: Math.round(cropX),
+                  originY: Math.round(cropY),
+                  width: Math.round(cropW),
+                  height: Math.round(cropH),
+                },
+              },
+            ],
+            { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+          );
+
+          // 크롭된 이미지 저장
+          await FileSystem.copyAsync({
+            from: croppedImage.uri,
+            to: newPath,
+          });
+
+          console.log('[capturePhoto] Cropped photo saved:', newPath);
+          return { croppedUri: newPath, originalUri: photo.uri };
+        } catch (cropError) {
+          console.log('[capturePhoto] Crop failed, saving original:', cropError.message);
+          // 크롭 실패 시 원본 저장
+          await FileSystem.copyAsync({
+            from: photo.uri,
+            to: newPath,
+          });
+          return { croppedUri: newPath, originalUri: newPath };
+        }
+      }
+
+      // 바운드 없으면 원본 저장
       await FileSystem.copyAsync({
         from: photo.uri,
         to: newPath,
       });
 
-      console.log('Photo saved:', newPath);
+      console.log('[capturePhoto] Photo saved (no crop):', newPath);
       return { croppedUri: newPath, originalUri: newPath };
     } catch (error) {
       console.error('Photo capture error:', error);
@@ -792,10 +907,12 @@ function ScannerScreen() {
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
-      // 사진 저장이 활성화되어 있으면 촬영
+      // 사진 저장이 활성화되어 있으면 촬영 (원본 bounds와 frameDimensions 전달)
       let photoPromise = null;
       if (photoSaveEnabledRef.current) {
-        photoPromise = capturePhoto(effectiveBounds).catch(err => {
+        // 크롭용 bounds: 원본 bounds 또는 cornerPoints에서 생성된 bounds 사용
+        const cropBounds = effectiveBounds || bounds;
+        photoPromise = capturePhoto(cropBounds, frameDimensions).catch(err => {
           console.log('Background photo capture error:', err);
           return null;
         });
@@ -811,10 +928,10 @@ function ScannerScreen() {
           // EC 레벨: 네이티브에서 받은 값 사용
           const detectedEcLevel = errorCorrectionLevel;
 
-          // 사진 촬영 완료를 기다림
+          // 사진 촬영 및 크롭 완료를 기다림 (크롭 시간 고려하여 타임아웃 증가)
           let photoUri = null;
           if (photoPromise) {
-            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 500));
+            const timeoutPromise = new Promise(resolve => setTimeout(() => resolve(null), 1500));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             photoUri = photoResult?.croppedUri || photoResult;
           }
