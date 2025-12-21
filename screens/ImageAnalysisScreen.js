@@ -449,8 +449,26 @@ function ImageAnalysisScreen() {
     return colorList[index % colorList.length];
   };
 
-  const mainContent = (
+  return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      {/* 숨겨진 WebView - 바코드 분석용 */}
+      {base64Image && zxingScript && (
+        <WebView
+          ref={webViewRef}
+          style={styles.hiddenWebView}
+          originWhitelist={['*']}
+          source={{ html: getWebViewHTML(zxingScript) }}
+          onMessage={handleWebViewMessage}
+          onError={handleWebViewError}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          allowFileAccess={true}
+          mixedContentMode="always"
+          cacheEnabled={true}
+          onLoadEnd={() => console.log('WebView loaded')}
+        />
+      )}
+
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -594,31 +612,6 @@ function ImageAnalysisScreen() {
       </ScrollView>
 
     </View>
-  );
-
-  // 숨겨진 WebView - 별도 Fragment로 분리
-  const hiddenWebViewElement = base64Image && zxingScript ? (
-    <WebView
-      ref={webViewRef}
-      style={styles.hiddenWebView}
-      originWhitelist={['*']}
-      source={{ html: getWebViewHTML(zxingScript) }}
-      onMessage={handleWebViewMessage}
-      onError={handleWebViewError}
-      javaScriptEnabled={true}
-      domStorageEnabled={true}
-      allowFileAccess={true}
-      mixedContentMode="always"
-      cacheEnabled={true}
-      onLoadEnd={() => console.log('WebView loaded')}
-    />
-  ) : null;
-
-  return (
-    <>
-      {mainContent}
-      {hiddenWebViewElement}
-    </>
   );
 }
 
