@@ -80,7 +80,8 @@ export default function RootLayout() {
               options={{
                 presentation: 'card',
                 headerShown: false,
-                animation: 'slide_from_bottom'
+                animation: 'slide_from_bottom',
+                contentStyle: { flex: 1 }
               }}
             />
           </Stack>
