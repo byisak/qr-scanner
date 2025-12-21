@@ -450,10 +450,8 @@ function ImageAnalysisScreen() {
   };
 
   return (
-    <View style={styles.absoluteContainer}>
-      <View style={[styles.fullScreen, { backgroundColor: colors.background }]}>
-        <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-        {/* 헤더 */}
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -612,8 +610,6 @@ function ImageAnalysisScreen() {
           onLoadEnd={() => console.log('WebView loaded')}
         />
       )}
-        </SafeAreaView>
-      </View>
     </View>
   );
 }
