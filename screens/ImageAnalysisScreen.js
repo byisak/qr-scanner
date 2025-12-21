@@ -428,24 +428,6 @@ function ImageAnalysisScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* WebView - QR 코드 분석용 */}
-      {base64Image && (
-        <WebView
-          ref={webViewRef}
-          style={styles.hiddenWebView}
-          originWhitelist={['*']}
-          source={{ html: getWebViewHTML() }}
-          onMessage={handleWebViewMessage}
-          onError={handleWebViewError}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          allowFileAccess={true}
-          mixedContentMode="always"
-          cacheEnabled={true}
-          onLoadEnd={() => console.log('WebView loaded')}
-        />
-      )}
-
       {/* 헤더 */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity
@@ -503,15 +485,15 @@ function ImageAnalysisScreen() {
                 </View>
               );
             })}
-          </View>
 
-          {/* 로딩 오버레이 */}
-          {isLoading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <Text style={styles.loadingText}>{loadingMessage || t('imageAnalysis.analyzing')}</Text>
-            </View>
-          )}
+            {/* 로딩 오버레이 */}
+            {isLoading && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingText}>{loadingMessage || t('imageAnalysis.analyzing')}</Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* 결과 섹션 */}
@@ -587,6 +569,24 @@ function ImageAnalysisScreen() {
           })}
         </View>
       </ScrollView>
+
+      {/* 숨겨진 WebView - 바코드 분석용 (맨 아래 배치) */}
+      {base64Image && (
+        <WebView
+          ref={webViewRef}
+          style={styles.hiddenWebView}
+          originWhitelist={['*']}
+          source={{ html: getWebViewHTML() }}
+          onMessage={handleWebViewMessage}
+          onError={handleWebViewError}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          allowFileAccess={true}
+          mixedContentMode="always"
+          cacheEnabled={true}
+          onLoadEnd={() => console.log('WebView loaded')}
+        />
+      )}
     </View>
   );
 }
@@ -597,11 +597,10 @@ const styles = StyleSheet.create({
   },
   hiddenWebView: {
     position: 'absolute',
-    width: 1,
-    height: 1,
+    width: 0,
+    height: 0,
     opacity: 0,
-    top: -100,
-    left: -100,
+    zIndex: -1,
   },
   header: {
     flexDirection: 'row',
