@@ -78,10 +78,8 @@ export default function RootLayout() {
             <Stack.Screen
               name="image-analysis"
               options={{
-                presentation: 'card',
-                headerShown: false,
-                animation: 'slide_from_bottom',
-                contentStyle: { flex: 1 }
+                presentation: 'modal',
+                headerShown: false
               }}
             />
           </Stack>
