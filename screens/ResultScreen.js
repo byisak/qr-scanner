@@ -52,6 +52,7 @@ export default function ResultScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
 
   // URL 열기 방식 설정 로드
   useEffect(() => {
@@ -510,35 +511,71 @@ export default function ResultScreen() {
           </View>
         )}
 
-        {/* EC 레벨 상세 (QR 코드만) */}
+        {/* QR 코드 오류 검증 레벨 표시 */}
         {ecLevelInfo && isQRCode && (
-          <View style={[styles.ecDetailCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.ecDetailTitle, { color: colors.text }]}>
-              {t('result.errorCorrectionLevel')}
-            </Text>
-            <View style={styles.ecLevelGrid}>
-              {['L', 'M', 'Q', 'H'].map((level) => {
-                const isActive = ecLevel?.toUpperCase() === level;
-                const levelColor = getECLevelColor(level);
-                const levelPercent = { L: '~7%', M: '~15%', Q: '~25%', H: '~30%' }[level];
-                return (
-                  <View
-                    key={level}
-                    style={[
-                      styles.ecGridItem,
-                      isActive && { backgroundColor: levelColor + '15', borderColor: levelColor }
-                    ]}
-                  >
-                    <View style={[styles.ecGridBadge, { backgroundColor: isActive ? levelColor : colors.textSecondary + '40' }]}>
-                      <Text style={styles.ecGridBadgeText}>{level}</Text>
-                    </View>
-                    <Text style={[styles.ecGridPercent, { color: isActive ? levelColor : colors.textSecondary }]}>
-                      {levelPercent}
-                    </Text>
-                  </View>
-                );
-              })}
+          <View style={[styles.ecLevelContainer, {
+            backgroundColor: isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)',
+            borderColor: colors.primary
+          }]}>
+            <View style={styles.ecLevelHeader}>
+              <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
+              <Text style={[styles.ecLevelTitle, { color: colors.primary }]}>
+                {t('result.errorCorrectionLevel')}
+              </Text>
             </View>
+            <View style={styles.ecLevelContent}>
+              <View style={[styles.ecLevelBadge, { backgroundColor: colors.primary }]}>
+                <Text style={styles.ecLevelBadgeText}>{ecLevelInfo.level}</Text>
+              </View>
+              <View style={styles.ecLevelInfo}>
+                <Text style={[styles.ecLevelDesc, { color: colors.text }]}>{ecLevelInfo.desc}</Text>
+                <Text style={[styles.ecLevelPercent, { color: colors.textSecondary }]}>
+                  {t('result.recoveryRate')}: {ecLevelInfo.percent}
+                </Text>
+              </View>
+            </View>
+
+            {/* 펼침 버튼 */}
+            <TouchableOpacity
+              style={styles.ecLevelExpandButton}
+              onPress={() => setEcLevelExpanded(!ecLevelExpanded)}
+            >
+              <Text style={[styles.ecLevelExpandText, { color: colors.textSecondary }]}>
+                {ecLevelExpanded ? t('result.hideEcLevelInfo') : t('result.showEcLevelInfo')}
+              </Text>
+              <Ionicons
+                name={ecLevelExpanded ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {/* 펼쳐진 EC 레벨 설명 */}
+            {ecLevelExpanded && (
+              <View style={[styles.ecLevelExpandedContent, { borderTopColor: colors.border }]}>
+                <Text style={[styles.ecLevelExpandedTitle, { color: colors.text }]}>
+                  {t('result.ecLevelTypes')}
+                </Text>
+                <View style={styles.ecLevelList}>
+                  {['L', 'M', 'Q', 'H'].map((level) => {
+                    const isActive = ecLevel?.toUpperCase() === level;
+                    const levelName = { L: 'Low', M: 'Medium', Q: 'Quartile', H: 'High' }[level];
+                    const levelPercent = { L: '~7%', M: '~15%', Q: '~25%', H: '~30%' }[level];
+                    return (
+                      <View key={level} style={[styles.ecLevelListItem, isActive && styles.ecLevelListItemActive, isActive && { backgroundColor: colors.primary + '20' }]}>
+                        <View style={[styles.ecLevelListBadge, { backgroundColor: isActive ? colors.primary : colors.textSecondary }]}>
+                          <Text style={styles.ecLevelListBadgeText}>{level}</Text>
+                        </View>
+                        <View style={styles.ecLevelListInfo}>
+                          <Text style={[styles.ecLevelListName, { color: colors.text }]}>{levelName}</Text>
+                          <Text style={[styles.ecLevelListPercent, { color: colors.textSecondary }]}>{levelPercent} {t('result.recoverable')}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -724,42 +761,106 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 12,
   },
-  ecDetailCard: {
-    borderRadius: 16,
-    padding: 16,
-  },
-  ecDetailTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  ecLevelGrid: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  ecGridItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
+  ecLevelContainer: {
+    borderWidth: 1.5,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    padding: 14,
   },
-  ecGridBadge: {
-    width: 32,
-    height: 32,
+  ecLevelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  ecLevelTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  ecLevelContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ecLevelBadge: {
+    width: 36,
+    height: 36,
     borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecLevelBadgeText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  ecLevelInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  ecLevelDesc: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  ecLevelPercent: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  ecLevelExpandButton: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginTop: 12,
+    paddingTop: 10,
   },
-  ecGridBadgeText: {
+  ecLevelExpandText: {
+    fontSize: 13,
+    marginRight: 4,
+  },
+  ecLevelExpandedContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  ecLevelExpandedTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  ecLevelList: {
+    gap: 8,
+  },
+  ecLevelListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  ecLevelListItemActive: {
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  ecLevelListBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecLevelListBadgeText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
   },
-  ecGridPercent: {
-    fontSize: 11,
-    fontWeight: '500',
+  ecLevelListInfo: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  ecLevelListName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ecLevelListPercent: {
+    fontSize: 12,
+    marginTop: 1,
   },
 });

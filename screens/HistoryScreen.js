@@ -279,6 +279,21 @@ export default function HistoryScreen() {
           keyExtractor={(_, i) => i.toString()}
           renderItem={({ item }) => {
             const hasPhoto = item.photos && item.photos.length > 0;
+            const isQRCode = !item.type || item.type === 'qr' || item.type === 'qrcode';
+            const ecLevel = item.errorCorrectionLevel;
+
+            // EC 레벨 색상
+            const getECLevelColor = (level) => {
+              if (!level) return colors.textSecondary;
+              switch (level.toUpperCase()) {
+                case 'L': return '#FF9500';
+                case 'M': return '#34C759';
+                case 'Q': return '#007AFF';
+                case 'H': return '#5856D6';
+                default: return colors.textSecondary;
+              }
+            };
+
             return (
               <TouchableOpacity
                 style={[s.item, { backgroundColor: colors.surface }]}
@@ -297,34 +312,52 @@ export default function HistoryScreen() {
                     />
                   )}
                   <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
-                    <View style={s.itemHeader}>
-                      <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
-                        {item.code}
-                      </Text>
+                    {/* 1줄: 스캔값 */}
+                    <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
+                      {item.code}
+                    </Text>
+
+                    {/* 2줄: 바코드타입, 반복횟수, 에러레벨 */}
+                    <View style={s.badgeRow}>
+                      {/* 바코드 타입 */}
+                      <View style={[s.badge, { backgroundColor: colors.primary + '15' }]}>
+                        <Ionicons
+                          name={isQRCode ? 'qr-code' : 'barcode'}
+                          size={11}
+                          color={colors.primary}
+                        />
+                        <Text style={[s.badgeText, { color: colors.primary }]}>
+                          {isQRCode ? 'QR' : item.type.toUpperCase()}
+                        </Text>
+                      </View>
+
+                      {/* 반복 횟수 */}
                       {item.count && item.count > 1 && (
-                        <View style={[s.countBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: '#FF9500' }]}>
-                          <Ionicons name="repeat" size={12} color="#FF9500" />
-                          <Text style={s.countBadgeText}>{item.count}</Text>
+                        <View style={[s.badge, { backgroundColor: 'rgba(255, 149, 0, 0.15)' }]}>
+                          <Ionicons name="repeat" size={11} color="#FF9500" />
+                          <Text style={[s.badgeText, { color: '#FF9500' }]}>{item.count}</Text>
+                        </View>
+                      )}
+
+                      {/* EC 레벨 (QR 코드만) */}
+                      {isQRCode && ecLevel && (
+                        <View style={[s.badge, { backgroundColor: getECLevelColor(ecLevel) + '15' }]}>
+                          <Ionicons name="shield-checkmark" size={11} color={getECLevelColor(ecLevel)} />
+                          <Text style={[s.badgeText, { color: getECLevelColor(ecLevel) }]}>
+                            EC:{ecLevel.toUpperCase()}
+                          </Text>
                         </View>
                       )}
                     </View>
+
+                    {/* 3줄: 스캔 시간 */}
                     <Text style={[s.time, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{formatDateTime(item.timestamp)}</Text>
+
                     {item.url && (
                       <Text style={[s.url, { color: colors.primary, fontFamily: fonts.regular }]} numberOfLines={1}>
                         {item.url}
                       </Text>
                     )}
-                  </View>
-                  {/* 바코드 타입 뱃지 (오른쪽) */}
-                  <View style={[s.typeBadgeRight, { backgroundColor: colors.primary + '15' }]}>
-                    <Ionicons
-                      name={(!item.type || item.type === 'qr' || item.type === 'qrcode') ? 'qr-code' : 'barcode'}
-                      size={12}
-                      color={colors.primary}
-                    />
-                    <Text style={[s.typeBadgeRightText, { color: colors.primary }]}>
-                      {(!item.type || item.type === 'qr' || item.type === 'qrcode') ? 'QR' : item.type.toUpperCase()}
-                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -518,16 +551,21 @@ const s = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  typeBadgeRight: {
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    gap: 4,
-    marginLeft: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
   },
-  typeBadgeRightText: {
+  badgeText: {
     fontSize: 10,
     fontWeight: '600',
   },
