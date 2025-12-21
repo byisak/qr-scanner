@@ -164,6 +164,10 @@ export default {
     ecLevelAnalysisFailed: 'Error en detección del nivel de corrección',
     ecLevelFailedReason: 'No se pudo analizar el nivel de corrección de errores debido a la baja calidad de imagen o código QR dañado. Por favor, escanea de nuevo para obtener una foto más clara.',
     rescanForVerification: 'Escanear de nuevo para verificar',
+    showEcLevelInfo: 'Ver info de nivel de corrección',
+    hideEcLevelInfo: 'Ocultar info',
+    ecLevelTypes: 'Tipos de nivel de corrección',
+    recoverable: 'recuperable',
   },
 
   // Pantalla de configuración
@@ -445,5 +449,25 @@ export default {
     saveErrorMessage: 'Error al guardar el código QR.',
     clipboardPasted: 'Contenido del portapapeles pegado',
     clipboardEmpty: 'El portapapeles está vacío',
+  },
+
+  // Configuración de guardado de fotos
+  photoSaveSettings: {
+    title: 'Guardar fotos',
+    enablePhotoSave: 'Guardar fotos',
+    enablePhotoSaveDesc: 'Guardar fotos automáticamente al escanear',
+    compressionLevel: 'Nivel de compresión',
+    compressionInfo: 'Menor compresión reduce el tamaño pero disminuye la calidad',
+    qualityOriginal: 'Original',
+    qualityOriginalDesc: 'Sin compresión, calidad original',
+    qualityHigh: 'Alta',
+    qualityHighDesc: 'Alta calidad (Recomendado)',
+    qualityMedium: 'Media',
+    qualityMediumDesc: 'Balance entre calidad y tamaño',
+    qualityLow: 'Baja',
+    qualityLowDesc: 'Tamaño pequeño, algo de pérdida de calidad',
+    qualityMinimum: 'Mínima',
+    qualityMinimumDesc: 'Tamaño mínimo, pérdida notable de calidad',
+    note: 'Los cambios de compresión solo aplican a nuevas fotos',
   },
 };

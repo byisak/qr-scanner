@@ -1,0 +1,47 @@
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
+index 28f1634..034abd3 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
+@@ -1,6 +1,7 @@
+ #import "CodeScannerProcessorPlugin.h"
+ #include <Foundation/Foundation.h>
+ #import <React/RCTLog.h>
++#import <CoreImage/CoreImage.h>
+
+ static RCTEventEmitter* eventEmitter = nil;
+
+@@ -174,6 +175,32 @@ static RCTEventEmitter* eventEmitter = nil;
+     observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
+   }
+
++  // Extract error correction level for QR codes
++  if (@available(iOS 11.0, *)) {
++    if ([observation.symbology isEqualToString:VNBarcodeSymbologyQR]) {
++      CIBarcodeDescriptor* descriptor = observation.barcodeDescriptor;
++      if (descriptor && [descriptor isKindOfClass:[CIQRCodeDescriptor class]]) {
++        CIQRCodeDescriptor* qrDescriptor = (CIQRCodeDescriptor*)descriptor;
++        NSString* ecLevel = nil;
++        switch (qrDescriptor.errorCorrectionLevel) {
++          case CIQRCodeErrorCorrectionLevelL:
++            ecLevel = @"L";
++            break;
++          case CIQRCodeErrorCorrectionLevelM:
++            ecLevel = @"M";
++            break;
++          case CIQRCodeErrorCorrectionLevelQ:
++            ecLevel = @"Q";
++            break;
++          case CIQRCodeErrorCorrectionLevelH:
++            ecLevel = @"H";
++            break;
++        }
++        if (ecLevel) {
++          observationRepresentation[@"errorCorrectionLevel"] = ecLevel;
++        }
++      }
++    }
++  }
++
+   return [observationRepresentation copy];
+ }
+

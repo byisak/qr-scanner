@@ -47,6 +47,20 @@ export default function SettingsScreen() {
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   // URL 열기 방식 상태
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  // 사진 압축률 상태
+  const [photoQuality, setPhotoQuality] = useState('0.8');
+
+  // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
+  const getQualityFullLabel = (quality) => {
+    const labels = {
+      '1.0': `${t('photoSaveSettings.qualityOriginal')} ${t('photoSaveSettings.qualityOriginalDesc')}`,
+      '0.8': `${t('photoSaveSettings.qualityHigh')} ${t('photoSaveSettings.qualityHighDesc')}`,
+      '0.6': `${t('photoSaveSettings.qualityMedium')} ${t('photoSaveSettings.qualityMediumDesc')}`,
+      '0.4': `${t('photoSaveSettings.qualityLow')} ${t('photoSaveSettings.qualityLowDesc')}`,
+      '0.2': `${t('photoSaveSettings.qualityMinimum')} ${t('photoSaveSettings.qualityMinimumDesc')}`,
+    };
+    return labels[quality] || `${t('photoSaveSettings.qualityHigh')} ${t('photoSaveSettings.qualityHighDesc')}`;
+  };
 
   useEffect(() => {
     (async () => {
@@ -94,6 +108,12 @@ export default function SettingsScreen() {
         if (savedUrlOpenMode) {
           setUrlOpenMode(savedUrlOpenMode);
         }
+
+        // 사진 압축률 로드
+        const q = await AsyncStorage.getItem('photoQuality');
+        if (q !== null) {
+          setPhotoQuality(q);
+        }
       } catch (error) {
         console.error('Load settings error:', error);
       }
@@ -131,6 +151,17 @@ export default function SettingsScreen() {
           const savedUrlOpenMode = await AsyncStorage.getItem('urlOpenMode');
           if (savedUrlOpenMode) {
             setUrlOpenMode(savedUrlOpenMode);
+          }
+
+          // 사진 저장 설정 로드
+          const p = await AsyncStorage.getItem('photoSaveEnabled');
+          if (p !== null) {
+            setPhotoSaveEnabled(p === 'true');
+          }
+
+          const q = await AsyncStorage.getItem('photoQuality');
+          if (q !== null) {
+            setPhotoQuality(q);
           }
         } catch (error) {
           console.error('Load settings error:', error);
@@ -289,20 +320,25 @@ export default function SettingsScreen() {
             />
           </View>
 
-          {/* 사진 저장 */}
-          <View style={s.row}>
+          {/* 사진 저장 (하위 설정 페이지로 이동) */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/photo-save-settings')}
+            activeOpacity={0.7}
+          >
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.photoSaveDesc')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {photoSaveEnabled ? getQualityFullLabel(photoQuality) : t('settings.photoSaveDesc')}
+              </Text>
             </View>
-            <Switch
-              value={photoSaveEnabled}
-              onValueChange={setPhotoSaveEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.photoSave')}
-            />
-          </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: photoSaveEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {photoSaveEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
 
           {/* 배치 스캔 모드 */}
           <View style={s.row}>

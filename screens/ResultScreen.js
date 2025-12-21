@@ -52,6 +52,7 @@ export default function ResultScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
 
   // URL 열기 방식 설정 로드
   useEffect(() => {
@@ -105,7 +106,6 @@ export default function ResultScreen() {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
       if (urlOpenMode === 'safari') {
-        // Safari로 열기
         try {
           const supported = await Linking.canOpenURL(urlToOpen);
           if (supported) {
@@ -118,30 +118,24 @@ export default function ResultScreen() {
           Alert.alert(t('result.error'), 'Failed to open URL');
         }
       } else if (urlOpenMode === 'chrome') {
-        // Chrome으로 열기
         try {
           let chromeUrl = urlToOpen;
           if (Platform.OS === 'ios') {
-            // iOS에서는 Chrome URL scheme 사용
             if (urlToOpen.startsWith('https://')) {
               chromeUrl = urlToOpen.replace('https://', 'googlechromes://');
             } else {
               chromeUrl = urlToOpen.replace('http://', 'googlechrome://');
             }
-            // Chrome으로 직접 열기 시도
             try {
               await Linking.openURL(chromeUrl);
             } catch {
-              // Chrome이 설치되어 있지 않으면 기본 브라우저로 열기
               await Linking.openURL(urlToOpen);
             }
           } else {
-            // Android에서는 Chrome intent 사용
             const intentUrl = `intent://${urlToOpen.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
             try {
               await Linking.openURL(intentUrl);
             } catch {
-              // Chrome이 없으면 기본 브라우저로
               await Linking.openURL(urlToOpen);
             }
           }
@@ -150,7 +144,6 @@ export default function ResultScreen() {
           Alert.alert(t('result.error'), 'Failed to open URL');
         }
       } else {
-        // 앱 내 웹뷰로 열기
         router.push({ pathname: '/webview', params: { url: urlToOpen } });
       }
     }
@@ -164,7 +157,6 @@ export default function ResultScreen() {
     }
 
     try {
-      // 권한 요청
       const { status } = await MediaLibrary.requestPermissionsAsync();
 
       if (status !== 'granted') {
@@ -175,10 +167,7 @@ export default function ResultScreen() {
         return;
       }
 
-      // 사진 저장
       const asset = await MediaLibrary.createAssetAsync(photoUri);
-
-      // 앨범에 추가 (QR Scanner 앨범 생성 또는 기존 앨범 사용)
       const album = await MediaLibrary.getAlbumAsync('QR Scanner');
       if (album == null) {
         await MediaLibrary.createAlbumAsync('QR Scanner', asset, false);
@@ -235,7 +224,6 @@ export default function ResultScreen() {
       const historyByGroup = JSON.parse(historyData);
       const groupHistory = historyByGroup[groupId] || [];
 
-      // 원래 코드와 일치하는 항목 찾기
       const itemIndex = groupHistory.findIndex(item =>
         item.code === displayText && item.timestamp === scanTimestamp
       );
@@ -245,7 +233,6 @@ export default function ResultScreen() {
         return;
       }
 
-      // 수정된 값으로 업데이트
       groupHistory[itemIndex] = {
         ...groupHistory[itemIndex],
         code: editedText,
@@ -295,7 +282,6 @@ export default function ResultScreen() {
               const historyByGroup = JSON.parse(historyData);
               const groupHistory = historyByGroup[groupId] || [];
 
-              // 원래 코드와 일치하는 항목 찾기
               const filteredHistory = groupHistory.filter(item =>
                 !(item.code === displayText && item.timestamp === scanTimestamp)
               );
@@ -321,96 +307,207 @@ export default function ResultScreen() {
 
   const handleEditToggle = () => {
     if (isEditing) {
-      // 편집 취소
       setEditedText(displayText);
       setIsEditing(false);
     } else {
-      // 편집 시작
       setIsEditing(true);
+    }
+  };
+
+  // EC 레벨 색상
+  const getECLevelColor = (level) => {
+    if (!level) return colors.textSecondary;
+    switch (level.toUpperCase()) {
+      case 'L': return '#FF9500';
+      case 'M': return '#34C759';
+      case 'Q': return '#007AFF';
+      case 'H': return '#5856D6';
+      default: return colors.textSecondary;
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      {/* 컴팩트 헤더 */}
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <TouchableOpacity
-          style={styles.closeButton}
+          style={styles.headerButton}
           onPress={() => router.back()}
           accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
-          <Ionicons name="close" size={28} color={colors.text} />
+          <Ionicons name="chevron-down" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{t('result.title')}</Text>
-        {isFromHistory && (
+        {isFromHistory ? (
           <TouchableOpacity
-            style={styles.deleteButton}
+            style={styles.headerButton}
             onPress={handleDelete}
             accessibilityLabel={t('common.delete')}
             accessibilityRole="button"
           >
-            <Ionicons name="trash-outline" size={24} color={colors.error} />
+            <Ionicons name="trash-outline" size={22} color={colors.error} />
           </TouchableOpacity>
+        ) : (
+          <View style={styles.headerButton} />
         )}
-        {!isFromHistory && <View style={{ width: 28 }} />}
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* 스캔 사진 */}
-        {hasPhoto && (
-          <View style={styles.photoContainer}>
-            <View style={styles.photoHeader}>
-              <Text style={[styles.photoLabel, { color: colors.textSecondary }]}>{t('result.scanPhoto')}</Text>
-              <View style={styles.photoButtonGroup}>
-                <TouchableOpacity
-                  style={[styles.savePhotoButton, { backgroundColor: colors.primary }]}
-                  onPress={handleSavePhoto}
-                  accessibilityLabel={t('result.savePhoto')}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="download-outline" size={20} color="#fff" />
-                  <Text style={styles.savePhotoButtonText}>{t('result.savePhoto')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.sharePhotoButton, { backgroundColor: colors.primary }]}
-                  onPress={handleSharePhoto}
-                  accessibilityLabel={t('result.share')}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="share-outline" size={20} color="#fff" />
-                </TouchableOpacity>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 메인 데이터 카드 */}
+        <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>
+          {/* 바코드 타입 & EC 레벨 뱃지 */}
+          <View style={styles.badgeRow}>
+            {barcodeType && (
+              <View style={[styles.typeBadge, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons
+                  name={isQRCode ? "qr-code" : "barcode"}
+                  size={14}
+                  color={colors.primary}
+                />
+                <Text style={[styles.typeBadgeText, { color: colors.primary }]}>
+                  {isQRCode ? 'QR Code' : barcodeType.toUpperCase()}
+                </Text>
               </View>
-            </View>
-            <Image
-              source={{ uri: photoUri }}
-              style={[styles.scanPhoto, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-              resizeMode="contain"
-            />
+            )}
+            {ecLevelInfo && isQRCode && (
+              <View style={[styles.ecBadge, { backgroundColor: getECLevelColor(ecLevel) + '15' }]}>
+                <Ionicons name="shield-checkmark" size={14} color={getECLevelColor(ecLevel)} />
+                <Text style={[styles.ecBadgeText, { color: getECLevelColor(ecLevel) }]}>
+                  EC: {ecLevelInfo.level} ({ecLevelInfo.percent})
+                </Text>
+              </View>
+            )}
           </View>
-        )}
+
+          {/* 스캔 데이터 */}
+          <View style={styles.dataSection}>
+            {isEditing ? (
+              <TextInput
+                style={[styles.dataInput, { color: colors.text, backgroundColor: colors.inputBackground }]}
+                value={editedText}
+                onChangeText={setEditedText}
+                multiline
+                autoFocus
+                placeholder={t('result.dataPlaceholder')}
+                placeholderTextColor={colors.textSecondary}
+              />
+            ) : (
+              <ScrollView style={styles.dataScrollView} nestedScrollEnabled>
+                <Text style={[styles.dataText, { color: colors.text }]} selectable>
+                  {displayText}
+                </Text>
+              </ScrollView>
+            )}
+          </View>
+
+          {/* 액션 버튼들 */}
+          {!isEditing ? (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.actionChip, { backgroundColor: colors.primary + '12' }]}
+                onPress={handleCopy}
+              >
+                <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                <Text style={[styles.actionChipText, { color: colors.primary }]}>{t('result.copy')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionChip, { backgroundColor: colors.primary + '12' }]}
+                onPress={handleShare}
+              >
+                <Ionicons name="share-outline" size={18} color={colors.primary} />
+                <Text style={[styles.actionChipText, { color: colors.primary }]}>{t('result.share')}</Text>
+              </TouchableOpacity>
+
+              {(isUrl || editedText.startsWith('http://') || editedText.startsWith('https://')) && (
+                <TouchableOpacity
+                  style={[styles.actionChip, { backgroundColor: colors.success + '12' }]}
+                  onPress={handleOpenUrl}
+                >
+                  <Ionicons name="open-outline" size={18} color={colors.success} />
+                  <Text style={[styles.actionChipText, { color: colors.success }]}>{t('result.open')}</Text>
+                </TouchableOpacity>
+              )}
+
+              {isFromHistory && (
+                <TouchableOpacity
+                  style={[styles.actionChip, { backgroundColor: colors.warning + '12' }]}
+                  onPress={handleEditToggle}
+                >
+                  <Ionicons name="pencil" size={18} color={colors.warning || '#FF9500'} />
+                  <Text style={[styles.actionChipText, { color: colors.warning || '#FF9500' }]}>{t('common.edit')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ) : (
+            <View style={styles.editActions}>
+              <TouchableOpacity
+                style={[styles.editButton, styles.cancelButton, { borderColor: colors.border }]}
+                onPress={handleEditToggle}
+              >
+                <Text style={[styles.editButtonText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editButton, styles.saveEditButton, { backgroundColor: colors.success }]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.saveEditButtonText}>{t('common.save')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         {/* 중복 스캔 알림 */}
         {showDuplicate && (
-          <View style={[styles.duplicateBanner, {
-            backgroundColor: isDark ? 'rgba(255, 149, 0, 0.25)' : 'rgba(255, 149, 0, 0.15)',
-            borderColor: '#FF9500'
-          }]}>
-            <View style={styles.duplicateHeader}>
-              <Ionicons name="repeat" size={20} color="#FF9500" />
-              <Text style={styles.duplicateText}>
+          <View style={[styles.infoCard, { backgroundColor: '#FF950010', borderColor: '#FF9500' }]}>
+            <View style={styles.infoCardHeader}>
+              <Ionicons name="repeat" size={18} color="#FF9500" />
+              <Text style={styles.infoCardTitle}>
                 {t('result.duplicateScan')} ({count}{t('result.duplicateCount')})
               </Text>
             </View>
-            {allScanTimes.length > 0 && (
-              <View style={styles.scanTimesContainer}>
-                <Text style={styles.scanTimesTitle}>{t('result.scanHistory')}</Text>
-                {allScanTimes.slice().reverse().map((time, index) => (
+            {allScanTimes.length > 1 && (
+              <View style={styles.scanTimesList}>
+                {allScanTimes.slice().reverse().slice(0, 5).map((time, index) => (
                   <Text key={index} style={styles.scanTimeItem}>
                     {allScanTimes.length - index}. {formatDateTime(time)}
                   </Text>
                 ))}
               </View>
             )}
+          </View>
+        )}
+
+        {/* 스캔 사진 */}
+        {hasPhoto && (
+          <View style={[styles.photoCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.photoHeader}>
+              <Text style={[styles.photoLabel, { color: colors.text }]}>{t('result.scanPhoto')}</Text>
+              <View style={styles.photoActions}>
+                <TouchableOpacity
+                  style={[styles.photoActionButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSavePhoto}
+                >
+                  <Ionicons name="download-outline" size={18} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.photoActionButton, { backgroundColor: colors.primary }]}
+                  onPress={handleSharePhoto}
+                >
+                  <Ionicons name="share-outline" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Image
+              source={{ uri: photoUri }}
+              style={[styles.scanPhoto, { backgroundColor: colors.inputBackground }]}
+              resizeMode="contain"
+            />
           </View>
         )}
 
@@ -437,140 +534,51 @@ export default function ResultScreen() {
                 </Text>
               </View>
             </View>
-          </View>
-        )}
 
-        {/* QR 코드 오류 검증 실패 - 재스캔 안내 */}
-        {!ecLevelInfo && ecAnalysisFailed && isQRCode && hasPhoto && (
-          <View style={[styles.ecLevelContainer, {
-            backgroundColor: isDark ? 'rgba(255, 149, 0, 0.15)' : 'rgba(255, 149, 0, 0.1)',
-            borderColor: '#FF9500'
-          }]}>
-            <View style={styles.ecLevelHeader}>
-              <Ionicons name="warning" size={18} color="#FF9500" />
-              <Text style={[styles.ecLevelTitle, { color: '#FF9500' }]}>
-                {t('result.ecLevelAnalysisFailed')}
+            {/* 펼침 버튼 */}
+            <TouchableOpacity
+              style={styles.ecLevelExpandButton}
+              onPress={() => setEcLevelExpanded(!ecLevelExpanded)}
+            >
+              <Text style={[styles.ecLevelExpandText, { color: colors.textSecondary }]}>
+                {ecLevelExpanded ? t('result.hideEcLevelInfo') : t('result.showEcLevelInfo')}
               </Text>
-            </View>
-            <Text style={[styles.ecLevelFailedDesc, { color: colors.textSecondary }]}>
-              {t('result.ecLevelFailedReason')}
-            </Text>
-            <TouchableOpacity
-              style={styles.rescanButton}
-              onPress={() => router.back()}
-            >
-              <Ionicons name="scan" size={18} color="#fff" />
-              <Text style={styles.rescanButtonText}>{t('result.rescanForVerification')}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={styles.labelRow}>
-          <View style={styles.labelWithType}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>{t('result.scannedData')}</Text>
-            {barcodeType && barcodeType !== 'qr' && barcodeType !== 'qrcode' && (
-              <View style={[styles.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                <Text style={[styles.typeBadgeText, { color: colors.primary }]}>{barcodeType.toUpperCase()}</Text>
-              </View>
-            )}
-          </View>
-          {isFromHistory && (
-            <TouchableOpacity
-              style={[styles.editToggleButton, { backgroundColor: colors.inputBackground }]}
-              onPress={handleEditToggle}
-            >
               <Ionicons
-                name={isEditing ? "close-circle" : "pencil"}
-                size={20}
-                color={isEditing ? colors.error : colors.primary}
+                name={ecLevelExpanded ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={colors.textSecondary}
               />
-              <Text style={[styles.editToggleText, { color: isEditing ? colors.error : colors.primary }]}>
-                {isEditing ? t('common.cancel') : t('common.edit')}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {isEditing ? (
-          <View style={[styles.dataBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <TextInput
-              style={[styles.dataInput, { color: colors.text }]}
-              value={editedText}
-              onChangeText={setEditedText}
-              multiline
-              autoFocus
-              placeholder={t('result.dataPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
-            />
-          </View>
-        ) : (
-          <View style={[styles.dataBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <ScrollView style={styles.dataScrollView}>
-              <Text style={[styles.dataText, { color: colors.text }]} selectable>
-                {displayText}
-              </Text>
-            </ScrollView>
-          </View>
-        )}
-
-        {isEditing && (
-          <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: colors.success }]}
-            onPress={handleSaveEdit}
-          >
-            <Ionicons name="checkmark-circle" size={24} color="#fff" />
-            <Text style={styles.saveButtonText}>{t('common.save')}</Text>
-          </TouchableOpacity>
-        )}
-
-        {!isEditing && (
-          <View style={styles.buttonGroup}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.surface }]}
-              onPress={handleCopy}
-              accessibilityLabel={t('result.copy')}
-              accessibilityRole="button"
-            >
-              <Ionicons name="copy-outline" size={24} color={colors.primary} />
-              <Text style={[styles.actionButtonText, { color: colors.primary }]}>{t('result.copy')}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.surface }]}
-              onPress={handleShare}
-              accessibilityLabel={t('result.share')}
-              accessibilityRole="button"
-            >
-              <Ionicons name="share-outline" size={24} color={colors.primary} />
-              <Text style={[styles.actionButtonText, { color: colors.primary }]}>{t('result.share')}</Text>
-            </TouchableOpacity>
-
-            {(isUrl || editedText.startsWith('http://') || editedText.startsWith('https://')) && (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.surface }]}
-                onPress={handleOpenUrl}
-                accessibilityLabel={t('result.open')}
-                accessibilityRole="button"
-              >
-                <Ionicons name="open-outline" size={24} color={colors.primary} />
-                <Text style={[styles.actionButtonText, { color: colors.primary }]}>{t('result.open')}</Text>
-              </TouchableOpacity>
+            {/* 펼쳐진 EC 레벨 설명 */}
+            {ecLevelExpanded && (
+              <View style={[styles.ecLevelExpandedContent, { borderTopColor: colors.border }]}>
+                <Text style={[styles.ecLevelExpandedTitle, { color: colors.text }]}>
+                  {t('result.ecLevelTypes')}
+                </Text>
+                <View style={styles.ecLevelList}>
+                  {['L', 'M', 'Q', 'H'].map((level) => {
+                    const isActive = ecLevel?.toUpperCase() === level;
+                    const levelName = { L: 'Low', M: 'Medium', Q: 'Quartile', H: 'High' }[level];
+                    const levelPercent = { L: '~7%', M: '~15%', Q: '~25%', H: '~30%' }[level];
+                    return (
+                      <View key={level} style={[styles.ecLevelListItem, isActive && styles.ecLevelListItemActive, isActive && { backgroundColor: colors.primary + '20' }]}>
+                        <View style={[styles.ecLevelListBadge, { backgroundColor: isActive ? colors.primary : colors.textSecondary }]}>
+                          <Text style={styles.ecLevelListBadgeText}>{level}</Text>
+                        </View>
+                        <View style={styles.ecLevelListInfo}>
+                          <Text style={[styles.ecLevelListName, { color: colors.text }]}>{levelName}</Text>
+                          <Text style={[styles.ecLevelListPercent, { color: colors.textSecondary }]}>{levelPercent} {t('result.recoverable')}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
             )}
           </View>
         )}
       </ScrollView>
-
-      {!isEditing && (
-        <TouchableOpacity
-          style={[styles.scanAgainButton, { backgroundColor: colors.success }]}
-          onPress={() => router.back()}
-          accessibilityLabel={t('result.scanAgain')}
-          accessibilityRole="button"
-        >
-          <Ionicons name="scan" size={24} color="#fff" />
-          <Text style={styles.scanAgainText}>{t('result.scanAgain')}</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -583,104 +591,139 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 60,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingTop: 50,
+    paddingBottom: 8,
   },
-  closeButton: {
-    padding: 4,
-  },
-  deleteButton: {
-    padding: 4,
+  headerButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
+    gap: 12,
   },
-  photoContainer: {
-    marginVertical: 20,
-    width: '100%',
+  mainCard: {
+    borderRadius: 16,
+    padding: 16,
   },
-  photoHeader: {
+  badgeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 12,
-    width: '100%',
   },
-  photoLabel: {
-    fontSize: 16,
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 5,
+  },
+  typeBadgeText: {
+    fontSize: 12,
     fontWeight: '600',
   },
-  photoButtonGroup: {
+  ecBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 5,
+  },
+  ecBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dataSection: {
+    minHeight: 80,
+    maxHeight: 200,
+    marginBottom: 16,
+  },
+  dataScrollView: {
+    flex: 1,
+  },
+  dataText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  dataInput: {
+    fontSize: 16,
+    lineHeight: 24,
+    padding: 12,
+    borderRadius: 12,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  actionChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 6,
+  },
+  actionChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  editActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  editButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    borderWidth: 1,
+  },
+  editButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  saveEditButton: {},
+  saveEditButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  infoCard: {
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+  },
+  infoCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  savePhotoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 6,
-  },
-  savePhotoButtonText: {
-    color: '#fff',
+  infoCardTitle: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  sharePhotoButton: {
-    width: 36,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'stretch',
-  },
-  scanPhoto: {
-    width: '70%',
-    aspectRatio: 1, // 정사각형 유지
-    alignSelf: 'center',
-    borderRadius: 12,
-    borderWidth: 2,
-  },
-  duplicateBanner: {
-    borderWidth: 2,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginVertical: 20,
-    alignItems: 'center',
-  },
-  duplicateHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  duplicateText: {
-    fontSize: 16,
-    fontWeight: '700',
     color: '#FF9500',
-    marginLeft: 8,
   },
-  scanTimesContainer: {
-    marginTop: 12,
-    width: '100%',
-    alignItems: 'flex-start',
-  },
-  scanTimesTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FF9500',
-    marginBottom: 6,
+  scanTimesList: {
+    marginTop: 10,
   },
   scanTimeItem: {
     fontSize: 12,
@@ -688,36 +731,40 @@ const styles = StyleSheet.create({
     marginVertical: 2,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  labelRow: {
+  photoCard: {
+    borderRadius: 16,
+    padding: 16,
+  },
+  photoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  labelWithType: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  label: {
-    fontSize: 16,
+  photoLabel: {
+    fontSize: 15,
     fontWeight: '600',
   },
-  typeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    borderWidth: 1,
+  photoActions: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  typeBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
+  photoActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scanPhoto: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 12,
   },
   ecLevelContainer: {
     borderWidth: 1.5,
     borderRadius: 12,
     padding: 14,
-    marginBottom: 20,
   },
   ecLevelHeader: {
     flexDirection: 'row',
@@ -757,123 +804,63 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
-  ecLevelFailedDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  rescanButton: {
+  ecLevelExpandButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF9500',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 6,
+    marginTop: 12,
+    paddingTop: 10,
   },
-  rescanButtonText: {
-    color: '#fff',
-    fontSize: 14,
+  ecLevelExpandText: {
+    fontSize: 13,
+    marginRight: 4,
+  },
+  ecLevelExpandedContent: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  ecLevelExpandedTitle: {
+    fontSize: 13,
     fontWeight: '600',
+    marginBottom: 10,
   },
-  editToggleButton: {
+  ecLevelList: {
+    gap: 8,
+  },
+  ecLevelListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
   },
-  editToggleText: {
+  ecLevelListItemActive: {
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+  ecLevelListBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  ecLevelListBadgeText: {
+    color: '#fff',
     fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
+    fontWeight: '700',
   },
-  dataBox: {
-    borderRadius: 16,
-    padding: 20,
-    minHeight: 120,
-    maxHeight: 300,
-    borderWidth: 2,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  dataScrollView: {
+  ecLevelListInfo: {
+    marginLeft: 10,
     flex: 1,
   },
-  dataText: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  dataInput: {
-    fontSize: 16,
-    lineHeight: 24,
-    minHeight: 100,
-    textAlignVertical: 'top',
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    paddingVertical: 14,
-    borderRadius: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  buttonGroup: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: 30,
-    marginBottom: 20,
-  },
-  actionButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 16,
-    minWidth: 90,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  actionButtonText: {
-    marginTop: 8,
+  ecLevelListName: {
     fontSize: 14,
     fontWeight: '600',
   },
-  scanAgainButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 20,
-    marginBottom: 100,
-    paddingVertical: 16,
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  scanAgainText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 8,
+  ecLevelListPercent: {
+    fontSize: 12,
+    marginTop: 1,
   },
 });

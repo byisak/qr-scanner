@@ -164,6 +164,10 @@ export default {
     ecLevelAnalysisFailed: '纠错等级识别失败',
     ecLevelFailedReason: '由于图像质量低或二维码损坏，无法分析纠错等级。请重新扫描以获取更清晰的照片。',
     rescanForVerification: '重新扫描以验证',
+    showEcLevelInfo: '查看纠错等级说明',
+    hideEcLevelInfo: '隐藏说明',
+    ecLevelTypes: '纠错等级类型',
+    recoverable: '可恢复',
   },
 
   // 设置界面
@@ -445,5 +449,25 @@ export default {
     saveErrorMessage: '二维码保存失败。',
     clipboardPasted: '已粘贴剪贴板内容',
     clipboardEmpty: '剪贴板为空',
+  },
+
+  // 照片保存设置
+  photoSaveSettings: {
+    title: '照片保存设置',
+    enablePhotoSave: '保存照片',
+    enablePhotoSaveDesc: '扫描时自动保存照片',
+    compressionLevel: '压缩率',
+    compressionInfo: '压缩率越低，文件越小，但画质会降低',
+    qualityOriginal: '原图',
+    qualityOriginalDesc: '无压缩，保持原始画质',
+    qualityHigh: '高',
+    qualityHighDesc: '高画质（推荐）',
+    qualityMedium: '中',
+    qualityMediumDesc: '画质与大小平衡',
+    qualityLow: '低',
+    qualityLowDesc: '小文件，画质略有下降',
+    qualityMinimum: '最小',
+    qualityMinimumDesc: '最小文件，画质明显下降',
+    note: '压缩率更改仅适用于新保存的照片',
   },
 };
