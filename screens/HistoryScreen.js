@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -276,39 +277,54 @@ export default function HistoryScreen() {
         <FlatList
           data={filteredList}
           keyExtractor={(_, i) => i.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[s.item, { backgroundColor: colors.surface }]}
-              onPress={() => handleItemPress(item)}
-              activeOpacity={0.7}
-              accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
-              accessibilityRole="button"
-            >
-              <View style={s.itemHeader}>
-                <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
-                <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
-                  {item.code}
-                </Text>
-                {item.type && item.type !== 'qr' && (
-                  <View style={[s.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                    <Text style={[s.typeBadgeText, { color: colors.primary, fontFamily: fonts.bold }]}>{item.type.toUpperCase()}</Text>
+          renderItem={({ item }) => {
+            const hasPhoto = item.photos && item.photos.length > 0;
+            return (
+              <TouchableOpacity
+                style={[s.item, { backgroundColor: colors.surface }]}
+                onPress={() => handleItemPress(item)}
+                activeOpacity={0.7}
+                accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
+                accessibilityRole="button"
+              >
+                <View style={s.itemContent}>
+                  {/* 사진 썸네일 */}
+                  {hasPhoto && (
+                    <Image
+                      source={{ uri: item.photos[0] }}
+                      style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                      resizeMode="cover"
+                    />
+                  )}
+                  <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
+                    <View style={s.itemHeader}>
+                      <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
+                      <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
+                        {item.code}
+                      </Text>
+                      {item.type && item.type !== 'qr' && (
+                        <View style={[s.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+                          <Text style={[s.typeBadgeText, { color: colors.primary, fontFamily: fonts.bold }]}>{item.type.toUpperCase()}</Text>
+                        </View>
+                      )}
+                      {item.count && item.count > 1 && (
+                        <View style={[s.countBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: '#FF9500' }]}>
+                          <Ionicons name="repeat" size={12} color="#FF9500" />
+                          <Text style={s.countBadgeText}>{item.count}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[s.time, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{formatDateTime(item.timestamp)}</Text>
+                    {item.url && (
+                      <Text style={[s.url, { color: colors.primary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                        {item.url}
+                      </Text>
+                    )}
                   </View>
-                )}
-                {item.count && item.count > 1 && (
-                  <View style={[s.countBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: '#FF9500' }]}>
-                    <Ionicons name="repeat" size={12} color="#FF9500" />
-                    <Text style={s.countBadgeText}>{item.count}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[s.time, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{formatDateTime(item.timestamp)}</Text>
-              {item.url && (
-                <Text style={[s.url, { color: colors.primary, fontFamily: fonts.regular }]} numberOfLines={1}>
-                  {item.url}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
+                </View>
+              </TouchableOpacity>
+            );
+          }}
           contentContainerStyle={s.listContent}
         />
       )}
@@ -443,6 +459,22 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+  },
+  itemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  photoThumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemInfoWithPhoto: {
+    marginLeft: 12,
   },
   itemHeader: {
     flexDirection: 'row',
