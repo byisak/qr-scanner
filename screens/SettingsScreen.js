@@ -50,16 +50,16 @@ export default function SettingsScreen() {
   // 사진 압축률 상태
   const [photoQuality, setPhotoQuality] = useState('0.8');
 
-  // 압축률 라벨 반환
-  const getQualityLabel = (quality) => {
-    const qualityLabels = {
-      '1.0': t('photoSaveSettings.qualityOriginal'),
-      '0.8': t('photoSaveSettings.qualityHigh'),
-      '0.6': t('photoSaveSettings.qualityMedium'),
-      '0.4': t('photoSaveSettings.qualityLow'),
-      '0.2': t('photoSaveSettings.qualityMinimum'),
+  // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
+  const getQualityFullLabel = (quality) => {
+    const labels = {
+      '1.0': `${t('photoSaveSettings.qualityOriginal')} ${t('photoSaveSettings.qualityOriginalDesc')}`,
+      '0.8': `${t('photoSaveSettings.qualityHigh')} ${t('photoSaveSettings.qualityHighDesc')}`,
+      '0.6': `${t('photoSaveSettings.qualityMedium')} ${t('photoSaveSettings.qualityMediumDesc')}`,
+      '0.4': `${t('photoSaveSettings.qualityLow')} ${t('photoSaveSettings.qualityLowDesc')}`,
+      '0.2': `${t('photoSaveSettings.qualityMinimum')} ${t('photoSaveSettings.qualityMinimumDesc')}`,
     };
-    return qualityLabels[quality] || t('photoSaveSettings.qualityHigh');
+    return labels[quality] || `${t('photoSaveSettings.qualityHigh')} ${t('photoSaveSettings.qualityHighDesc')}`;
   };
 
   useEffect(() => {
@@ -329,13 +329,15 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {photoSaveEnabled
-                  ? `${t('settings.statusOn')} · ${getQualityLabel(photoQuality)}`
-                  : t('settings.statusOff')
-                }
+                {photoSaveEnabled ? getQualityFullLabel(photoQuality) : t('settings.photoSaveDesc')}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: photoSaveEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {photoSaveEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
           </TouchableOpacity>
 
           {/* 배치 스캔 모드 */}
