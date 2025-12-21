@@ -28,18 +28,16 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
 
-// ZXing JavaScript 라이브러리 사용 (QR 코드 + 다양한 바코드 지원)
+// ZXing WASM IIFE 빌드 사용 (QR 코드 + 다양한 바코드 지원)
 const getWebViewHTML = () => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://unpkg.com/@aspect-build/aspect-library@0.21.1/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/full/index.min.js"></script>
 </head>
 <body style="background: #000;">
-<canvas id="canvas" style="display:none;"></canvas>
-<img id="image" style="display:none;" />
 <script>
   // 로그 전송
   function sendLog(message) {
@@ -80,7 +78,7 @@ const getWebViewHTML = () => `
         analyzeImage(data.base64);
       }
     } catch (e) {
-      sendError('Message parse error: ' + e.message);
+      // ignore parse errors from other messages
     }
   });
 
@@ -99,95 +97,73 @@ const getWebViewHTML = () => `
   // 이미지 분석 함수
   async function analyzeImage(base64Data) {
     sendStatus('loading');
-    sendLog('Starting analysis with ZXing...');
+    sendLog('Starting analysis with zxing-wasm...');
 
     try {
-      // ZXing 라이브러리 확인
-      if (typeof ZXing === 'undefined') {
-        sendError('ZXing library not loaded');
+      // zxing-wasm IIFE 글로벌 객체 확인
+      if (typeof ZXingWASM === 'undefined') {
+        sendError('ZXing WASM library not loaded');
         return;
       }
 
-      var img = document.getElementById('image');
-      img.src = 'data:image/jpeg;base64,' + base64Data;
+      sendLog('ZXing WASM loaded, converting image...');
+      sendStatus('analyzing');
 
-      await new Promise(function(resolve, reject) {
-        img.onload = resolve;
-        img.onerror = reject;
+      // Base64를 Blob으로 변환
+      var byteCharacters = atob(base64Data);
+      var byteNumbers = new Uint8Array(byteCharacters.length);
+      for (var i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      var blob = new Blob([byteNumbers], { type: 'image/jpeg' });
+
+      sendLog('Image blob created, analyzing...');
+
+      // 바코드 읽기 옵션
+      var readerOptions = {
+        tryHarder: true,
+        tryRotate: true,
+        tryInvert: true,
+        tryDownscale: true,
+        maxNumberOfSymbols: 20,
+        formats: [
+          'QRCode',
+          'EAN-13',
+          'EAN-8',
+          'Code128',
+          'Code39',
+          'Code93',
+          'UPC-A',
+          'UPC-E',
+          'ITF',
+          'Codabar',
+          'DataMatrix',
+          'Aztec',
+          'PDF417',
+        ],
+      };
+
+      // zxing-wasm readBarcodes 호출
+      var barcodes = await ZXingWASM.readBarcodes(blob, readerOptions);
+
+      sendLog('Analysis complete, found ' + barcodes.length + ' codes');
+
+      // 결과 처리
+      var processedResults = barcodes.map(function(barcode, index) {
+        return {
+          id: index,
+          text: barcode.text,
+          format: barcode.format,
+          position: barcode.position ? {
+            topLeft: barcode.position.topLeft,
+            topRight: barcode.position.topRight,
+            bottomRight: barcode.position.bottomRight,
+            bottomLeft: barcode.position.bottomLeft,
+          } : null,
+        };
       });
 
-      sendStatus('analyzing');
-      sendLog('Image loaded: ' + img.width + 'x' + img.height);
-
-      // Canvas에 이미지 그리기
-      var canvas = document.getElementById('canvas');
-      var ctx = canvas.getContext('2d');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      ctx.drawImage(img, 0, 0);
-
-      // ZXing으로 바코드 스캔
-      var codeReader = new ZXing.BrowserMultiFormatReader();
-      var hints = new Map();
-
-      // 지원하는 바코드 형식 설정
-      var formats = [
-        ZXing.BarcodeFormat.QR_CODE,
-        ZXing.BarcodeFormat.EAN_13,
-        ZXing.BarcodeFormat.EAN_8,
-        ZXing.BarcodeFormat.CODE_128,
-        ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.CODE_93,
-        ZXing.BarcodeFormat.UPC_A,
-        ZXing.BarcodeFormat.UPC_E,
-        ZXing.BarcodeFormat.ITF,
-        ZXing.BarcodeFormat.CODABAR,
-        ZXing.BarcodeFormat.DATA_MATRIX,
-        ZXing.BarcodeFormat.AZTEC,
-        ZXing.BarcodeFormat.PDF_417,
-      ];
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-
-      var luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
-      var binaryBitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
-
-      var results = [];
-
-      try {
-        // 단일 바코드 디코딩 시도
-        var reader = new ZXing.MultiFormatReader();
-        reader.setHints(hints);
-        var result = reader.decode(binaryBitmap);
-
-        if (result) {
-          sendLog('Barcode found: ' + result.getText().substring(0, 50));
-
-          var position = null;
-          var points = result.getResultPoints();
-          if (points && points.length >= 2) {
-            position = {
-              topLeft: { x: points[0].getX(), y: points[0].getY() },
-              topRight: { x: points[1].getX(), y: points[1].getY() },
-              bottomRight: points.length > 2 ? { x: points[2].getX(), y: points[2].getY() } : { x: points[1].getX(), y: points[1].getY() },
-              bottomLeft: points.length > 3 ? { x: points[3].getX(), y: points[3].getY() } : { x: points[0].getX(), y: points[0].getY() },
-            };
-          }
-
-          results.push({
-            id: 0,
-            text: result.getText(),
-            format: ZXing.BarcodeFormat[result.getBarcodeFormat()],
-            position: position,
-          });
-        }
-      } catch (e) {
-        // 바코드를 찾지 못한 경우
-        sendLog('No barcode found: ' + e.message);
-      }
-
-      sendLog('Analysis complete, found ' + results.length + ' codes');
-      sendResults(results);
+      sendResults(processedResults);
     } catch (error) {
       sendLog('Analysis error: ' + error.message);
       sendError(error.message || 'Unknown error');
@@ -195,7 +171,7 @@ const getWebViewHTML = () => `
   }
 
   // WebView 준비 완료 알림
-  sendLog('WebView initialized with ZXing');
+  sendLog('WebView initialized with zxing-wasm IIFE');
   window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
 </script>
 </body>
