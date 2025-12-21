@@ -22,20 +22,24 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
+import { Asset } from 'expo-asset';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
 
+// zxing-wasm 라이브러리 로컬 파일 (텍스트 파일로 번들링)
+const zxingWasmAsset = require('../assets/js/zxing-wasm.txt');
+
 // ZXing WASM IIFE 빌드 사용 (QR 코드 + 다양한 바코드 지원)
-const getWebViewHTML = () => `
+const getWebViewHTML = (zxingScript) => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@2.2.4/dist/iife/full/index.min.js"></script>
+  <script>${zxingScript || ''}</script>
 </head>
 <body style="background: #000;">
 <script>
@@ -195,10 +199,29 @@ function ImageAnalysisScreen() {
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
   const [base64Image, setBase64Image] = useState(null);
   const [webViewReady, setWebViewReady] = useState(false);
+  const [zxingScript, setZxingScript] = useState(null);
 
   const webViewRef = useRef(null);
   const timeoutRef = useRef(null);
   const analysisStartedRef = useRef(false);
+
+  // zxing-wasm 라이브러리 로드
+  useEffect(() => {
+    const loadZxingScript = async () => {
+      try {
+        const asset = Asset.fromModule(zxingWasmAsset);
+        await asset.downloadAsync();
+        const scriptContent = await FileSystem.readAsStringAsync(asset.localUri);
+        setZxingScript(scriptContent);
+        console.log('ZXing WASM script loaded, size:', scriptContent.length);
+      } catch (err) {
+        console.error('Failed to load ZXing script:', err);
+        // CDN 폴백
+        setZxingScript(null);
+      }
+    };
+    loadZxingScript();
+  }, []);
 
   // 타임아웃 설정
   const startTimeout = useCallback(() => {
@@ -571,12 +594,12 @@ function ImageAnalysisScreen() {
       </ScrollView>
 
       {/* 숨겨진 WebView - 바코드 분석용 (맨 아래 배치) */}
-      {base64Image && (
+      {base64Image && zxingScript && (
         <WebView
           ref={webViewRef}
           style={styles.hiddenWebView}
           originWhitelist={['*']}
-          source={{ html: getWebViewHTML() }}
+          source={{ html: getWebViewHTML(zxingScript) }}
           onMessage={handleWebViewMessage}
           onError={handleWebViewError}
           javaScriptEnabled={true}
