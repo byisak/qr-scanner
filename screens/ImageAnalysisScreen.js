@@ -653,10 +653,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
   imageSection: {
     alignItems: 'center',
@@ -705,7 +704,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   resultsSection: {
-    flex: 1,
   },
   sectionTitle: {
     fontSize: 20,
