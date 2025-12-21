@@ -627,11 +627,10 @@ const styles = StyleSheet.create({
   },
   hiddenWebView: {
     position: 'absolute',
-    left: -9999,
-    top: -9999,
-    width: 1,
-    height: 1,
+    width: 0,
+    height: 0,
     opacity: 0,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
