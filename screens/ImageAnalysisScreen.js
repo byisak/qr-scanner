@@ -451,24 +451,6 @@ function ImageAnalysisScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      {/* 숨겨진 WebView - 바코드 분석용 */}
-      {base64Image && zxingScript && (
-        <WebView
-          ref={webViewRef}
-          style={styles.hiddenWebView}
-          originWhitelist={['*']}
-          source={{ html: getWebViewHTML(zxingScript) }}
-          onMessage={handleWebViewMessage}
-          onError={handleWebViewError}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          allowFileAccess={true}
-          mixedContentMode="always"
-          cacheEnabled={true}
-          onLoadEnd={() => console.log('WebView loaded')}
-        />
-      )}
-
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -611,6 +593,25 @@ function ImageAnalysisScreen() {
         </View>
       </ScrollView>
 
+      {/* 숨겨진 WebView - 바코드 분석용 (레이아웃 외부) */}
+      {base64Image && zxingScript && (
+        <View style={styles.hiddenWebViewContainer} pointerEvents="none">
+          <WebView
+            ref={webViewRef}
+            style={styles.hiddenWebView}
+            originWhitelist={['*']}
+            source={{ html: getWebViewHTML(zxingScript) }}
+            onMessage={handleWebViewMessage}
+            onError={handleWebViewError}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            allowFileAccess={true}
+            mixedContentMode="always"
+            cacheEnabled={true}
+            onLoadEnd={() => console.log('WebView loaded')}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -625,12 +626,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  hiddenWebView: {
+  hiddenWebViewContainer: {
     position: 'absolute',
-    width: 0,
-    height: 0,
-    opacity: 0,
+    top: 0,
+    left: 0,
+    width: 1,
+    height: 1,
     overflow: 'hidden',
+    opacity: 0,
+    zIndex: -1,
+  },
+  hiddenWebView: {
+    width: 1,
+    height: 1,
   },
   header: {
     flexDirection: 'row',
