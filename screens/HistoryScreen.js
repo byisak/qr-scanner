@@ -298,15 +298,9 @@ export default function HistoryScreen() {
                   )}
                   <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
                     <View style={s.itemHeader}>
-                      <Ionicons name="qr-code-outline" size={20} color={colors.primary} />
                       <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
                         {item.code}
                       </Text>
-                      {item.type && item.type !== 'qr' && (
-                        <View style={[s.typeBadge, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-                          <Text style={[s.typeBadgeText, { color: colors.primary, fontFamily: fonts.bold }]}>{item.type.toUpperCase()}</Text>
-                        </View>
-                      )}
                       {item.count && item.count > 1 && (
                         <View style={[s.countBadge, { backgroundColor: 'rgba(255, 149, 0, 0.15)', borderColor: '#FF9500' }]}>
                           <Ionicons name="repeat" size={12} color="#FF9500" />
@@ -320,6 +314,17 @@ export default function HistoryScreen() {
                         {item.url}
                       </Text>
                     )}
+                  </View>
+                  {/* 바코드 타입 뱃지 (오른쪽) */}
+                  <View style={[s.typeBadgeRight, { backgroundColor: colors.primary + '15' }]}>
+                    <Ionicons
+                      name={(!item.type || item.type === 'qr' || item.type === 'qrcode') ? 'qr-code' : 'barcode'}
+                      size={12}
+                      color={colors.primary}
+                    />
+                    <Text style={[s.typeBadgeRightText, { color: colors.primary }]}>
+                      {(!item.type || item.type === 'qr' || item.type === 'qrcode') ? 'QR' : item.type.toUpperCase()}
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -512,6 +517,19 @@ const s = StyleSheet.create({
   typeBadgeText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  typeBadgeRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+    marginLeft: 8,
+  },
+  typeBadgeRightText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   time: {
     fontSize: 13,

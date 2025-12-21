@@ -670,20 +670,34 @@ function ScannerScreen() {
 
   // 사진 압축률 설정 (AsyncStorage에서 로드)
   const [photoQuality, setPhotoQuality] = useState(0.8);
+  const photoQualityRef = useRef(0.8);
 
-  // 사진 압축률 로드
-  useEffect(() => {
-    (async () => {
-      try {
-        const quality = await AsyncStorage.getItem('photoQuality');
-        if (quality !== null) {
-          setPhotoQuality(parseFloat(quality));
-        }
-      } catch (error) {
-        console.log('Failed to load photo quality setting');
+  // 사진 압축률 로드 함수
+  const loadPhotoQuality = useCallback(async () => {
+    try {
+      const quality = await AsyncStorage.getItem('photoQuality');
+      if (quality !== null) {
+        const parsedQuality = parseFloat(quality);
+        setPhotoQuality(parsedQuality);
+        photoQualityRef.current = parsedQuality;
+        console.log('[ScannerScreen] Photo quality loaded:', parsedQuality);
       }
-    })();
+    } catch (error) {
+      console.log('Failed to load photo quality setting');
+    }
   }, []);
+
+  // 초기 로드
+  useEffect(() => {
+    loadPhotoQuality();
+  }, [loadPhotoQuality]);
+
+  // 화면 포커스 시 다시 로드 (설정 변경 반영)
+  useFocusEffect(
+    useCallback(() => {
+      loadPhotoQuality();
+    }, [loadPhotoQuality])
+  );
 
   const capturePhoto = useCallback(async () => {
     isCapturingPhotoRef.current = true;
@@ -704,8 +718,10 @@ function ScannerScreen() {
       }
 
       // Vision Camera 사진 촬영 (설정된 압축률 적용)
+      const currentQuality = photoQualityRef.current;
+      console.log('[capturePhoto] Using quality:', currentQuality);
       const photo = await cameraRef.current.takePictureAsync({
-        quality: photoQuality,
+        quality: currentQuality,
         shutterSound: false,
       });
 
@@ -733,7 +749,7 @@ function ScannerScreen() {
       isCapturingPhotoRef.current = false;
       setIsCapturingPhoto(false);
     }
-  }, [photoQuality]);
+  }, []);
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
