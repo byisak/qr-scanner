@@ -1,5 +1,5 @@
 // components/QRStylePicker.js - QR 코드 스타일 선택 모달
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
-import ColorPicker, { Panel1, Swatches, Preview, HueSlider, OpacitySlider } from 'reanimated-color-picker';
+import NativeColorPicker from './NativeColorPicker';
 
 // 프리셋 색상 팔레트
 const COLOR_PRESETS = [
@@ -187,11 +187,6 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
     }
   };
 
-  const onSelectColor = useCallback(({ hex }) => {
-    onColorChange(hex);
-    setHexInput(hex);
-  }, [onColorChange]);
-
   return (
     <View style={styles.colorPickerContainer}>
       <Text style={[styles.optionTitle, { color: colors.text }]}>{label}</Text>
@@ -267,33 +262,17 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
             ))}
           </View>
 
-          {/* 컬러 피커 모달 */}
-          <Modal visible={showColorPicker} animationType="slide" transparent>
-            <View style={styles.colorPickerModalOverlay}>
-              <View style={[styles.colorPickerModal, { backgroundColor: colors.surface }]}>
-                <View style={styles.colorPickerModalHeader}>
-                  <Text style={[styles.colorPickerModalTitle, { color: colors.text }]}>색상 선택</Text>
-                  <TouchableOpacity onPress={() => setShowColorPicker(false)}>
-                    <Ionicons name="close" size={24} color={colors.text} />
-                  </TouchableOpacity>
-                </View>
-
-                <ColorPicker style={styles.colorPickerWrapper} value={color} onComplete={onSelectColor}>
-                  <Preview />
-                  <Panel1 style={styles.colorPanel} />
-                  <HueSlider style={styles.hueSlider} />
-                  <Swatches colors={COLOR_PRESETS} style={styles.swatches} />
-                </ColorPicker>
-
-                <TouchableOpacity
-                  style={[styles.colorPickerDoneButton, { backgroundColor: colors.primary }]}
-                  onPress={() => setShowColorPicker(false)}
-                >
-                  <Text style={styles.colorPickerDoneText}>확인</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Modal>
+          {/* 네이티브 컬러 피커 */}
+          <NativeColorPicker
+            visible={showColorPicker}
+            onClose={() => setShowColorPicker(false)}
+            color={color}
+            onColorChange={(newColor) => {
+              onColorChange(newColor);
+              setHexInput(newColor);
+            }}
+            colors={colors}
+          />
         </>
       ) : (
         <>
@@ -1092,51 +1071,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  colorPickerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  colorPickerModal: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-  },
-  colorPickerModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  colorPickerModalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  colorPickerWrapper: {
-    gap: 16,
-  },
-  colorPanel: {
-    height: 200,
-    borderRadius: 12,
-  },
-  hueSlider: {
-    height: 30,
-    borderRadius: 8,
-  },
-  swatches: {
-    marginTop: 8,
-  },
-  colorPickerDoneButton: {
-    marginTop: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  colorPickerDoneText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });
