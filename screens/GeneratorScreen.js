@@ -19,7 +19,6 @@ import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -326,9 +325,11 @@ export default function GeneratorScreen() {
     }
   };
 
-  // 로고 이미지 선택
+  // 로고 이미지 선택 (동적 import 사용)
   const handlePickLogo = async () => {
     try {
+      const ImagePicker = await import('expo-image-picker');
+
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(t('common.error'), '갤러리 접근 권한이 필요합니다.');
@@ -356,7 +357,7 @@ export default function GeneratorScreen() {
       }
     } catch (error) {
       console.error('Error picking logo:', error);
-      Alert.alert(t('common.error'), '이미지를 불러오는데 실패했습니다.');
+      Alert.alert(t('common.error'), '이미지를 불러오는데 실패했습니다. Expo Go 앱을 업데이트해 주세요.');
     }
   };
 
