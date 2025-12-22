@@ -970,6 +970,7 @@ export default function GeneratorScreen() {
         onClose={() => setStylePickerVisible(false)}
         currentStyle={qrStyle}
         onStyleChange={setQrStyle}
+        previewValue={qrData || 'QR PREVIEW'}
       />
     </View>
   );

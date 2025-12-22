@@ -2,12 +2,17 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { Asset } from 'expo-asset';
+import * as FileSystem from 'expo-file-system';
 
 const DOT_TYPES = ['square', 'dots', 'rounded', 'extra-rounded', 'classy', 'classy-rounded'];
 const CORNER_SQUARE_TYPES = ['square', 'dot', 'extra-rounded'];
 const CORNER_DOT_TYPES = ['square', 'dot'];
 
 export { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES };
+
+// 라이브러리 코드 캐싱
+let cachedLibraryCode = null;
 
 export default function StyledQRCode({
   value,
@@ -18,6 +23,29 @@ export default function StyledQRCode({
 }) {
   const webViewRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [libraryCode, setLibraryCode] = useState(cachedLibraryCode);
+
+  // 라이브러리 로드
+  useEffect(() => {
+    const loadLibrary = async () => {
+      if (cachedLibraryCode) {
+        setLibraryCode(cachedLibraryCode);
+        return;
+      }
+
+      try {
+        const asset = Asset.fromModule(require('../assets/js/qr-code-styling.txt'));
+        await asset.downloadAsync();
+        const code = await FileSystem.readAsStringAsync(asset.localUri);
+        cachedLibraryCode = code;
+        setLibraryCode(code);
+      } catch (error) {
+        console.error('Failed to load qr-code-styling library:', error);
+      }
+    };
+
+    loadLibrary();
+  }, []);
 
   const {
     dotType = 'square',
@@ -79,7 +107,7 @@ export default function StyledQRCode({
       <html>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.6.0/lib/qr-code-styling.js"></script>
+        <script>${libraryCode}</script>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           html, body {
@@ -184,6 +212,17 @@ export default function StyledQRCode({
 
   if (!value) {
     return null;
+  }
+
+  // 라이브러리 로드 대기
+  if (!libraryCode) {
+    return (
+      <View style={[styles.container, { width: size, height: size }, style]}>
+        <View style={[styles.loadingContainer, { width: size, height: size }]}>
+          <ActivityIndicator size="large" color="#007AFF" />
+        </View>
+      </View>
+    );
   }
 
   return (

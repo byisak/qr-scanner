@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
-import { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
+import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 
 // 프리셋 색상 팔레트
 const COLOR_PRESETS = [
@@ -155,6 +155,7 @@ export default function QRStylePicker({
   onClose,
   currentStyle,
   onStyleChange,
+  previewValue = 'QR PREVIEW', // 미리보기용 QR 데이터
 }) {
   const { t, language } = useLanguage();
   const { isDark } = useTheme();
@@ -162,6 +163,12 @@ export default function QRStylePicker({
 
   const [activeTab, setActiveTab] = useState('presets'); // presets, dots, corners, colors
   const [tempStyle, setTempStyle] = useState(currentStyle);
+  const [previewKey, setPreviewKey] = useState(0); // 미리보기 강제 리렌더링용
+
+  // 스타일 변경 시 미리보기 업데이트
+  useEffect(() => {
+    setPreviewKey(prev => prev + 1);
+  }, [tempStyle]);
 
   useEffect(() => {
     if (visible) {
@@ -540,6 +547,18 @@ export default function QRStylePicker({
           </TouchableOpacity>
         </View>
 
+        {/* Live Preview */}
+        <View style={[styles.previewContainer, { backgroundColor: colors.surface }]}>
+          <View style={[styles.previewWrapper, { backgroundColor: tempStyle.backgroundColor || '#ffffff' }]}>
+            <StyledQRCode
+              key={previewKey}
+              value={previewValue}
+              size={140}
+              qrStyle={tempStyle}
+            />
+          </View>
+        </View>
+
         {/* Tabs */}
         <View style={[styles.tabContainer, { backgroundColor: colors.surface }]}>
           {tabs.map((tab) => (
@@ -610,6 +629,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'right',
+  },
+  previewContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  previewWrapper: {
+    borderRadius: 16,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   tabContainer: {
     flexDirection: 'row',
