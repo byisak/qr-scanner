@@ -1,5 +1,5 @@
 // components/QRStylePicker.js - QR 코드 스타일 선택 모달
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
+import ColorPicker, { Panel1, Swatches, Preview, HueSlider, OpacitySlider } from 'reanimated-color-picker';
 
 // 프리셋 색상 팔레트
 const COLOR_PRESETS = [
@@ -162,8 +163,9 @@ const QR_STYLE_PRESETS = [
 export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 
 // 색상 선택 컴포넌트
-function ColorPicker({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
+function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
   const [hexInput, setHexInput] = useState(color || '#000000');
+  const [showColorPicker, setShowColorPicker] = useState(false);
 
   useEffect(() => {
     setHexInput(color || '#000000');
@@ -184,6 +186,11 @@ function ColorPicker({ label, color, onColorChange, useGradient, gradient, onGra
       setHexInput('#' + hexInput);
     }
   };
+
+  const onSelectColor = useCallback(({ hex }) => {
+    onColorChange(hex);
+    setHexInput(hex);
+  }, [onColorChange]);
 
   return (
     <View style={styles.colorPickerContainer}>
@@ -214,9 +221,12 @@ function ColorPicker({ label, color, onColorChange, useGradient, gradient, onGra
 
       {(!showGradientOption || !useGradient) ? (
         <>
-          {/* Hex 입력 */}
+          {/* 색상 선택 버튼 */}
           <View style={styles.hexInputRow}>
-            <View style={[styles.colorPreviewSmall, { backgroundColor: color }]} />
+            <TouchableOpacity
+              style={[styles.colorPreviewSmall, { backgroundColor: color }]}
+              onPress={() => setShowColorPicker(true)}
+            />
             <TextInput
               style={[styles.hexInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground }]}
               value={hexInput}
@@ -227,6 +237,12 @@ function ColorPicker({ label, color, onColorChange, useGradient, gradient, onGra
               autoCapitalize="characters"
               maxLength={7}
             />
+            <TouchableOpacity
+              style={[styles.colorPickerButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowColorPicker(true)}
+            >
+              <Ionicons name="color-palette" size={20} color="#fff" />
+            </TouchableOpacity>
           </View>
 
           {/* 프리셋 색상 */}
@@ -250,6 +266,34 @@ function ColorPicker({ label, color, onColorChange, useGradient, gradient, onGra
               />
             ))}
           </View>
+
+          {/* 컬러 피커 모달 */}
+          <Modal visible={showColorPicker} animationType="slide" transparent>
+            <View style={styles.colorPickerModalOverlay}>
+              <View style={[styles.colorPickerModal, { backgroundColor: colors.surface }]}>
+                <View style={styles.colorPickerModalHeader}>
+                  <Text style={[styles.colorPickerModalTitle, { color: colors.text }]}>색상 선택</Text>
+                  <TouchableOpacity onPress={() => setShowColorPicker(false)}>
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+
+                <ColorPicker style={styles.colorPickerWrapper} value={color} onComplete={onSelectColor}>
+                  <Preview />
+                  <Panel1 style={styles.colorPanel} />
+                  <HueSlider style={styles.hueSlider} />
+                  <Swatches colors={COLOR_PRESETS} style={styles.swatches} />
+                </ColorPicker>
+
+                <TouchableOpacity
+                  style={[styles.colorPickerDoneButton, { backgroundColor: colors.primary }]}
+                  onPress={() => setShowColorPicker(false)}
+                >
+                  <Text style={styles.colorPickerDoneText}>확인</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
         </>
       ) : (
         <>
@@ -426,7 +470,7 @@ export default function QRStylePicker({
 
       <View style={styles.sectionDivider} />
 
-      <ColorPicker
+      <ColorPickerSection
         label={t('generator.qrStyle.dotColor') || '도트 색상'}
         color={tempStyle.dotColor}
         onColorChange={(color) => updateStyle('dotColor', color)}
@@ -481,7 +525,7 @@ export default function QRStylePicker({
         ))}
       </View>
 
-      <ColorPicker
+      <ColorPickerSection
         label="색상"
         color={tempStyle.cornerSquareColor}
         onColorChange={(color) => updateStyle('cornerSquareColor', color)}
@@ -534,7 +578,7 @@ export default function QRStylePicker({
         ))}
       </View>
 
-      <ColorPicker
+      <ColorPickerSection
         label="색상"
         color={tempStyle.cornerDotColor}
         onColorChange={(color) => updateStyle('cornerDotColor', color)}
@@ -560,7 +604,7 @@ export default function QRStylePicker({
         배경 설정 (Background)
       </Text>
 
-      <ColorPicker
+      <ColorPickerSection
         label="배경 색상"
         color={tempStyle.backgroundColor}
         onColorChange={(color) => updateStyle('backgroundColor', color)}
@@ -1041,5 +1085,58 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  colorPickerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorPickerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  colorPickerModal: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  colorPickerModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  colorPickerModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  colorPickerWrapper: {
+    gap: 16,
+  },
+  colorPanel: {
+    height: 200,
+    borderRadius: 12,
+  },
+  hueSlider: {
+    height: 30,
+    borderRadius: 8,
+  },
+  swatches: {
+    marginTop: 8,
+  },
+  colorPickerDoneButton: {
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  colorPickerDoneText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
