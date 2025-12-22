@@ -40,7 +40,13 @@ export default function StyledQRCode({
     logoBackgroundColor = '#ffffff',
     errorCorrectionLevel = 'M',
     imageOptions = {},
+    width: qrWidth,
+    height: qrHeight,
   } = qrStyle;
+
+  // qrStyle에서 width/height가 있으면 사용, 없으면 size prop 사용
+  const actualWidth = qrWidth || size;
+  const actualHeight = qrHeight || size;
 
   // 이미지 옵션 기본값
   const imgOpts = {
@@ -126,8 +132,8 @@ export default function StyledQRCode({
             overflow: hidden;
           }
           #qr-container {
-            width: ${size}px;
-            height: ${size}px;
+            width: ${actualWidth}px;
+            height: ${actualHeight}px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -142,8 +148,8 @@ export default function StyledQRCode({
         <script>
           try {
             const options = {
-              width: ${size},
-              height: ${size},
+              width: ${actualWidth},
+              height: ${actualHeight},
               type: "canvas",
               data: ${JSON.stringify(value)},
               margin: ${margin},
@@ -223,11 +229,11 @@ export default function StyledQRCode({
   }
 
   return (
-    <View style={[styles.container, { width: size, height: size }, style]}>
+    <View style={[styles.container, { width: actualWidth, height: actualHeight }, style]}>
       <WebView
         ref={webViewRef}
         source={{ html: generateHTML() }}
-        style={[styles.webView, { width: size, height: size }]}
+        style={[styles.webView, { width: actualWidth, height: actualHeight }]}
         scrollEnabled={false}
         bounces={false}
         showsHorizontalScrollIndicator={false}
@@ -240,7 +246,7 @@ export default function StyledQRCode({
         androidLayerType="hardware"
       />
       {isLoading && (
-        <View style={[styles.loadingContainer, { width: size, height: size }]}>
+        <View style={[styles.loadingContainer, { width: actualWidth, height: actualHeight }]}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
       )}

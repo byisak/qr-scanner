@@ -33,15 +33,22 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
         .color-input-wrapper {
           position: relative;
           width: 100%;
-          height: 60px;
+          height: 80px;
         }
         .color-input {
           width: 100%;
           height: 100%;
-          border: none;
+          border: 2px solid #007AFF;
           border-radius: 12px;
           cursor: pointer;
           padding: 0;
+          -webkit-appearance: none;
+        }
+        .color-input-label {
+          text-align: center;
+          font-size: 14px;
+          color: #666;
+          margin-bottom: 8px;
         }
         .color-input::-webkit-color-swatch-wrapper {
           padding: 0;
@@ -85,6 +92,7 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
     <body>
       <div class="color-container">
         <div class="color-preview" id="preview"></div>
+        <div class="color-input-label">👆 탭하여 색상 선택</div>
         <div class="color-input-wrapper">
           <input type="color" class="color-input" id="colorInput" value="${color}">
         </div>
@@ -132,6 +140,16 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
         colorInput.addEventListener('input', (e) => {
           updateColor(e.target.value);
         });
+
+        // 컬러 피커 클릭 시 네이티브 피커 열기
+        colorInput.addEventListener('click', (e) => {
+          e.target.click();
+        });
+
+        // 자동으로 컬러 피커 열기 (약간의 딜레이 후)
+        setTimeout(() => {
+          colorInput.click();
+        }, 300);
       </script>
     </body>
     </html>

@@ -603,6 +603,51 @@ export default function QRStylePicker({
 
       <View style={styles.sectionDivider} />
 
+      {/* QR Size */}
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        크기 설정 (Size)
+      </Text>
+
+      <View style={styles.stepperContainer}>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>가로 (Width)</Text>
+        <View style={styles.stepperControls}>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('width', Math.max(100, (tempStyle.width || 300) - 50))}
+          >
+            <Ionicons name="remove" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.width || 300}px</Text>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('width', Math.min(1000, (tempStyle.width || 300) + 50))}
+          >
+            <Ionicons name="add" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.stepperContainer}>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>세로 (Height)</Text>
+        <View style={styles.stepperControls}>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('height', Math.max(100, (tempStyle.height || 300) - 50))}
+          >
+            <Ionicons name="remove" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.height || 300}px</Text>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('height', Math.min(1000, (tempStyle.height || 300) + 50))}
+          >
+            <Ionicons name="add" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.sectionDivider} />
+
       {/* Margin */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
         여백 설정
