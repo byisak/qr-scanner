@@ -887,17 +887,6 @@ export default function GeneratorScreen() {
                   )}
                 </View>
               </Animated.View>
-              {/* 저장용 전체 크기 QR 코드 (hidden) */}
-              {useStyledQR && qrData && (qrStyle.width || qrStyle.height) && (
-                <View style={{ position: 'absolute', left: -9999, opacity: 0 }}>
-                  <StyledQRCode
-                    value={qrData}
-                    size={qrStyle.width || qrStyle.height || 300}
-                    qrStyle={qrStyle}
-                    onCapture={(base64) => setFullSizeQRBase64(base64)}
-                  />
-                </View>
-              )}
             ) : (
               <View style={s.emptyState}>
                 <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
@@ -916,6 +905,18 @@ export default function GeneratorScreen() {
               </View>
             )}
           </View>
+
+          {/* 저장용 전체 크기 QR 코드 (hidden) */}
+          {useStyledQR && qrData && (qrStyle.width || qrStyle.height) && (
+            <View style={{ position: 'absolute', left: -9999, opacity: 0 }}>
+              <StyledQRCode
+                value={qrData}
+                size={qrStyle.width || qrStyle.height || 300}
+                qrStyle={qrStyle}
+                onCapture={(base64) => setFullSizeQRBase64(base64)}
+              />
+            </View>
+          )}
 
           {/* Style Mode Toggle */}
           {hasData && (
