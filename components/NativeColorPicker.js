@@ -66,18 +66,11 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
       }
     } catch (error) {
       console.log('Native color picker error:', error);
-      // 네이티브 모듈 에러 감지 (다양한 에러 메시지 패턴)
-      const errorMsg = error.message || '';
-      if (errorMsg.includes('not linked') ||
-          errorMsg.includes('undefined') ||
-          errorMsg.includes('Cannot find') ||
-          errorMsg.includes('native module')) {
-        Alert.alert(
-          '개발 빌드 필요',
-          'iOS 네이티브 컬러 피커는 개발 빌드(EAS Build 또는 Xcode 빌드)에서만 사용할 수 있습니다.\n\n1. pod install 실행\n2. Xcode에서 앱 다시 빌드\n\n현재는 프리셋 색상과 HEX 입력을 사용해 주세요.',
-          [{ text: '확인' }]
-        );
-      }
+      Alert.alert(
+        '앱 재빌드 필요',
+        'iOS 컬러 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\n1. Xcode에서 Clean Build (Cmd+Shift+K)\n2. Build (Cmd+B)\n3. Run (Cmd+R)\n\n현재는 프리셋 색상과 HEX 입력을 사용해 주세요.',
+        [{ text: '확인' }]
+      );
     }
   };
 

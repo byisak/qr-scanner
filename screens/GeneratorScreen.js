@@ -29,7 +29,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
-import * as ImagePicker from 'expo-image-picker';
 
 const QR_TYPES = [
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
@@ -329,6 +328,8 @@ export default function GeneratorScreen() {
   // 로고 이미지 선택
   const handlePickLogo = async () => {
     try {
+      const ImagePicker = await import('expo-image-picker');
+
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(t('common.error'), '갤러리 접근 권한이 필요합니다.');
@@ -356,7 +357,11 @@ export default function GeneratorScreen() {
       }
     } catch (error) {
       console.error('Error picking logo:', error);
-      Alert.alert(t('common.error'), '이미지를 불러오는데 실패했습니다.');
+      Alert.alert(
+        '앱 재빌드 필요',
+        '이미지 피커를 사용하려면 Xcode에서 앱을 다시 빌드해야 합니다.\n\n1. Xcode에서 Clean Build (Cmd+Shift+K)\n2. Build (Cmd+B)\n3. Run (Cmd+R)',
+        [{ text: '확인' }]
+      );
     }
   };
 
