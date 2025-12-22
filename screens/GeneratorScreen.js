@@ -62,6 +62,7 @@ export default function GeneratorScreen() {
   const [qrStyle, setQrStyle] = useState(QR_STYLE_PRESETS[0].style);
   const [stylePickerVisible, setStylePickerVisible] = useState(false);
   const [capturedQRBase64, setCapturedQRBase64] = useState(null);
+  const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
 
   // Form data for each type
   const [formData, setFormData] = useState({
@@ -244,9 +245,11 @@ export default function GeneratorScreen() {
 
     try {
       let uri;
-      if (useStyledQR && capturedQRBase64) {
+      // 저장용 전체 크기 QR 사용 (없으면 프리뷰 크기 사용)
+      const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+      if (useStyledQR && qrBase64) {
         // WebView에서 캡처한 base64 이미지 사용
-        const base64Data = capturedQRBase64.replace(/^data:image\/\w+;base64,/, '');
+        const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
         const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
         await FileSystem.writeAsStringAsync(fileUri, base64Data, {
           encoding: 'base64',
@@ -288,9 +291,11 @@ export default function GeneratorScreen() {
       }
 
       let uri;
-      if (useStyledQR && capturedQRBase64) {
+      // 저장용 전체 크기 QR 사용 (없으면 프리뷰 크기 사용)
+      const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+      if (useStyledQR && qrBase64) {
         // WebView에서 캡처한 base64 이미지 사용
-        const base64Data = capturedQRBase64.replace(/^data:image\/\w+;base64,/, '');
+        const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
         const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
         await FileSystem.writeAsStringAsync(fileUri, base64Data, {
           encoding: 'base64',
@@ -882,6 +887,17 @@ export default function GeneratorScreen() {
                   )}
                 </View>
               </Animated.View>
+              {/* 저장용 전체 크기 QR 코드 (hidden) */}
+              {useStyledQR && qrData && (qrStyle.width || qrStyle.height) && (
+                <View style={{ position: 'absolute', left: -9999, opacity: 0 }}>
+                  <StyledQRCode
+                    value={qrData}
+                    size={qrStyle.width || qrStyle.height || 300}
+                    qrStyle={qrStyle}
+                    onCapture={(base64) => setFullSizeQRBase64(base64)}
+                  />
+                </View>
+              )}
             ) : (
               <View style={s.emptyState}>
                 <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
