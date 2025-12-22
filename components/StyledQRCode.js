@@ -74,19 +74,6 @@ export default function StyledQRCode({
           color: "${backgroundColor}"
         }`;
 
-    const imageOptions = logo
-      ? `{
-          src: "${logo}",
-          width: ${size * logoSize},
-          height: ${size * logoSize},
-          margin: ${logoMargin},
-          imageOptions: {
-            crossOrigin: "anonymous",
-            margin: ${logoPadding}
-          }
-        }`
-      : 'undefined';
-
     return `
       <!DOCTYPE html>
       <html>
@@ -120,7 +107,7 @@ export default function StyledQRCode({
         <div id="qr-container"></div>
         <script>
           try {
-            const qrCode = new QRCodeStyling({
+            const options = {
               width: ${size},
               height: ${size},
               type: "canvas",
@@ -129,16 +116,21 @@ export default function StyledQRCode({
               cornersSquareOptions: ${cornerSquareOptions},
               cornersDotOptions: ${cornerDotOptions},
               backgroundOptions: ${backgroundOptions},
-              ${logo ? `image: "${logo}",` : ''}
-              imageOptions: ${logo ? `{
-                crossOrigin: "anonymous",
-                margin: ${logoPadding},
-                imageSize: ${logoSize}
-              }` : 'undefined'},
               qrOptions: {
                 errorCorrectionLevel: "${errorCorrectionLevel}"
               }
-            });
+            };
+
+            ${logo ? `
+            options.image = "${logo}";
+            options.imageOptions = {
+              crossOrigin: "anonymous",
+              margin: ${logoPadding},
+              imageSize: ${logoSize}
+            };
+            ` : ''}
+
+            const qrCode = new QRCodeStyling(options);
 
             qrCode.append(document.getElementById("qr-container"));
 
