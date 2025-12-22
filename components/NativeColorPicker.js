@@ -1,19 +1,27 @@
-// components/NativeColorPicker.js - 네이티브 컬러 피커 (iOS 네이티브 + 프리셋)
+// components/NativeColorPicker.js - 컬러 피커 (프리셋 + HEX 입력)
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-// 프리셋 색상
+// 프리셋 색상 (더 많은 색상 추가)
 const COLOR_PRESETS = [
-  '#000000', '#FFFFFF', '#007AFF', '#34C759', '#FF3B30',
-  '#FF9500', '#AF52DE', '#5856D6', '#FF2D55', '#00C7BE',
-  '#32ADE6', '#FFD60A', '#8E8E93', '#1C1C1E', '#2C2C2E',
+  // 기본
+  '#000000', '#FFFFFF', '#808080', '#C0C0C0',
+  // 빨강/분홍
+  '#FF3B30', '#FF2D55', '#FF6B6B', '#FF9999',
+  // 주황/노랑
+  '#FF9500', '#FFCC00', '#FFD60A', '#FFF3CD',
+  // 초록
+  '#34C759', '#00C853', '#4CAF50', '#8BC34A',
+  // 파랑/청록
+  '#007AFF', '#5856D6', '#00BCD4', '#03A9F4',
+  // 보라/마젠타
+  '#AF52DE', '#9C27B0', '#E91E63', '#FF4081',
 ];
 
 export default function NativeColorPicker({ visible, onClose, color, onColorChange, colors }) {
   const [tempColor, setTempColor] = useState(color);
   const [hexInput, setHexInput] = useState(color);
-  const [useNativePicker, setUseNativePicker] = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -42,35 +50,6 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
     } else if (/^[0-9A-Fa-f]{6}$/.test(hexInput)) {
       handleColorChange('#' + hexInput);
       setHexInput('#' + hexInput);
-    }
-  };
-
-  // iOS 네이티브 컬러 피커 열기
-  const openNativeColorPicker = async () => {
-    if (Platform.OS !== 'ios') {
-      Alert.alert('알림', 'iOS 네이티브 컬러 피커는 iOS에서만 사용 가능합니다.');
-      return;
-    }
-
-    try {
-      const ColorPickerIOS = await import('react-native-color-picker-ios');
-
-      const result = await ColorPickerIOS.default.open({
-        initialColor: tempColor || '#000000',
-        supportsAlpha: false,
-      });
-
-      if (result) {
-        // result는 "#RRGGBB" 형식
-        handleColorChange(result);
-      }
-    } catch (error) {
-      console.log('Native color picker error:', error);
-      Alert.alert(
-        '앱 재빌드 필요',
-        'iOS 컬러 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\n1. Xcode에서 Clean Build (Cmd+Shift+K)\n2. Build (Cmd+B)\n3. Run (Cmd+R)\n\n현재는 프리셋 색상과 HEX 입력을 사용해 주세요.',
-        [{ text: '확인' }]
-      );
     }
   };
 
@@ -106,18 +85,6 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
                 maxLength={7}
               />
             </View>
-
-            {/* iOS Native Color Picker Button */}
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                style={[styles.nativePickerButton, { backgroundColor: colors?.primary || '#007AFF' }]}
-                onPress={openNativeColorPicker}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="color-palette" size={20} color="#fff" />
-                <Text style={styles.nativePickerText}>iOS 컬러 피커 열기</Text>
-              </TouchableOpacity>
-            )}
 
             {/* Preset Colors */}
             <Text style={[styles.sectionTitle, { color: colors?.text || '#000' }]}>프리셋 색상</Text>
@@ -205,20 +172,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 18,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontWeight: '600',
-  },
-  nativePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 8,
-  },
-  nativePickerText: {
-    color: '#fff',
-    fontSize: 16,
     fontWeight: '600',
   },
   sectionTitle: {
