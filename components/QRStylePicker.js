@@ -11,7 +11,6 @@ import {
   TextInput,
   Switch,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -302,21 +301,23 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
 
           {/* 그라데이션 회전 */}
           {gradient && (
-            <View style={styles.sliderContainer}>
-              <Text style={[styles.sliderLabel, { color: colors.text }]}>
-                회전: {gradient.rotation || 0}°
-              </Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={0}
-                maximumValue={360}
-                step={15}
-                value={gradient.rotation || 0}
-                onValueChange={(value) => onGradientChange({ ...gradient, rotation: value })}
-                minimumTrackTintColor={colors.primary}
-                maximumTrackTintColor={colors.border}
-                thumbTintColor={colors.primary}
-              />
+            <View style={styles.stepperContainer}>
+              <Text style={[styles.stepperLabel, { color: colors.text }]}>회전</Text>
+              <View style={styles.stepperControls}>
+                <TouchableOpacity
+                  style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => onGradientChange({ ...gradient, rotation: Math.max(0, (gradient.rotation || 0) - 45) })}
+                >
+                  <Ionicons name="remove" size={20} color={colors.text} />
+                </TouchableOpacity>
+                <Text style={[styles.stepperValue, { color: colors.text }]}>{gradient.rotation || 0}°</Text>
+                <TouchableOpacity
+                  style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                  onPress={() => onGradientChange({ ...gradient, rotation: Math.min(360, (gradient.rotation || 0) + 45) })}
+                >
+                  <Ionicons name="add" size={20} color={colors.text} />
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </>
@@ -607,21 +608,23 @@ export default function QRStylePicker({
         여백 설정
       </Text>
 
-      <View style={styles.sliderContainer}>
-        <Text style={[styles.sliderLabel, { color: colors.text }]}>
-          여백 (Margin): {tempStyle.margin || 0}px
-        </Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={50}
-          step={5}
-          value={tempStyle.margin || 0}
-          onValueChange={(value) => updateStyle('margin', value)}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primary}
-        />
+      <View style={styles.stepperContainer}>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>여백 (Margin)</Text>
+        <View style={styles.stepperControls}>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('margin', Math.max(0, (tempStyle.margin || 0) - 5))}
+          >
+            <Ionicons name="remove" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.margin || 0}px</Text>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('margin', Math.min(50, (tempStyle.margin || 0) + 5))}
+          >
+            <Ionicons name="add" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.sectionDivider} />
@@ -692,38 +695,42 @@ export default function QRStylePicker({
         />
       </View>
 
-      <View style={styles.sliderContainer}>
-        <Text style={[styles.sliderLabel, { color: colors.text }]}>
-          이미지 크기: {((tempStyle.imageOptions?.imageSize || 0.4) * 100).toFixed(0)}%
-        </Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0.1}
-          maximumValue={0.5}
-          step={0.05}
-          value={tempStyle.imageOptions?.imageSize || 0.4}
-          onValueChange={(value) => updateStyle('imageOptions', { ...tempStyle.imageOptions, imageSize: value })}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primary}
-        />
+      <View style={styles.stepperContainer}>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>이미지 크기</Text>
+        <View style={styles.stepperControls}>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, imageSize: Math.max(0.1, (tempStyle.imageOptions?.imageSize || 0.4) - 0.05) })}
+          >
+            <Ionicons name="remove" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.stepperValue, { color: colors.text }]}>{((tempStyle.imageOptions?.imageSize || 0.4) * 100).toFixed(0)}%</Text>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, imageSize: Math.min(0.5, (tempStyle.imageOptions?.imageSize || 0.4) + 0.05) })}
+          >
+            <Ionicons name="add" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.sliderContainer}>
-        <Text style={[styles.sliderLabel, { color: colors.text }]}>
-          이미지 여백: {tempStyle.imageOptions?.margin ?? 5}px
-        </Text>
-        <Slider
-          style={styles.slider}
-          minimumValue={0}
-          maximumValue={20}
-          step={1}
-          value={tempStyle.imageOptions?.margin ?? 5}
-          onValueChange={(value) => updateStyle('imageOptions', { ...tempStyle.imageOptions, margin: value })}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primary}
-        />
+      <View style={styles.stepperContainer}>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>이미지 여백</Text>
+        <View style={styles.stepperControls}>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, margin: Math.max(0, (tempStyle.imageOptions?.margin ?? 5) - 1) })}
+          >
+            <Ionicons name="remove" size={20} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.imageOptions?.margin ?? 5}px</Text>
+          <TouchableOpacity
+            style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, margin: Math.min(20, (tempStyle.imageOptions?.margin ?? 5) + 1) })}
+          >
+            <Ionicons name="add" size={20} color={colors.text} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={[styles.optionHint, { color: colors.textTertiary, marginTop: 10 }]}>
@@ -1043,17 +1050,35 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '50%',
   },
-  sliderContainer: {
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: 8,
+    paddingVertical: 8,
   },
-  sliderLabel: {
+  stepperLabel: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 4,
   },
-  slider: {
-    width: '100%',
-    height: 40,
+  stepperControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  stepperButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'center',
   },
   switchRow: {
     flexDirection: 'row',
