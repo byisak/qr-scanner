@@ -55,15 +55,6 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
     try {
       const ColorPickerIOS = await import('react-native-color-picker-ios');
 
-      if (!ColorPickerIOS.default?.open) {
-        Alert.alert(
-          '개발 빌드 필요',
-          'iOS 네이티브 컬러 피커는 개발 빌드(EAS Build)에서만 사용할 수 있습니다.',
-          [{ text: '확인' }]
-        );
-        return;
-      }
-
       const result = await ColorPickerIOS.default.open({
         initialColor: tempColor || '#000000',
         supportsAlpha: false,
@@ -75,11 +66,14 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
       }
     } catch (error) {
       console.log('Native color picker error:', error);
-      Alert.alert(
-        '개발 빌드 필요',
-        'iOS 네이티브 컬러 피커는 개발 빌드(EAS Build)에서만 사용할 수 있습니다.\n\n현재 프리셋 색상과 HEX 입력을 사용해 주세요.',
-        [{ text: '확인' }]
-      );
+      // 실제로 에러가 발생한 경우에만 메시지 표시
+      if (error.message?.includes('not linked') || error.message?.includes('undefined')) {
+        Alert.alert(
+          '개발 빌드 필요',
+          'iOS 네이티브 컬러 피커는 개발 빌드(EAS Build)에서만 사용할 수 있습니다.\n\n현재 프리셋 색상과 HEX 입력을 사용해 주세요.',
+          [{ text: '확인' }]
+        );
+      }
     }
   };
 
