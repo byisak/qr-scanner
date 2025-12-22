@@ -219,10 +219,14 @@ export default {
     exampleDesc: '→ 扫描值为"ABC123"时\n将跳转到 https://example.com/product/ABC123',
     // URL列表相关
     urlListTitle: 'URL列表',
+    urlName: '名称',
+    urlAddress: 'URL地址',
+    urlNamePlaceholder: '输入URL名称 (例如: 库存管理系统)',
+    urlNameEmptyError: '请输入名称',
     urlEmptyError: '请输入URL',
     urlDuplicateError: '此URL已添加',
-    editUrl: '编辑URL',
-    editUrlDesc: '请输入新的URL',
+    editUrlTitle: '编辑URL',
+    editUrlDesc: '编辑名称和URL',
     deleteUrlConfirm: '确定要删除此URL吗？',
     urlToggleInfo: '扫描时只使用启用的URL',
     // 实时服务器传输

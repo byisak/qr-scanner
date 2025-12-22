@@ -219,10 +219,14 @@ export default {
     exampleDesc: '→ Si el valor escaneado es "ABC123"\nNavega a https://ejemplo.com/producto/ABC123',
     // Lista de URL
     urlListTitle: 'Lista de URL',
+    urlName: 'Nombre',
+    urlAddress: 'Dirección URL',
+    urlNamePlaceholder: 'Ingresa nombre de URL (ej: Sistema de Inventario)',
+    urlNameEmptyError: 'Por favor, ingresa un nombre',
     urlEmptyError: 'Por favor, ingresa una URL',
     urlDuplicateError: 'Esta URL ya ha sido agregada',
-    editUrl: 'Editar URL',
-    editUrlDesc: 'Ingresa la nueva URL',
+    editUrlTitle: 'Editar URL',
+    editUrlDesc: 'Editar nombre y URL',
     deleteUrlConfirm: '¿Deseas eliminar esta URL?',
     urlToggleInfo: 'Solo las URLs habilitadas se usarán al escanear',
     // Sincronización en tiempo real

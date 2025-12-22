@@ -230,10 +230,14 @@ export default {
     exampleDesc: '→ 스캔 값이 "ABC123"이면\nhttps://example.com/product/ABC123 로 이동',
     // URL 리스트 관련
     urlListTitle: 'URL 목록',
+    urlName: '이름',
+    urlAddress: 'URL 주소',
+    urlNamePlaceholder: 'URL 이름을 입력하세요 (예: 재고관리 시스템)',
+    urlNameEmptyError: '이름을 입력해주세요',
     urlEmptyError: 'URL을 입력해주세요',
     urlDuplicateError: '이미 추가된 URL입니다',
-    editUrl: 'URL 수정',
-    editUrlDesc: '새로운 URL을 입력하세요',
+    editUrlTitle: 'URL 수정',
+    editUrlDesc: '이름과 URL을 수정하세요',
     deleteUrlConfirm: '이 URL을 삭제하시겠습니까?',
     urlToggleInfo: '활성화된 URL만 스캔 시 사용됩니다',
     // 실시간 서버전송

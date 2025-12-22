@@ -29,12 +29,14 @@ export default function ScanUrlSettingsScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [enabled, setEnabled] = useState(false);
+  const [inputName, setInputName] = useState('');
   const [inputUrl, setInputUrl] = useState('');
-  const [urlList, setUrlList] = useState([]); // [{ id: string, url: string, enabled: boolean }]
+  const [urlList, setUrlList] = useState([]); // [{ id: string, name: string, url: string, enabled: boolean }]
 
   // 수정 모달 상태
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [editingName, setEditingName] = useState('');
   const [editingUrl, setEditingUrl] = useState('');
 
   // 초기 데이터 로드
@@ -50,12 +52,21 @@ export default function ScanUrlSettingsScreen() {
 
         if (savedUrlList) {
           const parsed = JSON.parse(savedUrlList);
-          setUrlList(parsed);
+          // 기존 데이터에 name 필드가 없으면 추가
+          const migratedList = parsed.map((item, index) => ({
+            ...item,
+            name: item.name || `URL ${index + 1}`,
+          }));
+          setUrlList(migratedList);
+          // 마이그레이션된 데이터 저장
+          if (parsed.some(item => !item.name)) {
+            await SecureStore.setItemAsync('scanUrlList', JSON.stringify(migratedList));
+          }
         } else {
           // 기존 단일 URL 마이그레이션
           const oldUrl = await SecureStore.getItemAsync('baseUrl');
           if (oldUrl) {
-            const migratedList = [{ id: Date.now().toString(), url: oldUrl, enabled: true }];
+            const migratedList = [{ id: Date.now().toString(), name: 'URL 1', url: oldUrl, enabled: true }];
             setUrlList(migratedList);
             await SecureStore.setItemAsync('scanUrlList', JSON.stringify(migratedList));
             await SecureStore.deleteItemAsync('baseUrl');
@@ -89,7 +100,14 @@ export default function ScanUrlSettingsScreen() {
 
   // URL 추가
   const handleAddUrl = () => {
+    const trimmedName = inputName.trim();
     const trimmedUrl = inputUrl.trim();
+
+    if (!trimmedName) {
+      Alert.alert(t('settings.error'), t('settings.urlNameEmptyError'));
+      return;
+    }
+
     if (!trimmedUrl) {
       Alert.alert(t('settings.error'), t('settings.urlEmptyError'));
       return;
@@ -104,11 +122,13 @@ export default function ScanUrlSettingsScreen() {
 
     const newItem = {
       id: Date.now().toString(),
+      name: trimmedName,
       url: trimmedUrl,
       enabled: urlList.length === 0, // 첫 번째 URL은 자동 활성화
     };
 
     setUrlList(prev => [...prev, newItem]);
+    setInputName('');
     setInputUrl('');
     Keyboard.dismiss();
   };
@@ -134,13 +154,21 @@ export default function ScanUrlSettingsScreen() {
   // URL 수정 모달 열기
   const handleEditUrl = (item) => {
     setEditingItem(item);
+    setEditingName(item.name);
     setEditingUrl(item.url);
     setEditModalVisible(true);
   };
 
   // URL 수정 저장
   const handleSaveEdit = () => {
+    const trimmedName = editingName?.trim();
     const trimmedUrl = editingUrl?.trim();
+
+    if (!trimmedName) {
+      Alert.alert(t('settings.error'), t('settings.urlNameEmptyError'));
+      return;
+    }
+
     if (!trimmedUrl) {
       Alert.alert(t('settings.error'), t('settings.urlEmptyError'));
       return;
@@ -152,10 +180,11 @@ export default function ScanUrlSettingsScreen() {
       return;
     }
     setUrlList(prev => prev.map(u =>
-      u.id === editingItem.id ? { ...u, url: trimmedUrl } : u
+      u.id === editingItem.id ? { ...u, name: trimmedName, url: trimmedUrl } : u
     ));
     setEditModalVisible(false);
     setEditingItem(null);
+    setEditingName('');
     setEditingUrl('');
   };
 
@@ -163,6 +192,7 @@ export default function ScanUrlSettingsScreen() {
   const handleCancelEdit = () => {
     setEditModalVisible(false);
     setEditingItem(null);
+    setEditingName('');
     setEditingUrl('');
   };
 
@@ -216,6 +246,17 @@ export default function ScanUrlSettingsScreen() {
                   {t('settings.urlInfo')}
                 </Text>
 
+                {/* URL 이름 입력 */}
+                <TextInput
+                  style={[styles.input, styles.inputFullWidth, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginTop: 15 }]}
+                  value={inputName}
+                  onChangeText={setInputName}
+                  placeholder={t('settings.urlNamePlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  autoCapitalize="none"
+                  accessibilityLabel={t('settings.urlName')}
+                />
+
                 {/* URL 입력 및 추가 버튼 */}
                 <View style={styles.inputRow}>
                   <TextInput
@@ -254,17 +295,28 @@ export default function ScanUrlSettingsScreen() {
                           }
                         ]}
                       >
-                        {/* Row 1: URL + Toggle */}
+                        {/* Row 1: Name + Toggle */}
                         <View style={styles.urlItemRow}>
-                          <Text
-                            style={[
-                              styles.urlItemText,
-                              { color: item.enabled ? colors.text : colors.textTertiary }
-                            ]}
-                            numberOfLines={2}
-                          >
-                            {item.url}
-                          </Text>
+                          <View style={styles.urlItemTextContainer}>
+                            <Text
+                              style={[
+                                styles.urlItemName,
+                                { color: item.enabled ? colors.text : colors.textSecondary }
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {item.name}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.urlItemUrl,
+                                { color: item.enabled ? colors.textSecondary : colors.textTertiary }
+                              ]}
+                              numberOfLines={1}
+                            >
+                              {item.url}
+                            </Text>
+                          </View>
                           <Switch
                             value={item.enabled}
                             onValueChange={(value) => handleToggleUrl(item.id, value)}
@@ -333,10 +385,29 @@ export default function ScanUrlSettingsScreen() {
               <TouchableWithoutFeedback>
                 <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    {t('settings.editUrl') || 'URL 수정'}
+                    {t('settings.editUrlTitle') || 'URL 수정'}
                   </Text>
                   <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-                    {t('settings.editUrlDesc') || '새로운 URL을 입력하세요'}
+                    {t('settings.editUrlDesc') || '이름과 URL을 수정하세요'}
+                  </Text>
+
+                  {/* 이름 입력 */}
+                  <Text style={[styles.modalInputLabel, { color: colors.textSecondary }]}>
+                    {t('settings.urlName') || '이름'}
+                  </Text>
+                  <TextInput
+                    style={[styles.modalInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    value={editingName}
+                    onChangeText={setEditingName}
+                    placeholder={t('settings.urlNamePlaceholder')}
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    autoFocus
+                  />
+
+                  {/* URL 입력 */}
+                  <Text style={[styles.modalInputLabel, { color: colors.textSecondary }]}>
+                    {t('settings.urlAddress') || 'URL 주소'}
                   </Text>
                   <TextInput
                     style={[styles.modalInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
@@ -346,8 +417,8 @@ export default function ScanUrlSettingsScreen() {
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="none"
                     keyboardType="url"
-                    autoFocus
                   />
+
                   <View style={styles.modalButtons}>
                     <TouchableOpacity
                       style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
@@ -450,6 +521,9 @@ const styles = StyleSheet.create({
   inputFlex: {
     flex: 1,
   },
+  inputFullWidth: {
+    width: '100%',
+  },
   addButton: {
     width: 50,
     height: 50,
@@ -476,10 +550,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  urlItemText: {
+  urlItemTextContainer: {
     flex: 1,
-    fontSize: 14,
     marginRight: 10,
+  },
+  urlItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  urlItemUrl: {
+    fontSize: 12,
   },
   urlItemSwitch: {
     transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
@@ -559,6 +640,11 @@ const styles = StyleSheet.create({
   modalDesc: {
     fontSize: 14,
     marginBottom: 16,
+  },
+  modalInputLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 6,
   },
   modalInput: {
     padding: 14,

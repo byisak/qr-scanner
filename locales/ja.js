@@ -219,10 +219,14 @@ export default {
     exampleDesc: '→ スキャン値が「ABC123」の場合\nhttps://example.com/product/ABC123 に移動',
     // URLリスト関連
     urlListTitle: 'URLリスト',
+    urlName: '名前',
+    urlAddress: 'URLアドレス',
+    urlNamePlaceholder: 'URL名を入力 (例: 在庫管理システム)',
+    urlNameEmptyError: '名前を入力してください',
     urlEmptyError: 'URLを入力してください',
     urlDuplicateError: 'このURLは既に追加されています',
-    editUrl: 'URLを編集',
-    editUrlDesc: '新しいURLを入力してください',
+    editUrlTitle: 'URLを編集',
+    editUrlDesc: '名前とURLを編集してください',
     deleteUrlConfirm: 'このURLを削除しますか？',
     urlToggleInfo: '有効なURLのみがスキャン時に使用されます',
     // リアルタイムサーバー送信
