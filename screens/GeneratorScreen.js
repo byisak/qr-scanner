@@ -1012,52 +1012,6 @@ export default function GeneratorScreen() {
             </View>
           )}
 
-          {/* Logo Picker */}
-          {hasData && useStyledQR && (
-            <View style={s.logoPickerContainer}>
-              <Text style={[s.logoPickerLabel, { color: colors.textSecondary }]}>
-                로고 이미지
-              </Text>
-              <View style={s.logoPickerRow}>
-                {logoImage ? (
-                  <>
-                    <View style={[s.logoPreview, { borderColor: colors.border }]}>
-                      <Image
-                        source={{ uri: logoImage }}
-                        style={s.logoImage}
-                        resizeMode="cover"
-                      />
-                    </View>
-                    <TouchableOpacity
-                      style={[s.logoButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                      onPress={handlePickLogo}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="swap-horizontal" size={18} color={colors.text} />
-                      <Text style={[s.logoButtonText, { color: colors.text }]}>변경</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[s.logoButton, { backgroundColor: '#FF3B30' }]}
-                      onPress={handleRemoveLogo}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="trash" size={18} color="#fff" />
-                      <Text style={[s.logoButtonText, { color: '#fff' }]}>삭제</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <TouchableOpacity
-                    style={[s.logoAddButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                    onPress={handlePickLogo}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
-                    <Text style={[s.logoAddText, { color: colors.text }]}>로고 추가</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
         </View>
 
         {/* Action Buttons */}
@@ -1097,6 +1051,9 @@ export default function GeneratorScreen() {
         currentStyle={qrStyle}
         onStyleChange={setQrStyle}
         previewValue={qrData || 'QR PREVIEW'}
+        logoImage={logoImage}
+        onPickLogo={handlePickLogo}
+        onRemoveLogo={handleRemoveLogo}
       />
     </View>
   );
@@ -1426,71 +1383,6 @@ const s = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     textAlign: 'center',
-    letterSpacing: -0.2,
-  },
-  // Logo Picker Styles
-  logoPickerContainer: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-  },
-  logoPickerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-    letterSpacing: -0.2,
-  },
-  logoPickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  logoPreview: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-  },
-  logoImageContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoImage: {
-    width: '100%',
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    gap: 6,
-  },
-  logoButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  logoAddButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    gap: 8,
-  },
-  logoAddText: {
-    fontSize: 15,
-    fontWeight: '600',
     letterSpacing: -0.2,
   },
 });

@@ -10,6 +10,8 @@ import {
   Platform,
   TextInput,
   Switch,
+  Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -332,6 +334,9 @@ export default function QRStylePicker({
   currentStyle,
   onStyleChange,
   previewValue = 'QR PREVIEW',
+  logoImage,
+  onPickLogo,
+  onRemoveLogo,
 }) {
   const { t, language } = useLanguage();
   const { isDark } = useTheme();
@@ -724,8 +729,60 @@ export default function QRStylePicker({
 
   const renderImageOptions = () => (
     <View style={styles.optionSection}>
+      {/* 로고 이미지 업로드 */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        이미지/로고 설정 (Image Options)
+        로고 이미지
+      </Text>
+
+      <View style={styles.logoSection}>
+        {logoImage ? (
+          <View style={styles.logoPreviewContainer}>
+            <View style={[styles.logoPreview, { borderColor: colors.border }]}>
+              <Image
+                source={{ uri: logoImage }}
+                style={styles.logoImage}
+                resizeMode="cover"
+              />
+            </View>
+            <View style={styles.logoButtonsRow}>
+              <TouchableOpacity
+                style={[styles.logoButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                onPress={onPickLogo}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="swap-horizontal" size={18} color={colors.text} />
+                <Text style={[styles.logoButtonText, { color: colors.text }]}>변경</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.logoButton, { backgroundColor: '#FF3B30' }]}
+                onPress={onRemoveLogo}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="trash" size={18} color="#fff" />
+                <Text style={[styles.logoButtonText, { color: '#fff' }]}>삭제</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.logoAddButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+            onPress={onPickLogo}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add-circle-outline" size={28} color={colors.primary} />
+            <Text style={[styles.logoAddText, { color: colors.text }]}>로고 추가</Text>
+            <Text style={[styles.logoAddHint, { color: colors.textTertiary }]}>
+              QR 코드 중앙에 로고가 표시됩니다
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.sectionDivider} />
+
+      {/* 이미지 옵션 */}
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        이미지 옵션
       </Text>
 
       <View style={styles.switchRow}>
@@ -777,10 +834,6 @@ export default function QRStylePicker({
           </TouchableOpacity>
         </View>
       </View>
-
-      <Text style={[styles.optionHint, { color: colors.textTertiary, marginTop: 10 }]}>
-        ※ 로고 이미지는 QR 생성 화면에서 추가할 수 있습니다.
-      </Text>
     </View>
   );
 
@@ -1151,5 +1204,61 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  // Logo Picker Styles
+  logoSection: {
+    marginBottom: 8,
+  },
+  logoPreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  logoPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    borderWidth: 2,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  logoButtonsRow: {
+    flexDirection: 'column',
+    gap: 8,
+    flex: 1,
+  },
+  logoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 6,
+  },
+  logoButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  logoAddButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  logoAddText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  logoAddHint: {
+    fontSize: 12,
+    marginTop: 4,
   },
 });
