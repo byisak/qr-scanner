@@ -45,6 +45,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withColorPickerIOS",
       [
         "expo-camera",
         {
