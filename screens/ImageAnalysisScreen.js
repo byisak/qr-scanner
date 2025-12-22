@@ -411,7 +411,7 @@ function ImageAnalysisScreen() {
       }
 
       const pos = result.position;
-      const padding = 20; // 여백
+      const padding = 50; // 여백 (바코드 잘림 방지)
 
       // 바운딩 박스 계산
       const minX = Math.min(pos.topLeft.x, pos.bottomLeft.x);
@@ -479,7 +479,7 @@ function ImageAnalysisScreen() {
 
         try {
           const pos = result.position;
-          const padding = 20;
+          const padding = 50;
 
           const minX = Math.min(pos.topLeft.x, pos.bottomLeft.x);
           const maxX = Math.max(pos.topRight.x, pos.bottomRight.x);
