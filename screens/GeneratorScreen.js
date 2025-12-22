@@ -249,7 +249,7 @@ export default function GeneratorScreen() {
         const base64Data = capturedQRBase64.replace(/^data:image\/\w+;base64,/, '');
         const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
         await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64',
         });
         uri = fileUri;
       } else {
@@ -293,7 +293,7 @@ export default function GeneratorScreen() {
         const base64Data = capturedQRBase64.replace(/^data:image\/\w+;base64,/, '');
         const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
         await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: 'base64',
         });
         uri = fileUri;
       } else {
