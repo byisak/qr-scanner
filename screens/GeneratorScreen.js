@@ -325,10 +325,21 @@ export default function GeneratorScreen() {
     }
   };
 
-  // 로고 이미지 선택 (동적 import 사용)
+  // 로고 이미지 선택 (개발 빌드에서만 사용 가능)
   const handlePickLogo = async () => {
     try {
+      // expo-image-picker를 동적으로 로드
       const ImagePicker = await import('expo-image-picker');
+
+      // 모듈이 제대로 로드되었는지 확인
+      if (!ImagePicker.requestMediaLibraryPermissionsAsync) {
+        Alert.alert(
+          '개발 빌드 필요',
+          '로고 추가 기능은 개발 빌드(EAS Build)에서만 사용할 수 있습니다.\n\nExpo Go에서는 이 기능을 사용할 수 없습니다.',
+          [{ text: '확인' }]
+        );
+        return;
+      }
 
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
@@ -337,7 +348,7 @@ export default function GeneratorScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -357,7 +368,11 @@ export default function GeneratorScreen() {
       }
     } catch (error) {
       console.error('Error picking logo:', error);
-      Alert.alert(t('common.error'), '이미지를 불러오는데 실패했습니다. Expo Go 앱을 업데이트해 주세요.');
+      Alert.alert(
+        '개발 빌드 필요',
+        '로고 추가 기능은 개발 빌드(EAS Build)에서만 사용할 수 있습니다.\n\n`npx eas build --profile development --platform ios` 명령으로 개발 빌드를 생성하세요.',
+        [{ text: '확인' }]
+      );
     }
   };
 
