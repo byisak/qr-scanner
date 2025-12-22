@@ -8,7 +8,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  TextInput,
+  Switch,
 } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -46,6 +49,7 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'square',
       cornerDotColor: '#000000',
       backgroundColor: '#ffffff',
+      margin: 10,
     },
   },
   {
@@ -60,6 +64,7 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'dot',
       cornerDotColor: '#000000',
       backgroundColor: '#ffffff',
+      margin: 10,
     },
   },
   {
@@ -74,6 +79,7 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'dot',
       cornerDotColor: '#007AFF',
       backgroundColor: '#ffffff',
+      margin: 10,
     },
   },
   {
@@ -88,6 +94,7 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'dot',
       cornerDotColor: '#1C1C1E',
       backgroundColor: '#ffffff',
+      margin: 10,
     },
   },
   {
@@ -102,6 +109,7 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'dot',
       cornerDotColor: '#764ba2',
       backgroundColor: '#ffffff',
+      margin: 10,
     },
   },
   {
@@ -116,6 +124,7 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'dot',
       cornerDotColor: '#fee140',
       backgroundColor: '#ffffff',
+      margin: 10,
     },
   },
   {
@@ -130,6 +139,7 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'dot',
       cornerDotColor: '#ffffff',
       backgroundColor: '#1C1C1E',
+      margin: 10,
     },
   },
   {
@@ -144,28 +154,169 @@ const QR_STYLE_PRESETS = [
       cornerDotType: 'dot',
       cornerDotColor: '#60efff',
       backgroundColor: '#0d0d0d',
+      margin: 10,
     },
   },
 ];
 
 export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 
+// 색상 선택 컴포넌트
+function ColorPicker({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
+  const [hexInput, setHexInput] = useState(color || '#000000');
+
+  useEffect(() => {
+    setHexInput(color || '#000000');
+  }, [color]);
+
+  const handleHexChange = (text) => {
+    setHexInput(text);
+    if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
+      onColorChange(text);
+    }
+  };
+
+  const handleHexSubmit = () => {
+    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput)) {
+      onColorChange(hexInput);
+    } else if (/^[0-9A-Fa-f]{6}$/.test(hexInput)) {
+      onColorChange('#' + hexInput);
+      setHexInput('#' + hexInput);
+    }
+  };
+
+  return (
+    <View style={styles.colorPickerContainer}>
+      <Text style={[styles.optionTitle, { color: colors.text }]}>{label}</Text>
+
+      {showGradientOption && (
+        <View style={styles.colorTypeRow}>
+          <TouchableOpacity
+            style={[styles.colorTypeButton, !useGradient && styles.colorTypeButtonActive, { borderColor: colors.border }]}
+            onPress={() => onGradientToggle(false)}
+          >
+            <Ionicons name="color-fill" size={16} color={!useGradient ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.colorTypeText, { color: !useGradient ? colors.primary : colors.textSecondary }]}>
+              단색
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.colorTypeButton, useGradient && styles.colorTypeButtonActive, { borderColor: colors.border }]}
+            onPress={() => onGradientToggle(true)}
+          >
+            <Ionicons name="color-palette" size={16} color={useGradient ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.colorTypeText, { color: useGradient ? colors.primary : colors.textSecondary }]}>
+              그라데이션
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {(!showGradientOption || !useGradient) ? (
+        <>
+          {/* Hex 입력 */}
+          <View style={styles.hexInputRow}>
+            <View style={[styles.colorPreviewSmall, { backgroundColor: color }]} />
+            <TextInput
+              style={[styles.hexInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground }]}
+              value={hexInput}
+              onChangeText={handleHexChange}
+              onBlur={handleHexSubmit}
+              placeholder="#000000"
+              placeholderTextColor={colors.textTertiary}
+              autoCapitalize="characters"
+              maxLength={7}
+            />
+          </View>
+
+          {/* 프리셋 색상 */}
+          <View style={styles.colorGrid}>
+            {COLOR_PRESETS.map((presetColor) => (
+              <TouchableOpacity
+                key={presetColor}
+                style={[
+                  styles.colorButton,
+                  {
+                    backgroundColor: presetColor,
+                    borderColor: color === presetColor ? colors.primary : colors.border,
+                    borderWidth: color === presetColor ? 3 : 1,
+                  },
+                ]}
+                onPress={() => {
+                  onColorChange(presetColor);
+                  setHexInput(presetColor);
+                }}
+                activeOpacity={0.7}
+              />
+            ))}
+          </View>
+        </>
+      ) : (
+        <>
+          {/* 그라데이션 프리셋 */}
+          <View style={styles.gradientRow}>
+            {GRADIENT_PRESETS.map((preset, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.gradientButton,
+                  {
+                    borderColor: JSON.stringify(gradient?.colorStops) === JSON.stringify(preset.colorStops)
+                      ? colors.primary
+                      : colors.border,
+                    borderWidth: JSON.stringify(gradient?.colorStops) === JSON.stringify(preset.colorStops) ? 2 : 1,
+                  },
+                ]}
+                onPress={() => onGradientChange({ type: 'linear', rotation: gradient?.rotation || 0, colorStops: preset.colorStops })}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.gradientPreview, { backgroundColor: preset.colorStops[0].color }]}>
+                  <View style={[styles.gradientPreviewHalf, { backgroundColor: preset.colorStops[1].color }]} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* 그라데이션 회전 */}
+          {gradient && (
+            <View style={styles.sliderContainer}>
+              <Text style={[styles.sliderLabel, { color: colors.text }]}>
+                회전: {gradient.rotation || 0}°
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={0}
+                maximumValue={360}
+                step={15}
+                value={gradient.rotation || 0}
+                onValueChange={(value) => onGradientChange({ ...gradient, rotation: value })}
+                minimumTrackTintColor={colors.primary}
+                maximumTrackTintColor={colors.border}
+                thumbTintColor={colors.primary}
+              />
+            </View>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
+
 export default function QRStylePicker({
   visible,
   onClose,
   currentStyle,
   onStyleChange,
-  previewValue = 'QR PREVIEW', // 미리보기용 QR 데이터
+  previewValue = 'QR PREVIEW',
 }) {
   const { t, language } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
-  const [activeTab, setActiveTab] = useState('presets'); // presets, dots, corners, colors
+  const [activeTab, setActiveTab] = useState('presets');
   const [tempStyle, setTempStyle] = useState(currentStyle);
-  const [previewKey, setPreviewKey] = useState(0); // 미리보기 강제 리렌더링용
+  const [previewKey, setPreviewKey] = useState(0);
 
-  // 스타일 변경 시 미리보기 업데이트
   useEffect(() => {
     setPreviewKey(prev => prev + 1);
   }, [tempStyle]);
@@ -245,7 +396,7 @@ export default function QRStylePicker({
   const renderDotOptions = () => (
     <View style={styles.optionSection}>
       <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.dotType') || '도트 타입'}
+        {t('generator.qrStyle.dotType') || '도트 스타일'}
       </Text>
       <View style={styles.optionRow}>
         {DOT_TYPES.map((type) => (
@@ -273,89 +424,36 @@ export default function QRStylePicker({
         ))}
       </View>
 
-      <Text style={[styles.optionTitle, { color: colors.text, marginTop: 20 }]}>
-        {t('generator.qrStyle.dotColor') || '도트 색상'}
-      </Text>
-      <View style={styles.colorGrid}>
-        {COLOR_PRESETS.map((color) => (
-          <TouchableOpacity
-            key={color}
-            style={[
-              styles.colorButton,
-              {
-                backgroundColor: color,
-                borderColor: tempStyle.dotColor === color ? colors.primary : colors.border,
-                borderWidth: tempStyle.dotColor === color ? 3 : 1,
-              },
-            ]}
-            onPress={() => {
-              updateStyle('dotColor', color);
-              updateStyle('dotGradient', null);
-            }}
-            activeOpacity={0.7}
-          />
-        ))}
-      </View>
+      <View style={styles.sectionDivider} />
 
-      <Text style={[styles.optionTitle, { color: colors.text, marginTop: 20 }]}>
-        {t('generator.qrStyle.gradients') || '그라데이션'}
-      </Text>
-      <View style={styles.gradientRow}>
-        <TouchableOpacity
-          style={[
-            styles.gradientButton,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: !tempStyle.dotGradient ? colors.primary : colors.border,
-              borderWidth: !tempStyle.dotGradient ? 2 : 1,
-            },
-          ]}
-          onPress={() => updateStyle('dotGradient', null)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
-          <Text style={[styles.gradientButtonText, { color: colors.textSecondary }]}>None</Text>
-        </TouchableOpacity>
-        {GRADIENT_PRESETS.map((gradient, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.gradientButton,
-              {
-                borderColor: JSON.stringify(tempStyle.dotGradient?.colorStops) === JSON.stringify(gradient.colorStops)
-                  ? colors.primary
-                  : colors.border,
-                borderWidth: JSON.stringify(tempStyle.dotGradient?.colorStops) === JSON.stringify(gradient.colorStops) ? 2 : 1,
-              },
-            ]}
-            onPress={() => updateStyle('dotGradient', { type: 'linear', rotation: 45, colorStops: gradient.colorStops })}
-            activeOpacity={0.7}
-          >
-            <View
-              style={[
-                styles.gradientPreview,
-                {
-                  backgroundColor: gradient.colorStops[0].color,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.gradientPreviewHalf,
-                  { backgroundColor: gradient.colorStops[1].color },
-                ]}
-              />
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <ColorPicker
+        label={t('generator.qrStyle.dotColor') || '도트 색상'}
+        color={tempStyle.dotColor}
+        onColorChange={(color) => updateStyle('dotColor', color)}
+        useGradient={!!tempStyle.dotGradient}
+        gradient={tempStyle.dotGradient}
+        onGradientChange={(gradient) => updateStyle('dotGradient', gradient)}
+        onGradientToggle={(useGradient) => {
+          if (!useGradient) {
+            updateStyle('dotGradient', null);
+          } else {
+            updateStyle('dotGradient', { type: 'linear', rotation: 0, colorStops: GRADIENT_PRESETS[0].colorStops });
+          }
+        }}
+        colors={colors}
+      />
     </View>
   );
 
   const renderCornerOptions = () => (
     <View style={styles.optionSection}>
+      {/* Corner Square */}
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        코너 사각형 (Corners Square)
+      </Text>
+
       <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.cornerSquareType') || '코너 사각형 타입'}
+        {t('generator.qrStyle.cornerSquareType') || '스타일'}
       </Text>
       <View style={styles.optionRow}>
         {CORNER_SQUARE_TYPES.map((type) => (
@@ -383,29 +481,32 @@ export default function QRStylePicker({
         ))}
       </View>
 
-      <Text style={[styles.optionTitle, { color: colors.text, marginTop: 20 }]}>
-        {t('generator.qrStyle.cornerSquareColor') || '코너 사각형 색상'}
-      </Text>
-      <View style={styles.colorGrid}>
-        {COLOR_PRESETS.slice(0, 10).map((color) => (
-          <TouchableOpacity
-            key={color}
-            style={[
-              styles.colorButton,
-              {
-                backgroundColor: color,
-                borderColor: tempStyle.cornerSquareColor === color ? colors.primary : colors.border,
-                borderWidth: tempStyle.cornerSquareColor === color ? 3 : 1,
-              },
-            ]}
-            onPress={() => updateStyle('cornerSquareColor', color)}
-            activeOpacity={0.7}
-          />
-        ))}
-      </View>
+      <ColorPicker
+        label="색상"
+        color={tempStyle.cornerSquareColor}
+        onColorChange={(color) => updateStyle('cornerSquareColor', color)}
+        useGradient={!!tempStyle.cornerSquareGradient}
+        gradient={tempStyle.cornerSquareGradient}
+        onGradientChange={(gradient) => updateStyle('cornerSquareGradient', gradient)}
+        onGradientToggle={(useGradient) => {
+          if (!useGradient) {
+            updateStyle('cornerSquareGradient', null);
+          } else {
+            updateStyle('cornerSquareGradient', { type: 'linear', rotation: 0, colorStops: GRADIENT_PRESETS[0].colorStops });
+          }
+        }}
+        colors={colors}
+      />
 
-      <Text style={[styles.optionTitle, { color: colors.text, marginTop: 20 }]}>
-        {t('generator.qrStyle.cornerDotType') || '코너 도트 타입'}
+      <View style={styles.sectionDivider} />
+
+      {/* Corner Dot */}
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        코너 도트 (Corners Dot)
+      </Text>
+
+      <Text style={[styles.optionTitle, { color: colors.text }]}>
+        {t('generator.qrStyle.cornerDotType') || '스타일'}
       </Text>
       <View style={styles.optionRow}>
         {CORNER_DOT_TYPES.map((type) => (
@@ -433,53 +534,81 @@ export default function QRStylePicker({
         ))}
       </View>
 
-      <Text style={[styles.optionTitle, { color: colors.text, marginTop: 20 }]}>
-        {t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'}
-      </Text>
-      <View style={styles.colorGrid}>
-        {COLOR_PRESETS.slice(0, 10).map((color) => (
-          <TouchableOpacity
-            key={color}
-            style={[
-              styles.colorButton,
-              {
-                backgroundColor: color,
-                borderColor: tempStyle.cornerDotColor === color ? colors.primary : colors.border,
-                borderWidth: tempStyle.cornerDotColor === color ? 3 : 1,
-              },
-            ]}
-            onPress={() => updateStyle('cornerDotColor', color)}
-            activeOpacity={0.7}
-          />
-        ))}
-      </View>
+      <ColorPicker
+        label="색상"
+        color={tempStyle.cornerDotColor}
+        onColorChange={(color) => updateStyle('cornerDotColor', color)}
+        useGradient={!!tempStyle.cornerDotGradient}
+        gradient={tempStyle.cornerDotGradient}
+        onGradientChange={(gradient) => updateStyle('cornerDotGradient', gradient)}
+        onGradientToggle={(useGradient) => {
+          if (!useGradient) {
+            updateStyle('cornerDotGradient', null);
+          } else {
+            updateStyle('cornerDotGradient', { type: 'linear', rotation: 0, colorStops: GRADIENT_PRESETS[0].colorStops });
+          }
+        }}
+        colors={colors}
+      />
     </View>
   );
 
-  const renderColorOptions = () => (
+  const renderBackgroundOptions = () => (
     <View style={styles.optionSection}>
-      <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.backgroundColor') || '배경 색상'}
+      {/* Background Color */}
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        배경 설정 (Background)
       </Text>
-      <View style={styles.colorGrid}>
-        {COLOR_PRESETS.map((color) => (
-          <TouchableOpacity
-            key={color}
-            style={[
-              styles.colorButton,
-              {
-                backgroundColor: color,
-                borderColor: tempStyle.backgroundColor === color ? colors.primary : colors.border,
-                borderWidth: tempStyle.backgroundColor === color ? 3 : 1,
-              },
-            ]}
-            onPress={() => updateStyle('backgroundColor', color)}
-            activeOpacity={0.7}
-          />
-        ))}
+
+      <ColorPicker
+        label="배경 색상"
+        color={tempStyle.backgroundColor}
+        onColorChange={(color) => updateStyle('backgroundColor', color)}
+        useGradient={!!tempStyle.backgroundGradient}
+        gradient={tempStyle.backgroundGradient}
+        onGradientChange={(gradient) => updateStyle('backgroundGradient', gradient)}
+        onGradientToggle={(useGradient) => {
+          if (!useGradient) {
+            updateStyle('backgroundGradient', null);
+          } else {
+            updateStyle('backgroundGradient', { type: 'linear', rotation: 0, colorStops: [{ offset: 0, color: '#ffffff' }, { offset: 1, color: '#f0f0f0' }] });
+          }
+        }}
+        colors={colors}
+      />
+
+      <View style={styles.sectionDivider} />
+
+      {/* Margin */}
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        여백 설정
+      </Text>
+
+      <View style={styles.sliderContainer}>
+        <Text style={[styles.sliderLabel, { color: colors.text }]}>
+          여백 (Margin): {tempStyle.margin || 0}px
+        </Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={50}
+          step={5}
+          value={tempStyle.margin || 0}
+          onValueChange={(value) => updateStyle('margin', value)}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primary}
+        />
       </View>
 
-      <Text style={[styles.optionTitle, { color: colors.text, marginTop: 20 }]}>
+      <View style={styles.sectionDivider} />
+
+      {/* QR Options */}
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        QR 옵션
+      </Text>
+
+      <Text style={[styles.optionTitle, { color: colors.text }]}>
         {t('generator.qrStyle.errorCorrection') || '오류 보정 레벨'}
       </Text>
       <View style={styles.optionRow}>
@@ -489,8 +618,8 @@ export default function QRStylePicker({
             style={[
               styles.optionButton,
               {
-                backgroundColor: tempStyle.errorCorrectionLevel === level ? colors.primary : colors.inputBackground,
-                borderColor: tempStyle.errorCorrectionLevel === level ? colors.primary : colors.border,
+                backgroundColor: (tempStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.inputBackground,
+                borderColor: (tempStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.border,
                 flex: 1,
               },
             ]}
@@ -500,7 +629,7 @@ export default function QRStylePicker({
             <Text
               style={[
                 styles.optionButtonText,
-                { color: tempStyle.errorCorrectionLevel === level ? '#fff' : colors.text },
+                { color: (tempStyle.errorCorrectionLevel || 'M') === level ? '#fff' : colors.text },
               ]}
             >
               {level}
@@ -508,7 +637,7 @@ export default function QRStylePicker({
             <Text
               style={[
                 styles.optionButtonSubtext,
-                { color: tempStyle.errorCorrectionLevel === level ? 'rgba(255,255,255,0.7)' : colors.textTertiary },
+                { color: (tempStyle.errorCorrectionLevel || 'M') === level ? 'rgba(255,255,255,0.7)' : colors.textTertiary },
               ]}
             >
               {level === 'L' ? '7%' : level === 'M' ? '15%' : level === 'Q' ? '25%' : '30%'}
@@ -522,11 +651,70 @@ export default function QRStylePicker({
     </View>
   );
 
+  const renderImageOptions = () => (
+    <View style={styles.optionSection}>
+      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+        이미지/로고 설정 (Image Options)
+      </Text>
+
+      <View style={styles.switchRow}>
+        <Text style={[styles.switchLabel, { color: colors.text }]}>
+          배경 도트 숨기기
+        </Text>
+        <Switch
+          value={tempStyle.imageOptions?.hideBackgroundDots ?? true}
+          onValueChange={(value) => updateStyle('imageOptions', { ...tempStyle.imageOptions, hideBackgroundDots: value })}
+          trackColor={{ false: colors.border, true: colors.primary }}
+          thumbColor="#fff"
+        />
+      </View>
+
+      <View style={styles.sliderContainer}>
+        <Text style={[styles.sliderLabel, { color: colors.text }]}>
+          이미지 크기: {((tempStyle.imageOptions?.imageSize || 0.4) * 100).toFixed(0)}%
+        </Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0.1}
+          maximumValue={0.5}
+          step={0.05}
+          value={tempStyle.imageOptions?.imageSize || 0.4}
+          onValueChange={(value) => updateStyle('imageOptions', { ...tempStyle.imageOptions, imageSize: value })}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primary}
+        />
+      </View>
+
+      <View style={styles.sliderContainer}>
+        <Text style={[styles.sliderLabel, { color: colors.text }]}>
+          이미지 여백: {tempStyle.imageOptions?.margin ?? 5}px
+        </Text>
+        <Slider
+          style={styles.slider}
+          minimumValue={0}
+          maximumValue={20}
+          step={1}
+          value={tempStyle.imageOptions?.margin ?? 5}
+          onValueChange={(value) => updateStyle('imageOptions', { ...tempStyle.imageOptions, margin: value })}
+          minimumTrackTintColor={colors.primary}
+          maximumTrackTintColor={colors.border}
+          thumbTintColor={colors.primary}
+        />
+      </View>
+
+      <Text style={[styles.optionHint, { color: colors.textTertiary, marginTop: 10 }]}>
+        ※ 로고 이미지는 QR 생성 화면에서 추가할 수 있습니다.
+      </Text>
+    </View>
+  );
+
   const tabs = [
     { id: 'presets', label: t('generator.qrStyle.presets') || '프리셋', icon: 'color-palette-outline' },
     { id: 'dots', label: t('generator.qrStyle.dots') || '도트', icon: 'grid-outline' },
     { id: 'corners', label: t('generator.qrStyle.corners') || '코너', icon: 'scan-outline' },
-    { id: 'colors', label: t('generator.qrStyle.colors') || '색상', icon: 'color-fill-outline' },
+    { id: 'background', label: '배경', icon: 'image-outline' },
+    { id: 'image', label: '이미지', icon: 'images-outline' },
   ];
 
   return (
@@ -560,7 +748,12 @@ export default function QRStylePicker({
         </View>
 
         {/* Tabs */}
-        <View style={[styles.tabContainer, { backgroundColor: colors.surface }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.tabScrollContainer, { backgroundColor: colors.surface }]}
+          contentContainerStyle={styles.tabScrollContent}
+        >
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab.id}
@@ -586,7 +779,7 @@ export default function QRStylePicker({
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
         {/* Content */}
         <ScrollView
@@ -597,7 +790,8 @@ export default function QRStylePicker({
           {activeTab === 'presets' && renderPresets()}
           {activeTab === 'dots' && renderDotOptions()}
           {activeTab === 'corners' && renderCornerOptions()}
-          {activeTab === 'colors' && renderColorOptions()}
+          {activeTab === 'background' && renderBackgroundOptions()}
+          {activeTab === 'image' && renderImageOptions()}
         </ScrollView>
       </View>
     </Modal>
@@ -645,16 +839,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  tabContainer: {
-    flexDirection: 'row',
+  tabScrollContainer: {
+    maxHeight: 50,
+  },
+  tabScrollContent: {
     paddingHorizontal: 8,
   },
   tab: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
+    paddingHorizontal: 16,
     gap: 6,
   },
   tabText: {
@@ -705,12 +901,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   optionSection: {
-    gap: 12,
+    gap: 16,
+  },
+  sectionHeader: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(128,128,128,0.2)',
+    marginVertical: 16,
   },
   optionTitle: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   optionRow: {
     flexDirection: 'row',
@@ -736,6 +942,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  colorPickerContainer: {
+    gap: 12,
+  },
+  colorTypeRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8,
+  },
+  colorTypeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  colorTypeButtonActive: {
+    backgroundColor: 'rgba(0,122,255,0.1)',
+  },
+  colorTypeText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  hexInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  colorPreviewSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  hexInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -759,10 +1011,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  gradientButtonText: {
-    fontSize: 10,
-    marginTop: 2,
-  },
   gradientPreview: {
     width: '100%',
     height: '100%',
@@ -771,5 +1019,27 @@ const styles = StyleSheet.create({
   gradientPreviewHalf: {
     width: '100%',
     height: '50%',
+  },
+  sliderContainer: {
+    marginTop: 8,
+  },
+  sliderLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  switchLabel: {
+    fontSize: 15,
+    fontWeight: '500',
   },
 });

@@ -23,22 +23,34 @@ export default function StyledQRCode({
   const {
     dotType = 'square',
     dotColor = '#000000',
-    dotGradient = null, // { type: 'linear', rotation: 0, colorStops: [{ offset: 0, color: '#000' }, { offset: 1, color: '#000' }] }
+    dotGradient = null,
     cornerSquareType = 'square',
     cornerSquareColor = '#000000',
+    cornerSquareGradient = null,
     cornerDotType = 'square',
     cornerDotColor = '#000000',
+    cornerDotGradient = null,
     backgroundColor = '#ffffff',
     backgroundGradient = null,
-    logo = null, // base64 이미지
-    logoSize = 0.3, // QR 코드 대비 비율 (0.1 ~ 0.5)
+    margin = 0,
+    logo = null,
+    logoSize = 0.3,
     logoMargin = 5,
     logoPadding = 5,
     logoBackgroundColor = '#ffffff',
-    errorCorrectionLevel = 'M', // L, M, Q, H
+    errorCorrectionLevel = 'M',
+    imageOptions = {},
   } = qrStyle;
 
+  // 이미지 옵션 기본값
+  const imgOpts = {
+    hideBackgroundDots: imageOptions.hideBackgroundDots ?? true,
+    imageSize: imageOptions.imageSize ?? 0.4,
+    margin: imageOptions.margin ?? 5,
+  };
+
   const generateHTML = () => {
+    // Dots Options
     const dotOptions = dotGradient
       ? `{
           type: "${dotType}",
@@ -53,16 +65,37 @@ export default function StyledQRCode({
           color: "${dotColor}"
         }`;
 
-    const cornerSquareOptions = `{
-      type: "${cornerSquareType}",
-      color: "${cornerSquareColor}"
-    }`;
+    // Corners Square Options
+    const cornerSquareOptions = cornerSquareGradient
+      ? `{
+          type: "${cornerSquareType}",
+          gradient: {
+            type: "${cornerSquareGradient.type || 'linear'}",
+            rotation: ${cornerSquareGradient.rotation || 0},
+            colorStops: ${JSON.stringify(cornerSquareGradient.colorStops)}
+          }
+        }`
+      : `{
+          type: "${cornerSquareType}",
+          color: "${cornerSquareColor}"
+        }`;
 
-    const cornerDotOptions = `{
-      type: "${cornerDotType}",
-      color: "${cornerDotColor}"
-    }`;
+    // Corners Dot Options
+    const cornerDotOptions = cornerDotGradient
+      ? `{
+          type: "${cornerDotType}",
+          gradient: {
+            type: "${cornerDotGradient.type || 'linear'}",
+            rotation: ${cornerDotGradient.rotation || 0},
+            colorStops: ${JSON.stringify(cornerDotGradient.colorStops)}
+          }
+        }`
+      : `{
+          type: "${cornerDotType}",
+          color: "${cornerDotColor}"
+        }`;
 
+    // Background Options
     const backgroundOptions = backgroundGradient
       ? `{
           gradient: {
@@ -113,6 +146,7 @@ export default function StyledQRCode({
               height: ${size},
               type: "canvas",
               data: ${JSON.stringify(value)},
+              margin: ${margin},
               dotsOptions: ${dotOptions},
               cornersSquareOptions: ${cornerSquareOptions},
               cornersDotOptions: ${cornerDotOptions},
@@ -126,8 +160,9 @@ export default function StyledQRCode({
             options.image = "${logo}";
             options.imageOptions = {
               crossOrigin: "anonymous",
-              margin: ${logoPadding},
-              imageSize: ${logoSize}
+              hideBackgroundDots: ${imgOpts.hideBackgroundDots},
+              imageSize: ${imgOpts.imageSize},
+              margin: ${imgOpts.margin}
             };
             ` : ''}
 
