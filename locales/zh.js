@@ -11,6 +11,8 @@ export default {
     confirm: '确认',
     search: '搜索',
     loading: '加载中...',
+    error: '错误',
+    apply: '应用',
   },
 
   // 认证
@@ -219,10 +221,14 @@ export default {
     exampleDesc: '→ 扫描值为"ABC123"时\n将跳转到 https://example.com/product/ABC123',
     // URL列表相关
     urlListTitle: 'URL列表',
+    urlName: '名称',
+    urlAddress: 'URL地址',
+    urlNamePlaceholder: '输入URL名称 (例如: 库存管理系统)',
+    urlNameEmptyError: '请输入名称',
     urlEmptyError: '请输入URL',
     urlDuplicateError: '此URL已添加',
-    editUrl: '编辑URL',
-    editUrlDesc: '请输入新的URL',
+    editUrlTitle: '编辑URL',
+    editUrlDesc: '编辑名称和URL',
     deleteUrlConfirm: '确定要删除此URL吗？',
     urlToggleInfo: '扫描时只使用启用的URL',
     // 实时服务器传输
@@ -466,6 +472,27 @@ export default {
     saveErrorMessage: '二维码保存失败。',
     clipboardPasted: '已粘贴剪贴板内容',
     clipboardEmpty: '剪贴板为空',
+    // QR样式
+    qrStyle: {
+      title: 'QR样式',
+      customize: '样式',
+      basic: '基本',
+      styled: '样式',
+      presets: '预设',
+      dots: '点阵',
+      corners: '角落',
+      colors: '颜色',
+      dotType: '点阵类型',
+      dotColor: '点阵颜色',
+      gradients: '渐变',
+      cornerSquareType: '角落方块类型',
+      cornerSquareColor: '角落方块颜色',
+      cornerDotType: '角落点类型',
+      cornerDotColor: '角落点颜色',
+      backgroundColor: '背景颜色',
+      errorCorrection: '纠错级别',
+      errorCorrectionHint: '级别越高，受损的二维码也能被识别',
+    },
   },
 
   // 照片保存设置

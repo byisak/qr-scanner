@@ -12,6 +12,7 @@ export default {
     search: 'Search',
     loading: 'Loading...',
     error: 'Error',
+    apply: 'Apply',
   },
 
   // Auth
@@ -228,10 +229,14 @@ export default {
     exampleDesc: '→ If scanned value is "ABC123"\nNavigates to https://example.com/product/ABC123',
     // URL List
     urlListTitle: 'URL List',
+    urlName: 'Name',
+    urlAddress: 'URL Address',
+    urlNamePlaceholder: 'Enter URL name (e.g., Inventory System)',
+    urlNameEmptyError: 'Please enter a name',
     urlEmptyError: 'Please enter a URL',
     urlDuplicateError: 'This URL has already been added',
-    editUrl: 'Edit URL',
-    editUrlDesc: 'Enter the new URL',
+    editUrlTitle: 'Edit URL',
+    editUrlDesc: 'Edit name and URL',
     deleteUrlConfirm: 'Do you want to delete this URL?',
     urlToggleInfo: 'Only enabled URLs will be used when scanning',
     // Realtime Server Sync
@@ -475,6 +480,27 @@ export default {
     saveErrorMessage: 'Failed to save QR code.',
     clipboardPasted: 'Clipboard content pasted',
     clipboardEmpty: 'Clipboard is empty',
+    // QR Style
+    qrStyle: {
+      title: 'QR Style',
+      customize: 'Style',
+      basic: 'Basic',
+      styled: 'Styled',
+      presets: 'Presets',
+      dots: 'Dots',
+      corners: 'Corners',
+      colors: 'Colors',
+      dotType: 'Dot Type',
+      dotColor: 'Dot Color',
+      gradients: 'Gradients',
+      cornerSquareType: 'Corner Square Type',
+      cornerSquareColor: 'Corner Square Color',
+      cornerDotType: 'Corner Dot Type',
+      cornerDotColor: 'Corner Dot Color',
+      backgroundColor: 'Background Color',
+      errorCorrection: 'Error Correction Level',
+      errorCorrectionHint: 'Higher level allows damaged QR codes to be scanned',
+    },
   },
 
   // Photo save settings

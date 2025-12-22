@@ -11,6 +11,8 @@ export default {
     confirm: '確認',
     search: '検索',
     loading: '読み込み中...',
+    error: 'エラー',
+    apply: '適用',
   },
 
   // 認証
@@ -219,10 +221,14 @@ export default {
     exampleDesc: '→ スキャン値が「ABC123」の場合\nhttps://example.com/product/ABC123 に移動',
     // URLリスト関連
     urlListTitle: 'URLリスト',
+    urlName: '名前',
+    urlAddress: 'URLアドレス',
+    urlNamePlaceholder: 'URL名を入力 (例: 在庫管理システム)',
+    urlNameEmptyError: '名前を入力してください',
     urlEmptyError: 'URLを入力してください',
     urlDuplicateError: 'このURLは既に追加されています',
-    editUrl: 'URLを編集',
-    editUrlDesc: '新しいURLを入力してください',
+    editUrlTitle: 'URLを編集',
+    editUrlDesc: '名前とURLを編集してください',
     deleteUrlConfirm: 'このURLを削除しますか？',
     urlToggleInfo: '有効なURLのみがスキャン時に使用されます',
     // リアルタイムサーバー送信
@@ -466,6 +472,27 @@ export default {
     saveErrorMessage: 'QRコードの保存に失敗しました。',
     clipboardPasted: 'クリップボードの内容を取得しました',
     clipboardEmpty: 'クリップボードが空です',
+    // QRスタイル
+    qrStyle: {
+      title: 'QRスタイル',
+      customize: 'スタイル',
+      basic: '基本',
+      styled: 'スタイル',
+      presets: 'プリセット',
+      dots: 'ドット',
+      corners: 'コーナー',
+      colors: '色',
+      dotType: 'ドットタイプ',
+      dotColor: 'ドット色',
+      gradients: 'グラデーション',
+      cornerSquareType: 'コーナー四角タイプ',
+      cornerSquareColor: 'コーナー四角色',
+      cornerDotType: 'コーナードットタイプ',
+      cornerDotColor: 'コーナードット色',
+      backgroundColor: '背景色',
+      errorCorrection: 'エラー訂正レベル',
+      errorCorrectionHint: '高いほど破損したQRコードも読み取り可能',
+    },
   },
 
   // 写真保存設定

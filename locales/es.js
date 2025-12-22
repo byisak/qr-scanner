@@ -11,6 +11,8 @@ export default {
     confirm: 'Confirmar',
     search: 'Buscar',
     loading: 'Cargando...',
+    error: 'Error',
+    apply: 'Aplicar',
   },
 
   // Autenticación
@@ -219,10 +221,14 @@ export default {
     exampleDesc: '→ Si el valor escaneado es "ABC123"\nNavega a https://ejemplo.com/producto/ABC123',
     // Lista de URL
     urlListTitle: 'Lista de URL',
+    urlName: 'Nombre',
+    urlAddress: 'Dirección URL',
+    urlNamePlaceholder: 'Ingresa nombre de URL (ej: Sistema de Inventario)',
+    urlNameEmptyError: 'Por favor, ingresa un nombre',
     urlEmptyError: 'Por favor, ingresa una URL',
     urlDuplicateError: 'Esta URL ya ha sido agregada',
-    editUrl: 'Editar URL',
-    editUrlDesc: 'Ingresa la nueva URL',
+    editUrlTitle: 'Editar URL',
+    editUrlDesc: 'Editar nombre y URL',
     deleteUrlConfirm: '¿Deseas eliminar esta URL?',
     urlToggleInfo: 'Solo las URLs habilitadas se usarán al escanear',
     // Sincronización en tiempo real
@@ -466,6 +472,27 @@ export default {
     saveErrorMessage: 'Error al guardar el código QR.',
     clipboardPasted: 'Contenido del portapapeles pegado',
     clipboardEmpty: 'El portapapeles está vacío',
+    // Estilo QR
+    qrStyle: {
+      title: 'Estilo QR',
+      customize: 'Estilo',
+      basic: 'Básico',
+      styled: 'Estilizado',
+      presets: 'Preajustes',
+      dots: 'Puntos',
+      corners: 'Esquinas',
+      colors: 'Colores',
+      dotType: 'Tipo de punto',
+      dotColor: 'Color del punto',
+      gradients: 'Degradados',
+      cornerSquareType: 'Tipo de esquina cuadrada',
+      cornerSquareColor: 'Color de esquina cuadrada',
+      cornerDotType: 'Tipo de punto de esquina',
+      cornerDotColor: 'Color del punto de esquina',
+      backgroundColor: 'Color de fondo',
+      errorCorrection: 'Nivel de corrección de errores',
+      errorCorrectionHint: 'Mayor nivel permite escanear códigos QR dañados',
+    },
   },
 
   // Configuración de guardado de fotos
