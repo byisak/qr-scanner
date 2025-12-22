@@ -11,6 +11,8 @@ export default {
     confirm: 'Confirmar',
     search: 'Buscar',
     loading: 'Cargando...',
+    error: 'Error',
+    apply: 'Aplicar',
   },
 
   // Autenticación
@@ -470,6 +472,27 @@ export default {
     saveErrorMessage: 'Error al guardar el código QR.',
     clipboardPasted: 'Contenido del portapapeles pegado',
     clipboardEmpty: 'El portapapeles está vacío',
+    // Estilo QR
+    qrStyle: {
+      title: 'Estilo QR',
+      customize: 'Estilo',
+      basic: 'Básico',
+      styled: 'Estilizado',
+      presets: 'Preajustes',
+      dots: 'Puntos',
+      corners: 'Esquinas',
+      colors: 'Colores',
+      dotType: 'Tipo de punto',
+      dotColor: 'Color del punto',
+      gradients: 'Degradados',
+      cornerSquareType: 'Tipo de esquina cuadrada',
+      cornerSquareColor: 'Color de esquina cuadrada',
+      cornerDotType: 'Tipo de punto de esquina',
+      cornerDotColor: 'Color del punto de esquina',
+      backgroundColor: 'Color de fondo',
+      errorCorrection: 'Nivel de corrección de errores',
+      errorCorrectionHint: 'Mayor nivel permite escanear códigos QR dañados',
+    },
   },
 
   // Configuración de guardado de fotos

@@ -11,6 +11,8 @@ export default {
     confirm: '确认',
     search: '搜索',
     loading: '加载中...',
+    error: '错误',
+    apply: '应用',
   },
 
   // 认证
@@ -470,6 +472,27 @@ export default {
     saveErrorMessage: '二维码保存失败。',
     clipboardPasted: '已粘贴剪贴板内容',
     clipboardEmpty: '剪贴板为空',
+    // QR样式
+    qrStyle: {
+      title: 'QR样式',
+      customize: '样式',
+      basic: '基本',
+      styled: '样式',
+      presets: '预设',
+      dots: '点阵',
+      corners: '角落',
+      colors: '颜色',
+      dotType: '点阵类型',
+      dotColor: '点阵颜色',
+      gradients: '渐变',
+      cornerSquareType: '角落方块类型',
+      cornerSquareColor: '角落方块颜色',
+      cornerDotType: '角落点类型',
+      cornerDotColor: '角落点颜色',
+      backgroundColor: '背景颜色',
+      errorCorrection: '纠错级别',
+      errorCorrectionHint: '级别越高，受损的二维码也能被识别',
+    },
   },
 
   // 照片保存设置

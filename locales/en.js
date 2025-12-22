@@ -12,6 +12,7 @@ export default {
     search: 'Search',
     loading: 'Loading...',
     error: 'Error',
+    apply: 'Apply',
   },
 
   // Auth
@@ -479,6 +480,27 @@ export default {
     saveErrorMessage: 'Failed to save QR code.',
     clipboardPasted: 'Clipboard content pasted',
     clipboardEmpty: 'Clipboard is empty',
+    // QR Style
+    qrStyle: {
+      title: 'QR Style',
+      customize: 'Style',
+      basic: 'Basic',
+      styled: 'Styled',
+      presets: 'Presets',
+      dots: 'Dots',
+      corners: 'Corners',
+      colors: 'Colors',
+      dotType: 'Dot Type',
+      dotColor: 'Dot Color',
+      gradients: 'Gradients',
+      cornerSquareType: 'Corner Square Type',
+      cornerSquareColor: 'Corner Square Color',
+      cornerDotType: 'Corner Dot Type',
+      cornerDotColor: 'Corner Dot Color',
+      backgroundColor: 'Background Color',
+      errorCorrection: 'Error Correction Level',
+      errorCorrectionHint: 'Higher level allows damaged QR codes to be scanned',
+    },
   },
 
   // Photo save settings

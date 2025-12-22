@@ -11,6 +11,8 @@ export default {
     confirm: '確認',
     search: '検索',
     loading: '読み込み中...',
+    error: 'エラー',
+    apply: '適用',
   },
 
   // 認証
@@ -470,6 +472,27 @@ export default {
     saveErrorMessage: 'QRコードの保存に失敗しました。',
     clipboardPasted: 'クリップボードの内容を取得しました',
     clipboardEmpty: 'クリップボードが空です',
+    // QRスタイル
+    qrStyle: {
+      title: 'QRスタイル',
+      customize: 'スタイル',
+      basic: '基本',
+      styled: 'スタイル',
+      presets: 'プリセット',
+      dots: 'ドット',
+      corners: 'コーナー',
+      colors: '色',
+      dotType: 'ドットタイプ',
+      dotColor: 'ドット色',
+      gradients: 'グラデーション',
+      cornerSquareType: 'コーナー四角タイプ',
+      cornerSquareColor: 'コーナー四角色',
+      cornerDotType: 'コーナードットタイプ',
+      cornerDotColor: 'コーナードット色',
+      backgroundColor: '背景色',
+      errorCorrection: 'エラー訂正レベル',
+      errorCorrectionHint: '高いほど破損したQRコードも読み取り可能',
+    },
   },
 
   // 写真保存設定

@@ -12,6 +12,7 @@ export default {
     search: '검색',
     loading: '로딩 중...',
     error: '오류',
+    apply: '적용',
   },
 
   // 인증
@@ -479,6 +480,27 @@ export default {
     saveErrorMessage: 'QR 코드 저장에 실패했습니다.',
     clipboardPasted: '클립보드 내용을 가져왔습니다',
     clipboardEmpty: '클립보드가 비어있습니다',
+    // QR 스타일
+    qrStyle: {
+      title: 'QR 스타일',
+      customize: '스타일',
+      basic: '기본',
+      styled: '스타일',
+      presets: '프리셋',
+      dots: '도트',
+      corners: '코너',
+      colors: '색상',
+      dotType: '도트 타입',
+      dotColor: '도트 색상',
+      gradients: '그라데이션',
+      cornerSquareType: '코너 사각형 타입',
+      cornerSquareColor: '코너 사각형 색상',
+      cornerDotType: '코너 도트 타입',
+      cornerDotColor: '코너 도트 색상',
+      backgroundColor: '배경 색상',
+      errorCorrection: '오류 보정 레벨',
+      errorCorrectionHint: '높을수록 손상된 QR코드도 인식 가능',
+    },
   },
 
   // 사진 저장 설정

@@ -17,6 +17,7 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -25,6 +26,8 @@ import { Colors } from '../constants/Colors';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import StyledQRCode from '../components/StyledQRCode';
+import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
 
 const QR_TYPES = [
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
@@ -53,6 +56,12 @@ export default function GeneratorScreen() {
   const [hapticEnabled, setHapticEnabled] = useState(false);
   const qrSize = useRef(new Animated.Value(0)).current;
   const qrRef = useRef(null);
+
+  // QR 스타일 관련 상태
+  const [useStyledQR, setUseStyledQR] = useState(true);
+  const [qrStyle, setQrStyle] = useState(QR_STYLE_PRESETS[0].style);
+  const [stylePickerVisible, setStylePickerVisible] = useState(false);
+  const [capturedQRBase64, setCapturedQRBase64] = useState(null);
 
   // Form data for each type
   const [formData, setFormData] = useState({
@@ -234,10 +243,21 @@ export default function GeneratorScreen() {
     }
 
     try {
-      const uri = await captureRef(qrRef, {
-        format: 'png',
-        quality: 1,
-      });
+      let uri;
+      if (useStyledQR && capturedQRBase64) {
+        // WebView에서 캡처한 base64 이미지 사용
+        const base64Data = capturedQRBase64.replace(/^data:image\/\w+;base64,/, '');
+        const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
+        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        uri = fileUri;
+      } else {
+        uri = await captureRef(qrRef, {
+          format: 'png',
+          quality: 1,
+        });
+      }
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri);
@@ -267,10 +287,21 @@ export default function GeneratorScreen() {
         return;
       }
 
-      const uri = await captureRef(qrRef, {
-        format: 'png',
-        quality: 1,
-      });
+      let uri;
+      if (useStyledQR && capturedQRBase64) {
+        // WebView에서 캡처한 base64 이미지 사용
+        const base64Data = capturedQRBase64.replace(/^data:image\/\w+;base64,/, '');
+        const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
+        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        uri = fileUri;
+      } else {
+        uri = await captureRef(qrRef, {
+          format: 'png',
+          quality: 1,
+        });
+      }
 
       await MediaLibrary.saveToLibraryAsync(uri);
 
@@ -788,20 +819,34 @@ export default function GeneratorScreen() {
         {/* QR Code Preview */}
         <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
           <View style={s.qrHeader}>
-            <Ionicons 
-              name="qr-code-outline" 
-              size={20} 
-              color={colors.primary} 
-            />
-            <Text style={[s.qrTitle, { color: colors.text }]}>
-              {t('generator.qrPreview')}
-            </Text>
+            <View style={s.qrHeaderLeft}>
+              <Ionicons
+                name="qr-code-outline"
+                size={20}
+                color={colors.primary}
+              />
+              <Text style={[s.qrTitle, { color: colors.text }]}>
+                {t('generator.qrPreview')}
+              </Text>
+            </View>
+            {hasData && (
+              <TouchableOpacity
+                style={[s.styleButton, { backgroundColor: colors.primary }]}
+                onPress={() => setStylePickerVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="color-palette-outline" size={16} color="#fff" />
+                <Text style={s.styleButtonText}>
+                  {t('generator.qrStyle.customize') || '스타일'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
-          
+
           <View style={[s.qrContainer, { borderColor: colors.border }]}>
             {hasData ? (
-              <Animated.View 
-                ref={qrRef} 
+              <Animated.View
+                ref={qrRef}
                 style={[
                   s.qrWrapper,
                   {
@@ -816,16 +861,25 @@ export default function GeneratorScreen() {
                     ],
                     opacity: qrSize,
                   },
-                ]} 
+                ]}
                 collapsable={false}
               >
-                <View style={s.qrBackground}>
-                  <QRCode
-                    value={qrData}
-                    size={240}
-                    backgroundColor="white"
-                    color="black"
-                  />
+                <View style={[s.qrBackground, { backgroundColor: qrStyle.backgroundColor || '#fff' }]}>
+                  {useStyledQR ? (
+                    <StyledQRCode
+                      value={qrData}
+                      size={240}
+                      qrStyle={qrStyle}
+                      onCapture={(base64) => setCapturedQRBase64(base64)}
+                    />
+                  ) : (
+                    <QRCode
+                      value={qrData}
+                      size={240}
+                      backgroundColor="white"
+                      color="black"
+                    />
+                  )}
                 </View>
               </Animated.View>
             ) : (
@@ -846,6 +900,38 @@ export default function GeneratorScreen() {
               </View>
             )}
           </View>
+
+          {/* Style Mode Toggle */}
+          {hasData && (
+            <View style={s.styleModeContainer}>
+              <TouchableOpacity
+                style={[
+                  s.styleModeButton,
+                  !useStyledQR && { backgroundColor: colors.primary },
+                  useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
+                ]}
+                onPress={() => setUseStyledQR(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.styleModeText, { color: !useStyledQR ? '#fff' : colors.text }]}>
+                  {t('generator.qrStyle.basic') || '기본'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  s.styleModeButton,
+                  useStyledQR && { backgroundColor: colors.primary },
+                  !useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
+                ]}
+                onPress={() => setUseStyledQR(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.styleModeText, { color: useStyledQR ? '#fff' : colors.text }]}>
+                  {t('generator.qrStyle.styled') || '스타일'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}
@@ -877,6 +963,14 @@ export default function GeneratorScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* QR Style Picker Modal */}
+      <QRStylePicker
+        visible={stylePickerVisible}
+        onClose={() => setStylePickerVisible(false)}
+        currentStyle={qrStyle}
+        onStyleChange={setQrStyle}
+      />
     </View>
   );
 }
@@ -1035,13 +1129,46 @@ const s = StyleSheet.create({
   qrHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
     marginBottom: 20,
+  },
+  qrHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   qrTitle: {
     fontSize: 18,
     fontWeight: '600',
     letterSpacing: -0.3,
+  },
+  styleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  styleButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  styleModeContainer: {
+    flexDirection: 'row',
+    marginTop: 16,
+    gap: 8,
+  },
+  styleModeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  styleModeText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   qrContainer: {
     borderRadius: 20,
