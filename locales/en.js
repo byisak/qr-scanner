@@ -11,6 +11,7 @@ export default {
     confirm: 'Confirm',
     search: 'Search',
     loading: 'Loading...',
+    error: 'Error',
   },
 
   // Auth
@@ -102,6 +103,30 @@ export default {
     sending: 'Sending',
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
+    uploadImage: 'Scan from Image',
+  },
+
+  // Image analysis screen
+  imageAnalysis: {
+    title: 'Image Analysis',
+    selectPhoto: 'Select Photo',
+    noPhotos: 'No photos available',
+    noImage: 'No image to analyze.',
+    loadingWasm: 'Loading barcode scanner...',
+    loadingImage: 'Loading image...',
+    analyzing: 'Analyzing barcodes/QR codes...',
+    analysisError: 'An error occurred during image analysis.',
+    pickerError: 'An error occurred while selecting the image.',
+    results: 'Detected Codes',
+    noResults: 'No barcodes found',
+    noResultsDesc: 'No barcodes or QR codes were detected in this image.\nTry another image.',
+    saveAll: 'Save All',
+    saveSuccess: 'Saved',
+    saveSuccessMessage: 'Barcode #{{number}} has been saved to album.',
+    saveAllSuccess: 'All Saved',
+    saveAllSuccessMessage: '{{count}} barcodes have been saved to album.',
+    saveError: 'An error occurred while saving.',
+    permissionDenied: 'Photo album access permission is required.',
   },
 
   // History screen
@@ -127,6 +152,7 @@ export default {
     duplicateCount: 'time',
     scanHistory: 'Scan History:',
     copy: 'Copy',
+    save: 'Save',
     share: 'Share',
     open: 'Open',
     scanAgain: 'Scan Again',

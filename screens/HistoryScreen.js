@@ -304,13 +304,24 @@ export default function HistoryScreen() {
                 accessibilityRole="button"
               >
                 <View style={s.itemContent}>
-                  {/* 사진 썸네일 */}
+                  {/* 사진 썸네일 - 클릭시 이미지 분석 */}
                   {hasPhoto && (
-                    <Image
-                      source={{ uri: item.photos[0] }}
-                      style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                      resizeMode="cover"
-                    />
+                    <TouchableOpacity
+                      onPress={() => router.push({
+                        pathname: '/image-analysis',
+                        params: { imageUri: item.photos[0] }
+                      })}
+                      activeOpacity={0.7}
+                    >
+                      <Image
+                        source={{ uri: item.photos[0] }}
+                        style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                        resizeMode="cover"
+                      />
+                      <View style={[s.analyzeIconOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                        <Ionicons name="scan" size={16} color="#fff" />
+                      </View>
+                    </TouchableOpacity>
                   )}
                   <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
                     {/* 1줄: 스캔값 */}
@@ -508,6 +519,14 @@ const s = StyleSheet.create({
     height: 60,
     borderRadius: 8,
     borderWidth: 1,
+  },
+  analyzeIconOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    borderTopLeftRadius: 8,
+    borderBottomRightRadius: 7,
+    padding: 4,
   },
   itemInfo: {
     flex: 1,

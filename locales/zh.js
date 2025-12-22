@@ -102,6 +102,23 @@ export default {
     sending: '发送中',
     noSessionUrl: '没有传输地址',
     pleaseGenerateUrl: '要使用实时服务器传输，请先在设置中生成地址。',
+    uploadImage: '从图片扫描',
+  },
+
+  // 图片分析界面
+  imageAnalysis: {
+    title: '图片分析',
+    selectPhoto: '选择照片',
+    noPhotos: '没有照片',
+    noImage: '没有可分析的图片。',
+    loadingWasm: '正在加载条码扫描器...',
+    loadingImage: '正在加载图片...',
+    analyzing: '正在分析条码/二维码...',
+    analysisError: '图片分析时发生错误。',
+    pickerError: '选择图片时发生错误。',
+    results: '识别的代码',
+    noResults: '未找到条码',
+    noResultsDesc: '在此图片中未检测到条码或二维码。\n请尝试其他图片。',
   },
 
   // 历史记录界面

@@ -503,11 +503,23 @@ export default function ResultScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-            <Image
-              source={{ uri: photoUri }}
-              style={[styles.scanPhoto, { backgroundColor: colors.inputBackground }]}
-              resizeMode="contain"
-            />
+            <TouchableOpacity
+              onPress={() => router.push({
+                pathname: '/image-analysis',
+                params: { imageUri: photoUri }
+              })}
+              activeOpacity={0.8}
+            >
+              <Image
+                source={{ uri: photoUri }}
+                style={[styles.scanPhoto, { backgroundColor: colors.inputBackground }]}
+                resizeMode="contain"
+              />
+              <View style={[styles.analyzeOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                <Ionicons name="scan" size={24} color="#fff" />
+                <Text style={styles.analyzeOverlayText}>{t('imageAnalysis.title')}</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -760,6 +772,24 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: 12,
+  },
+  analyzeOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    gap: 8,
+  },
+  analyzeOverlayText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   ecLevelContainer: {
     borderWidth: 1.5,

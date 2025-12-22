@@ -11,6 +11,9 @@ import {
   Modal,
   ScrollView,
   InteractionManager,
+  FlatList,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -27,6 +30,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as MediaLibrary from 'expo-media-library';
 
 const DEBOUNCE_DELAY = 500;
 const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
@@ -1071,6 +1075,67 @@ function ScannerScreen() {
     }
   }, [realtimeSyncEnabled]);
 
+  // 갤러리 사진 목록 상태
+  const [galleryModalVisible, setGalleryModalVisible] = useState(false);
+  const [galleryPhotos, setGalleryPhotos] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+
+  // 갤러리 열기
+  const handlePickImage = useCallback(async () => {
+    try {
+      // 미디어 라이브러리 권한 요청
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('result.permissionDenied'),
+          t('result.permissionDeniedMessage')
+        );
+        return;
+      }
+
+      setGalleryLoading(true);
+      setGalleryModalVisible(true);
+
+      // 최근 사진 50개 가져오기
+      const assets = await MediaLibrary.getAssetsAsync({
+        mediaType: 'photo',
+        first: 50,
+        sortBy: [MediaLibrary.SortBy.creationTime],
+      });
+
+      setGalleryPhotos(assets.assets);
+      setGalleryLoading(false);
+    } catch (error) {
+      console.error('Gallery error:', error);
+      setGalleryLoading(false);
+      Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
+    }
+  }, [t]);
+
+  // 사진 선택 시
+  const handleSelectPhoto = useCallback(async (asset) => {
+    try {
+      setGalleryModalVisible(false);
+
+      // 에셋 정보 가져오기 (로컬 URI 포함)
+      const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
+      const imageUri = assetInfo.localUri || asset.uri;
+
+      // 네비게이션 전 카메라 중지
+      isNavigatingRef.current = true;
+      setIsActive(false);
+
+      // 이미지 분석 화면으로 이동
+      router.push({
+        pathname: '/image-analysis',
+        params: { imageUri: imageUri },
+      });
+    } catch (error) {
+      console.error('Photo select error:', error);
+      Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
+    }
+  }, [router, t]);
+
   // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링, 기본 그룹 이름 다국어 적용)
   const displayGroups = useMemo(() => {
     const filtered = realtimeSyncEnabled
@@ -1217,6 +1282,29 @@ function ScannerScreen() {
         )}
       </TouchableOpacity>
 
+      {/* 이미지 업로드 버튼 */}
+      <TouchableOpacity
+        onPress={handlePickImage}
+        activeOpacity={0.8}
+        accessibilityLabel={t('scanner.uploadImage')}
+        accessibilityRole="button"
+        style={[styles.imagePickerButtonContainer, { top: topOffset }]}
+      >
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            intensity={80}
+            tint="light"
+            style={styles.imagePickerButton}
+          >
+            <Ionicons name="images" size={20} color="rgba(255,255,255,0.95)" />
+          </BlurView>
+        ) : (
+          <View style={[styles.imagePickerButton, styles.imagePickerButtonAndroid]}>
+            <Ionicons name="images" size={20} color="rgba(255,255,255,0.95)" />
+          </View>
+        )}
+      </TouchableOpacity>
+
 
       {/* 그룹 선택 모달 */}
       <Modal
@@ -1271,6 +1359,60 @@ function ScannerScreen() {
             </ScrollView>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* 갤러리 모달 */}
+      <Modal
+        visible={galleryModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setGalleryModalVisible(false)}
+      >
+        <View style={styles.galleryModalContainer}>
+          <View style={[styles.galleryModalContent, { paddingTop: insets.top }]}>
+            <View style={styles.galleryModalHeader}>
+              <Text style={styles.galleryModalTitle}>{t('imageAnalysis.selectPhoto')}</Text>
+              <TouchableOpacity
+                onPress={() => setGalleryModalVisible(false)}
+                style={styles.galleryModalCloseButton}
+              >
+                <Ionicons name="close" size={28} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {galleryLoading ? (
+              <View style={styles.galleryLoading}>
+                <ActivityIndicator size="large" color="#fff" />
+                <Text style={styles.galleryLoadingText}>{t('common.loading')}</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={galleryPhotos}
+                numColumns={3}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.galleryGrid}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.galleryPhotoItem}
+                    onPress={() => handleSelectPhoto(item)}
+                    activeOpacity={0.7}
+                  >
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.galleryPhotoImage}
+                    />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <View style={styles.galleryEmpty}>
+                    <Ionicons name="images-outline" size={48} color="#666" />
+                    <Text style={styles.galleryEmptyText}>{t('imageAnalysis.noPhotos')}</Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -1441,6 +1583,21 @@ const styles = StyleSheet.create({
   torchButtonActive: {
     backgroundColor: 'rgba(255,214,10,0.15)',
   },
+  imagePickerButtonContainer: {
+    position: 'absolute',
+    // top은 인라인 스타일로 동적 설정
+    right: 20,
+  },
+  imagePickerButton: {
+    padding: 12,
+    borderRadius: 22,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePickerButtonAndroid: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
   msg: {
     flex: 1,
     textAlign: 'center',
@@ -1558,6 +1715,64 @@ const styles = StyleSheet.create({
   },
   groupItemTextActive: {
     color: '#007AFF',
+  },
+  // 갤러리 모달 스타일
+  galleryModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+  },
+  galleryModalContent: {
+    flex: 1,
+  },
+  galleryModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  galleryModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  galleryModalCloseButton: {
+    padding: 4,
+  },
+  galleryLoading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  galleryLoadingText: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 12,
+  },
+  galleryGrid: {
+    padding: 2,
+  },
+  galleryPhotoItem: {
+    flex: 1,
+    aspectRatio: 1,
+    margin: 2,
+  },
+  galleryPhotoImage: {
+    flex: 1,
+    borderRadius: 4,
+  },
+  galleryEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  galleryEmptyText: {
+    color: '#666',
+    fontSize: 14,
+    marginTop: 12,
   },
 });
 

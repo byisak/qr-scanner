@@ -11,6 +11,7 @@ export default {
     confirm: '확인',
     search: '검색',
     loading: '로딩 중...',
+    error: '오류',
   },
 
   // 인증
@@ -102,6 +103,30 @@ export default {
     sending: '전송',
     noSessionUrl: '전송 주소 없음',
     pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
+    uploadImage: '이미지에서 스캔',
+  },
+
+  // 이미지 분석 화면
+  imageAnalysis: {
+    title: '이미지 분석',
+    selectPhoto: '사진 선택',
+    noPhotos: '사진이 없습니다',
+    noImage: '분석할 이미지가 없습니다.',
+    loadingWasm: '바코드 인식기 로드 중...',
+    loadingImage: '이미지 로드 중...',
+    analyzing: '바코드/QR코드 분석 중...',
+    analysisError: '이미지 분석 중 오류가 발생했습니다.',
+    pickerError: '이미지를 선택하는 중 오류가 발생했습니다.',
+    results: '인식된 코드',
+    noResults: '바코드를 찾을 수 없습니다',
+    noResultsDesc: '이미지에서 바코드나 QR코드가 인식되지 않았습니다.\n다른 이미지를 시도해보세요.',
+    saveAll: '모두 저장',
+    saveSuccess: '저장 완료',
+    saveSuccessMessage: '바코드 #{{number}}이(가) 앨범에 저장되었습니다.',
+    saveAllSuccess: '모두 저장 완료',
+    saveAllSuccessMessage: '{{count}}개의 바코드가 앨범에 저장되었습니다.',
+    saveError: '저장 중 오류가 발생했습니다.',
+    permissionDenied: '사진 앨범 접근 권한이 필요합니다.',
   },
 
   // 히스토리 화면
@@ -127,6 +152,7 @@ export default {
     duplicateCount: '번째',
     scanHistory: '스캔 기록:',
     copy: '복사',
+    save: '저장',
     share: '공유',
     open: '열기',
     scanAgain: '다시 스캔하기',
