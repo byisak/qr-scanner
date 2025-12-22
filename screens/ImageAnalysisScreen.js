@@ -848,11 +848,12 @@ const styles = StyleSheet.create({
   imageSection: {
     alignItems: 'center',
     marginBottom: 16,
+    paddingTop: 28, // 라벨 높이 + 여백 (잘림 방지)
   },
   imageContainer: {
     position: 'relative',
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: 'visible', // 라벨이 이미지 밖으로 나올 수 있도록
     backgroundColor: '#000',
   },
   image: {
