@@ -187,6 +187,7 @@ export default {
     hideEcLevelInfo: 'Ocultar info',
     ecLevelTypes: 'Tipos de nivel de corrección',
     recoverable: 'recuperable',
+    regenerateCode: 'Regenerar',
   },
 
   // Pantalla de configuración

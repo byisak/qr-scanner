@@ -187,6 +187,7 @@ export default {
     hideEcLevelInfo: '説明を非表示',
     ecLevelTypes: '誤り訂正レベルの種類',
     recoverable: '復元可能',
+    regenerateCode: 'コード再生成',
   },
 
   // 設定画面

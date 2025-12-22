@@ -195,6 +195,7 @@ export default {
     hideEcLevelInfo: 'Hide Info',
     ecLevelTypes: 'Error Correction Level Types',
     recoverable: 'recoverable',
+    regenerateCode: 'Regenerate',
   },
 
   // Settings screen

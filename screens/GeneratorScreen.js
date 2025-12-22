@@ -24,7 +24,7 @@ import { captureRef } from 'react-native-view-shot';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
@@ -49,11 +49,12 @@ export default function GeneratorScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams();
 
   // iOS는 기존 값 유지, Android는 SafeArea insets 사용
   const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
 
-  const [selectedType, setSelectedType] = useState('website');
+  const [selectedType, setSelectedType] = useState(params.initialType || 'website');
   const [hapticEnabled, setHapticEnabled] = useState(false);
   const qrSize = useRef(new Animated.Value(0)).current;
   const qrRef = useRef(null);
@@ -91,6 +92,25 @@ export default function GeneratorScreen() {
     };
     loadSettings();
   }, []);
+
+  // params에서 초기 데이터 로드 (코드 재생성 기능)
+  useEffect(() => {
+    if (params.initialType && params.initialData) {
+      try {
+        const parsedData = JSON.parse(params.initialData);
+        setSelectedType(params.initialType);
+        setFormData((prev) => ({
+          ...prev,
+          [params.initialType]: {
+            ...prev[params.initialType],
+            ...parsedData,
+          },
+        }));
+      } catch (error) {
+        console.error('Error parsing initial data:', error);
+      }
+    }
+  }, [params.initialType, params.initialData]);
 
   // Load selected location from map picker
   useEffect(() => {

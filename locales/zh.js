@@ -187,6 +187,7 @@ export default {
     hideEcLevelInfo: '隐藏说明',
     ecLevelTypes: '纠错等级类型',
     recoverable: '可恢复',
+    regenerateCode: '重新生成',
   },
 
   // 设置界面

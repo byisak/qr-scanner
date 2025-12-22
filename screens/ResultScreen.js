@@ -314,6 +314,153 @@ export default function ResultScreen() {
     }
   };
 
+  // 스캔 데이터 타입 감지 및 파싱
+  const detectDataType = (data) => {
+    if (!data) return { type: 'text', parsedData: { text: '' } };
+
+    const trimmedData = data.trim();
+
+    // URL
+    if (trimmedData.startsWith('http://') || trimmedData.startsWith('https://')) {
+      return { type: 'website', parsedData: { url: trimmedData } };
+    }
+
+    // vCard (연락처)
+    if (trimmedData.startsWith('BEGIN:VCARD')) {
+      const parsedData = {
+        name: '',
+        phone: '',
+        email: '',
+        company: '',
+        title: '',
+        address: '',
+      };
+
+      const lines = trimmedData.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('FN:')) {
+          parsedData.name = line.replace('FN:', '').trim();
+        } else if (line.startsWith('TEL:') || line.startsWith('TEL;')) {
+          parsedData.phone = line.replace(/^TEL[^:]*:/, '').trim();
+        } else if (line.startsWith('EMAIL:') || line.startsWith('EMAIL;')) {
+          parsedData.email = line.replace(/^EMAIL[^:]*:/, '').trim();
+        } else if (line.startsWith('ORG:')) {
+          parsedData.company = line.replace('ORG:', '').trim();
+        } else if (line.startsWith('TITLE:')) {
+          parsedData.title = line.replace('TITLE:', '').trim();
+        } else if (line.startsWith('ADR:') || line.startsWith('ADR;')) {
+          const addrParts = line.replace(/^ADR[^:]*:/, '').split(';');
+          parsedData.address = addrParts.filter(p => p.trim()).join(' ').trim();
+        }
+      }
+
+      return { type: 'contact', parsedData };
+    }
+
+    // WiFi
+    if (trimmedData.startsWith('WIFI:')) {
+      const parsedData = { ssid: '', password: '', security: 'WPA' };
+      const wifiMatch = trimmedData.match(/WIFI:(.+)/);
+      if (wifiMatch) {
+        const params = wifiMatch[1];
+        const ssidMatch = params.match(/S:([^;]*)/);
+        const passMatch = params.match(/P:([^;]*)/);
+        const typeMatch = params.match(/T:([^;]*)/);
+
+        if (ssidMatch) parsedData.ssid = ssidMatch[1];
+        if (passMatch) parsedData.password = passMatch[1];
+        if (typeMatch) parsedData.security = typeMatch[1] || 'WPA';
+      }
+      return { type: 'wifi', parsedData };
+    }
+
+    // Email
+    if (trimmedData.startsWith('mailto:')) {
+      const parsedData = { recipient: '', subject: '', message: '' };
+      const emailUrl = trimmedData.replace('mailto:', '');
+      const [recipient, queryString] = emailUrl.split('?');
+      parsedData.recipient = recipient;
+
+      if (queryString) {
+        const params = new URLSearchParams(queryString);
+        parsedData.subject = decodeURIComponent(params.get('subject') || '');
+        parsedData.message = decodeURIComponent(params.get('body') || '');
+      }
+      return { type: 'email', parsedData };
+    }
+
+    // SMS
+    if (trimmedData.startsWith('sms:') || trimmedData.startsWith('SMS:')) {
+      const parsedData = { phone: '', message: '' };
+      const smsData = trimmedData.replace(/^sms:/i, '');
+      const [phone, queryString] = smsData.split('?');
+      parsedData.phone = phone;
+
+      if (queryString) {
+        const params = new URLSearchParams(queryString);
+        parsedData.message = decodeURIComponent(params.get('body') || '');
+      }
+      return { type: 'sms', parsedData };
+    }
+
+    // Phone
+    if (trimmedData.startsWith('tel:') || trimmedData.startsWith('TEL:')) {
+      const phone = trimmedData.replace(/^tel:/i, '');
+      return { type: 'phone', parsedData: { phone } };
+    }
+
+    // Event (vEvent)
+    if (trimmedData.startsWith('BEGIN:VEVENT') || trimmedData.includes('BEGIN:VEVENT')) {
+      const parsedData = {
+        title: '',
+        location: '',
+        startDate: '',
+        endDate: '',
+        description: '',
+      };
+
+      const lines = trimmedData.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('SUMMARY:')) {
+          parsedData.title = line.replace('SUMMARY:', '').trim();
+        } else if (line.startsWith('LOCATION:')) {
+          parsedData.location = line.replace('LOCATION:', '').trim();
+        } else if (line.startsWith('DTSTART:') || line.startsWith('DTSTART;')) {
+          parsedData.startDate = line.replace(/^DTSTART[^:]*:/, '').trim();
+        } else if (line.startsWith('DTEND:') || line.startsWith('DTEND;')) {
+          parsedData.endDate = line.replace(/^DTEND[^:]*:/, '').trim();
+        } else if (line.startsWith('DESCRIPTION:')) {
+          parsedData.description = line.replace('DESCRIPTION:', '').trim();
+        }
+      }
+
+      return { type: 'event', parsedData };
+    }
+
+    // Geo location
+    if (trimmedData.startsWith('geo:') || trimmedData.startsWith('GEO:')) {
+      const geoData = trimmedData.replace(/^geo:/i, '');
+      const [latitude, longitude] = geoData.split(',').map(v => v.trim());
+      return { type: 'location', parsedData: { latitude: latitude || '', longitude: longitude || '' } };
+    }
+
+    // Default: text
+    return { type: 'text', parsedData: { text: trimmedData } };
+  };
+
+  // 코드 재생성 - generator 페이지로 이동
+  const handleRegenerateCode = () => {
+    const { type, parsedData } = detectDataType(displayText);
+
+    router.push({
+      pathname: '/(tabs)/generator',
+      params: {
+        initialType: type,
+        initialData: JSON.stringify(parsedData),
+      },
+    });
+  };
+
   // EC 레벨 색상
   const getECLevelColor = (level) => {
     if (!level) return colors.textSecondary;
@@ -434,15 +581,13 @@ export default function ResultScreen() {
                 </TouchableOpacity>
               )}
 
-              {isFromHistory && (
-                <TouchableOpacity
-                  style={[styles.actionChip, { backgroundColor: colors.warning + '12' }]}
-                  onPress={handleEditToggle}
-                >
-                  <Ionicons name="pencil" size={18} color={colors.warning || '#FF9500'} />
-                  <Text style={[styles.actionChipText, { color: colors.warning || '#FF9500' }]}>{t('common.edit')}</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.actionChip, { backgroundColor: colors.primary + '12' }]}
+                onPress={handleRegenerateCode}
+              >
+                <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
+                <Text style={[styles.actionChipText, { color: colors.primary }]}>{t('result.regenerateCode')}</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.editActions}>

@@ -195,6 +195,7 @@ export default {
     hideEcLevelInfo: '안내 숨기기',
     ecLevelTypes: '오류 검증 레벨 종류',
     recoverable: '복원 가능',
+    regenerateCode: '코드 재생성',
   },
 
   // 설정 화면
