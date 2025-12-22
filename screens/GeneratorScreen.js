@@ -331,6 +331,16 @@ export default function GeneratorScreen() {
       // expo-image-picker를 동적으로 로드
       const ImagePicker = await import('expo-image-picker');
 
+      // 네이티브 모듈 존재 확인
+      if (!ImagePicker.requestMediaLibraryPermissionsAsync) {
+        Alert.alert(
+          '개발 빌드 필요',
+          '이미지 피커는 개발 빌드(EAS Build 또는 Xcode 빌드)에서만 사용할 수 있습니다.\n\n1. pod install 실행\n2. Xcode에서 앱 다시 빌드',
+          [{ text: '확인' }]
+        );
+        return;
+      }
+
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert(t('common.error'), '갤러리 접근 권한이 필요합니다.');
@@ -358,7 +368,16 @@ export default function GeneratorScreen() {
       }
     } catch (error) {
       console.error('Error picking logo:', error);
-      Alert.alert(t('common.error'), '이미지를 불러오는데 실패했습니다.');
+      // 네이티브 모듈 에러 감지
+      if (error.message?.includes('native module') || error.message?.includes('not a function')) {
+        Alert.alert(
+          '개발 빌드 필요',
+          '이미지 피커는 개발 빌드에서만 사용할 수 있습니다.\n\n앱을 다시 빌드해 주세요.',
+          [{ text: '확인' }]
+        );
+      } else {
+        Alert.alert(t('common.error'), '이미지를 불러오는데 실패했습니다.');
+      }
     }
   };
 
