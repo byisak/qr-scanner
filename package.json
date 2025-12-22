@@ -16,7 +16,6 @@
     "@expo-google-fonts/noto-sans-jp": "^0.4.2",
     "@expo-google-fonts/noto-sans-sc": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
-    "@expo/ui": "~0.2.0-beta.9",
     "@mgcrea/vision-camera-barcode-scanner": "^0.12.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~54.0.25",

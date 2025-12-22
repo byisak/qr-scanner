@@ -1,19 +1,7 @@
-// components/NativeColorPicker.js - SwiftUI 네이티브 컬러 피커
+// components/NativeColorPicker.js - 네이티브 컬러 피커 (프리셋 + hex 입력)
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput } from 'react-native';
+import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-// iOS에서만 SwiftUI 컴포넌트 사용
-let Host, ColorPicker;
-if (Platform.OS === 'ios') {
-  try {
-    const SwiftUI = require('@expo/ui/swift-ui');
-    Host = SwiftUI.Host;
-    ColorPicker = SwiftUI.ColorPicker;
-  } catch (e) {
-    console.log('SwiftUI not available:', e);
-  }
-}
 
 // 프리셋 색상
 const COLOR_PRESETS = [
@@ -56,29 +44,6 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
     }
   };
 
-  // iOS SwiftUI ColorPicker 사용 가능한 경우
-  const renderSwiftUIColorPicker = () => {
-    if (Platform.OS === 'ios' && Host && ColorPicker) {
-      return (
-        <View style={styles.swiftUIContainer}>
-          <Host style={styles.hostContainer} matchContents>
-            <ColorPicker
-              color={tempColor}
-              label="색상 선택"
-              onValueChanged={(event) => {
-                const newColor = event.nativeEvent.color;
-                if (newColor) {
-                  handleColorChange(newColor);
-                }
-              }}
-            />
-          </Host>
-        </View>
-      );
-    }
-    return null;
-  };
-
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
@@ -91,48 +56,48 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
             </TouchableOpacity>
           </View>
 
-          {/* Color Preview */}
-          <View style={styles.previewSection}>
-            <View style={[styles.colorPreview, { backgroundColor: tempColor }]} />
-            <TextInput
-              style={[styles.hexInput, {
-                color: colors?.text || '#000',
-                borderColor: colors?.border || '#ddd',
-                backgroundColor: colors?.inputBackground || '#f5f5f5'
-              }]}
-              value={hexInput}
-              onChangeText={handleHexChange}
-              onBlur={handleHexSubmit}
-              placeholder="#000000"
-              placeholderTextColor={colors?.textTertiary || '#999'}
-              autoCapitalize="characters"
-              maxLength={7}
-            />
-          </View>
-
-          {/* SwiftUI ColorPicker (iOS only) */}
-          {renderSwiftUIColorPicker()}
-
-          {/* Preset Colors */}
-          <Text style={[styles.sectionTitle, { color: colors?.text || '#000' }]}>프리셋 색상</Text>
-          <View style={styles.presetGrid}>
-            {COLOR_PRESETS.map((presetColor) => (
-              <TouchableOpacity
-                key={presetColor}
-                style={[
-                  styles.presetButton,
-                  {
-                    backgroundColor: presetColor,
-                    borderColor: tempColor?.toUpperCase() === presetColor ? (colors?.primary || '#007AFF') : 'transparent',
-                    borderWidth: tempColor?.toUpperCase() === presetColor ? 3 : 1,
-                  },
-                  presetColor === '#FFFFFF' && { borderColor: '#ddd', borderWidth: 1 }
-                ]}
-                onPress={() => handleColorChange(presetColor)}
-                activeOpacity={0.7}
+          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Color Preview */}
+            <View style={styles.previewSection}>
+              <View style={[styles.colorPreview, { backgroundColor: tempColor }]} />
+              <TextInput
+                style={[styles.hexInput, {
+                  color: colors?.text || '#000',
+                  borderColor: colors?.border || '#ddd',
+                  backgroundColor: colors?.inputBackground || '#f5f5f5'
+                }]}
+                value={hexInput}
+                onChangeText={handleHexChange}
+                onBlur={handleHexSubmit}
+                onSubmitEditing={handleHexSubmit}
+                placeholder="#000000"
+                placeholderTextColor={colors?.textTertiary || '#999'}
+                autoCapitalize="characters"
+                maxLength={7}
               />
-            ))}
-          </View>
+            </View>
+
+            {/* Preset Colors */}
+            <Text style={[styles.sectionTitle, { color: colors?.text || '#000' }]}>프리셋 색상</Text>
+            <View style={styles.presetGrid}>
+              {COLOR_PRESETS.map((presetColor) => (
+                <TouchableOpacity
+                  key={presetColor}
+                  style={[
+                    styles.presetButton,
+                    {
+                      backgroundColor: presetColor,
+                      borderColor: tempColor?.toUpperCase() === presetColor ? (colors?.primary || '#007AFF') : 'transparent',
+                      borderWidth: tempColor?.toUpperCase() === presetColor ? 3 : 1,
+                    },
+                    presetColor === '#FFFFFF' && { borderColor: '#ddd', borderWidth: 1 }
+                  ]}
+                  onPress={() => handleColorChange(presetColor)}
+                  activeOpacity={0.7}
+                />
+              ))}
+            </View>
+          </ScrollView>
 
           {/* Done Button */}
           <TouchableOpacity
@@ -157,7 +122,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    maxHeight: '80%',
+    maxHeight: '60%',
   },
   header: {
     flexDirection: 'row',
@@ -174,10 +139,13 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  content: {
+    paddingHorizontal: 16,
+  },
   previewSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 16,
     gap: 12,
   },
   colorPreview: {
@@ -197,34 +165,25 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     fontWeight: '600',
   },
-  swiftUIContainer: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  hostContainer: {
-    width: '100%',
-    minHeight: 50,
-  },
   sectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 16,
     marginBottom: 12,
   },
   presetGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    gap: 10,
+    gap: 12,
     marginBottom: 16,
   },
   presetButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   doneButton: {
     marginHorizontal: 16,
+    marginTop: 8,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

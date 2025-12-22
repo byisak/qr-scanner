@@ -869,7 +869,7 @@ export default function GeneratorScreen() {
                     <StyledQRCode
                       value={qrData}
                       size={240}
-                      qrStyle={qrStyle}
+                      qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
                       onCapture={(base64) => setCapturedQRBase64(base64)}
                     />
                   ) : (
