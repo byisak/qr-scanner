@@ -817,9 +817,14 @@ export default function QRStylePicker({
               key={previewKey}
               value={previewValue}
               size={140}
-              qrStyle={tempStyle}
+              qrStyle={{ ...tempStyle, width: undefined, height: undefined }}
             />
           </View>
+          {(tempStyle.width || tempStyle.height) && (
+            <Text style={[styles.sizeIndicator, { color: colors.textSecondary }]}>
+              실제 크기: {tempStyle.width || 300} × {tempStyle.height || 300}px
+            </Text>
+          )}
         </View>
 
         {/* Tabs */}
@@ -913,6 +918,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+  },
+  sizeIndicator: {
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: '500',
   },
   tabScrollContainer: {
     maxHeight: 50,
