@@ -32,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
+import { validateBarcodeValue, getBarcodeErrorMessage } from '../constants/barcodeSpecs';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -438,15 +439,39 @@ export default function GeneratorScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setSelectedBarcodeFormat(bcid);
-    setBarcodeValue('');
-    setBarcodeError(null);
+
+    // 기존 값이 있으면 새 포맷에 대해 유효성 검사
+    if (barcodeValue && barcodeValue.length > 0) {
+      const validation = validateBarcodeValue(bcid, barcodeValue);
+      if (!validation.valid) {
+        const errorMessage = getBarcodeErrorMessage(validation.error, validation.detail, t);
+        setBarcodeError(errorMessage);
+      } else {
+        setBarcodeError(null);
+      }
+    } else {
+      setBarcodeError(null);
+    }
   };
 
-  // 바코드 값 변경 (bwip-js가 검증 담당)
+  // 바코드 값 변경 및 유효성 검사
   const handleBarcodeValueChange = (value) => {
     setBarcodeValue(value);
-    // 에러는 bwip-js 렌더링 시점에 처리됨
-    setBarcodeError(null);
+
+    // 빈 값이면 에러 없음
+    if (!value || value.length === 0) {
+      setBarcodeError(null);
+      return;
+    }
+
+    // 유효성 검사 수행
+    const validation = validateBarcodeValue(selectedBarcodeFormat, value);
+    if (!validation.valid) {
+      const errorMessage = getBarcodeErrorMessage(validation.error, validation.detail, t);
+      setBarcodeError(errorMessage);
+    } else {
+      setBarcodeError(null);
+    }
   };
 
   // 세그먼트 탭 변경
@@ -1279,7 +1304,7 @@ export default function GeneratorScreen() {
                     <View style={s.errorContainer}>
                       <Ionicons name="alert-circle" size={14} color="#dc2626" />
                       <Text style={s.errorTextRed}>
-                        {t(`generator.barcodeErrors.${barcodeError}`) || '올바른 형식이 아닙니다'}
+                        {barcodeError}
                       </Text>
                     </View>
                   )}
