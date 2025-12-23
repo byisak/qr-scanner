@@ -1,6 +1,6 @@
 // components/BarcodeSvg.js - bwip-js 기반 바코드 생성 컴포넌트 (네이티브 방식)
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Image, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Image, ActivityIndicator, StyleSheet, Text } from 'react-native';
 import bwipjs from '@bwip-js/react-native';
 
 /**
@@ -384,9 +384,9 @@ export default function BarcodeSvg({
 
     try {
       // 네이티브 bwip-js로 바코드 생성
-      const dataUrl = await bwipjs.toDataURL({
+      const options = {
         bcid: bcid,
-        text: processedValue,
+        text: String(processedValue),
         scale: width,
         height: Math.max(height / 10, 8),
         includetext: displayValue,
@@ -397,7 +397,17 @@ export default function BarcodeSvg({
         barcolor: lineColor.replace('#', ''),
         paddingwidth: margin,
         paddingheight: margin,
-      });
+      };
+
+      console.log('Generating barcode with options:', options);
+
+      const dataUrl = await bwipjs.toDataURL(options);
+
+      console.log('Barcode generated, dataUrl type:', typeof dataUrl, 'length:', dataUrl?.length);
+
+      if (!dataUrl) {
+        throw new Error('toDataURL returned empty result');
+      }
 
       setImageData(dataUrl);
       setError(null);
@@ -468,10 +478,11 @@ export default function BarcodeSvg({
         />
       )}
 
-      {/* 에러 상태 - 로딩 인디케이터로 표시 (재시도 대기) */}
+      {/* 에러 상태 */}
       {error && !imageData && !isLoading && (
         <View style={styles.errorContainer}>
-          <ActivityIndicator size="small" color="#666" />
+          <Text style={styles.errorText}>바코드 생성 오류</Text>
+          <Text style={styles.errorDetail}>{error}</Text>
         </View>
       )}
     </View>
@@ -493,5 +504,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 200,
     minHeight: 80,
+    padding: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#dc2626',
+    marginBottom: 4,
+  },
+  errorDetail: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
   },
 });
