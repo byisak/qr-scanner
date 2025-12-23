@@ -32,7 +32,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
-import { validateBarcodeValue, getBarcodeErrorMessage } from '../constants/barcodeSpecs';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -439,40 +438,33 @@ export default function GeneratorScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setSelectedBarcodeFormat(bcid);
-
-    // 기존 값이 있으면 새 포맷에 대해 유효성 검사
-    if (barcodeValue && barcodeValue.length > 0) {
-      const validation = validateBarcodeValue(bcid, barcodeValue);
-      if (!validation.valid) {
-        const errorMessage = getBarcodeErrorMessage(validation.error, validation.detail, t);
-        setBarcodeError(errorMessage);
-      } else {
-        setBarcodeError(null);
-      }
-    } else {
-      setBarcodeError(null);
-    }
+    setBarcodeError(null);
+    // 에러는 bwip-js 렌더링 시 onError 콜백으로 설정됨
   };
 
-  // 바코드 값 변경 및 유효성 검사
+  // 바코드 값 변경 (bwip-js가 유효성 검사 담당)
   const handleBarcodeValueChange = (value) => {
     setBarcodeValue(value);
-
-    // 빈 값이면 에러 없음
-    if (!value || value.length === 0) {
-      setBarcodeError(null);
-      return;
-    }
-
-    // 유효성 검사 수행
-    const validation = validateBarcodeValue(selectedBarcodeFormat, value);
-    if (!validation.valid) {
-      const errorMessage = getBarcodeErrorMessage(validation.error, validation.detail, t);
-      setBarcodeError(errorMessage);
-    } else {
-      setBarcodeError(null);
-    }
+    // 에러는 bwip-js 렌더링 시 onError 콜백으로 설정됨
   };
+
+  // bwip-js 에러 메시지 파싱 (사용자 친화적으로 변환)
+  const parseBwipError = useCallback((errorMessage) => {
+    if (!errorMessage) return null;
+
+    // bwipp.xxx#nnnn: 형식에서 설명 부분만 추출
+    const colonIndex = errorMessage.indexOf(':');
+    if (colonIndex > -1) {
+      return errorMessage.substring(colonIndex + 1).trim();
+    }
+    return errorMessage;
+  }, []);
+
+  // bwip-js 바코드 생성 에러 핸들러
+  const handleBarcodeError = useCallback((errorMessage) => {
+    const parsedError = parseBwipError(errorMessage);
+    setBarcodeError(parsedError);
+  }, [parseBwipError]);
 
   // 세그먼트 탭 변경
   const handleCodeModeChange = async (mode) => {
@@ -1698,6 +1690,7 @@ export default function GeneratorScreen() {
                       maxWidth={280}
                       rotate={barcodeSettings.rotate}
                       alttext={barcodeSettings.customText}
+                      onError={handleBarcodeError}
                     />
                   </View>
                 </Animated.View>

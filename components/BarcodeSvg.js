@@ -1,6 +1,7 @@
 // components/BarcodeSvg.js - bwip-js 기반 바코드 생성 컴포넌트 (네이티브 방식)
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Image, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View, Image, ActivityIndicator, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import bwipjs from '@bwip-js/react-native';
 
 /**
@@ -349,6 +350,7 @@ export default function BarcodeSvg({
   maxWidth = 280,  // 최대 너비 (자동 스케일링)
   rotate = 'N',    // 회전: N(0°), R(90°), I(180°), L(270°)
   alttext = '',    // 바코드 아래 커스텀 텍스트 (비어있으면 value 사용)
+  onError = null,  // 에러 콜백: (errorMessage: string | null) => void
 }) {
   const [imageData, setImageData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -434,6 +436,8 @@ export default function BarcodeSvg({
 
       setImageData(dataUrl);
       setError(null);
+      // 성공 시 에러 콜백 호출 (null)
+      if (onError) onError(null);
 
       // 이미지 크기 계산 (예상값 기반)
       const estimatedWidth = Math.min(processedValue.length * width * 11 + margin * 2, 400);
@@ -456,10 +460,12 @@ export default function BarcodeSvg({
       console.warn('Barcode generation error:', e.message);
       setError(e.message);
       setImageData(null);
+      // 에러 콜백 호출
+      if (onError) onError(e.message);
     } finally {
       setIsLoading(false);
     }
-  }, [processedValue, bcid, width, height, displayValue, fontSize, textMargin, background, lineColor, margin, maxWidth, rotate, alttext]);
+  }, [processedValue, bcid, width, height, displayValue, fontSize, textMargin, background, lineColor, margin, maxWidth, rotate, alttext, onError]);
 
   // 값이나 포맷 변경 시 바코드 재생성
   useEffect(() => {
@@ -501,11 +507,10 @@ export default function BarcodeSvg({
         />
       )}
 
-      {/* 에러 상태 */}
+      {/* 에러 상태 - 간단한 아이콘만 표시 (상세 에러는 인풋 아래에 표시) */}
       {error && !imageData && !isLoading && (
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>바코드 생성 오류</Text>
-          <Text style={styles.errorDetail}>{error}</Text>
+          <Ionicons name="alert-circle-outline" size={48} color="#dc2626" />
         </View>
       )}
     </View>
@@ -528,16 +533,5 @@ const styles = StyleSheet.create({
     minWidth: 200,
     minHeight: 80,
     padding: 16,
-  },
-  errorText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#dc2626',
-    marginBottom: 4,
-  },
-  errorDetail: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
   },
 });
