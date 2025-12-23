@@ -448,23 +448,80 @@ export default function GeneratorScreen() {
     // 에러는 bwip-js 렌더링 시 onError 콜백으로 설정됨
   };
 
-  // bwip-js 에러 메시지 파싱 (사용자 친화적으로 변환)
-  const parseBwipError = useCallback((errorMessage) => {
+  // bwip-js 에러 메시지를 번역 키로 변환
+  const getBwipErrorTranslationKey = useCallback((errorMessage) => {
     if (!errorMessage) return null;
 
-    // bwipp.xxx#nnnn: 형식에서 설명 부분만 추출
-    const colonIndex = errorMessage.indexOf(':');
-    if (colonIndex > -1) {
-      return errorMessage.substring(colonIndex + 1).trim();
+    const msg = errorMessage.toLowerCase();
+
+    // 패턴 매칭으로 번역 키 결정
+    if (msg.includes('must contain only digits') || msg.includes('must only contain digits')) {
+      return 'onlyDigits';
     }
-    return errorMessage;
+    if (msg.includes('code 93') && msg.includes('capital letters')) {
+      return 'code93Chars';
+    }
+    if (msg.includes('code 39') && msg.includes('capital letters')) {
+      return 'code39Chars';
+    }
+    if (msg.includes('capital letters') && msg.includes('digits')) {
+      return 'onlyDigitsAndUppercase';
+    }
+    if (msg.includes('ascii')) {
+      return 'code128Chars';
+    }
+    if (msg.includes('invalid character') || msg.includes('bad character')) {
+      return 'invalidChar';
+    }
+    if (msg.includes('check digit') || msg.includes('checksum')) {
+      return 'invalidCheckDigit';
+    }
+    if (msg.includes('even number') || msg.includes('must be even')) {
+      return 'mustBeEven';
+    }
+    if (msg.includes('too long') || msg.includes('exceeds')) {
+      return 'tooLongData';
+    }
+    if (msg.includes('too short') || msg.includes('not enough')) {
+      return 'tooShortData';
+    }
+    if (msg.includes('start') && msg.includes('stop')) {
+      return 'invalidStartStop';
+    }
+    if (msg.includes('out of range') || msg.includes('range')) {
+      return 'outOfRange';
+    }
+    if (msg.includes('length')) {
+      return 'invalidLength';
+    }
+
+    return null; // 매칭되는 패턴 없음
   }, []);
 
   // bwip-js 바코드 생성 에러 핸들러
   const handleBarcodeError = useCallback((errorMessage) => {
-    const parsedError = parseBwipError(errorMessage);
-    setBarcodeError(parsedError);
-  }, [parseBwipError]);
+    if (!errorMessage) {
+      setBarcodeError(null);
+      return;
+    }
+
+    // 번역 키 찾기
+    const translationKey = getBwipErrorTranslationKey(errorMessage);
+
+    if (translationKey) {
+      // 번역된 메시지 사용
+      const translatedMsg = t(`generator.barcodeErrors.${translationKey}`);
+      setBarcodeError(translatedMsg);
+    } else {
+      // 번역 키를 찾지 못한 경우, 원본 메시지에서 설명 부분만 추출
+      const colonIndex = errorMessage.indexOf(':');
+      if (colonIndex > -1) {
+        setBarcodeError(errorMessage.substring(colonIndex + 1).trim());
+      } else {
+        setBarcodeError(errorMessage);
+      }
+    }
+  }, [getBwipErrorTranslationKey, t]);
 
   // 세그먼트 탭 변경
   const handleCodeModeChange = async (mode) => {
