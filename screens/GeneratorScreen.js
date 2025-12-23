@@ -86,16 +86,21 @@ export default function GeneratorScreen() {
 
   // 바코드 타입 즐겨찾기 및 모달
   const [favoriteBarcodes, setFavoriteBarcodes] = useState([]); // bcid 목록
+  const [hiddenDefaults, setHiddenDefaults] = useState([]); // 숨긴 기본 바코드
   const [barcodePickerVisible, setBarcodePickerVisible] = useState(false);
   const [barcodeSearchQuery, setBarcodeSearchQuery] = useState('');
 
-  // 즐겨찾기 로드
+  // 즐겨찾기 및 숨긴 기본 바코드 로드
   useEffect(() => {
     const loadFavorites = async () => {
       try {
         const saved = await AsyncStorage.getItem('favoriteBarcodesBcid');
         if (saved) {
           setFavoriteBarcodes(JSON.parse(saved));
+        }
+        const hidden = await AsyncStorage.getItem('hiddenDefaultBarcodes');
+        if (hidden) {
+          setHiddenDefaults(JSON.parse(hidden));
         }
       } catch (error) {
         console.error('Error loading favorite barcodes:', error);
@@ -109,14 +114,16 @@ export default function GeneratorScreen() {
     return ALL_BWIP_BARCODES.find(b => b.bcid === selectedBarcodeFormat) || ALL_BWIP_BARCODES[0];
   }, [selectedBarcodeFormat]);
 
-  // 표시할 바코드 타입 목록 계산 (기본 11개 + 즐겨찾기)
+  // 표시할 바코드 타입 목록 계산 (숨기지 않은 기본 + 즐겨찾기)
   const displayedBarcodeTypes = useMemo(() => {
-    const defaultTypes = ALL_BWIP_BARCODES.filter(b => DEFAULT_BARCODE_BCIDS.includes(b.bcid));
+    const defaultTypes = ALL_BWIP_BARCODES.filter(
+      b => DEFAULT_BARCODE_BCIDS.includes(b.bcid) && !hiddenDefaults.includes(b.bcid)
+    );
     const favoriteTypes = ALL_BWIP_BARCODES.filter(
       b => favoriteBarcodes.includes(b.bcid) && !DEFAULT_BARCODE_BCIDS.includes(b.bcid)
     );
     return [...defaultTypes, ...favoriteTypes];
-  }, [favoriteBarcodes]);
+  }, [favoriteBarcodes, hiddenDefaults]);
 
   // 모달에서 검색 필터링된 바코드 목록
   const filteredBarcodes = useMemo(() => {
@@ -141,24 +148,38 @@ export default function GeneratorScreen() {
     return groups;
   }, [filteredBarcodes]);
 
-  // 즐겨찾기 토글
+  // 즐겨찾기 토글 (기본 바코드와 일반 즐겨찾기 모두 처리)
   const toggleFavoriteBarcode = async (bcid) => {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
-    let newFavorites;
-    if (favoriteBarcodes.includes(bcid)) {
-      newFavorites = favoriteBarcodes.filter(id => id !== bcid);
-    } else {
-      newFavorites = [...favoriteBarcodes, bcid];
-    }
+    const isDefault = DEFAULT_BARCODE_BCIDS.includes(bcid);
 
-    setFavoriteBarcodes(newFavorites);
     try {
-      await AsyncStorage.setItem('favoriteBarcodesBcid', JSON.stringify(newFavorites));
+      if (isDefault) {
+        // 기본 바코드인 경우: hiddenDefaults 토글
+        let newHidden;
+        if (hiddenDefaults.includes(bcid)) {
+          newHidden = hiddenDefaults.filter(id => id !== bcid);
+        } else {
+          newHidden = [...hiddenDefaults, bcid];
+        }
+        setHiddenDefaults(newHidden);
+        await AsyncStorage.setItem('hiddenDefaultBarcodes', JSON.stringify(newHidden));
+      } else {
+        // 일반 바코드인 경우: favoriteBarcodes 토글
+        let newFavorites;
+        if (favoriteBarcodes.includes(bcid)) {
+          newFavorites = favoriteBarcodes.filter(id => id !== bcid);
+        } else {
+          newFavorites = [...favoriteBarcodes, bcid];
+        }
+        setFavoriteBarcodes(newFavorites);
+        await AsyncStorage.setItem('favoriteBarcodesBcid', JSON.stringify(newFavorites));
+      }
     } catch (error) {
-      console.error('Error saving favorite barcodes:', error);
+      console.error('Error saving barcode preferences:', error);
     }
   };
 
@@ -1183,12 +1204,6 @@ export default function GeneratorScreen() {
                     ]}>
                       {format.name}
                     </Text>
-                    <Text style={[
-                      s.typeDesc,
-                      { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
-                    ]} numberOfLines={1}>
-                      {format.description}
-                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -1757,7 +1772,8 @@ export default function GeneratorScreen() {
                         {barcodes.map((format) => {
                           const isDefault = DEFAULT_BARCODE_BCIDS.includes(format.bcid);
                           const isFavorite = favoriteBarcodes.includes(format.bcid);
-                          const isChecked = isDefault || isFavorite;
+                          const isHiddenDefault = hiddenDefaults.includes(format.bcid);
+                          const isChecked = (isDefault && !isHiddenDefault) || isFavorite;
                           const isSelected = selectedBarcodeFormat === format.bcid;
 
                           return (
@@ -1773,17 +1789,14 @@ export default function GeneratorScreen() {
                               onPress={() => handleSelectBarcodeFromModal(format.bcid)}
                               activeOpacity={0.7}
                             >
-                              {/* 즐겨찾기 체크박스 (기본 바코드는 비활성화) */}
+                              {/* 즐겨찾기 체크박스 */}
                               <TouchableOpacity
                                 style={s.favoriteButton}
                                 onPress={(e) => {
                                   e.stopPropagation();
-                                  if (!isDefault) {
-                                    toggleFavoriteBarcode(format.bcid);
-                                  }
+                                  toggleFavoriteBarcode(format.bcid);
                                 }}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                disabled={isDefault}
                               >
                                 <Ionicons
                                   name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
