@@ -347,6 +347,8 @@ export default function BarcodeSvg({
   lineColor = '#000000',
   margin = 10,
   maxWidth = 280,  // 최대 너비 (자동 스케일링)
+  rotate = 'N',    // 회전: N(0°), R(90°), I(180°), L(270°)
+  alttext = '',    // 바코드 아래 커스텀 텍스트 (비어있으면 value 사용)
 }) {
   const [imageData, setImageData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -397,7 +399,13 @@ export default function BarcodeSvg({
         barcolor: lineColor.replace('#', ''),
         paddingwidth: margin,
         paddingheight: margin,
+        rotate: rotate,
       };
+
+      // 커스텀 텍스트가 있으면 alttext 옵션 추가
+      if (alttext && alttext.trim()) {
+        options.alttext = alttext.trim();
+      }
 
       console.log('Generating barcode with options:', options);
 
@@ -451,7 +459,7 @@ export default function BarcodeSvg({
     } finally {
       setIsLoading(false);
     }
-  }, [processedValue, bcid, width, height, displayValue, fontSize, textMargin, background, lineColor, margin, maxWidth]);
+  }, [processedValue, bcid, width, height, displayValue, fontSize, textMargin, background, lineColor, margin, maxWidth, rotate, alttext]);
 
   // 값이나 포맷 변경 시 바코드 재생성
   useEffect(() => {

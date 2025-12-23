@@ -78,10 +78,12 @@ export default function GeneratorScreen() {
 
   // 바코드 스타일 설정
   const [barcodeSettings, setBarcodeSettings] = useState({
-    scale: 2,        // 바코드 너비 스케일 (1-4)
+    scale: 2,        // 바코드 너비 스케일 (1-9)
     height: 80,      // 바코드 높이 (40-120)
     fontSize: 14,    // 텍스트 크기 (10-20)
     showText: true,  // 텍스트 표시 여부
+    rotate: 'N',     // 회전: N(0°), R(90°), I(180°), L(270°)
+    customText: '',  // 바코드 아래 커스텀 텍스트
   });
 
   // 바코드 타입 즐겨찾기 및 모달
@@ -1310,8 +1312,8 @@ export default function GeneratorScreen() {
                   <Text style={[s.settingLabel, { color: colors.text }]}>
                     {t('generator.barcodeWidth') || '너비'}
                   </Text>
-                  <View style={s.settingButtons}>
-                    {[1, 2, 3, 4].map((val) => (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.settingScrollButtons}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
                       <TouchableOpacity
                         key={`scale-${val}`}
                         style={[
@@ -1328,7 +1330,7 @@ export default function GeneratorScreen() {
                         </Text>
                       </TouchableOpacity>
                     ))}
-                  </View>
+                  </ScrollView>
                 </View>
 
                 {/* 바코드 높이 */}
@@ -1420,6 +1422,60 @@ export default function GeneratorScreen() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+                </View>
+
+                {/* 바코드 회전 */}
+                <View style={s.settingRow}>
+                  <Text style={[s.settingLabel, { color: colors.text }]}>
+                    {t('generator.barcodeRotate') || '회전'}
+                  </Text>
+                  <View style={s.settingButtons}>
+                    {[
+                      { value: 'N', label: '0°' },
+                      { value: 'R', label: '90°' },
+                      { value: 'I', label: '180°' },
+                      { value: 'L', label: '270°' },
+                    ].map((item) => (
+                      <TouchableOpacity
+                        key={`rotate-${item.value}`}
+                        style={[
+                          s.settingButton,
+                          {
+                            backgroundColor: barcodeSettings.rotate === item.value ? colors.primary : colors.background,
+                            borderColor: barcodeSettings.rotate === item.value ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
+                      >
+                        <Text style={{ color: barcodeSettings.rotate === item.value ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
+                          {item.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {/* 커스텀 텍스트 */}
+                <View style={s.settingRow}>
+                  <Text style={[s.settingLabel, { color: colors.text }]}>
+                    {t('generator.barcodeCustomText') || '표시 텍스트'}
+                  </Text>
+                </View>
+                <View style={s.customTextInputContainer}>
+                  <TextInput
+                    style={[
+                      s.customTextInput,
+                      {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      }
+                    ]}
+                    placeholder={t('generator.barcodeCustomTextPlaceholder') || '비워두면 바코드 값 표시'}
+                    placeholderTextColor={colors.textTertiary}
+                    value={barcodeSettings.customText}
+                    onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
+                  />
                 </View>
               </View>
             </View>
@@ -1601,6 +1657,8 @@ export default function GeneratorScreen() {
                       lineColor="#000000"
                       margin={16}
                       maxWidth={280}
+                      rotate={barcodeSettings.rotate}
+                      alttext={barcodeSettings.customText}
                     />
                   </View>
                 </Animated.View>
@@ -1988,6 +2046,21 @@ const s = StyleSheet.create({
   },
   settingButtonWide: {
     minWidth: 60,
+  },
+  settingScrollButtons: {
+    flexGrow: 0,
+    marginLeft: 8,
+  },
+  customTextInputContainer: {
+    paddingHorizontal: 4,
+    marginTop: -4,
+  },
+  customTextInput: {
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
   },
   typesScroll: {
     maxHeight: 110,
