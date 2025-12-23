@@ -204,11 +204,13 @@ export default function BarcodeSvg({
   background = '#ffffff',
   lineColor = '#000000',
   margin = 10,
+  maxWidth = 280,  // 최대 너비 (자동 스케일링)
 }) {
   const [imageData, setImageData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 280, height: 140 });
+  const [scaledDimensions, setScaledDimensions] = useState({ width: 280, height: 140 });
   const webViewRef = useRef(null);
 
   // Codabar 전처리
@@ -327,10 +329,20 @@ export default function BarcodeSvg({
       const result = JSON.parse(event.nativeEvent.data);
       if (result.success) {
         setImageData(result.data);
-        setDimensions({
-          width: Math.max(result.width, 100),
-          height: Math.max(result.height, 50),
-        });
+        const origWidth = Math.max(result.width, 100);
+        const origHeight = Math.max(result.height, 50);
+        setDimensions({ width: origWidth, height: origHeight });
+
+        // maxWidth 기준으로 자동 스케일링
+        if (origWidth > maxWidth) {
+          const scale = maxWidth / origWidth;
+          setScaledDimensions({
+            width: maxWidth,
+            height: Math.round(origHeight * scale),
+          });
+        } else {
+          setScaledDimensions({ width: origWidth, height: origHeight });
+        }
         setError(null);
       } else {
         setError(result.error);
@@ -405,8 +417,8 @@ export default function BarcodeSvg({
         <Image
           source={{ uri: imageData }}
           style={{
-            width: dimensions.width,
-            height: dimensions.height,
+            width: scaledDimensions.width,
+            height: scaledDimensions.height,
           }}
           resizeMode="contain"
         />
