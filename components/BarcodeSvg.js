@@ -1,6 +1,6 @@
 // components/BarcodeSvg.js - bwip-js 기반 바코드 생성 컴포넌트 (WebView 방식)
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Image, ActivityIndicator, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { View, Image, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 /**
@@ -207,6 +207,7 @@ export default function BarcodeSvg({
 }) {
   const [imageData, setImageData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [dimensions, setDimensions] = useState({ width: 280, height: 140 });
   const webViewRef = useRef(null);
 
@@ -218,64 +219,102 @@ export default function BarcodeSvg({
 
   const formatInfo = BARCODE_FORMATS[format];
 
-  // HTML 템플릿 생성
+  // 고유 키 생성 (값 변경 시 WebView 리렌더링 강제)
+  const webViewKey = useMemo(() => {
+    return `${format}-${value}-${Date.now()}`;
+  }, [format, value]);
+
+  // HTML 템플릿 생성 - CDN 로드 완료 후 실행
   const generateHTML = () => {
     if (!value || !formatInfo) {
       return '<html><body></body></html>';
     }
 
+    // 특수문자 이스케이프
+    const escapedValue = processedValue
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/"/g, '\\"');
+
     return `
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.jsdelivr.net/npm/bwip-js@4"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
       background: transparent;
     }
     canvas { display: block; }
+    #error { color: red; font-size: 12px; text-align: center; padding: 10px; }
   </style>
 </head>
 <body>
   <canvas id="barcode"></canvas>
+  <div id="error"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bwip-js@4.5.1/dist/bwip-js-min.js"></script>
   <script>
-    try {
-      bwipjs.toCanvas('barcode', {
-        bcid: '${formatInfo.bcid}',
-        text: '${processedValue.replace(/'/g, "\\'")}',
-        scale: ${width},
-        height: ${height / 10},
-        includetext: ${displayValue},
-        textxalign: 'center',
-        textsize: ${fontSize},
-        textgaps: ${textMargin},
-        backgroundcolor: '${background.replace('#', '')}',
-        barcolor: '${lineColor.replace('#', '')}',
-        paddingwidth: ${margin},
-        paddingheight: ${margin},
+    function generateBarcode() {
+      try {
+        if (typeof bwipjs === 'undefined') {
+          document.getElementById('error').innerText = 'Library not loaded';
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            success: false,
+            error: 'bwip-js library not loaded'
+          }));
+          return;
+        }
+
+        bwipjs.toCanvas('barcode', {
+          bcid: '${formatInfo.bcid}',
+          text: '${escapedValue}',
+          scale: ${width},
+          height: ${Math.max(height / 10, 8)},
+          includetext: ${displayValue},
+          textxalign: 'center',
+          textsize: ${fontSize},
+          textgaps: ${textMargin},
+          backgroundcolor: '${background.replace('#', '')}',
+          barcolor: '${lineColor.replace('#', '')}',
+          paddingwidth: ${margin},
+          paddingheight: ${margin},
+        });
+
+        var canvas = document.getElementById('barcode');
+        var dataUrl = canvas.toDataURL('image/png');
+        var w = canvas.width;
+        var h = canvas.height;
+
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          success: true,
+          data: dataUrl,
+          width: w,
+          height: h
+        }));
+      } catch (e) {
+        document.getElementById('error').innerText = e.message;
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          success: false,
+          error: e.message
+        }));
+      }
+    }
+
+    // CDN 로드 완료 후 실행
+    if (document.readyState === 'complete') {
+      setTimeout(generateBarcode, 100);
+    } else {
+      window.addEventListener('load', function() {
+        setTimeout(generateBarcode, 100);
       });
-
-      var canvas = document.getElementById('barcode');
-      var dataUrl = canvas.toDataURL('image/png');
-      var width = canvas.width;
-      var height = canvas.height;
-
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        success: true,
-        data: dataUrl,
-        width: width,
-        height: height
-      }));
-    } catch (e) {
-      window.ReactNativeWebView.postMessage(JSON.stringify({
-        success: false,
-        error: e.message
-      }));
     }
   </script>
 </body>
@@ -289,9 +328,13 @@ export default function BarcodeSvg({
       if (result.success) {
         setImageData(result.data);
         setDimensions({
-          width: Math.max(result.width, 200),
-          height: result.height,
+          width: Math.max(result.width, 100),
+          height: Math.max(result.height, 50),
         });
+        setError(null);
+      } else {
+        setError(result.error);
+        setImageData(null);
       }
     } catch (e) {
       // 파싱 오류 무시
@@ -299,12 +342,28 @@ export default function BarcodeSvg({
     setIsLoading(false);
   };
 
+  const handleLoadEnd = () => {
+    // WebView 로드 완료 - 잠시 후 로딩 상태 해제
+    setTimeout(() => {
+      if (isLoading && !imageData) {
+        // 아직 이미지가 없으면 로딩 유지
+      }
+    }, 2000);
+  };
+
+  const handleError = (syntheticEvent) => {
+    const { nativeEvent } = syntheticEvent;
+    setError(nativeEvent.description || 'WebView error');
+    setIsLoading(false);
+  };
+
   useEffect(() => {
     if (value && formatInfo) {
       setIsLoading(true);
       setImageData(null);
+      setError(null);
     }
-  }, [value, format, width, height, displayValue, fontSize, textMargin, background, lineColor, margin]);
+  }, [value, format]);
 
   if (!value || !formatInfo) {
     return null;
@@ -312,22 +371,32 @@ export default function BarcodeSvg({
 
   return (
     <View style={styles.container}>
-      {/* 숨겨진 WebView - 바코드 생성용 */}
-      <WebView
-        ref={webViewRef}
-        source={{ html: generateHTML() }}
-        style={styles.hiddenWebView}
-        onMessage={handleMessage}
-        javaScriptEnabled={true}
-        originWhitelist={['*']}
-        scrollEnabled={false}
-        showsHorizontalScrollIndicator={false}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* WebView - 바코드 생성용 (화면 밖에 배치) */}
+      <View style={styles.webViewContainer}>
+        <WebView
+          key={webViewKey}
+          ref={webViewRef}
+          source={{ html: generateHTML() }}
+          style={styles.webView}
+          onMessage={handleMessage}
+          onLoadEnd={handleLoadEnd}
+          onError={handleError}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          originWhitelist={['*']}
+          scrollEnabled={false}
+          bounces={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          cacheEnabled={false}
+          incognito={Platform.OS === 'android'}
+          mixedContentMode="always"
+        />
+      </View>
 
       {/* 바코드 이미지 표시 */}
       {isLoading && !imageData && (
-        <View style={[styles.loadingContainer, { width: dimensions.width, height: dimensions.height }]}>
+        <View style={[styles.loadingContainer, { minWidth: 200, minHeight: 80 }]}>
           <ActivityIndicator size="small" color="#666" />
         </View>
       )}
@@ -338,9 +407,15 @@ export default function BarcodeSvg({
           style={{
             width: dimensions.width,
             height: dimensions.height,
-            resizeMode: 'contain',
           }}
+          resizeMode="contain"
         />
+      )}
+
+      {error && !imageData && !isLoading && (
+        <View style={styles.errorContainer}>
+          <ActivityIndicator size="small" color="#666" />
+        </View>
       )}
     </View>
   );
@@ -350,15 +425,29 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 80,
   },
-  hiddenWebView: {
-    width: 1,
-    height: 1,
-    opacity: 0,
+  webViewContainer: {
     position: 'absolute',
+    left: -1000,
+    top: -1000,
+    width: 400,
+    height: 200,
+    opacity: 0,
+  },
+  webView: {
+    width: 400,
+    height: 200,
+    backgroundColor: 'transparent',
   },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  errorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 200,
+    minHeight: 80,
   },
 });
