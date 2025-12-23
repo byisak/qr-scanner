@@ -401,12 +401,27 @@ export default function BarcodeSvg({
 
       console.log('Generating barcode with options:', options);
 
-      const dataUrl = await bwipjs.toDataURL(options);
+      const result = await bwipjs.toDataURL(options);
 
-      console.log('Barcode generated, dataUrl type:', typeof dataUrl, 'length:', dataUrl?.length);
+      console.log('Barcode generated, result type:', typeof result, 'result:', JSON.stringify(result).substring(0, 200));
+
+      // 결과 타입에 따라 처리
+      let dataUrl;
+      if (typeof result === 'string') {
+        // 문자열인 경우 그대로 사용
+        dataUrl = result;
+      } else if (result && typeof result === 'object') {
+        // 객체인 경우 uri, data, dataURL 등의 속성 확인
+        dataUrl = result.uri || result.data || result.dataURL || result.base64;
+        if (result.base64 && !dataUrl.startsWith('data:')) {
+          dataUrl = `data:image/png;base64,${result.base64}`;
+        }
+      }
+
+      console.log('Final dataUrl:', dataUrl ? dataUrl.substring(0, 50) + '...' : 'null');
 
       if (!dataUrl) {
-        throw new Error('toDataURL returned empty result');
+        throw new Error('toDataURL returned invalid result: ' + JSON.stringify(result).substring(0, 100));
       }
 
       setImageData(dataUrl);
