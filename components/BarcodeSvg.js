@@ -319,24 +319,26 @@ export default function BarcodeSvg({
       // JsBarcode 모듈 가져오기
       const getModule = (format) => {
         const formats = {
-          CODE128: require('jsbarcode/src/barcodes/CODE128/CODE128.js').default || require('jsbarcode/src/barcodes/CODE128/CODE128.js'),
-          CODE128A: require('jsbarcode/src/barcodes/CODE128/CODE128A.js').default || require('jsbarcode/src/barcodes/CODE128/CODE128A.js'),
-          CODE128B: require('jsbarcode/src/barcodes/CODE128/CODE128B.js').default || require('jsbarcode/src/barcodes/CODE128/CODE128B.js'),
-          CODE128C: require('jsbarcode/src/barcodes/CODE128/CODE128C.js').default || require('jsbarcode/src/barcodes/CODE128/CODE128C.js'),
-          EAN13: require('jsbarcode/src/barcodes/EAN_UPC/EAN13.js').default || require('jsbarcode/src/barcodes/EAN_UPC/EAN13.js'),
-          EAN8: require('jsbarcode/src/barcodes/EAN_UPC/EAN8.js').default || require('jsbarcode/src/barcodes/EAN_UPC/EAN8.js'),
-          EAN5: require('jsbarcode/src/barcodes/EAN_UPC/EAN5.js').default || require('jsbarcode/src/barcodes/EAN_UPC/EAN5.js'),
-          EAN2: require('jsbarcode/src/barcodes/EAN_UPC/EAN2.js').default || require('jsbarcode/src/barcodes/EAN_UPC/EAN2.js'),
-          UPC: require('jsbarcode/src/barcodes/EAN_UPC/UPC.js').default || require('jsbarcode/src/barcodes/EAN_UPC/UPC.js'),
-          UPCE: require('jsbarcode/src/barcodes/EAN_UPC/UPCE.js').default || require('jsbarcode/src/barcodes/EAN_UPC/UPCE.js'),
-          CODE39: require('jsbarcode/src/barcodes/CODE39/index.js').default || require('jsbarcode/src/barcodes/CODE39/index.js'),
-          ITF: require('jsbarcode/src/barcodes/ITF/ITF.js').default || require('jsbarcode/src/barcodes/ITF/ITF.js'),
-          ITF14: require('jsbarcode/src/barcodes/ITF/ITF14.js').default || require('jsbarcode/src/barcodes/ITF/ITF14.js'),
-          MSI: require('jsbarcode/src/barcodes/MSI/MSI.js').default || require('jsbarcode/src/barcodes/MSI/MSI.js'),
-          MSI10: require('jsbarcode/src/barcodes/MSI/MSI10.js').default || require('jsbarcode/src/barcodes/MSI/MSI10.js'),
-          MSI11: require('jsbarcode/src/barcodes/MSI/MSI11.js').default || require('jsbarcode/src/barcodes/MSI/MSI11.js'),
-          pharmacode: require('jsbarcode/src/barcodes/pharmacode/index.js').default || require('jsbarcode/src/barcodes/pharmacode/index.js'),
-          codabar: require('jsbarcode/src/barcodes/codabar/index.js').default || require('jsbarcode/src/barcodes/codabar/index.js'),
+          // Default exports
+          CODE128: require('jsbarcode/src/barcodes/CODE128/CODE128.js').default,
+          CODE128A: require('jsbarcode/src/barcodes/CODE128/CODE128A.js').default,
+          CODE128B: require('jsbarcode/src/barcodes/CODE128/CODE128B.js').default,
+          CODE128C: require('jsbarcode/src/barcodes/CODE128/CODE128C.js').default,
+          EAN13: require('jsbarcode/src/barcodes/EAN_UPC/EAN13.js').default,
+          EAN8: require('jsbarcode/src/barcodes/EAN_UPC/EAN8.js').default,
+          EAN5: require('jsbarcode/src/barcodes/EAN_UPC/EAN5.js').default,
+          EAN2: require('jsbarcode/src/barcodes/EAN_UPC/EAN2.js').default,
+          UPC: require('jsbarcode/src/barcodes/EAN_UPC/UPC.js').default,
+          UPCE: require('jsbarcode/src/barcodes/EAN_UPC/UPCE.js').default,
+          ITF: require('jsbarcode/src/barcodes/ITF/ITF.js').default,
+          ITF14: require('jsbarcode/src/barcodes/ITF/ITF14.js').default,
+          MSI: require('jsbarcode/src/barcodes/MSI/MSI.js').default,
+          MSI10: require('jsbarcode/src/barcodes/MSI/MSI10.js').default,
+          MSI11: require('jsbarcode/src/barcodes/MSI/MSI11.js').default,
+          // Named exports
+          CODE39: require('jsbarcode/src/barcodes/CODE39/index.js').CODE39,
+          pharmacode: require('jsbarcode/src/barcodes/pharmacode/index.js').pharmacode,
+          codabar: require('jsbarcode/src/barcodes/codabar/index.js').codabar,
         };
         return formats[format];
       };
