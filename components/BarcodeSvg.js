@@ -136,9 +136,10 @@ export const BARCODE_FORMATS = {
     name: 'UPC-E',
     description: '소형 상품 (미국)',
     icon: 'pricetag-outline',
-    pattern: /^\d{6,8}$/,
+    // 6자리 또는 0/1로 시작하는 8자리만 허용
+    pattern: /^(\d{6}|[01]\d{7})$/,
     maxLength: 8,
-    placeholder: '01234565',
+    placeholder: '123456',
   },
   CODE39: {
     id: 'CODE39',
@@ -370,15 +371,34 @@ export default function BarcodeSvg({
         processedValue = formatCodabar(value);
       }
 
-      const encoder = new BarcodeClass(processedValue, {});
+      // 인코더에 필요한 옵션 전달 (UPCE 등에서 사용)
+      const encoderOptions = {
+        displayValue,
+        fontSize,
+        width,
+        height,
+        textMargin,
+        flat,
+      };
+
+      const encoder = new BarcodeClass(processedValue, encoderOptions);
       if (!encoder.valid()) {
         // 유효하지 않은 값 - 입력 중일 수 있으므로 조용히 실패
         return null;
       }
 
       const encoded = encoder.encode();
-      const binary = encoded.data;
-      const text = encoded.text;
+
+      // encode()가 배열을 반환하는 경우 (guarded encoding) 처리
+      let binary, text;
+      if (Array.isArray(encoded)) {
+        // UPCE 등의 guarded encoding - 데이터 부분만 추출
+        binary = encoded.map(e => e.data || '').join('');
+        text = processedValue;
+      } else {
+        binary = encoded.data;
+        text = encoded.text;
+      }
 
       // SVG 크기 계산
       const barcodeWidth = binary.length * width;
