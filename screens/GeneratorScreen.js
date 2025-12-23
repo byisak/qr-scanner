@@ -456,37 +456,41 @@ export default function GeneratorScreen() {
 
     // EAN 계열
     if (msg.includes('ean-13') || msg.includes('ean13')) {
-      if (msg.includes('digit') && !msg.includes('check')) return 'ean13_digits';
-      if (msg.includes('12 or 13') || msg.includes('length')) return 'ean13_length';
       if (msg.includes('check digit')) return 'ean13_checkdigit';
+      if (msg.includes('12 or 13') || msg.includes('length')) return 'ean13_length';
+      return 'ean13_digits';
     }
     if (msg.includes('ean-8') || msg.includes('ean8')) {
-      if (msg.includes('digit') && !msg.includes('check')) return 'ean8_digits';
-      if (msg.includes('7 or 8') || msg.includes('length')) return 'ean8_length';
       if (msg.includes('check digit')) return 'ean8_checkdigit';
+      if (msg.includes('7 or 8') || msg.includes('length')) return 'ean8_length';
+      return 'ean8_digits';
     }
     if (msg.includes('ean-5') || msg.includes('ean5')) {
-      if (msg.includes('digit')) return 'ean5_digits';
-      if (msg.includes('5 digit') || msg.includes('length')) return 'ean5_length';
+      if (msg.includes('length')) return 'ean5_length';
+      return 'ean5_digits';
     }
     if (msg.includes('ean-2') || msg.includes('ean2')) {
-      if (msg.includes('digit')) return 'ean2_digits';
-      if (msg.includes('2 digit') || msg.includes('length')) return 'ean2_length';
+      if (msg.includes('length')) return 'ean2_length';
+      return 'ean2_digits';
     }
 
     // UPC 계열
     if (msg.includes('upc-a') || msg.includes('upca')) {
-      if (msg.includes('digit') && !msg.includes('check')) return 'upca_digits';
-      if (msg.includes('11 or 12') || msg.includes('length')) return 'upca_length';
       if (msg.includes('check digit')) return 'upca_checkdigit';
+      if (msg.includes('11 or 12') || msg.includes('length')) return 'upca_length';
+      return 'upca_digits';
     }
     if (msg.includes('upc-e') || msg.includes('upce')) {
-      if (msg.includes('digit') && !msg.includes('check')) return 'upce_digits';
+      if (msg.includes('check digit')) return 'upce_checkdigit';
       if (msg.includes('7 or 8') || msg.includes('length')) return 'upce_length';
-      if (msg.includes('number system')) return 'upce_numbersystem';
+      if (msg.includes('cannot be converted') || msg.includes('not compressible')) return 'upce_notcompressible';
+      return 'upce_digits';
     }
 
     // Code 계열
+    if (msg.includes('code 93 extended') || msg.includes('code93ext')) {
+      return 'code93ext_chars';
+    }
     if (msg.includes('code 93') || msg.includes('code93')) {
       return 'code93_chars';
     }
@@ -502,87 +506,238 @@ export default function GeneratorScreen() {
     if (msg.includes('code 11') || msg.includes('code11')) {
       return 'code11_chars';
     }
+    if (msg.includes('code 49') || msg.includes('code49')) {
+      if (msg.includes('maximum length') || msg.includes('no valid')) return 'code49_length';
+      return 'code49_chars';
+    }
 
     // ITF 계열
     if (msg.includes('itf-14') || msg.includes('itf14')) {
-      if (msg.includes('digit')) return 'itf14_digits';
-      if (msg.includes('13') || msg.includes('14') || msg.includes('length')) return 'itf14_length';
+      if (msg.includes('check digit')) return 'itf14_checkdigit';
+      if (msg.includes('13 or 14') || msg.includes('length')) return 'itf14_length';
+      return 'itf14_digits';
     }
     if (msg.includes('interleaved 2 of 5') || msg.includes('interleaved2of5')) {
       if (msg.includes('even')) return 'itf_even';
-      if (msg.includes('digit')) return 'itf_digits';
+      return 'itf_digits';
     }
-    if (msg.includes('code 25') || msg.includes('2 of 5')) {
-      if (msg.includes('digit')) return 'itf_digits';
+    if (msg.includes('code 25') || msg.includes('code2of5') || msg.includes('2 of 5')) {
+      return 'code2of5_digits';
     }
 
-    // GS1 계열
-    if (msg.includes('gs1') || msg.includes('databar')) {
-      if (msg.includes('digit')) return 'gs1_digits';
-      return 'gs1_format';
+    // GS1 DataBar 계열
+    if (msg.includes('databar limited') || msg.includes('databarlimited')) {
+      if (msg.includes('13 or 14') || msg.includes('length')) return 'databarlimited_length';
+      return 'databarlimited_digits';
     }
-    if (msg.includes('ean-14') || msg.includes('ean14') || msg.includes('gs1-14')) {
-      return 'ean14_digits';
+    if (msg.includes('databar omni') || msg.includes('databaromni')) {
+      if (msg.includes('13 or 14') || msg.includes('length')) return 'databaromni_length';
+      return 'databaromni_digits';
     }
+    if (msg.includes('databar stacked omni') || msg.includes('databarstackedomni')) {
+      if (msg.includes('(01)') || msg.includes('application identifier')) return 'databarstackedomni_ai';
+      return 'databarstackedomni_length';
+    }
+    if (msg.includes('databar stacked') || msg.includes('databarstacked')) {
+      if (msg.includes('13 or 14') || msg.includes('length')) return 'databarstacked_length';
+      return 'databarstacked_digits';
+    }
+    if (msg.includes('databar truncated') || msg.includes('databartruncated')) {
+      if (msg.includes('13 or 14') || msg.includes('length')) return 'databartruncated_length';
+      return 'databartruncated_digits';
+    }
+    if (msg.includes('databar expanded') || msg.includes('databarexpanded')) {
+      if (msg.includes('(') || msg.includes('ai')) return 'databarexpanded_ai';
+      return 'databarexpanded_format';
+    }
+    if (msg.includes('composite') && msg.includes('pipe')) {
+      return 'composite_missing';
+    }
+
+    // SSCC-18
     if (msg.includes('sscc-18') || msg.includes('sscc18')) {
+      if (msg.includes('17 or 18') || msg.includes('length')) return 'sscc18_length';
       return 'sscc18_digits';
     }
 
-    // 기타 바코드
+    // Australian Post
+    if (msg.includes('auspost')) {
+      if (msg.includes('fcc') || msg.includes('11, 45, 59') || msg.includes('62')) return 'auspost_fcc';
+      if (msg.includes('too long')) return 'auspost_toolong';
+      if (msg.includes('at least 10') || msg.includes('too short')) return 'auspost_tooshort';
+      return 'auspost_format';
+    }
+
+    // Aztec Rune
+    if (msg.includes('aztec rune') || msg.includes('aztecrune')) {
+      if (msg.includes('0 to 255') || msg.includes('invalid')) return 'aztecrune_range';
+      if (msg.includes('numeric')) return 'aztecrune_numeric';
+      return 'aztecrune_format';
+    }
+
+    // BC412
+    if (msg.includes('bc412')) {
+      return 'bc412_chars';
+    }
+
+    // Channel Code
+    if (msg.includes('channel code') || msg.includes('channelcode')) {
+      if (msg.includes('2 to 7') || msg.includes('length')) return 'channelcode_length';
+      if (msg.includes('too big') || msg.includes('value')) return 'channelcode_toobig';
+      return 'channelcode_digits';
+    }
+
+    // Codabar
     if (msg.includes('codabar')) {
-      if (msg.includes('start') || msg.includes('stop')) return 'codabar_startstop';
+      if (msg.includes('at least 2') || msg.includes('length')) return 'codabar_length';
+      if (msg.includes('start') && msg.includes('stop')) return 'codabar_startstop';
+      if (msg.includes('body')) return 'codabar_body';
       return 'codabar_chars';
     }
+
+    // MSI
     if (msg.includes('msi')) {
       return 'msi_digits';
     }
+
+    // Plessey
     if (msg.includes('plessey')) {
       return 'plessey_chars';
+    }
+
+    // Telepen
+    if (msg.includes('telepen numeric') || msg.includes('telepennumeric')) {
+      if (msg.includes('even length') || msg.includes('odd')) return 'telepennumeric_even';
+      return 'telepennumeric_chars';
     }
     if (msg.includes('telepen')) {
       return 'telepen_chars';
     }
+
+    // Pharmacode
+    if (msg.includes('two-track pharmacode') || msg.includes('pharmacode2')) {
+      if (msg.includes('4') && msg.includes('64570080')) return 'pharmacode2_range';
+      if (msg.includes('1 to 6') || msg.includes('length')) return 'pharmacode2_length';
+      return 'pharmacode2_digits';
+    }
+    if (msg.includes('italian pharmacode') || msg.includes('code32') || msg.includes('code 32')) {
+      if (msg.includes('check digit')) return 'code32_checkdigit';
+      if (msg.includes('8 or 9') || msg.includes('length')) return 'code32_length';
+      return 'code32_digits';
+    }
     if (msg.includes('pharmacode')) {
-      if (msg.includes('range') || msg.includes('3') && msg.includes('131070')) return 'pharmacode_range';
+      if (msg.includes('3') && msg.includes('131070')) return 'pharmacode_range';
       if (msg.includes('1 to 6') || msg.includes('length')) return 'pharmacode_length';
       return 'pharmacode_digits';
     }
+
+    // PZN
     if (msg.includes('pzn')) {
+      if (msg.includes('check digit')) return 'pzn_checkdigit';
+      if (msg.includes('6 or 7') || msg.includes('length')) return 'pzn_length';
       return 'pzn_digits';
-    }
-    if (msg.includes('italian pharmacode') || msg.includes('code32') || msg.includes('code 32')) {
-      return 'code32_digits';
     }
 
     // 우편 바코드
     if (msg.includes('postnet')) {
-      if (msg.includes('5, 9') || msg.includes('length')) return 'postnet_length';
+      if (msg.includes('5, 9') || msg.includes('11') || msg.includes('length')) return 'postnet_length';
       return 'postnet_digits';
     }
     if (msg.includes('planet')) {
+      if (msg.includes('11') || msg.includes('13') || msg.includes('length')) return 'planet_length';
       return 'planet_digits';
     }
     if (msg.includes('daft')) {
       return 'daft_chars';
     }
     if (msg.includes('identcode')) {
+      if (msg.includes('check digit')) return 'identcode_checkdigit';
+      if (msg.includes('11 or 12') || msg.includes('length')) return 'identcode_length';
       return 'identcode_digits';
     }
     if (msg.includes('leitcode')) {
+      if (msg.includes('check digit')) return 'leitcode_checkdigit';
+      if (msg.includes('13 or 14') || msg.includes('length')) return 'leitcode_length';
       return 'leitcode_digits';
     }
+    if (msg.includes('japan post') || msg.includes('japanpost')) {
+      if (msg.includes('too long')) return 'japanpost_toolong';
+      return 'japanpost_chars';
+    }
+    if (msg.includes('kix')) {
+      return 'kix_chars';
+    }
+    if (msg.includes('royal mail') || msg.includes('royalmail') || msg.includes('rm4scc')) {
+      return 'royalmail_chars';
+    }
+    if (msg.includes('onecode') || msg.includes('usps intelligent mail') || msg.includes('intelligent mail')) {
+      if (msg.includes('20, 25, 29') || msg.includes('31') || msg.includes('length')) return 'onecode_length';
+      return 'onecode_digits';
+    }
+    if (msg.includes('mailmark')) {
+      if (msg.includes('7, 9') || msg.includes('29') || msg.includes('type')) return 'mailmark_type';
+      return 'mailmark_format';
+    }
 
-    // ISBN
+    // ISBN/ISSN/ISMN
     if (msg.includes('isbn')) {
       if (msg.includes('check digit')) return 'isbn_checkdigit';
+      if (msg.includes('dashes') || msg.includes('format')) return 'isbn_format';
       return 'isbn_length';
+    }
+    if (msg.includes('ismn')) {
+      if (msg.includes('m-') || msg.includes('prefix')) return 'ismn_prefix';
+      return 'ismn_length';
+    }
+    if (msg.includes('issn')) {
+      if (msg.includes('dash') || msg.includes('fifth')) return 'issn_format';
+      if (msg.includes('first') || msg.includes('numeral')) return 'issn_numeric';
+      return 'issn_length';
+    }
+
+    // M&S
+    if (msg.includes('m&s') || msg.includes('mands')) {
+      return 'mands_length';
+    }
+
+    // HIBC 계열
+    if (msg.includes('hibc')) {
+      return 'hibc_chars';
+    }
+
+    // 2D 바코드
+    if (msg.includes('datamatrix')) {
+      if (msg.includes('maximum length') || msg.includes('no valid') || msg.includes('invalid size')) return 'datamatrix_toolong';
+      return 'datamatrix_format';
+    }
+    if (msg.includes('qrcode') || msg.includes('qr code')) {
+      if (msg.includes('maximum length') || msg.includes('no valid')) return 'qrcode_toolong';
+      return 'qrcode_format';
+    }
+    if (msg.includes('micropdf417')) {
+      if (msg.includes('maximum length') || msg.includes('no valid')) return 'micropdf417_toolong';
+      return 'micropdf417_format';
+    }
+    if (msg.includes('rmqr') || msg.includes('rectangular micro qr')) {
+      if (msg.includes('version')) return 'rmqr_version';
+      return 'rmqr_format';
+    }
+
+    // Raw
+    if (msg.includes('raw')) {
+      return 'raw_chars';
+    }
+
+    // Symbol
+    if (msg.includes('unknown symbol')) {
+      return 'symbol_unknown';
     }
 
     // 공통 에러 패턴
     if (msg.includes('check digit')) {
       return 'badCheckDigit';
     }
-    if (msg.includes('too long') || msg.includes('exceeds')) {
+    if (msg.includes('too long') || msg.includes('exceeds') || msg.includes('maximum length')) {
       return 'dataTooLong';
     }
     if (msg.includes('too short')) {
