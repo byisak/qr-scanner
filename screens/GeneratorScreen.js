@@ -29,16 +29,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
-import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum } from '../components/BarcodeSvg';
+import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar } from '../components/BarcodeSvg';
 
-// 바코드 타입 목록
+// 바코드 타입 목록 (카테고리별 그룹화)
 const BARCODE_TYPES = [
-  { id: 'CODE128', icon: 'cube-outline', gradient: ['#667eea', '#764ba2'] },
-  { id: 'EAN13', icon: 'cart-outline', gradient: ['#f093fb', '#f5576c'] },
-  { id: 'EAN8', icon: 'pricetag-outline', gradient: ['#4facfe', '#00f2fe'] },
-  { id: 'UPC', icon: 'storefront-outline', gradient: ['#43e97b', '#38f9d7'] },
-  { id: 'CODE39', icon: 'construct-outline', gradient: ['#fa709a', '#fee140'] },
-  { id: 'ITF14', icon: 'archive-outline', gradient: ['#30cfd0', '#330867'] },
+  // 물류/산업용
+  { id: 'CODE128', icon: 'cube-outline', gradient: ['#667eea', '#764ba2'], category: 'industrial' },
+  { id: 'CODE39', icon: 'construct-outline', gradient: ['#fa709a', '#fee140'], category: 'industrial' },
+  { id: 'ITF', icon: 'swap-horizontal-outline', gradient: ['#a8edea', '#fed6e3'], category: 'industrial' },
+  { id: 'ITF14', icon: 'archive-outline', gradient: ['#30cfd0', '#330867'], category: 'industrial' },
+  // 상품 바코드
+  { id: 'EAN13', icon: 'cart-outline', gradient: ['#f093fb', '#f5576c'], category: 'retail' },
+  { id: 'EAN8', icon: 'pricetag-outline', gradient: ['#4facfe', '#00f2fe'], category: 'retail' },
+  { id: 'UPC', icon: 'storefront-outline', gradient: ['#43e97b', '#38f9d7'], category: 'retail' },
+  { id: 'UPCE', icon: 'pricetag-outline', gradient: ['#ff9a9e', '#fecfef'], category: 'retail' },
+  // 특수 용도
+  { id: 'codabar', icon: 'library-outline', gradient: ['#ffecd2', '#fcb69f'], category: 'special' },
+  { id: 'pharmacode', icon: 'medkit-outline', gradient: ['#ff6e7f', '#bfe9ff'], category: 'special' },
+  { id: 'MSI', icon: 'file-tray-stacked-outline', gradient: ['#c471f5', '#fa71cd'], category: 'special' },
 ];
 
 const QR_TYPES = [
@@ -66,11 +74,11 @@ export default function GeneratorScreen() {
   const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
 
   // 세그먼트 탭: 'qr' 또는 'barcode'
-  const [codeMode, setCodeMode] = useState('qr');
+  const [codeMode, setCodeMode] = useState(params.initialMode || 'qr');
 
   const [selectedType, setSelectedType] = useState(params.initialType || 'website');
-  const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState('CODE128');
-  const [barcodeValue, setBarcodeValue] = useState('');
+  const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState(params.initialBarcodeFormat || 'CODE128');
+  const [barcodeValue, setBarcodeValue] = useState(params.initialBarcodeValue || '');
   const [barcodeError, setBarcodeError] = useState(null);
 
   const [hapticEnabled, setHapticEnabled] = useState(false);
@@ -115,6 +123,22 @@ export default function GeneratorScreen() {
 
   // params에서 초기 데이터 로드 (코드 재생성 기능)
   useEffect(() => {
+    // 모드 설정 (QR 또는 바코드)
+    if (params.initialMode) {
+      setCodeMode(params.initialMode);
+    }
+
+    // 바코드 모드인 경우
+    if (params.initialMode === 'barcode') {
+      if (params.initialBarcodeFormat) {
+        setSelectedBarcodeFormat(params.initialBarcodeFormat);
+      }
+      if (params.initialBarcodeValue) {
+        setBarcodeValue(params.initialBarcodeValue);
+      }
+    }
+
+    // QR 모드인 경우
     if (params.initialType && params.initialData) {
       try {
         const parsedData = JSON.parse(params.initialData);
@@ -130,7 +154,7 @@ export default function GeneratorScreen() {
         console.error('Error parsing initial data:', error);
       }
     }
-  }, [params.initialType, params.initialData]);
+  }, [params.initialMode, params.initialType, params.initialData, params.initialBarcodeFormat, params.initialBarcodeValue]);
 
   // Load selected location from map picker
   useEffect(() => {

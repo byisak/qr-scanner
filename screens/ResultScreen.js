@@ -450,15 +450,51 @@ export default function ResultScreen() {
 
   // 코드 재생성 - generator 페이지로 이동
   const handleRegenerateCode = () => {
-    const { type, parsedData } = detectDataType(displayText);
+    // QR 코드인 경우 데이터 타입 감지
+    if (isQRCode) {
+      const { type, parsedData } = detectDataType(displayText);
+      router.push({
+        pathname: '/(tabs)/generator',
+        params: {
+          initialMode: 'qr',
+          initialType: type,
+          initialData: JSON.stringify(parsedData),
+        },
+      });
+    } else {
+      // 바코드인 경우 바코드 모드로 전달
+      // barcodeType을 적절한 형식으로 매핑
+      const formatMap = {
+        'code_128': 'CODE128',
+        'code128': 'CODE128',
+        'ean_13': 'EAN13',
+        'ean13': 'EAN13',
+        'ean_8': 'EAN8',
+        'ean8': 'EAN8',
+        'upc_a': 'UPC',
+        'upca': 'UPC',
+        'upc_e': 'UPCE',
+        'upce': 'UPCE',
+        'code_39': 'CODE39',
+        'code39': 'CODE39',
+        'itf': 'ITF',
+        'itf_14': 'ITF14',
+        'itf14': 'ITF14',
+        'codabar': 'codabar',
+        'qr': 'CODE128', // fallback
+        'qrcode': 'CODE128',
+      };
+      const mappedFormat = formatMap[barcodeType.toLowerCase()] || 'CODE128';
 
-    router.push({
-      pathname: '/(tabs)/generator',
-      params: {
-        initialType: type,
-        initialData: JSON.stringify(parsedData),
-      },
-    });
+      router.push({
+        pathname: '/(tabs)/generator',
+        params: {
+          initialMode: 'barcode',
+          initialBarcodeFormat: mappedFormat,
+          initialBarcodeValue: displayText,
+        },
+      });
+    }
   };
 
   // EC 레벨 색상
