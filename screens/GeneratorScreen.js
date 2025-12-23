@@ -1663,6 +1663,11 @@ export default function GeneratorScreen() {
           setBarcodeSearchQuery('');
           setBarcodePickerVisible(false);
         }}
+        onShow={() => {
+          console.log('Modal opened - ALL_BWIP_BARCODES count:', ALL_BWIP_BARCODES?.length);
+          console.log('Modal opened - groupedBarcodes keys:', Object.keys(groupedBarcodes));
+          console.log('Modal opened - filteredBarcodes count:', filteredBarcodes?.length);
+        }}
       >
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
@@ -2283,6 +2288,7 @@ const s = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '85%',
+    minHeight: '60%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
   },
   modalHeader: {
