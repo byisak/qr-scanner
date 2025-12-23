@@ -442,6 +442,9 @@ export default {
     barcodeHeight: '높이',
     barcodeFontSize: '글자 크기',
     barcodeShowText: '숫자 표시',
+    barcodeRotate: '회전',
+    barcodeCustomText: '표시 텍스트',
+    barcodeCustomTextPlaceholder: '비워두면 바코드 값 표시',
     // 바코드 타입 모달
     addBarcode: '더보기',
     selectBarcodeType: '바코드 타입 선택',

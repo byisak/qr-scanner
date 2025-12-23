@@ -434,6 +434,9 @@ export default {
     barcodeHeight: '高さ',
     barcodeFontSize: '文字サイズ',
     barcodeShowText: 'テキスト表示',
+    barcodeRotate: '回転',
+    barcodeCustomText: '表示テキスト',
+    barcodeCustomTextPlaceholder: '空欄の場合はバーコード値を表示',
     // バーコードタイプモーダル
     addBarcode: 'その他',
     selectBarcodeType: 'バーコードタイプを選択',

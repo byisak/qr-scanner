@@ -442,6 +442,9 @@ export default {
     barcodeHeight: 'Height',
     barcodeFontSize: 'Font Size',
     barcodeShowText: 'Show Text',
+    barcodeRotate: 'Rotate',
+    barcodeCustomText: 'Display Text',
+    barcodeCustomTextPlaceholder: 'Leave empty to show barcode value',
     // Barcode type modal
     addBarcode: 'More',
     selectBarcodeType: 'Select Barcode Type',

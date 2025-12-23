@@ -434,6 +434,9 @@ export default {
     barcodeHeight: '高度',
     barcodeFontSize: '字体大小',
     barcodeShowText: '显示文字',
+    barcodeRotate: '旋转',
+    barcodeCustomText: '显示文字',
+    barcodeCustomTextPlaceholder: '留空则显示条码值',
     // 条形码类型弹窗
     addBarcode: '更多',
     selectBarcodeType: '选择条形码类型',

@@ -85,6 +85,7 @@ export default function GeneratorScreen() {
     rotate: 'N',     // 회전: N(0°), R(90°), I(180°), L(270°)
     customText: '',  // 바코드 아래 커스텀 텍스트
   });
+  const [barcodeSettingsExpanded, setBarcodeSettingsExpanded] = useState(false);
 
   // 바코드 타입 즐겨찾기 및 모달
   const [favoriteBarcodes, setFavoriteBarcodes] = useState([]); // bcid 목록
@@ -1296,16 +1297,28 @@ export default function GeneratorScreen() {
 
             {/* 바코드 스타일 설정 */}
             <View style={[s.formSection, { backgroundColor: colors.surface }]}>
-              <View style={s.formHeader}>
+              <TouchableOpacity
+                style={s.formHeaderCollapsible}
+                onPress={() => setBarcodeSettingsExpanded(!barcodeSettingsExpanded)}
+                activeOpacity={0.7}
+              >
+                <View style={s.formHeaderLeft}>
+                  <Ionicons
+                    name="options-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text style={[s.formTitle, { color: colors.text }]}>
+                    {t('generator.barcodeSettings') || '바코드 설정'}
+                  </Text>
+                </View>
                 <Ionicons
-                  name="options-outline"
+                  name={barcodeSettingsExpanded ? 'chevron-up' : 'chevron-down'}
                   size={20}
-                  color={colors.primary}
+                  color={colors.textSecondary}
                 />
-                <Text style={[s.formTitle, { color: colors.text }]}>
-                  {t('generator.barcodeSettings') || '바코드 설정'}
-                </Text>
-              </View>
+              </TouchableOpacity>
+              {barcodeSettingsExpanded && (
               <View style={s.settingsContainer}>
                 {/* 바코드 너비 */}
                 <View style={s.settingRow}>
@@ -1478,6 +1491,7 @@ export default function GeneratorScreen() {
                   />
                 </View>
               </View>
+              )}
             </View>
           </>
         )}
@@ -2018,6 +2032,7 @@ const s = StyleSheet.create({
   // 바코드 설정 스타일
   settingsContainer: {
     gap: 16,
+    marginTop: 16,
   },
   settingRow: {
     flexDirection: 'row',
@@ -2114,6 +2129,17 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 20,
+  },
+  formHeaderCollapsible: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  formHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   formTitle: {
     fontSize: 18,
@@ -2368,8 +2394,8 @@ const s = StyleSheet.create({
   modalContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '85%',
-    minHeight: '60%',
+    maxHeight: '92%',
+    minHeight: '80%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
   },
   modalHeader: {
