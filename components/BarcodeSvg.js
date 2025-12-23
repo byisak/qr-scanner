@@ -311,67 +311,6 @@ export default function BarcodeSvg({
   textAlign = 'center',
   flat = false,
 }) {
-  const barcodeData = useMemo(() => {
-    if (!value) return null;
-
-    try {
-      // JsBarcode가 지원하는 dummy SVG 객체 생성
-      const encodings = [];
-
-      // JsBarcode의 getModule을 직접 사용하여 인코딩 데이터 얻기
-      const canvas = {
-        encodings: [],
-        getEncodings: function() { return this.encodings; }
-      };
-
-      // JsBarcode 옵션
-      const options = {
-        format,
-        width,
-        height,
-        displayValue,
-        fontSize,
-        textMargin,
-        background,
-        lineColor,
-        margin,
-        textAlign,
-        flat,
-      };
-
-      // JsBarcode를 사용하여 인코딩 데이터 생성
-      JsBarcode(canvas, value, {
-        ...options,
-        // SVG 렌더러 대신 직접 데이터만 가져옴
-        xmlDocument: {
-          createElementNS: () => ({
-            setAttribute: () => {},
-            appendChild: () => {},
-          }),
-          documentElement: { appendChild: () => {} },
-        },
-      });
-
-      // 바코드 바이너리 데이터 직접 생성
-      const barcodeModule = JsBarcode._getModule(format);
-      if (!barcodeModule) return null;
-
-      const encoder = new barcodeModule(value, options);
-      if (!encoder.valid()) return null;
-
-      const encoded = encoder.encode();
-
-      return {
-        data: encoded.data,
-        text: encoded.text,
-        options,
-      };
-    } catch (error) {
-      console.error('Barcode generation error:', error);
-      return null;
-    }
-  }, [value, format, width, height, displayValue, fontSize, textMargin, background, lineColor, margin, textAlign, flat]);
-
   // 직접 SVG 렌더링
   const renderBarcode = useMemo(() => {
     if (!value) return null;
@@ -404,7 +343,7 @@ export default function BarcodeSvg({
 
       const BarcodeClass = getModule(format);
       if (!BarcodeClass) {
-        console.error('Unknown barcode format:', format);
+        // 알 수 없는 포맷 - 조용히 실패
         return null;
       }
 
@@ -416,7 +355,7 @@ export default function BarcodeSvg({
 
       const encoder = new BarcodeClass(processedValue, {});
       if (!encoder.valid()) {
-        console.error('Invalid barcode value for format:', format, processedValue);
+        // 유효하지 않은 값 - 입력 중일 수 있으므로 조용히 실패
         return null;
       }
 
@@ -458,7 +397,7 @@ export default function BarcodeSvg({
         barcodeWidth,
       };
     } catch (error) {
-      console.error('Barcode render error:', error);
+      // 렌더링 오류 - 입력 중일 수 있으므로 조용히 실패
       return null;
     }
   }, [value, format, width, height, displayValue, fontSize, textMargin, background, lineColor, margin]);
