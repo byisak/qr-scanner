@@ -406,11 +406,42 @@ export default {
   // QR 코드 생성 화면
   generator: {
     title: '코드 생성',
-    subtitle: '다양한 유형의 QR 코드를 만들어보세요',
+    subtitle: '다양한 유형의 코드를 만들어보세요',
     formTitle: '정보 입력',
     qrPreview: 'QR 코드 미리보기',
     emptyTitle: 'QR 코드를 생성하세요',
     emptyText: '정보를 입력하면 QR 코드가 생성됩니다',
+    // 세그먼트 탭
+    qrCode: 'QR 코드',
+    barcode: '바코드',
+    // 바코드 관련
+    barcodePreview: '바코드 미리보기',
+    barcodeInput: '바코드 값 입력',
+    barcodeValue: '값',
+    emptyBarcodeTitle: '바코드를 생성하세요',
+    emptyBarcodeText: '값을 입력하면 바코드가 생성됩니다',
+    barcodeTypes: {
+      CODE128: '물류/재고 관리',
+      EAN13: '상품 바코드',
+      EAN8: '소형 상품',
+      UPC: '미국 상품',
+      CODE39: '산업용',
+      ITF14: '박스 단위',
+    },
+    barcodeHints: {
+      CODE128: '영숫자 입력 가능, 길이 제한 없음',
+      EAN13: '12자리 숫자 입력 (체크섬 자동 계산)',
+      EAN8: '7자리 숫자 입력 (체크섬 자동 계산)',
+      UPC: '11자리 숫자 입력 (체크섬 자동 계산)',
+      CODE39: '영숫자 및 일부 특수문자 (-. $/+%)',
+      ITF14: '13자리 숫자 입력 (체크섬 자동 계산)',
+    },
+    barcodeErrors: {
+      emptyValue: '값을 입력해주세요',
+      invalidPattern: '올바른 형식이 아닙니다',
+      tooShort: '자릿수가 부족합니다',
+      unknownFormat: '알 수 없는 바코드 형식입니다',
+    },
     types: {
       website: '웹 사이트',
       contact: '연락처',

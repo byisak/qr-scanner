@@ -406,11 +406,42 @@ export default {
   // QR code generator screen
   generator: {
     title: 'Generate',
-    subtitle: 'Create various types of QR codes',
+    subtitle: 'Create various types of codes',
     formTitle: 'Enter Information',
     qrPreview: 'QR Code Preview',
     emptyTitle: 'Generate a QR Code',
     emptyText: 'Enter information to generate QR code',
+    // Segment tabs
+    qrCode: 'QR Code',
+    barcode: 'Barcode',
+    // Barcode related
+    barcodePreview: 'Barcode Preview',
+    barcodeInput: 'Enter Barcode Value',
+    barcodeValue: 'Value',
+    emptyBarcodeTitle: 'Generate a Barcode',
+    emptyBarcodeText: 'Enter a value to generate barcode',
+    barcodeTypes: {
+      CODE128: 'Logistics/Inventory',
+      EAN13: 'Product barcode',
+      EAN8: 'Small products',
+      UPC: 'US products',
+      CODE39: 'Industrial',
+      ITF14: 'Box units',
+    },
+    barcodeHints: {
+      CODE128: 'Alphanumeric, no length limit',
+      EAN13: 'Enter 12 digits (checksum auto-calculated)',
+      EAN8: 'Enter 7 digits (checksum auto-calculated)',
+      UPC: 'Enter 11 digits (checksum auto-calculated)',
+      CODE39: 'Alphanumeric and some special chars (-. $/+%)',
+      ITF14: 'Enter 13 digits (checksum auto-calculated)',
+    },
+    barcodeErrors: {
+      emptyValue: 'Please enter a value',
+      invalidPattern: 'Invalid format',
+      tooShort: 'Not enough digits',
+      unknownFormat: 'Unknown barcode format',
+    },
     types: {
       website: 'Website',
       contact: 'Contact',

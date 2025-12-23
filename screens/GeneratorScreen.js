@@ -1,4 +1,4 @@
-// screens/GeneratorScreen.js - Enhanced QR Code generator screen
+// screens/GeneratorScreen.js - Enhanced QR/Barcode generator screen
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -29,6 +29,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
+import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum } from '../components/BarcodeSvg';
+
+// 바코드 타입 목록
+const BARCODE_TYPES = [
+  { id: 'CODE128', icon: 'cube-outline', gradient: ['#667eea', '#764ba2'] },
+  { id: 'EAN13', icon: 'cart-outline', gradient: ['#f093fb', '#f5576c'] },
+  { id: 'EAN8', icon: 'pricetag-outline', gradient: ['#4facfe', '#00f2fe'] },
+  { id: 'UPC', icon: 'storefront-outline', gradient: ['#43e97b', '#38f9d7'] },
+  { id: 'CODE39', icon: 'construct-outline', gradient: ['#fa709a', '#fee140'] },
+  { id: 'ITF14', icon: 'archive-outline', gradient: ['#30cfd0', '#330867'] },
+];
 
 const QR_TYPES = [
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
@@ -54,10 +65,19 @@ export default function GeneratorScreen() {
   // iOS는 기존 값 유지, Android는 SafeArea insets 사용
   const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
 
+  // 세그먼트 탭: 'qr' 또는 'barcode'
+  const [codeMode, setCodeMode] = useState('qr');
+
   const [selectedType, setSelectedType] = useState(params.initialType || 'website');
+  const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState('CODE128');
+  const [barcodeValue, setBarcodeValue] = useState('');
+  const [barcodeError, setBarcodeError] = useState(null);
+
   const [hapticEnabled, setHapticEnabled] = useState(false);
   const qrSize = useRef(new Animated.Value(0)).current;
+  const barcodeSize = useRef(new Animated.Value(0)).current;
   const qrRef = useRef(null);
+  const barcodeRef = useRef(null);
 
   // QR 스타일 관련 상태
   const [useStyledQR, setUseStyledQR] = useState(true);
@@ -210,6 +230,15 @@ export default function GeneratorScreen() {
   const qrData = generateQRData();
   const hasData = qrData.length > 0;
 
+  // 바코드 유효성 검사
+  const barcodeValidation = validateBarcode(selectedBarcodeFormat, barcodeValue);
+  const hasBarcodeData = barcodeValue.length > 0 && barcodeValidation.valid;
+
+  // 체크섬 자동 계산 (EAN/UPC 계열)
+  const finalBarcodeValue = ['EAN13', 'EAN8', 'UPC', 'ITF14'].includes(selectedBarcodeFormat)
+    ? calculateChecksum(selectedBarcodeFormat, barcodeValue)
+    : barcodeValue;
+
   useEffect(() => {
     // Animate QR code appearance
     Animated.spring(qrSize, {
@@ -219,6 +248,16 @@ export default function GeneratorScreen() {
       friction: 7,
     }).start();
   }, [hasData]);
+
+  useEffect(() => {
+    // Animate barcode appearance
+    Animated.spring(barcodeSize, {
+      toValue: hasBarcodeData ? 1 : 0,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  }, [hasBarcodeData]);
 
   const handleTypeSelect = async (typeId) => {
     if (hapticEnabled) {
@@ -255,8 +294,40 @@ export default function GeneratorScreen() {
     }));
   };
 
+  // 바코드 포맷 선택
+  const handleBarcodeFormatSelect = async (formatId) => {
+    if (hapticEnabled) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setSelectedBarcodeFormat(formatId);
+    setBarcodeValue('');
+    setBarcodeError(null);
+  };
+
+  // 바코드 값 변경
+  const handleBarcodeValueChange = (value) => {
+    setBarcodeValue(value);
+    const validation = validateBarcode(selectedBarcodeFormat, value);
+    if (!validation.valid && value.length > 0) {
+      setBarcodeError(validation.message);
+    } else {
+      setBarcodeError(null);
+    }
+  };
+
+  // 세그먼트 탭 변경
+  const handleCodeModeChange = async (mode) => {
+    if (hapticEnabled) {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setCodeMode(mode);
+  };
+
   const handleShare = async () => {
-    if (!hasData) {
+    const isBarcode = codeMode === 'barcode';
+    const currentHasData = isBarcode ? hasBarcodeData : hasData;
+
+    if (!currentHasData) {
       Alert.alert(t('common.error'), t('generator.emptyText'));
       return;
     }
@@ -267,21 +338,29 @@ export default function GeneratorScreen() {
 
     try {
       let uri;
-      // 저장용 전체 크기 QR 사용 (없으면 프리뷰 크기 사용)
-      const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
-      if (useStyledQR && qrBase64) {
-        // WebView에서 캡처한 base64 이미지 사용
-        const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-        const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
-        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-          encoding: 'base64',
-        });
-        uri = fileUri;
-      } else {
-        uri = await captureRef(qrRef, {
+
+      if (isBarcode) {
+        // 바코드 캡처
+        uri = await captureRef(barcodeRef, {
           format: 'png',
           quality: 1,
         });
+      } else {
+        // QR 코드 캡처
+        const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+        if (useStyledQR && qrBase64) {
+          const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
+          const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
+          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+            encoding: 'base64',
+          });
+          uri = fileUri;
+        } else {
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+          });
+        }
       }
 
       if (await Sharing.isAvailableAsync()) {
@@ -290,13 +369,16 @@ export default function GeneratorScreen() {
         Alert.alert(t('common.error'), 'Sharing is not available on this device');
       }
     } catch (error) {
-      console.error('Error sharing QR code:', error);
-      Alert.alert(t('common.error'), 'Failed to share QR code');
+      console.error('Error sharing code:', error);
+      Alert.alert(t('common.error'), t('generator.shareError') || 'Failed to share');
     }
   };
 
   const handleSaveImage = async () => {
-    if (!hasData) {
+    const isBarcode = codeMode === 'barcode';
+    const currentHasData = isBarcode ? hasBarcodeData : hasData;
+
+    if (!currentHasData) {
       Alert.alert(t('common.error'), t('generator.emptyText'));
       return;
     }
@@ -313,21 +395,29 @@ export default function GeneratorScreen() {
       }
 
       let uri;
-      // 저장용 전체 크기 QR 사용 (없으면 프리뷰 크기 사용)
-      const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
-      if (useStyledQR && qrBase64) {
-        // WebView에서 캡처한 base64 이미지 사용
-        const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-        const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
-        await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-          encoding: 'base64',
-        });
-        uri = fileUri;
-      } else {
-        uri = await captureRef(qrRef, {
+
+      if (isBarcode) {
+        // 바코드 캡처
+        uri = await captureRef(barcodeRef, {
           format: 'png',
           quality: 1,
         });
+      } else {
+        // QR 코드 캡처
+        const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+        if (useStyledQR && qrBase64) {
+          const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
+          const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
+          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+            encoding: 'base64',
+          });
+          uri = fileUri;
+        } else {
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+          });
+        }
       }
 
       await MediaLibrary.saveToLibraryAsync(uri);
@@ -337,7 +427,7 @@ export default function GeneratorScreen() {
         t('generator.saveSuccessMessage')
       );
     } catch (error) {
-      console.error('Error saving QR code:', error);
+      console.error('Error saving code:', error);
       Alert.alert(
         t('generator.saveError'),
         t('generator.saveErrorMessage')
@@ -835,196 +925,418 @@ export default function GeneratorScreen() {
           </Text>
         </View>
 
-        {/* Type Selector */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.typesContainer}
-          style={s.typesScroll}
-        >
-          {QR_TYPES.map((type) => (
-            <TouchableOpacity
-              key={type.id}
-              style={[
-                s.typeButton,
-                { 
-                  backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
-                  borderColor: selectedType === type.id ? colors.primary : colors.border,
-                },
-              ]}
-              onPress={() => handleTypeSelect(type.id)}
-              activeOpacity={0.7}
+        {/* 세그먼트 탭: QR 코드 / 바코드 */}
+        <View style={[s.segmentContainer, { backgroundColor: colors.surface }]}>
+          <TouchableOpacity
+            style={[
+              s.segmentButton,
+              codeMode === 'qr' && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => handleCodeModeChange('qr')}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="qr-code-outline"
+              size={20}
+              color={codeMode === 'qr' ? '#fff' : colors.text}
+            />
+            <Text style={[
+              s.segmentText,
+              { color: codeMode === 'qr' ? '#fff' : colors.text }
+            ]}>
+              {t('generator.qrCode') || 'QR 코드'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              s.segmentButton,
+              codeMode === 'barcode' && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => handleCodeModeChange('barcode')}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="barcode-outline"
+              size={20}
+              color={codeMode === 'barcode' ? '#fff' : colors.text}
+            />
+            <Text style={[
+              s.segmentText,
+              { color: codeMode === 'barcode' ? '#fff' : colors.text }
+            ]}>
+              {t('generator.barcode') || '바코드'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* QR 코드 모드 */}
+        {codeMode === 'qr' && (
+          <>
+            {/* Type Selector */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.typesContainer}
+              style={s.typesScroll}
             >
-              <View style={[
-                s.typeIconContainer,
-                { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
-              ]}>
+              {QR_TYPES.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    s.typeButton,
+                    {
+                      backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
+                      borderColor: selectedType === type.id ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => handleTypeSelect(type.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    s.typeIconContainer,
+                    { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
+                  ]}>
+                    <Ionicons
+                      name={type.icon}
+                      size={22}
+                      color={selectedType === type.id ? '#fff' : colors.text}
+                    />
+                  </View>
+                  <Text style={[
+                    s.typeText,
+                    { color: selectedType === type.id ? '#fff' : colors.text }
+                  ]}>
+                    {t(`generator.types.${type.id}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Form Section */}
+            <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+              <View style={s.formHeader}>
                 <Ionicons
-                  name={type.icon}
-                  size={22}
-                  color={selectedType === type.id ? '#fff' : colors.text}
+                  name="create-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text style={[s.formTitle, { color: colors.text }]}>
+                  {t('generator.formTitle')}
+                </Text>
+              </View>
+              <View style={s.formContainer}>
+                {renderFormFields()}
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* 바코드 모드 */}
+        {codeMode === 'barcode' && (
+          <>
+            {/* 바코드 포맷 선택 */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.typesContainer}
+              style={s.typesScroll}
+            >
+              {BARCODE_TYPES.map((format) => (
+                <TouchableOpacity
+                  key={format.id}
+                  style={[
+                    s.typeButton,
+                    {
+                      backgroundColor: selectedBarcodeFormat === format.id ? colors.primary : colors.surface,
+                      borderColor: selectedBarcodeFormat === format.id ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => handleBarcodeFormatSelect(format.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    s.typeIconContainer,
+                    { backgroundColor: selectedBarcodeFormat === format.id ? 'rgba(255,255,255,0.2)' : colors.background }
+                  ]}>
+                    <Ionicons
+                      name={format.icon}
+                      size={22}
+                      color={selectedBarcodeFormat === format.id ? '#fff' : colors.text}
+                    />
+                  </View>
+                  <Text style={[
+                    s.typeText,
+                    { color: selectedBarcodeFormat === format.id ? '#fff' : colors.text }
+                  ]}>
+                    {BARCODE_FORMATS[format.id]?.name || format.id}
+                  </Text>
+                  <Text style={[
+                    s.typeDesc,
+                    { color: selectedBarcodeFormat === format.id ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+                  ]}>
+                    {t(`generator.barcodeTypes.${format.id}`) || BARCODE_FORMATS[format.id]?.description}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* 바코드 입력 폼 */}
+            <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+              <View style={s.formHeader}>
+                <Ionicons
+                  name="barcode-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text style={[s.formTitle, { color: colors.text }]}>
+                  {t('generator.barcodeInput') || '바코드 값 입력'}
+                </Text>
+              </View>
+              <View style={s.formContainer}>
+                <View style={s.fieldContainer}>
+                  <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
+                    {t('generator.barcodeValue') || '값'}
+                  </Text>
+                  <TextInput
+                    style={[
+                      s.input,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: barcodeError ? colors.error : colors.border,
+                        color: colors.text
+                      }
+                    ]}
+                    placeholder={BARCODE_FORMATS[selectedBarcodeFormat]?.placeholder || '값을 입력하세요'}
+                    placeholderTextColor={colors.textTertiary}
+                    value={barcodeValue}
+                    onChangeText={handleBarcodeValueChange}
+                    keyboardType={['EAN13', 'EAN8', 'UPC', 'ITF14', 'MSI', 'pharmacode'].includes(selectedBarcodeFormat) ? 'numeric' : 'default'}
+                    autoCapitalize={selectedBarcodeFormat === 'CODE39' ? 'characters' : 'none'}
+                    maxLength={BARCODE_FORMATS[selectedBarcodeFormat]?.maxLength || undefined}
+                  />
+                  {barcodeError && (
+                    <Text style={[s.errorText, { color: colors.error }]}>
+                      {t(`generator.barcodeErrors.${barcodeError}`) || barcodeError}
+                    </Text>
+                  )}
+                  {/* 바코드 포맷 힌트 */}
+                  <View style={s.barcodeHint}>
+                    <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
+                    <Text style={[s.barcodeHintText, { color: colors.textSecondary }]}>
+                      {t(`generator.barcodeHints.${selectedBarcodeFormat}`) ||
+                       `${BARCODE_FORMATS[selectedBarcodeFormat]?.description} - ${
+                         BARCODE_FORMATS[selectedBarcodeFormat]?.maxLength
+                           ? `${BARCODE_FORMATS[selectedBarcodeFormat].maxLength}자리`
+                           : '길이 제한 없음'
+                       }`}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* QR Code Preview - QR 모드일 때만 */}
+        {codeMode === 'qr' && (
+          <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
+            <View style={s.qrHeader}>
+              <View style={s.qrHeaderLeft}>
+                <Ionicons
+                  name="qr-code-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text style={[s.qrTitle, { color: colors.text }]}>
+                  {t('generator.qrPreview')}
+                </Text>
+              </View>
+              {hasData && (
+                <TouchableOpacity
+                  style={[s.styleButton, { backgroundColor: colors.primary }]}
+                  onPress={() => setStylePickerVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="color-palette-outline" size={16} color="#fff" />
+                  <Text style={s.styleButtonText}>
+                    {t('generator.qrStyle.customize') || '스타일'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={[s.qrContainer, { borderColor: colors.border }]}>
+              {hasData ? (
+                <Animated.View
+                  ref={qrRef}
+                  style={[
+                    s.qrWrapper,
+                    {
+                      transform: [
+                        { scale: qrSize },
+                        {
+                          rotateZ: qrSize.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['180deg', '0deg'],
+                          }),
+                        },
+                      ],
+                      opacity: qrSize,
+                    },
+                  ]}
+                  collapsable={false}
+                >
+                  <View style={[s.qrBackground, { backgroundColor: qrStyle.backgroundColor || '#fff' }]}>
+                    {useStyledQR ? (
+                      <StyledQRCode
+                        value={qrData}
+                        size={240}
+                        qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
+                        onCapture={(base64) => setCapturedQRBase64(base64)}
+                      />
+                    ) : (
+                      <QRCode
+                        value={qrData}
+                        size={240}
+                        backgroundColor="white"
+                        color="black"
+                      />
+                    )}
+                  </View>
+                </Animated.View>
+              ) : (
+                <View style={s.emptyState}>
+                  <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
+                    <Ionicons
+                      name="qr-code-outline"
+                      size={48}
+                      color={colors.textTertiary}
+                    />
+                  </View>
+                  <Text style={[s.emptyTitle, { color: colors.text }]}>
+                    {t('generator.emptyTitle')}
+                  </Text>
+                  <Text style={[s.emptyText, { color: colors.textSecondary }]}>
+                    {t('generator.emptyText')}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* 저장용 전체 크기 QR 코드 (hidden) */}
+            {useStyledQR && qrData && (qrStyle.width || qrStyle.height) && (
+              <View style={{ position: 'absolute', left: -9999, opacity: 0 }}>
+                <StyledQRCode
+                  value={qrData}
+                  size={qrStyle.width || qrStyle.height || 300}
+                  qrStyle={qrStyle}
+                  onCapture={(base64) => setFullSizeQRBase64(base64)}
                 />
               </View>
-              <Text style={[
-                s.typeText, 
-                { color: selectedType === type.id ? '#fff' : colors.text }
-              ]}>
-                {t(`generator.types.${type.id}`)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Form Section */}
-        <View style={[s.formSection, { backgroundColor: colors.surface }]}>
-          <View style={s.formHeader}>
-            <Ionicons 
-              name="create-outline" 
-              size={20} 
-              color={colors.primary} 
-            />
-            <Text style={[s.formTitle, { color: colors.text }]}>
-              {t('generator.formTitle')}
-            </Text>
-          </View>
-          <View style={s.formContainer}>
-            {renderFormFields()}
-          </View>
-        </View>
-
-        {/* QR Code Preview */}
-        <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
-          <View style={s.qrHeader}>
-            <View style={s.qrHeaderLeft}>
-              <Ionicons
-                name="qr-code-outline"
-                size={20}
-                color={colors.primary}
-              />
-              <Text style={[s.qrTitle, { color: colors.text }]}>
-                {t('generator.qrPreview')}
-              </Text>
-            </View>
-            {hasData && (
-              <TouchableOpacity
-                style={[s.styleButton, { backgroundColor: colors.primary }]}
-                onPress={() => setStylePickerVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="color-palette-outline" size={16} color="#fff" />
-                <Text style={s.styleButtonText}>
-                  {t('generator.qrStyle.customize') || '스타일'}
-                </Text>
-              </TouchableOpacity>
             )}
-          </View>
 
-          <View style={[s.qrContainer, { borderColor: colors.border }]}>
-            {hasData ? (
-              <Animated.View
-                ref={qrRef}
-                style={[
-                  s.qrWrapper,
-                  {
-                    transform: [
-                      { scale: qrSize },
-                      {
-                        rotateZ: qrSize.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: ['180deg', '0deg'],
-                        }),
-                      },
-                    ],
-                    opacity: qrSize,
-                  },
-                ]}
-                collapsable={false}
-              >
-                <View style={[s.qrBackground, { backgroundColor: qrStyle.backgroundColor || '#fff' }]}>
-                  {useStyledQR ? (
-                    <StyledQRCode
-                      value={qrData}
-                      size={240}
-                      qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
-                      onCapture={(base64) => setCapturedQRBase64(base64)}
-                    />
-                  ) : (
-                    <QRCode
-                      value={qrData}
-                      size={240}
-                      backgroundColor="white"
-                      color="black"
-                    />
-                  )}
-                </View>
-              </Animated.View>
-            ) : (
-              <View style={s.emptyState}>
-                <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
-                  <Ionicons
-                    name="qr-code-outline"
-                    size={48}
-                    color={colors.textTertiary}
-                  />
-                </View>
-                <Text style={[s.emptyTitle, { color: colors.text }]}>
-                  {t('generator.emptyTitle')}
-                </Text>
-                <Text style={[s.emptyText, { color: colors.textSecondary }]}>
-                  {t('generator.emptyText')}
-                </Text>
+            {/* Style Mode Toggle */}
+            {hasData && (
+              <View style={s.styleModeContainer}>
+                <TouchableOpacity
+                  style={[
+                    s.styleModeButton,
+                    !useStyledQR && { backgroundColor: colors.primary },
+                    useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
+                  ]}
+                  onPress={() => setUseStyledQR(false)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.styleModeText, { color: !useStyledQR ? '#fff' : colors.text }]}>
+                    {t('generator.qrStyle.basic') || '기본'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    s.styleModeButton,
+                    useStyledQR && { backgroundColor: colors.primary },
+                    !useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
+                  ]}
+                  onPress={() => setUseStyledQR(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.styleModeText, { color: useStyledQR ? '#fff' : colors.text }]}>
+                    {t('generator.qrStyle.styled') || '스타일'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
           </View>
+        )}
 
-          {/* 저장용 전체 크기 QR 코드 (hidden) */}
-          {useStyledQR && qrData && (qrStyle.width || qrStyle.height) && (
-            <View style={{ position: 'absolute', left: -9999, opacity: 0 }}>
-              <StyledQRCode
-                value={qrData}
-                size={qrStyle.width || qrStyle.height || 300}
-                qrStyle={qrStyle}
-                onCapture={(base64) => setFullSizeQRBase64(base64)}
-              />
-            </View>
-          )}
-
-          {/* Style Mode Toggle */}
-          {hasData && (
-            <View style={s.styleModeContainer}>
-              <TouchableOpacity
-                style={[
-                  s.styleModeButton,
-                  !useStyledQR && { backgroundColor: colors.primary },
-                  useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
-                ]}
-                onPress={() => setUseStyledQR(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={[s.styleModeText, { color: !useStyledQR ? '#fff' : colors.text }]}>
-                  {t('generator.qrStyle.basic') || '기본'}
+        {/* Barcode Preview - 바코드 모드일 때만 */}
+        {codeMode === 'barcode' && (
+          <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
+            <View style={s.qrHeader}>
+              <View style={s.qrHeaderLeft}>
+                <Ionicons
+                  name="barcode-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text style={[s.qrTitle, { color: colors.text }]}>
+                  {t('generator.barcodePreview') || '바코드 미리보기'}
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  s.styleModeButton,
-                  useStyledQR && { backgroundColor: colors.primary },
-                  !useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
-                ]}
-                onPress={() => setUseStyledQR(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[s.styleModeText, { color: useStyledQR ? '#fff' : colors.text }]}>
-                  {t('generator.qrStyle.styled') || '스타일'}
-                </Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          )}
 
-        </View>
+            <View style={[s.qrContainer, s.barcodeContainer, { borderColor: colors.border }]}>
+              {hasBarcodeData ? (
+                <Animated.View
+                  ref={barcodeRef}
+                  style={[
+                    s.qrWrapper,
+                    {
+                      transform: [
+                        { scale: barcodeSize },
+                      ],
+                      opacity: barcodeSize,
+                    },
+                  ]}
+                  collapsable={false}
+                >
+                  <View style={[s.barcodeBackground, { backgroundColor: '#fff' }]}>
+                    <BarcodeSvg
+                      value={finalBarcodeValue}
+                      format={selectedBarcodeFormat}
+                      width={2}
+                      height={80}
+                      displayValue={true}
+                      fontSize={16}
+                      background="#ffffff"
+                      lineColor="#000000"
+                      margin={20}
+                    />
+                  </View>
+                </Animated.View>
+              ) : (
+                <View style={s.emptyState}>
+                  <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
+                    <Ionicons
+                      name="barcode-outline"
+                      size={48}
+                      color={colors.textTertiary}
+                    />
+                  </View>
+                  <Text style={[s.emptyTitle, { color: colors.text }]}>
+                    {t('generator.emptyBarcodeTitle') || '바코드를 생성하세요'}
+                  </Text>
+                  <Text style={[s.emptyText, { color: colors.textSecondary }]}>
+                    {t('generator.emptyBarcodeText') || '값을 입력하면 바코드가 생성됩니다'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
 
         {/* Action Buttons */}
-        {hasData && (
+        {((codeMode === 'qr' && hasData) || (codeMode === 'barcode' && hasBarcodeData)) && (
           <View style={s.actionsContainer}>
             <View style={s.buttonRow}>
               <TouchableOpacity
@@ -1100,6 +1412,57 @@ const s = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  // 세그먼트 탭 스타일
+  segmentContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  segmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 8,
+  },
+  segmentText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // 바코드 관련 스타일
+  typeDesc: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  barcodeContainer: {
+    minHeight: 160,
+  },
+  barcodeBackground: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barcodeHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
+  barcodeHintText: {
+    fontSize: 12,
+    flex: 1,
+  },
+  errorText: {
+    fontSize: 12,
+    marginTop: 4,
   },
   typesScroll: {
     maxHeight: 110,

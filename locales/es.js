@@ -398,11 +398,42 @@ export default {
   // Pantalla de generador de código QR
   generator: {
     title: 'Generar',
-    subtitle: 'Crea varios tipos de códigos QR',
+    subtitle: 'Crea varios tipos de códigos',
     formTitle: 'Ingresa información',
     qrPreview: 'Vista previa del código QR',
     emptyTitle: 'Genera un código QR',
     emptyText: 'Ingresa información para generar el código QR',
+    // Pestañas de segmento
+    qrCode: 'Código QR',
+    barcode: 'Código de barras',
+    // Relacionado con código de barras
+    barcodePreview: 'Vista previa del código de barras',
+    barcodeInput: 'Ingresar valor del código de barras',
+    barcodeValue: 'Valor',
+    emptyBarcodeTitle: 'Genera un código de barras',
+    emptyBarcodeText: 'Ingresa un valor para generar el código de barras',
+    barcodeTypes: {
+      CODE128: 'Logística/Inventario',
+      EAN13: 'Código de producto',
+      EAN8: 'Productos pequeños',
+      UPC: 'Productos de EE.UU.',
+      CODE39: 'Industrial',
+      ITF14: 'Unidades de caja',
+    },
+    barcodeHints: {
+      CODE128: 'Alfanumérico, sin límite de longitud',
+      EAN13: 'Ingresa 12 dígitos (suma de verificación automática)',
+      EAN8: 'Ingresa 7 dígitos (suma de verificación automática)',
+      UPC: 'Ingresa 11 dígitos (suma de verificación automática)',
+      CODE39: 'Alfanumérico y algunos caracteres especiales (-. $/+%)',
+      ITF14: 'Ingresa 13 dígitos (suma de verificación automática)',
+    },
+    barcodeErrors: {
+      emptyValue: 'Por favor ingresa un valor',
+      invalidPattern: 'Formato inválido',
+      tooShort: 'Dígitos insuficientes',
+      unknownFormat: 'Formato de código de barras desconocido',
+    },
     types: {
       website: 'Sitio web',
       contact: 'Contacto',

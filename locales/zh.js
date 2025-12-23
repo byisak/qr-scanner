@@ -398,11 +398,42 @@ export default {
   // 二维码生成界面
   generator: {
     title: '代码生成',
-    subtitle: '创建各种类型的二维码',
+    subtitle: '创建各种类型的代码',
     formTitle: '输入信息',
     qrPreview: '二维码预览',
     emptyTitle: '生成二维码',
     emptyText: '输入信息后将生成二维码',
+    // 分段标签
+    qrCode: '二维码',
+    barcode: '条形码',
+    // 条形码相关
+    barcodePreview: '条形码预览',
+    barcodeInput: '输入条形码值',
+    barcodeValue: '值',
+    emptyBarcodeTitle: '生成条形码',
+    emptyBarcodeText: '输入值后将生成条形码',
+    barcodeTypes: {
+      CODE128: '物流/库存管理',
+      EAN13: '商品条形码',
+      EAN8: '小型商品',
+      UPC: '美国商品',
+      CODE39: '工业用',
+      ITF14: '箱装单位',
+    },
+    barcodeHints: {
+      CODE128: '可输入字母数字，无长度限制',
+      EAN13: '输入12位数字（自动计算校验位）',
+      EAN8: '输入7位数字（自动计算校验位）',
+      UPC: '输入11位数字（自动计算校验位）',
+      CODE39: '字母数字和部分特殊字符 (-. $/+%)',
+      ITF14: '输入13位数字（自动计算校验位）',
+    },
+    barcodeErrors: {
+      emptyValue: '请输入值',
+      invalidPattern: '格式不正确',
+      tooShort: '位数不足',
+      unknownFormat: '未知的条形码格式',
+    },
     types: {
       website: '网站',
       contact: '联系人',

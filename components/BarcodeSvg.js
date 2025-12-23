@@ -1,0 +1,366 @@
+// components/BarcodeSvg.js - 바코드 생성 컴포넌트
+import React, { useMemo } from 'react';
+import { View } from 'react-native';
+import Svg, { Rect, Text as SvgText } from 'react-native-svg';
+import JsBarcode from 'jsbarcode';
+
+/**
+ * 지원하는 바코드 포맷
+ */
+export const BARCODE_FORMATS = {
+  CODE128: {
+    id: 'CODE128',
+    name: 'Code 128',
+    description: '물류/재고 관리',
+    icon: 'cube-outline',
+    pattern: /^[\x00-\x7F]+$/, // ASCII characters
+    maxLength: null,
+    placeholder: 'ABC-123',
+  },
+  EAN13: {
+    id: 'EAN13',
+    name: 'EAN-13',
+    description: '상품 바코드',
+    icon: 'cart-outline',
+    pattern: /^\d{12,13}$/,
+    maxLength: 13,
+    placeholder: '4901234567890',
+  },
+  EAN8: {
+    id: 'EAN8',
+    name: 'EAN-8',
+    description: '소형 상품',
+    icon: 'pricetag-outline',
+    pattern: /^\d{7,8}$/,
+    maxLength: 8,
+    placeholder: '96385074',
+  },
+  UPC: {
+    id: 'UPC',
+    name: 'UPC-A',
+    description: '미국 상품',
+    icon: 'storefront-outline',
+    pattern: /^\d{11,12}$/,
+    maxLength: 12,
+    placeholder: '012345678905',
+  },
+  CODE39: {
+    id: 'CODE39',
+    name: 'Code 39',
+    description: '산업용',
+    icon: 'construct-outline',
+    pattern: /^[0-9A-Z\-\.\ \$\/\+\%]+$/,
+    maxLength: null,
+    placeholder: 'CODE-39',
+  },
+  ITF14: {
+    id: 'ITF14',
+    name: 'ITF-14',
+    description: '박스 단위',
+    icon: 'archive-outline',
+    pattern: /^\d{13,14}$/,
+    maxLength: 14,
+    placeholder: '10012345678902',
+  },
+  MSI: {
+    id: 'MSI',
+    name: 'MSI',
+    description: '재고 관리',
+    icon: 'file-tray-stacked-outline',
+    pattern: /^\d+$/,
+    maxLength: null,
+    placeholder: '123456',
+  },
+  pharmacode: {
+    id: 'pharmacode',
+    name: 'Pharmacode',
+    description: '의약품',
+    icon: 'medkit-outline',
+    pattern: /^\d+$/,
+    maxLength: null,
+    placeholder: '1234',
+  },
+  codabar: {
+    id: 'codabar',
+    name: 'Codabar',
+    description: '도서관/택배',
+    icon: 'library-outline',
+    pattern: /^[A-D][0-9\-\$\:\/\.\+]+[A-D]$/i,
+    maxLength: null,
+    placeholder: 'A12345B',
+  },
+};
+
+/**
+ * 바코드 유효성 검사
+ */
+export const validateBarcode = (format, value) => {
+  if (!value || !format) return { valid: false, message: 'emptyValue' };
+
+  const formatInfo = BARCODE_FORMATS[format];
+  if (!formatInfo) return { valid: false, message: 'unknownFormat' };
+
+  // 패턴 검사
+  if (formatInfo.pattern && !formatInfo.pattern.test(value)) {
+    return { valid: false, message: 'invalidPattern' };
+  }
+
+  // 길이 검사 (체크섬 제외한 길이)
+  if (formatInfo.maxLength) {
+    const checkLength = format === 'EAN13' ? 12 :
+                        format === 'EAN8' ? 7 :
+                        format === 'UPC' ? 11 :
+                        format === 'ITF14' ? 13 : formatInfo.maxLength;
+
+    if (value.length < checkLength) {
+      return { valid: false, message: 'tooShort', expected: checkLength };
+    }
+  }
+
+  return { valid: true };
+};
+
+/**
+ * EAN/UPC 체크섬 계산
+ */
+export const calculateChecksum = (format, value) => {
+  if (!value) return '';
+
+  const digits = value.replace(/\D/g, '');
+
+  if (format === 'EAN13' && digits.length === 12) {
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      sum += parseInt(digits[i]) * (i % 2 === 0 ? 1 : 3);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return digits + checkDigit;
+  }
+
+  if (format === 'EAN8' && digits.length === 7) {
+    let sum = 0;
+    for (let i = 0; i < 7; i++) {
+      sum += parseInt(digits[i]) * (i % 2 === 0 ? 3 : 1);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return digits + checkDigit;
+  }
+
+  if (format === 'UPC' && digits.length === 11) {
+    let sum = 0;
+    for (let i = 0; i < 11; i++) {
+      sum += parseInt(digits[i]) * (i % 2 === 0 ? 3 : 1);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return digits + checkDigit;
+  }
+
+  if (format === 'ITF14' && digits.length === 13) {
+    let sum = 0;
+    for (let i = 0; i < 13; i++) {
+      sum += parseInt(digits[i]) * (i % 2 === 0 ? 3 : 1);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return digits + checkDigit;
+  }
+
+  return value;
+};
+
+/**
+ * BarcodeSvg 컴포넌트
+ */
+export default function BarcodeSvg({
+  value,
+  format = 'CODE128',
+  width = 2,
+  height = 100,
+  displayValue = true,
+  fontSize = 20,
+  textMargin = 2,
+  background = '#ffffff',
+  lineColor = '#000000',
+  margin = 10,
+  textAlign = 'center',
+  flat = false,
+}) {
+  const barcodeData = useMemo(() => {
+    if (!value) return null;
+
+    try {
+      // JsBarcode가 지원하는 dummy SVG 객체 생성
+      const encodings = [];
+
+      // JsBarcode의 getModule을 직접 사용하여 인코딩 데이터 얻기
+      const canvas = {
+        encodings: [],
+        getEncodings: function() { return this.encodings; }
+      };
+
+      // JsBarcode 옵션
+      const options = {
+        format,
+        width,
+        height,
+        displayValue,
+        fontSize,
+        textMargin,
+        background,
+        lineColor,
+        margin,
+        textAlign,
+        flat,
+      };
+
+      // JsBarcode를 사용하여 인코딩 데이터 생성
+      JsBarcode(canvas, value, {
+        ...options,
+        // SVG 렌더러 대신 직접 데이터만 가져옴
+        xmlDocument: {
+          createElementNS: () => ({
+            setAttribute: () => {},
+            appendChild: () => {},
+          }),
+          documentElement: { appendChild: () => {} },
+        },
+      });
+
+      // 바코드 바이너리 데이터 직접 생성
+      const barcodeModule = JsBarcode._getModule(format);
+      if (!barcodeModule) return null;
+
+      const encoder = new barcodeModule(value, options);
+      if (!encoder.valid()) return null;
+
+      const encoded = encoder.encode();
+
+      return {
+        data: encoded.data,
+        text: encoded.text,
+        options,
+      };
+    } catch (error) {
+      console.error('Barcode generation error:', error);
+      return null;
+    }
+  }, [value, format, width, height, displayValue, fontSize, textMargin, background, lineColor, margin, textAlign, flat]);
+
+  // 직접 SVG 렌더링
+  const renderBarcode = useMemo(() => {
+    if (!value) return null;
+
+    try {
+      // JsBarcode 모듈 가져오기
+      const getModule = (format) => {
+        const formats = {
+          CODE128: require('jsbarcode/src/barcodes/CODE128/CODE128.js').default || require('jsbarcode/src/barcodes/CODE128/CODE128.js'),
+          EAN13: require('jsbarcode/src/barcodes/EAN_UPC/EAN13.js').default || require('jsbarcode/src/barcodes/EAN_UPC/EAN13.js'),
+          EAN8: require('jsbarcode/src/barcodes/EAN_UPC/EAN8.js').default || require('jsbarcode/src/barcodes/EAN_UPC/EAN8.js'),
+          UPC: require('jsbarcode/src/barcodes/EAN_UPC/UPC.js').default || require('jsbarcode/src/barcodes/EAN_UPC/UPC.js'),
+          CODE39: require('jsbarcode/src/barcodes/CODE39/index.js').default || require('jsbarcode/src/barcodes/CODE39/index.js'),
+          ITF14: require('jsbarcode/src/barcodes/ITF/ITF14.js').default || require('jsbarcode/src/barcodes/ITF/ITF14.js'),
+          MSI: require('jsbarcode/src/barcodes/MSI/MSI.js').default || require('jsbarcode/src/barcodes/MSI/MSI.js'),
+          pharmacode: require('jsbarcode/src/barcodes/pharmacode/index.js').default || require('jsbarcode/src/barcodes/pharmacode/index.js'),
+          codabar: require('jsbarcode/src/barcodes/codabar/index.js').default || require('jsbarcode/src/barcodes/codabar/index.js'),
+        };
+        return formats[format];
+      };
+
+      const BarcodeClass = getModule(format);
+      if (!BarcodeClass) {
+        console.error('Unknown barcode format:', format);
+        return null;
+      }
+
+      const encoder = new BarcodeClass(value, {});
+      if (!encoder.valid()) {
+        console.error('Invalid barcode value for format:', format, value);
+        return null;
+      }
+
+      const encoded = encoder.encode();
+      const binary = encoded.data;
+      const text = encoded.text;
+
+      // SVG 크기 계산
+      const barcodeWidth = binary.length * width;
+      const totalWidth = barcodeWidth + margin * 2;
+      const textHeight = displayValue ? fontSize + textMargin : 0;
+      const totalHeight = height + margin * 2 + textHeight;
+
+      // 바 렌더링
+      const bars = [];
+      let x = margin;
+
+      for (let i = 0; i < binary.length; i++) {
+        if (binary[i] === '1') {
+          bars.push(
+            <Rect
+              key={i}
+              x={x}
+              y={margin}
+              width={width}
+              height={height}
+              fill={lineColor}
+            />
+          );
+        }
+        x += width;
+      }
+
+      return {
+        bars,
+        text,
+        totalWidth,
+        totalHeight,
+        barcodeWidth,
+      };
+    } catch (error) {
+      console.error('Barcode render error:', error);
+      return null;
+    }
+  }, [value, format, width, height, displayValue, fontSize, textMargin, background, lineColor, margin]);
+
+  if (!renderBarcode) {
+    return null;
+  }
+
+  const { bars, text, totalWidth, totalHeight, barcodeWidth } = renderBarcode;
+
+  // 텍스트 X 위치 계산
+  let textX = margin + barcodeWidth / 2;
+  let textAnchor = 'middle';
+  if (textAlign === 'left') {
+    textX = margin;
+    textAnchor = 'start';
+  } else if (textAlign === 'right') {
+    textX = margin + barcodeWidth;
+    textAnchor = 'end';
+  }
+
+  return (
+    <View>
+      <Svg width={totalWidth} height={totalHeight}>
+        {/* 배경 */}
+        <Rect x={0} y={0} width={totalWidth} height={totalHeight} fill={background} />
+
+        {/* 바코드 바 */}
+        {bars}
+
+        {/* 텍스트 */}
+        {displayValue && (
+          <SvgText
+            x={textX}
+            y={margin + height + textMargin + fontSize * 0.85}
+            fill={lineColor}
+            fontSize={fontSize}
+            fontFamily="monospace"
+            textAnchor={textAnchor}
+          >
+            {text}
+          </SvgText>
+        )}
+      </Svg>
+    </View>
+  );
+}

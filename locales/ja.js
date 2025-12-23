@@ -398,11 +398,42 @@ export default {
   // QRコード生成画面
   generator: {
     title: 'コード生成',
-    subtitle: '様々なタイプのQRコードを作成',
+    subtitle: '様々なタイプのコードを作成',
     formTitle: '情報入力',
     qrPreview: 'QRコードプレビュー',
     emptyTitle: 'QRコードを生成',
     emptyText: '情報を入力するとQRコードが生成されます',
+    // セグメントタブ
+    qrCode: 'QRコード',
+    barcode: 'バーコード',
+    // バーコード関連
+    barcodePreview: 'バーコードプレビュー',
+    barcodeInput: 'バーコード値入力',
+    barcodeValue: '値',
+    emptyBarcodeTitle: 'バーコードを生成',
+    emptyBarcodeText: '値を入力するとバーコードが生成されます',
+    barcodeTypes: {
+      CODE128: '物流/在庫管理',
+      EAN13: '商品バーコード',
+      EAN8: '小型商品',
+      UPC: '米国商品',
+      CODE39: '工業用',
+      ITF14: 'ボックス単位',
+    },
+    barcodeHints: {
+      CODE128: '英数字入力可、長さ制限なし',
+      EAN13: '12桁入力（チェックサム自動計算）',
+      EAN8: '7桁入力（チェックサム自動計算）',
+      UPC: '11桁入力（チェックサム自動計算）',
+      CODE39: '英数字と一部特殊文字 (-. $/+%)',
+      ITF14: '13桁入力（チェックサム自動計算）',
+    },
+    barcodeErrors: {
+      emptyValue: '値を入力してください',
+      invalidPattern: '形式が正しくありません',
+      tooShort: '桁数が不足しています',
+      unknownFormat: '不明なバーコード形式です',
+    },
     types: {
       website: 'ウェブサイト',
       contact: '連絡先',
