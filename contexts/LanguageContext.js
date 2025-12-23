@@ -57,10 +57,10 @@ export const LanguageProvider = ({ children }) => {
       }
     }
 
-    // 값이 문자열이면 파라미터 치환
+    // 값이 문자열이면 파라미터 치환 ({{param}} 형식 지원)
     if (typeof value === 'string') {
       return Object.keys(params).reduce((str, param) => {
-        return str.replace(`{${param}}`, params[param]);
+        return str.replace(new RegExp(`\\{\\{${param}\\}\\}`, 'g'), params[param]);
       }, value);
     }
 
