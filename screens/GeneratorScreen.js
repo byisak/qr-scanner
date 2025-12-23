@@ -33,11 +33,9 @@ import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
 
-// 기본 표시되는 바코드 타입 bcid 목록 (11개)
+// 기본 표시되는 바코드 타입 bcid 목록 (3개)
 const DEFAULT_BARCODE_BCIDS = [
-  'code128', 'code39', 'interleaved2of5', 'itf14',
-  'ean13', 'ean8', 'upca', 'upce',
-  'rationalizedCodabar', 'pharmacode', 'msi',
+  'code128', 'ean13', 'qrcode',
 ];
 
 // 카테고리 순서
@@ -1721,7 +1719,7 @@ export default function GeneratorScreen() {
 
             {/* 설명 텍스트 */}
             <Text style={[s.modalDescription, { color: colors.textSecondary }]}>
-              {t('generator.barcodePickerDescription') || '별을 눌러 즐겨찾기에 추가하세요'}
+              {t('generator.barcodePickerDescription') || '체크하면 바코드 목록에 추가됩니다'}
             </Text>
 
             {/* 바코드 타입 목록 */}
@@ -1757,7 +1755,6 @@ export default function GeneratorScreen() {
                       </View>
                       <View style={s.categoryGrid}>
                         {barcodes.map((format) => {
-                          const isDefault = DEFAULT_BARCODE_BCIDS.includes(format.bcid);
                           const isFavorite = favoriteBarcodes.includes(format.bcid);
                           const isSelected = selectedBarcodeFormat === format.bcid;
 
@@ -1768,13 +1765,13 @@ export default function GeneratorScreen() {
                                 s.modalBarcodeItem,
                                 {
                                   backgroundColor: isSelected ? colors.primary : colors.background,
-                                  borderColor: isSelected ? colors.primary : colors.border,
+                                  borderColor: isSelected ? colors.primary : isFavorite ? '#22c55e' : colors.border,
                                 },
                               ]}
                               onPress={() => handleSelectBarcodeFromModal(format.bcid)}
                               activeOpacity={0.7}
                             >
-                              {/* 즐겨찾기 버튼 */}
+                              {/* 즐겨찾기 체크박스 */}
                               <TouchableOpacity
                                 style={s.favoriteButton}
                                 onPress={(e) => {
@@ -1784,18 +1781,11 @@ export default function GeneratorScreen() {
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                               >
                                 <Ionicons
-                                  name={isFavorite ? 'star' : 'star-outline'}
-                                  size={18}
-                                  color={isFavorite ? '#fbbf24' : colors.textTertiary}
+                                  name={isFavorite ? 'checkmark-circle' : 'ellipse-outline'}
+                                  size={20}
+                                  color={isFavorite ? '#22c55e' : colors.textTertiary}
                                 />
                               </TouchableOpacity>
-
-                              {/* 기본 타입 표시 */}
-                              {isDefault && (
-                                <View style={s.defaultBadge}>
-                                  <Ionicons name="checkmark-circle" size={14} color="#22c55e" />
-                                </View>
-                              )}
 
                               <LinearGradient
                                 colors={catInfo.gradient || ['#667eea', '#764ba2']}
@@ -2402,12 +2392,6 @@ const s = StyleSheet.create({
     right: 8,
     padding: 4,
     zIndex: 10,
-  },
-  defaultBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    padding: 4,
   },
   modalIconGradient: {
     width: 48,

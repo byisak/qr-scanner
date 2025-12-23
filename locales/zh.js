@@ -441,7 +441,7 @@ export default {
     searchBarcode: '搜索条形码（名称、说明）',
     searchResults: '{{count}}个结果',
     noSearchResults: '没有搜索结果',
-    barcodePickerDescription: '点击星标添加到收藏夹',
+    barcodePickerDescription: '勾选后添加到条码列表',
     barcodeCategories: {
       industrial: '物流/工业',
       retail: '零售商品',

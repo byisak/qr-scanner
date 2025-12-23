@@ -449,7 +449,7 @@ export default {
     searchBarcode: '바코드 검색 (이름, 설명)',
     searchResults: '{{count}}개 결과',
     noSearchResults: '검색 결과가 없습니다',
-    barcodePickerDescription: '별을 눌러 즐겨찾기에 추가하세요',
+    barcodePickerDescription: '체크하면 바코드 목록에 추가됩니다',
     barcodeCategories: {
       industrial: '산업/물류',
       retail: '상품 바코드',

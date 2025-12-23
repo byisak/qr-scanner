@@ -441,7 +441,7 @@ export default {
     searchBarcode: 'Buscar código de barras (nombre, descripción)',
     searchResults: '{{count}} resultados',
     noSearchResults: 'No se encontraron resultados',
-    barcodePickerDescription: 'Toca la estrella para agregar a favoritos',
+    barcodePickerDescription: 'Marca para agregar a la lista de códigos',
     barcodeCategories: {
       industrial: 'Industrial/Logística',
       retail: 'Productos minoristas',

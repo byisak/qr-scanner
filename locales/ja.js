@@ -441,7 +441,7 @@ export default {
     searchBarcode: 'バーコード検索（名前、説明）',
     searchResults: '{{count}}件の結果',
     noSearchResults: '検索結果がありません',
-    barcodePickerDescription: '星をタップしてお気に入りに追加',
+    barcodePickerDescription: 'チェックするとバーコードリストに追加されます',
     barcodeCategories: {
       industrial: '物流/産業用',
       retail: '商品バーコード',

@@ -449,7 +449,7 @@ export default {
     searchBarcode: 'Search barcode (name, description)',
     searchResults: '{{count}} results',
     noSearchResults: 'No results found',
-    barcodePickerDescription: 'Tap the star to add to favorites',
+    barcodePickerDescription: 'Check to add to barcode list',
     barcodeCategories: {
       industrial: 'Industrial/Logistics',
       retail: 'Retail Products',
