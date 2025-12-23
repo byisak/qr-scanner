@@ -12,6 +12,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
+    "@bwip-js/react-native": "^4.8.0",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/noto-sans-jp": "^0.4.2",
     "@expo-google-fonts/noto-sans-sc": "^0.4.2",
