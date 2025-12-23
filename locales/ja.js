@@ -437,11 +437,22 @@ export default {
     // バーコードタイプモーダル
     addBarcode: 'その他',
     selectBarcodeType: 'バーコードタイプを選択',
+    barcodeCount: '{{count}}種対応',
+    searchBarcode: 'バーコード検索（名前、説明）',
+    searchResults: '{{count}}件の結果',
+    noSearchResults: '検索結果がありません',
     barcodePickerDescription: '星をタップしてお気に入りに追加',
     barcodeCategories: {
       industrial: '物流/産業用',
       retail: '商品バーコード',
+      gs1: 'GS1/物流',
+      medical: '医療/製薬',
       special: '特殊用途',
+      postal: '郵便バーコード',
+      '2d': '2Dバーコード',
+      stacked: 'スタック型',
+      automotive: '自動車',
+      other: 'その他',
     },
     barcodeHints: {
       CODE128: '英数字入力可、長さ制限なし',

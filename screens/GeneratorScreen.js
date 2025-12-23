@@ -31,35 +31,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
-import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar } from '../components/BarcodeSvg';
+import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
 
-// 모든 바코드 타입 목록 (카테고리별 그룹화)
-const ALL_BARCODE_TYPES = [
-  // 물류/산업용
-  { id: 'CODE128', icon: 'cube-outline', gradient: ['#667eea', '#764ba2'], category: 'industrial' },
-  { id: 'CODE39', icon: 'construct-outline', gradient: ['#fa709a', '#fee140'], category: 'industrial' },
-  { id: 'CODE93', icon: 'barcode-outline', gradient: ['#667eea', '#764ba2'], category: 'industrial' },
-  { id: 'ITF', icon: 'swap-horizontal-outline', gradient: ['#a8edea', '#fed6e3'], category: 'industrial' },
-  { id: 'ITF14', icon: 'archive-outline', gradient: ['#30cfd0', '#330867'], category: 'industrial' },
-  // 상품 바코드
-  { id: 'EAN13', icon: 'cart-outline', gradient: ['#f093fb', '#f5576c'], category: 'retail' },
-  { id: 'EAN8', icon: 'pricetag-outline', gradient: ['#4facfe', '#00f2fe'], category: 'retail' },
-  { id: 'EAN5', icon: 'book-outline', gradient: ['#43e97b', '#38f9d7'], category: 'retail' },
-  { id: 'EAN2', icon: 'newspaper-outline', gradient: ['#ffecd2', '#fcb69f'], category: 'retail' },
-  { id: 'UPC', icon: 'storefront-outline', gradient: ['#43e97b', '#38f9d7'], category: 'retail' },
-  { id: 'UPCE', icon: 'pricetag-outline', gradient: ['#ff9a9e', '#fecfef'], category: 'retail' },
-  // 특수 용도
-  { id: 'codabar', icon: 'library-outline', gradient: ['#ffecd2', '#fcb69f'], category: 'special' },
-  { id: 'pharmacode', icon: 'medkit-outline', gradient: ['#ff6e7f', '#bfe9ff'], category: 'special' },
-  { id: 'MSI', icon: 'file-tray-stacked-outline', gradient: ['#c471f5', '#fa71cd'], category: 'special' },
+// 기본 표시되는 바코드 타입 bcid 목록 (11개)
+const DEFAULT_BARCODE_BCIDS = [
+  'code128', 'code39', 'interleaved2of5', 'itf14',
+  'ean13', 'ean8', 'upca', 'upce',
+  'rationalizedCodabar', 'pharmacode', 'msi',
 ];
 
-// 기본 표시되는 바코드 타입 ID 목록 (11개)
-const DEFAULT_BARCODE_IDS = [
-  'CODE128', 'CODE39', 'ITF', 'ITF14',
-  'EAN13', 'EAN8', 'UPC', 'UPCE',
-  'codabar', 'pharmacode', 'MSI',
-];
+// 카테고리 순서
+const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'postal', '2d', 'stacked', 'automotive', 'other'];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -91,7 +73,8 @@ export default function GeneratorScreen() {
   const [codeMode, setCodeMode] = useState(params.initialMode || 'qr');
 
   const [selectedType, setSelectedType] = useState(params.initialType || 'website');
-  const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState(params.initialBarcodeFormat || 'CODE128');
+  // bcid 형태로 저장 (예: 'code128', 'ean13')
+  const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState(params.initialBarcodeFormat || 'code128');
   const [barcodeValue, setBarcodeValue] = useState(params.initialBarcodeValue || '');
   const [barcodeError, setBarcodeError] = useState(null);
 
@@ -104,14 +87,15 @@ export default function GeneratorScreen() {
   });
 
   // 바코드 타입 즐겨찾기 및 모달
-  const [favoriteBarcodes, setFavoriteBarcodes] = useState([]);
+  const [favoriteBarcodes, setFavoriteBarcodes] = useState([]); // bcid 목록
   const [barcodePickerVisible, setBarcodePickerVisible] = useState(false);
+  const [barcodeSearchQuery, setBarcodeSearchQuery] = useState('');
 
   // 즐겨찾기 로드
   useEffect(() => {
     const loadFavorites = async () => {
       try {
-        const saved = await AsyncStorage.getItem('favoriteBarcodes');
+        const saved = await AsyncStorage.getItem('favoriteBarcodesBcid');
         if (saved) {
           setFavoriteBarcodes(JSON.parse(saved));
         }
@@ -122,44 +106,73 @@ export default function GeneratorScreen() {
     loadFavorites();
   }, []);
 
+  // 현재 선택된 바코드 정보 조회
+  const selectedBarcodeInfo = useMemo(() => {
+    return ALL_BWIP_BARCODES.find(b => b.bcid === selectedBarcodeFormat) || ALL_BWIP_BARCODES[0];
+  }, [selectedBarcodeFormat]);
+
   // 표시할 바코드 타입 목록 계산 (기본 11개 + 즐겨찾기)
   const displayedBarcodeTypes = useMemo(() => {
-    const defaultTypes = ALL_BARCODE_TYPES.filter(type => DEFAULT_BARCODE_IDS.includes(type.id));
-    const favoriteTypes = ALL_BARCODE_TYPES.filter(
-      type => favoriteBarcodes.includes(type.id) && !DEFAULT_BARCODE_IDS.includes(type.id)
+    const defaultTypes = ALL_BWIP_BARCODES.filter(b => DEFAULT_BARCODE_BCIDS.includes(b.bcid));
+    const favoriteTypes = ALL_BWIP_BARCODES.filter(
+      b => favoriteBarcodes.includes(b.bcid) && !DEFAULT_BARCODE_BCIDS.includes(b.bcid)
     );
     return [...defaultTypes, ...favoriteTypes];
   }, [favoriteBarcodes]);
 
+  // 모달에서 검색 필터링된 바코드 목록
+  const filteredBarcodes = useMemo(() => {
+    if (!barcodeSearchQuery.trim()) return ALL_BWIP_BARCODES;
+    const query = barcodeSearchQuery.toLowerCase().trim();
+    return ALL_BWIP_BARCODES.filter(b =>
+      b.name.toLowerCase().includes(query) ||
+      b.bcid.toLowerCase().includes(query) ||
+      b.description.toLowerCase().includes(query)
+    );
+  }, [barcodeSearchQuery]);
+
+  // 카테고리별로 그룹화된 바코드 목록 (검색 결과 기준)
+  const groupedBarcodes = useMemo(() => {
+    const groups = {};
+    CATEGORY_ORDER.forEach(cat => {
+      const items = filteredBarcodes.filter(b => b.category === cat);
+      if (items.length > 0) {
+        groups[cat] = items;
+      }
+    });
+    return groups;
+  }, [filteredBarcodes]);
+
   // 즐겨찾기 토글
-  const toggleFavoriteBarcode = async (barcodeId) => {
+  const toggleFavoriteBarcode = async (bcid) => {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
     let newFavorites;
-    if (favoriteBarcodes.includes(barcodeId)) {
-      newFavorites = favoriteBarcodes.filter(id => id !== barcodeId);
+    if (favoriteBarcodes.includes(bcid)) {
+      newFavorites = favoriteBarcodes.filter(id => id !== bcid);
     } else {
-      newFavorites = [...favoriteBarcodes, barcodeId];
+      newFavorites = [...favoriteBarcodes, bcid];
     }
 
     setFavoriteBarcodes(newFavorites);
     try {
-      await AsyncStorage.setItem('favoriteBarcodes', JSON.stringify(newFavorites));
+      await AsyncStorage.setItem('favoriteBarcodesBcid', JSON.stringify(newFavorites));
     } catch (error) {
       console.error('Error saving favorite barcodes:', error);
     }
   };
 
   // 모달에서 바코드 선택
-  const handleSelectBarcodeFromModal = async (formatId) => {
+  const handleSelectBarcodeFromModal = async (bcid) => {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    setSelectedBarcodeFormat(formatId);
+    setSelectedBarcodeFormat(bcid);
     setBarcodeValue('');
     setBarcodeError(null);
+    setBarcodeSearchQuery('');
     setBarcodePickerVisible(false);
   };
 
@@ -336,14 +349,11 @@ export default function GeneratorScreen() {
   const qrData = generateQRData();
   const hasData = qrData.length > 0;
 
-  // 바코드 유효성 검사
-  const barcodeValidation = validateBarcode(selectedBarcodeFormat, barcodeValue);
-  const hasBarcodeData = barcodeValue.length > 0 && barcodeValidation.valid;
+  // 바코드 유효성 검사 (간소화 - bwip-js가 실제 검증 수행)
+  const hasBarcodeData = barcodeValue.length > 0;
 
-  // 체크섬 자동 계산 (EAN/UPC 계열)
-  const finalBarcodeValue = ['EAN13', 'EAN8', 'UPC', 'ITF14'].includes(selectedBarcodeFormat)
-    ? calculateChecksum(selectedBarcodeFormat, barcodeValue)
-    : barcodeValue;
+  // 바코드 값은 그대로 사용 (bwip-js가 체크섬 자동 계산)
+  const finalBarcodeValue = barcodeValue;
 
   useEffect(() => {
     // Animate QR code appearance
@@ -400,25 +410,21 @@ export default function GeneratorScreen() {
     }));
   };
 
-  // 바코드 포맷 선택
-  const handleBarcodeFormatSelect = async (formatId) => {
+  // 바코드 포맷 선택 (bcid 형식)
+  const handleBarcodeFormatSelect = async (bcid) => {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    setSelectedBarcodeFormat(formatId);
+    setSelectedBarcodeFormat(bcid);
     setBarcodeValue('');
     setBarcodeError(null);
   };
 
-  // 바코드 값 변경
+  // 바코드 값 변경 (bwip-js가 검증 담당)
   const handleBarcodeValueChange = (value) => {
     setBarcodeValue(value);
-    const validation = validateBarcode(selectedBarcodeFormat, value);
-    if (!validation.valid && value.length > 0) {
-      setBarcodeError(validation.message);
-    } else {
-      setBarcodeError(null);
-    }
+    // 에러는 bwip-js 렌더링 시점에 처리됨
+    setBarcodeError(null);
   };
 
   // 세그먼트 탭 변경
@@ -1147,43 +1153,47 @@ export default function GeneratorScreen() {
               contentContainerStyle={s.typesContainer}
               style={s.typesScroll}
             >
-              {displayedBarcodeTypes.map((format) => (
-                <TouchableOpacity
-                  key={format.id}
-                  style={[
-                    s.typeButton,
-                    {
-                      backgroundColor: selectedBarcodeFormat === format.id ? colors.primary : colors.surface,
-                      borderColor: selectedBarcodeFormat === format.id ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => handleBarcodeFormatSelect(format.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[
-                    s.typeIconContainer,
-                    { backgroundColor: selectedBarcodeFormat === format.id ? 'rgba(255,255,255,0.2)' : colors.background }
-                  ]}>
-                    <Ionicons
-                      name={format.icon}
-                      size={22}
-                      color={selectedBarcodeFormat === format.id ? '#fff' : colors.text}
-                    />
-                  </View>
-                  <Text style={[
-                    s.typeText,
-                    { color: selectedBarcodeFormat === format.id ? '#fff' : colors.text }
-                  ]}>
-                    {BARCODE_FORMATS[format.id]?.name || format.id}
-                  </Text>
-                  <Text style={[
-                    s.typeDesc,
-                    { color: selectedBarcodeFormat === format.id ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
-                  ]}>
-                    {t(`generator.barcodeTypes.${format.id}`) || BARCODE_FORMATS[format.id]?.description}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {displayedBarcodeTypes.map((format) => {
+                const isSelected = selectedBarcodeFormat === format.bcid;
+                const catInfo = BARCODE_CATEGORIES[format.category] || {};
+                return (
+                  <TouchableOpacity
+                    key={format.bcid}
+                    style={[
+                      s.typeButton,
+                      {
+                        backgroundColor: isSelected ? colors.primary : colors.surface,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => handleBarcodeFormatSelect(format.bcid)}
+                    activeOpacity={0.7}
+                  >
+                    <LinearGradient
+                      colors={isSelected ? ['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)'] : (catInfo.gradient || ['#667eea', '#764ba2'])}
+                      style={s.typeIconContainer}
+                    >
+                      <Ionicons
+                        name={catInfo.icon || 'barcode-outline'}
+                        size={22}
+                        color="#fff"
+                      />
+                    </LinearGradient>
+                    <Text style={[
+                      s.typeText,
+                      { color: isSelected ? '#fff' : colors.text }
+                    ]}>
+                      {format.name}
+                    </Text>
+                    <Text style={[
+                      s.typeDesc,
+                      { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+                    ]} numberOfLines={1}>
+                      {format.description}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
 
               {/* 바코드 추가 버튼 */}
               <TouchableOpacity
@@ -1224,7 +1234,7 @@ export default function GeneratorScreen() {
                   color={colors.primary}
                 />
                 <Text style={[s.formTitle, { color: colors.text }]}>
-                  {t('generator.barcodeInput') || '바코드 값 입력'}
+                  {selectedBarcodeInfo.name} - {t('generator.barcodeInput') || '바코드 값 입력'}
                 </Text>
               </View>
               <View style={s.formContainer}>
@@ -1241,13 +1251,13 @@ export default function GeneratorScreen() {
                         color: colors.text
                       }
                     ]}
-                    placeholder={BARCODE_FORMATS[selectedBarcodeFormat]?.placeholder || '값을 입력하세요'}
+                    placeholder={selectedBarcodeInfo.placeholder || '값을 입력하세요'}
                     placeholderTextColor={colors.textTertiary}
                     value={barcodeValue}
                     onChangeText={handleBarcodeValueChange}
-                    keyboardType={['EAN13', 'EAN8', 'UPC', 'ITF14', 'MSI', 'pharmacode'].includes(selectedBarcodeFormat) ? 'numeric' : 'default'}
-                    autoCapitalize={selectedBarcodeFormat === 'CODE39' ? 'characters' : 'none'}
-                    maxLength={BARCODE_FORMATS[selectedBarcodeFormat]?.maxLength || undefined}
+                    keyboardType={['ean13', 'ean8', 'upca', 'itf14', 'msi', 'pharmacode', 'postnet', 'planet'].includes(selectedBarcodeFormat) ? 'numeric' : 'default'}
+                    autoCapitalize={['code39', 'code39ext'].includes(selectedBarcodeFormat) ? 'characters' : 'none'}
+                    maxLength={selectedBarcodeInfo.fixedLength ? selectedBarcodeInfo.fixedLength + 1 : undefined}
                   />
                   {barcodeError && (
                     <View style={s.errorContainer}>
@@ -1261,12 +1271,8 @@ export default function GeneratorScreen() {
                   <View style={s.barcodeHint}>
                     <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
                     <Text style={[s.barcodeHintText, { color: colors.textSecondary }]}>
-                      {t(`generator.barcodeHints.${selectedBarcodeFormat}`) ||
-                       `${BARCODE_FORMATS[selectedBarcodeFormat]?.description} - ${
-                         BARCODE_FORMATS[selectedBarcodeFormat]?.maxLength
-                           ? `${BARCODE_FORMATS[selectedBarcodeFormat].maxLength}자리`
-                           : '길이 제한 없음'
-                       }`}
+                      {selectedBarcodeInfo.description}
+                      {selectedBarcodeInfo.fixedLength ? ` (${selectedBarcodeInfo.fixedLength}자리)` : ''}
                     </Text>
                   </View>
                 </View>
@@ -1648,27 +1654,64 @@ export default function GeneratorScreen() {
         onRemoveLogo={handleRemoveLogo}
       />
 
-      {/* 바코드 타입 선택 모달 */}
+      {/* 바코드 타입 선택 모달 (110종 전체) */}
       <Modal
         visible={barcodePickerVisible}
         animationType="slide"
         transparent={true}
-        onRequestClose={() => setBarcodePickerVisible(false)}
+        onRequestClose={() => {
+          setBarcodeSearchQuery('');
+          setBarcodePickerVisible(false);
+        }}
       >
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
             {/* 모달 헤더 */}
             <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.text }]}>
-                {t('generator.selectBarcodeType') || '바코드 타입 선택'}
-              </Text>
+              <View>
+                <Text style={[s.modalTitle, { color: colors.text }]}>
+                  {t('generator.selectBarcodeType') || '바코드 타입 선택'}
+                </Text>
+                <Text style={[s.modalSubtitle, { color: colors.textSecondary }]}>
+                  {t('generator.barcodeCount', { count: ALL_BWIP_BARCODES.length }) || `${ALL_BWIP_BARCODES.length}종 지원`}
+                </Text>
+              </View>
               <TouchableOpacity
                 style={[s.modalCloseButton, { backgroundColor: colors.background }]}
-                onPress={() => setBarcodePickerVisible(false)}
+                onPress={() => {
+                  setBarcodeSearchQuery('');
+                  setBarcodePickerVisible(false);
+                }}
                 activeOpacity={0.7}
               >
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
+            </View>
+
+            {/* 검색 인풋 */}
+            <View style={s.searchContainer}>
+              <View style={[s.searchInputWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <Ionicons name="search" size={20} color={colors.textSecondary} />
+                <TextInput
+                  style={[s.searchInput, { color: colors.text }]}
+                  placeholder={t('generator.searchBarcode') || '바코드 검색 (이름, 설명)'}
+                  placeholderTextColor={colors.textTertiary}
+                  value={barcodeSearchQuery}
+                  onChangeText={setBarcodeSearchQuery}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {barcodeSearchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setBarcodeSearchQuery('')}>
+                    <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {barcodeSearchQuery && (
+                <Text style={[s.searchResultCount, { color: colors.textSecondary }]}>
+                  {t('generator.searchResults', { count: filteredBarcodes.length }) || `${filteredBarcodes.length}개 결과`}
+                </Text>
+              )}
             </View>
 
             {/* 설명 텍스트 */}
@@ -1681,84 +1724,104 @@ export default function GeneratorScreen() {
               style={s.modalScroll}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={s.modalScrollContent}
+              keyboardShouldPersistTaps="handled"
             >
               {/* 카테고리별 그룹화 */}
-              {['industrial', 'retail', 'special'].map((category) => (
-                <View key={category} style={s.categorySection}>
-                  <Text style={[s.categoryTitle, { color: colors.textSecondary }]}>
-                    {t(`generator.barcodeCategories.${category}`) ||
-                      (category === 'industrial' ? '물류/산업용' :
-                       category === 'retail' ? '상품 바코드' : '특수 용도')}
+              {Object.keys(groupedBarcodes).length === 0 ? (
+                <View style={s.emptySearchResult}>
+                  <Ionicons name="search-outline" size={48} color={colors.textTertiary} />
+                  <Text style={[s.emptySearchText, { color: colors.textSecondary }]}>
+                    {t('generator.noSearchResults') || '검색 결과가 없습니다'}
                   </Text>
-                  <View style={s.categoryGrid}>
-                    {ALL_BARCODE_TYPES.filter(type => type.category === category).map((format) => {
-                      const isDefault = DEFAULT_BARCODE_IDS.includes(format.id);
-                      const isFavorite = favoriteBarcodes.includes(format.id);
-                      const isSelected = selectedBarcodeFormat === format.id;
-
-                      return (
-                        <TouchableOpacity
-                          key={format.id}
-                          style={[
-                            s.modalBarcodeItem,
-                            {
-                              backgroundColor: isSelected ? colors.primary : colors.background,
-                              borderColor: isSelected ? colors.primary : colors.border,
-                            },
-                          ]}
-                          onPress={() => handleSelectBarcodeFromModal(format.id)}
-                          activeOpacity={0.7}
-                        >
-                          {/* 즐겨찾기 버튼 (기본 타입이 아닌 경우에만) */}
-                          {!isDefault && (
-                            <TouchableOpacity
-                              style={s.favoriteButton}
-                              onPress={() => toggleFavoriteBarcode(format.id)}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            >
-                              <Ionicons
-                                name={isFavorite ? 'star' : 'star-outline'}
-                                size={18}
-                                color={isFavorite ? '#fbbf24' : colors.textTertiary}
-                              />
-                            </TouchableOpacity>
-                          )}
-
-                          {/* 기본 타입 표시 */}
-                          {isDefault && (
-                            <View style={s.defaultBadge}>
-                              <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                            </View>
-                          )}
-
-                          <LinearGradient
-                            colors={format.gradient}
-                            style={s.modalIconGradient}
-                          >
-                            <Ionicons
-                              name={format.icon}
-                              size={24}
-                              color="#fff"
-                            />
-                          </LinearGradient>
-                          <Text style={[
-                            s.modalBarcodeTitle,
-                            { color: isSelected ? '#fff' : colors.text }
-                          ]}>
-                            {BARCODE_FORMATS[format.id]?.name || format.id}
-                          </Text>
-                          <Text style={[
-                            s.modalBarcodeDesc,
-                            { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
-                          ]} numberOfLines={2}>
-                            {t(`generator.barcodeTypes.${format.id}`) || BARCODE_FORMATS[format.id]?.description}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
                 </View>
-              ))}
+              ) : (
+                Object.entries(groupedBarcodes).map(([category, barcodes]) => {
+                  const catInfo = BARCODE_CATEGORIES[category] || {};
+                  return (
+                    <View key={category} style={s.categorySection}>
+                      <View style={s.categoryHeader}>
+                        <LinearGradient
+                          colors={catInfo.gradient || ['#667eea', '#764ba2']}
+                          style={s.categoryIcon}
+                        >
+                          <Ionicons name={catInfo.icon || 'barcode-outline'} size={16} color="#fff" />
+                        </LinearGradient>
+                        <Text style={[s.categoryTitle, { color: colors.textSecondary }]}>
+                          {catInfo.name || category} ({barcodes.length})
+                        </Text>
+                      </View>
+                      <View style={s.categoryGrid}>
+                        {barcodes.map((format) => {
+                          const isDefault = DEFAULT_BARCODE_BCIDS.includes(format.bcid);
+                          const isFavorite = favoriteBarcodes.includes(format.bcid);
+                          const isSelected = selectedBarcodeFormat === format.bcid;
+
+                          return (
+                            <TouchableOpacity
+                              key={format.bcid}
+                              style={[
+                                s.modalBarcodeItem,
+                                {
+                                  backgroundColor: isSelected ? colors.primary : colors.background,
+                                  borderColor: isSelected ? colors.primary : colors.border,
+                                },
+                              ]}
+                              onPress={() => handleSelectBarcodeFromModal(format.bcid)}
+                              activeOpacity={0.7}
+                            >
+                              {/* 즐겨찾기 버튼 */}
+                              <TouchableOpacity
+                                style={s.favoriteButton}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  toggleFavoriteBarcode(format.bcid);
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                              >
+                                <Ionicons
+                                  name={isFavorite ? 'star' : 'star-outline'}
+                                  size={18}
+                                  color={isFavorite ? '#fbbf24' : colors.textTertiary}
+                                />
+                              </TouchableOpacity>
+
+                              {/* 기본 타입 표시 */}
+                              {isDefault && (
+                                <View style={s.defaultBadge}>
+                                  <Ionicons name="checkmark-circle" size={14} color="#22c55e" />
+                                </View>
+                              )}
+
+                              <LinearGradient
+                                colors={catInfo.gradient || ['#667eea', '#764ba2']}
+                                style={s.modalIconGradient}
+                              >
+                                <Ionicons
+                                  name={catInfo.icon || 'barcode-outline'}
+                                  size={22}
+                                  color="#fff"
+                                />
+                              </LinearGradient>
+                              <Text style={[
+                                s.modalBarcodeTitle,
+                                { color: isSelected ? '#fff' : colors.text }
+                              ]} numberOfLines={1}>
+                                {format.name}
+                              </Text>
+                              <Text style={[
+                                s.modalBarcodeDesc,
+                                { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+                              ]} numberOfLines={2}>
+                                {format.description}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
             </ScrollView>
           </View>
         </View>
@@ -2235,6 +2298,10 @@ const s = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.3,
   },
+  modalSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
+  },
   modalCloseButton: {
     width: 36,
     height: 36,
@@ -2242,10 +2309,45 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalDescription: {
-    fontSize: 14,
+  // 검색 관련 스타일
+  searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    paddingVertical: 0,
+  },
+  searchResultCount: {
+    fontSize: 12,
+    marginTop: 8,
+    marginLeft: 4,
+  },
+  emptySearchResult: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptySearchText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  modalDescription: {
+    fontSize: 13,
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
   modalScroll: {
     flex: 1,
@@ -2255,14 +2357,25 @@ const s = StyleSheet.create({
     paddingBottom: 20,
   },
   categorySection: {
-    marginBottom: 20,
+    marginBottom: 24,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  categoryIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoryTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: -0.2,
   },
   categoryGrid: {
     flexDirection: 'row',

@@ -437,11 +437,22 @@ export default {
     // 条形码类型弹窗
     addBarcode: '更多',
     selectBarcodeType: '选择条形码类型',
+    barcodeCount: '支持{{count}}种',
+    searchBarcode: '搜索条形码（名称、说明）',
+    searchResults: '{{count}}个结果',
+    noSearchResults: '没有搜索结果',
     barcodePickerDescription: '点击星标添加到收藏夹',
     barcodeCategories: {
       industrial: '物流/工业',
       retail: '零售商品',
+      gs1: 'GS1/物流',
+      medical: '医疗/制药',
       special: '特殊用途',
+      postal: '邮政条码',
+      '2d': '2D条码',
+      stacked: '堆叠型',
+      automotive: '汽车',
+      other: '其他',
     },
     barcodeHints: {
       CODE128: '可输入字母数字，无长度限制',

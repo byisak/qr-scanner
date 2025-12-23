@@ -445,11 +445,22 @@ export default {
     // 바코드 타입 모달
     addBarcode: '더보기',
     selectBarcodeType: '바코드 타입 선택',
+    barcodeCount: '{{count}}종 지원',
+    searchBarcode: '바코드 검색 (이름, 설명)',
+    searchResults: '{{count}}개 결과',
+    noSearchResults: '검색 결과가 없습니다',
     barcodePickerDescription: '별을 눌러 즐겨찾기에 추가하세요',
     barcodeCategories: {
-      industrial: '물류/산업용',
+      industrial: '산업/물류',
       retail: '상품 바코드',
+      gs1: 'GS1/물류',
+      medical: '의료/제약',
       special: '특수 용도',
+      postal: '우편 바코드',
+      '2d': '2D 바코드',
+      stacked: '스택형',
+      automotive: '자동차',
+      other: '기타',
     },
     barcodeHints: {
       CODE128: '영숫자 입력 가능, 길이 제한 없음',

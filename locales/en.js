@@ -445,11 +445,22 @@ export default {
     // Barcode type modal
     addBarcode: 'More',
     selectBarcodeType: 'Select Barcode Type',
+    barcodeCount: '{{count}} types supported',
+    searchBarcode: 'Search barcode (name, description)',
+    searchResults: '{{count}} results',
+    noSearchResults: 'No results found',
     barcodePickerDescription: 'Tap the star to add to favorites',
     barcodeCategories: {
       industrial: 'Industrial/Logistics',
       retail: 'Retail Products',
+      gs1: 'GS1/Logistics',
+      medical: 'Medical/Pharma',
       special: 'Special Purpose',
+      postal: 'Postal Codes',
+      '2d': '2D Barcodes',
+      stacked: 'Stacked',
+      automotive: 'Automotive',
+      other: 'Other',
     },
     barcodeHints: {
       CODE128: 'Alphanumeric, no length limit',

@@ -437,11 +437,22 @@ export default {
     // Modal de tipo de código de barras
     addBarcode: 'Más',
     selectBarcodeType: 'Seleccionar tipo',
+    barcodeCount: '{{count}} tipos soportados',
+    searchBarcode: 'Buscar código de barras (nombre, descripción)',
+    searchResults: '{{count}} resultados',
+    noSearchResults: 'No se encontraron resultados',
     barcodePickerDescription: 'Toca la estrella para agregar a favoritos',
     barcodeCategories: {
       industrial: 'Industrial/Logística',
       retail: 'Productos minoristas',
+      gs1: 'GS1/Logística',
+      medical: 'Médico/Farmacéutico',
       special: 'Propósito especial',
+      postal: 'Códigos postales',
+      '2d': 'Códigos 2D',
+      stacked: 'Apilado',
+      automotive: 'Automotriz',
+      other: 'Otros',
     },
     barcodeHints: {
       CODE128: 'Alfanumérico, sin límite de longitud',
