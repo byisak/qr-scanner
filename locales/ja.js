@@ -509,6 +509,10 @@ export default {
       itf14_digits: 'ITF-14は数字のみ入力可能です',
       itf14_length: 'ITF-14は13桁または14桁の数字である必要があります',
       itf14_checkdigit: 'ITF-14チェックディジットが正しくありません',
+      // EAN-14
+      ean14_digits: 'EAN-14は数字のみ入力可能です',
+      ean14_length: 'EAN-14は13桁または14桁の数字である必要があります',
+      ean14_ai: 'EAN-14は(01) AIで始まる必要があります',
       // GS1 DataBar系列
       databarlimited_digits: 'GS1 DataBar Limitedは数字のみ入力可能です',
       databarlimited_length: 'GS1 DataBar Limitedは13桁または14桁の数字である必要があります',

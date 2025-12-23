@@ -506,6 +506,10 @@ export default {
       itf14_digits: 'ITF-14 solo puede contener dígitos',
       itf14_length: 'ITF-14 debe tener 13 o 14 dígitos',
       itf14_checkdigit: 'Dígito de verificación ITF-14 incorrecto',
+      // EAN-14
+      ean14_digits: 'EAN-14 solo puede contener dígitos',
+      ean14_length: 'EAN-14 debe tener 13 o 14 dígitos',
+      ean14_ai: 'EAN-14 debe comenzar con identificador de aplicación (01)',
       // Serie GS1 DataBar
       databarlimited_digits: 'GS1 DataBar Limited solo puede contener dígitos',
       databarlimited_length: 'GS1 DataBar Limited debe tener 13 o 14 dígitos',

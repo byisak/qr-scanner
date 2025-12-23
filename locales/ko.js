@@ -517,6 +517,10 @@ export default {
       itf14_digits: 'ITF-14는 숫자만 입력 가능합니다',
       itf14_length: 'ITF-14는 13자리 또는 14자리 숫자여야 합니다',
       itf14_checkdigit: 'ITF-14 체크 디지트가 올바르지 않습니다',
+      // EAN-14
+      ean14_digits: 'EAN-14는 숫자만 입력 가능합니다',
+      ean14_length: 'EAN-14는 13자리 또는 14자리 숫자여야 합니다',
+      ean14_ai: 'EAN-14는 (01) AI로 시작해야 합니다',
       // GS1 DataBar 계열
       databarlimited_digits: 'GS1 DataBar Limited는 숫자만 입력 가능합니다',
       databarlimited_length: 'GS1 DataBar Limited는 13자리 또는 14자리 숫자여야 합니다',

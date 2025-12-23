@@ -525,6 +525,13 @@ export default function GeneratorScreen() {
       return 'code2of5_digits';
     }
 
+    // EAN-14
+    if (msg.includes('ean-14') || msg.includes('ean14')) {
+      if (msg.includes('(01)') || msg.includes('application identifier')) return 'ean14_ai';
+      if (msg.includes('13 or 14') || msg.includes('length')) return 'ean14_length';
+      return 'ean14_digits';
+    }
+
     // GS1 DataBar 계열
     if (msg.includes('databar limited') || msg.includes('databarlimited')) {
       if (msg.includes('13 or 14') || msg.includes('length')) return 'databarlimited_length';

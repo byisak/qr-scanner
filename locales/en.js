@@ -517,6 +517,10 @@ export default {
       itf14_digits: 'ITF-14 must contain only digits',
       itf14_length: 'ITF-14 must be 13 or 14 digits',
       itf14_checkdigit: 'Incorrect ITF-14 check digit provided',
+      // EAN-14
+      ean14_digits: 'EAN-14 must contain only digits',
+      ean14_length: 'EAN-14 must be 13 or 14 digits',
+      ean14_ai: 'EAN-14 must begin with (01) application identifier',
       // GS1 DataBar series
       databarlimited_digits: 'GS1 DataBar Limited must contain only digits',
       databarlimited_length: 'GS1 DataBar Limited must be 13 or 14 digits',

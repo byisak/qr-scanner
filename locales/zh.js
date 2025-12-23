@@ -509,6 +509,10 @@ export default {
       itf14_digits: 'ITF-14只能包含数字',
       itf14_length: 'ITF-14必须是13或14位数字',
       itf14_checkdigit: 'ITF-14校验位不正确',
+      // EAN-14
+      ean14_digits: 'EAN-14只能包含数字',
+      ean14_length: 'EAN-14必须是13或14位数字',
+      ean14_ai: 'EAN-14必须以(01) AI开头',
       // GS1 DataBar系列
       databarlimited_digits: 'GS1 DataBar Limited只能包含数字',
       databarlimited_length: 'GS1 DataBar Limited必须是13或14位数字',
