@@ -371,14 +371,15 @@ export default function BarcodeSvg({
         processedValue = formatCodabar(value);
       }
 
-      // 인코더에 필요한 옵션 전달 (UPCE 등에서 사용)
+      // 인코더에 필요한 옵션 전달
+      // flat: true로 설정하여 단순 {data, text} 형식 반환 (guarded encoding 비활성화)
       const encoderOptions = {
         displayValue,
         fontSize,
         width,
         height,
         textMargin,
-        flat,
+        flat: true, // 항상 flat encoding 사용
       };
 
       const encoder = new BarcodeClass(processedValue, encoderOptions);
@@ -388,17 +389,8 @@ export default function BarcodeSvg({
       }
 
       const encoded = encoder.encode();
-
-      // encode()가 배열을 반환하는 경우 (guarded encoding) 처리
-      let binary, text;
-      if (Array.isArray(encoded)) {
-        // UPCE 등의 guarded encoding - 데이터 부분만 추출
-        binary = encoded.map(e => e.data || '').join('');
-        text = processedValue;
-      } else {
-        binary = encoded.data;
-        text = encoded.text;
-      }
+      const binary = encoded.data;
+      const text = encoded.text || processedValue;
 
       // SVG 크기 계산
       const barcodeWidth = binary.length * width;
