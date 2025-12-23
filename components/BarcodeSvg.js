@@ -2,7 +2,48 @@
 import React, { useMemo } from 'react';
 import { View } from 'react-native';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
-import JsBarcode from 'jsbarcode';
+
+// 바코드 모듈 직접 import (Metro 번들러 호환)
+import CODE128 from 'jsbarcode/src/barcodes/CODE128/CODE128.js';
+import CODE128A from 'jsbarcode/src/barcodes/CODE128/CODE128A.js';
+import CODE128B from 'jsbarcode/src/barcodes/CODE128/CODE128B.js';
+import CODE128C from 'jsbarcode/src/barcodes/CODE128/CODE128C.js';
+import EAN13 from 'jsbarcode/src/barcodes/EAN_UPC/EAN13.js';
+import EAN8 from 'jsbarcode/src/barcodes/EAN_UPC/EAN8.js';
+import EAN5 from 'jsbarcode/src/barcodes/EAN_UPC/EAN5.js';
+import EAN2 from 'jsbarcode/src/barcodes/EAN_UPC/EAN2.js';
+import UPC from 'jsbarcode/src/barcodes/EAN_UPC/UPC.js';
+import UPCE from 'jsbarcode/src/barcodes/EAN_UPC/UPCE.js';
+import ITF from 'jsbarcode/src/barcodes/ITF/ITF.js';
+import ITF14 from 'jsbarcode/src/barcodes/ITF/ITF14.js';
+import MSI from 'jsbarcode/src/barcodes/MSI/MSI.js';
+import MSI10 from 'jsbarcode/src/barcodes/MSI/MSI10.js';
+import MSI11 from 'jsbarcode/src/barcodes/MSI/MSI11.js';
+import { CODE39 } from 'jsbarcode/src/barcodes/CODE39/index.js';
+import { pharmacode } from 'jsbarcode/src/barcodes/pharmacode/index.js';
+import { codabar } from 'jsbarcode/src/barcodes/codabar/index.js';
+
+// 바코드 모듈 매핑
+const BARCODE_MODULES = {
+  CODE128,
+  CODE128A,
+  CODE128B,
+  CODE128C,
+  EAN13,
+  EAN8,
+  EAN5,
+  EAN2,
+  UPC,
+  UPCE,
+  ITF,
+  ITF14,
+  MSI,
+  MSI10,
+  MSI11,
+  CODE39,
+  pharmacode,
+  codabar,
+};
 
 /**
  * 지원하는 바코드 포맷
@@ -316,34 +357,8 @@ export default function BarcodeSvg({
     if (!value) return null;
 
     try {
-      // JsBarcode 모듈 가져오기
-      const getModule = (format) => {
-        const formats = {
-          // Default exports
-          CODE128: require('jsbarcode/src/barcodes/CODE128/CODE128.js').default,
-          CODE128A: require('jsbarcode/src/barcodes/CODE128/CODE128A.js').default,
-          CODE128B: require('jsbarcode/src/barcodes/CODE128/CODE128B.js').default,
-          CODE128C: require('jsbarcode/src/barcodes/CODE128/CODE128C.js').default,
-          EAN13: require('jsbarcode/src/barcodes/EAN_UPC/EAN13.js').default,
-          EAN8: require('jsbarcode/src/barcodes/EAN_UPC/EAN8.js').default,
-          EAN5: require('jsbarcode/src/barcodes/EAN_UPC/EAN5.js').default,
-          EAN2: require('jsbarcode/src/barcodes/EAN_UPC/EAN2.js').default,
-          UPC: require('jsbarcode/src/barcodes/EAN_UPC/UPC.js').default,
-          UPCE: require('jsbarcode/src/barcodes/EAN_UPC/UPCE.js').default,
-          ITF: require('jsbarcode/src/barcodes/ITF/ITF.js').default,
-          ITF14: require('jsbarcode/src/barcodes/ITF/ITF14.js').default,
-          MSI: require('jsbarcode/src/barcodes/MSI/MSI.js').default,
-          MSI10: require('jsbarcode/src/barcodes/MSI/MSI10.js').default,
-          MSI11: require('jsbarcode/src/barcodes/MSI/MSI11.js').default,
-          // Named exports
-          CODE39: require('jsbarcode/src/barcodes/CODE39/index.js').CODE39,
-          pharmacode: require('jsbarcode/src/barcodes/pharmacode/index.js').pharmacode,
-          codabar: require('jsbarcode/src/barcodes/codabar/index.js').codabar,
-        };
-        return formats[format];
-      };
-
-      const BarcodeClass = getModule(format);
+      // 미리 import된 바코드 모듈 사용
+      const BarcodeClass = BARCODE_MODULES[format];
       if (!BarcodeClass) {
         // 알 수 없는 포맷 - 조용히 실패
         return null;
