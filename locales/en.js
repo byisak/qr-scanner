@@ -529,7 +529,9 @@ export default {
       code32_digits: 'Italian Pharmacode must contain only digits',
       // Postal barcodes
       postnet_digits: 'POSTNET must contain only digits',
+      postnet_length: 'USPS POSTNET must be 5, 9 or 11 digits excluding check digit',
       planet_digits: 'PLANET must contain only digits',
+      daft_chars: 'DAFT must contain only characters D, A, F and T',
       identcode_digits: 'Deutsche Post Identcode must contain only digits',
       leitcode_digits: 'Deutsche Post Leitcode must contain only digits',
       // 2D barcodes

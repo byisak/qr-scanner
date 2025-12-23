@@ -518,7 +518,9 @@ export default {
       code32_digits: 'Italian Pharmacode solo puede contener dígitos',
       // Códigos postales
       postnet_digits: 'POSTNET solo puede contener dígitos',
+      postnet_length: 'USPS POSTNET debe tener 5, 9 u 11 dígitos excluyendo el dígito de control',
       planet_digits: 'PLANET solo puede contener dígitos',
+      daft_chars: 'DAFT solo puede contener los caracteres D, A, F y T',
       identcode_digits: 'Deutsche Post Identcode solo puede contener dígitos',
       leitcode_digits: 'Deutsche Post Leitcode solo puede contener dígitos',
       // Códigos 2D

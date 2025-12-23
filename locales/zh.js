@@ -521,7 +521,9 @@ export default {
       code32_digits: 'Italian Pharmacode只能包含数字',
       // 邮政条形码
       postnet_digits: 'POSTNET只能包含数字',
+      postnet_length: 'USPS POSTNET必须为5、9或11位数字（不含校验位）',
       planet_digits: 'PLANET只能包含数字',
+      daft_chars: 'DAFT只能包含D、A、F和T字符',
       identcode_digits: 'Deutsche Post Identcode只能包含数字',
       leitcode_digits: 'Deutsche Post Leitcode只能包含数字',
       // 2D条形码

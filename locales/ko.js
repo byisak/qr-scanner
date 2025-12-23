@@ -529,7 +529,9 @@ export default {
       code32_digits: 'Italian Pharmacode는 숫자만 입력 가능합니다',
       // 우편 바코드
       postnet_digits: 'POSTNET은 숫자만 입력 가능합니다',
+      postnet_length: 'USPS POSTNET은 체크 디지트 제외 5, 9 또는 11자리여야 합니다',
       planet_digits: 'PLANET은 숫자만 입력 가능합니다',
+      daft_chars: 'DAFT는 D, A, F, T 문자만 입력 가능합니다',
       identcode_digits: 'Deutsche Post Identcode는 숫자만 입력 가능합니다',
       leitcode_digits: 'Deutsche Post Leitcode는 숫자만 입력 가능합니다',
       // 2D 바코드

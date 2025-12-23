@@ -521,7 +521,9 @@ export default {
       code32_digits: 'Italian Pharmacodeは数字のみ入力可能です',
       // 郵便バーコード
       postnet_digits: 'POSTNETは数字のみ入力可能です',
+      postnet_length: 'USPS POSTNETはチェックディジットを除いて5、9、または11桁である必要があります',
       planet_digits: 'PLANETは数字のみ入力可能です',
+      daft_chars: 'DAFTはD、A、F、T文字のみ入力可能です',
       identcode_digits: 'Deutsche Post Identcodeは数字のみ入力可能です',
       leitcode_digits: 'Deutsche Post Leitcodeは数字のみ入力可能です',
       // 2Dバーコード

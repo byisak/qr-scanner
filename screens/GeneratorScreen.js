@@ -556,10 +556,14 @@ export default function GeneratorScreen() {
 
     // 우편 바코드
     if (msg.includes('postnet')) {
+      if (msg.includes('5, 9') || msg.includes('length')) return 'postnet_length';
       return 'postnet_digits';
     }
     if (msg.includes('planet')) {
       return 'planet_digits';
+    }
+    if (msg.includes('daft')) {
+      return 'daft_chars';
     }
     if (msg.includes('identcode')) {
       return 'identcode_digits';
