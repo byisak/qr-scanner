@@ -448,51 +448,149 @@ export default function GeneratorScreen() {
     // 에러는 bwip-js 렌더링 시 onError 콜백으로 설정됨
   };
 
-  // bwip-js 에러 메시지를 번역 키로 변환
+  // bwip-js 에러 메시지를 번역 키로 변환 (바코드별 상세 매칭)
   const getBwipErrorTranslationKey = useCallback((errorMessage) => {
     if (!errorMessage) return null;
 
     const msg = errorMessage.toLowerCase();
 
-    // 패턴 매칭으로 번역 키 결정
-    if (msg.includes('must contain only digits') || msg.includes('must only contain digits')) {
-      return 'onlyDigits';
+    // EAN 계열
+    if (msg.includes('ean-13') || msg.includes('ean13')) {
+      if (msg.includes('digit') && !msg.includes('check')) return 'ean13_digits';
+      if (msg.includes('12 or 13') || msg.includes('length')) return 'ean13_length';
+      if (msg.includes('check digit')) return 'ean13_checkdigit';
     }
-    if (msg.includes('code 93') && msg.includes('capital letters')) {
-      return 'code93Chars';
+    if (msg.includes('ean-8') || msg.includes('ean8')) {
+      if (msg.includes('digit') && !msg.includes('check')) return 'ean8_digits';
+      if (msg.includes('7 or 8') || msg.includes('length')) return 'ean8_length';
+      if (msg.includes('check digit')) return 'ean8_checkdigit';
     }
-    if (msg.includes('code 39') && msg.includes('capital letters')) {
-      return 'code39Chars';
+    if (msg.includes('ean-5') || msg.includes('ean5')) {
+      if (msg.includes('digit')) return 'ean5_digits';
+      if (msg.includes('5 digit') || msg.includes('length')) return 'ean5_length';
     }
-    if (msg.includes('capital letters') && msg.includes('digits')) {
-      return 'onlyDigitsAndUppercase';
+    if (msg.includes('ean-2') || msg.includes('ean2')) {
+      if (msg.includes('digit')) return 'ean2_digits';
+      if (msg.includes('2 digit') || msg.includes('length')) return 'ean2_length';
     }
-    if (msg.includes('ascii')) {
-      return 'code128Chars';
+
+    // UPC 계열
+    if (msg.includes('upc-a') || msg.includes('upca')) {
+      if (msg.includes('digit') && !msg.includes('check')) return 'upca_digits';
+      if (msg.includes('11 or 12') || msg.includes('length')) return 'upca_length';
+      if (msg.includes('check digit')) return 'upca_checkdigit';
     }
-    if (msg.includes('invalid character') || msg.includes('bad character')) {
-      return 'invalidChar';
+    if (msg.includes('upc-e') || msg.includes('upce')) {
+      if (msg.includes('digit') && !msg.includes('check')) return 'upce_digits';
+      if (msg.includes('7 or 8') || msg.includes('length')) return 'upce_length';
+      if (msg.includes('number system')) return 'upce_numbersystem';
     }
-    if (msg.includes('check digit') || msg.includes('checksum')) {
-      return 'invalidCheckDigit';
+
+    // Code 계열
+    if (msg.includes('code 93') || msg.includes('code93')) {
+      return 'code93_chars';
+    }
+    if (msg.includes('code 39 extended') || msg.includes('code39ext')) {
+      return 'code39ext_chars';
+    }
+    if (msg.includes('code 39') || msg.includes('code39')) {
+      return 'code39_chars';
+    }
+    if (msg.includes('code 128') || msg.includes('code128')) {
+      return 'code128_chars';
+    }
+    if (msg.includes('code 11') || msg.includes('code11')) {
+      return 'code11_chars';
+    }
+
+    // ITF 계열
+    if (msg.includes('itf-14') || msg.includes('itf14')) {
+      if (msg.includes('digit')) return 'itf14_digits';
+      if (msg.includes('13') || msg.includes('14') || msg.includes('length')) return 'itf14_length';
+    }
+    if (msg.includes('interleaved 2 of 5') || msg.includes('interleaved2of5')) {
+      if (msg.includes('even')) return 'itf_even';
+      if (msg.includes('digit')) return 'itf_digits';
+    }
+    if (msg.includes('code 25') || msg.includes('2 of 5')) {
+      if (msg.includes('digit')) return 'itf_digits';
+    }
+
+    // GS1 계열
+    if (msg.includes('gs1') || msg.includes('databar')) {
+      if (msg.includes('digit')) return 'gs1_digits';
+      return 'gs1_format';
+    }
+    if (msg.includes('ean-14') || msg.includes('ean14') || msg.includes('gs1-14')) {
+      return 'ean14_digits';
+    }
+    if (msg.includes('sscc-18') || msg.includes('sscc18')) {
+      return 'sscc18_digits';
+    }
+
+    // 기타 바코드
+    if (msg.includes('codabar')) {
+      if (msg.includes('start') || msg.includes('stop')) return 'codabar_startstop';
+      return 'codabar_chars';
+    }
+    if (msg.includes('msi')) {
+      return 'msi_digits';
+    }
+    if (msg.includes('plessey')) {
+      return 'plessey_chars';
+    }
+    if (msg.includes('telepen')) {
+      return 'telepen_chars';
+    }
+    if (msg.includes('pharmacode')) {
+      if (msg.includes('range') || msg.includes('3') && msg.includes('131070')) return 'pharmacode_range';
+      return 'pharmacode_digits';
+    }
+    if (msg.includes('pzn')) {
+      return 'pzn_digits';
+    }
+    if (msg.includes('italian pharmacode') || msg.includes('code32') || msg.includes('code 32')) {
+      return 'code32_digits';
+    }
+
+    // 우편 바코드
+    if (msg.includes('postnet')) {
+      return 'postnet_digits';
+    }
+    if (msg.includes('planet')) {
+      return 'planet_digits';
+    }
+    if (msg.includes('identcode')) {
+      return 'identcode_digits';
+    }
+    if (msg.includes('leitcode')) {
+      return 'leitcode_digits';
+    }
+
+    // ISBN
+    if (msg.includes('isbn')) {
+      if (msg.includes('check digit')) return 'isbn_checkdigit';
+      return 'isbn_length';
+    }
+
+    // 공통 에러 패턴
+    if (msg.includes('check digit')) {
+      return 'badCheckDigit';
+    }
+    if (msg.includes('too long') || msg.includes('exceeds')) {
+      return 'dataTooLong';
+    }
+    if (msg.includes('too short')) {
+      return 'dataTooShort';
     }
     if (msg.includes('even number') || msg.includes('must be even')) {
       return 'mustBeEven';
     }
-    if (msg.includes('too long') || msg.includes('exceeds')) {
-      return 'tooLongData';
+    if (msg.includes('only digits') || msg.includes('contain only digits')) {
+      return 'onlyDigits';
     }
-    if (msg.includes('too short') || msg.includes('not enough')) {
-      return 'tooShortData';
-    }
-    if (msg.includes('start') && msg.includes('stop')) {
-      return 'invalidStartStop';
-    }
-    if (msg.includes('out of range') || msg.includes('range')) {
-      return 'outOfRange';
-    }
-    if (msg.includes('length')) {
-      return 'invalidLength';
+    if (msg.includes('invalid') || msg.includes('bad character')) {
+      return 'invalidChar';
     }
 
     return null; // 매칭되는 패턴 없음
