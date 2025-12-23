@@ -516,6 +516,7 @@ export default {
       telepen_chars: 'Telepen只能包含ASCII字符',
       pharmacode_digits: 'Pharmacode只能包含数字',
       pharmacode_range: 'Pharmacode必须在3到131070之间',
+      pharmacode_length: 'Pharmacode必须为1到6位数字',
       pzn_digits: 'PZN只能包含数字',
       code32_digits: 'Italian Pharmacode只能包含数字',
       // 邮政条形码

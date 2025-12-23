@@ -544,6 +544,7 @@ export default function GeneratorScreen() {
     }
     if (msg.includes('pharmacode')) {
       if (msg.includes('range') || msg.includes('3') && msg.includes('131070')) return 'pharmacode_range';
+      if (msg.includes('1 to 6') || msg.includes('length')) return 'pharmacode_length';
       return 'pharmacode_digits';
     }
     if (msg.includes('pzn')) {

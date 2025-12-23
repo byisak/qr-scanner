@@ -516,6 +516,7 @@ export default {
       telepen_chars: 'TelepenはASCII文字のみ入力可能です',
       pharmacode_digits: 'Pharmacodeは数字のみ入力可能です',
       pharmacode_range: 'Pharmacodeは3〜131070の範囲の数字である必要があります',
+      pharmacode_length: 'Pharmacodeは1〜6桁の数字である必要があります',
       pzn_digits: 'PZNは数字のみ入力可能です',
       code32_digits: 'Italian Pharmacodeは数字のみ入力可能です',
       // 郵便バーコード

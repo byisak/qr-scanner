@@ -513,6 +513,7 @@ export default {
       telepen_chars: 'Telepen solo puede contener caracteres ASCII',
       pharmacode_digits: 'Pharmacode solo puede contener dígitos',
       pharmacode_range: 'Pharmacode debe estar entre 3 y 131070',
+      pharmacode_length: 'Pharmacode debe tener de 1 a 6 dígitos',
       pzn_digits: 'PZN solo puede contener dígitos',
       code32_digits: 'Italian Pharmacode solo puede contener dígitos',
       // Códigos postales

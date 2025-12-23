@@ -524,6 +524,7 @@ export default {
       telepen_chars: 'Telepen은 ASCII 문자만 입력 가능합니다',
       pharmacode_digits: 'Pharmacode는 숫자만 입력 가능합니다',
       pharmacode_range: 'Pharmacode는 3~131070 범위의 숫자여야 합니다',
+      pharmacode_length: 'Pharmacode는 1~6자리 숫자여야 합니다',
       pzn_digits: 'PZN은 숫자만 입력 가능합니다',
       code32_digits: 'Italian Pharmacode는 숫자만 입력 가능합니다',
       // 우편 바코드

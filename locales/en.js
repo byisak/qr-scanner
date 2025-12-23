@@ -524,6 +524,7 @@ export default {
       telepen_chars: 'Telepen must contain only ASCII characters',
       pharmacode_digits: 'Pharmacode must contain only digits',
       pharmacode_range: 'Pharmacode must be between 3 and 131070',
+      pharmacode_length: 'Pharmacode must be 1 to 6 digits',
       pzn_digits: 'PZN must contain only digits',
       code32_digits: 'Italian Pharmacode must contain only digits',
       // Postal barcodes
