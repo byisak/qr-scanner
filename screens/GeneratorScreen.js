@@ -1429,6 +1429,7 @@ export default function GeneratorScreen() {
               <View style={s.formContainer}>
                 <View style={s.fieldContainer}>
                   <TextInput
+                    key={selectedBarcodeFormat}
                     style={[
                       s.input,
                       {
