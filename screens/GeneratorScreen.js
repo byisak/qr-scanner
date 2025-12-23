@@ -438,8 +438,8 @@ export default function GeneratorScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setSelectedBarcodeFormat(bcid);
+    setBarcodeValue('');  // 값 초기화
     setBarcodeError(null);
-    // 에러는 bwip-js 렌더링 시 onError 콜백으로 설정됨
   };
 
   // 바코드 값 변경 (bwip-js가 유효성 검사 담당)
@@ -1427,9 +1427,6 @@ export default function GeneratorScreen() {
               </View>
               <View style={s.formContainer}>
                 <View style={s.fieldContainer}>
-                  <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
-                    {t('generator.barcodeValue') || '값'}
-                  </Text>
                   <TextInput
                     style={[
                       s.input,
