@@ -33,13 +33,13 @@ import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
 
-// 기본 표시되는 바코드 타입 bcid 목록 (3개)
+// 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
-  'code128', 'ean13', 'qrcode',
+  'code128', 'ean13',
 ];
 
-// 카테고리 순서
-const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'postal', '2d', 'stacked', 'automotive', 'other'];
+// 카테고리 순서 (2D 바코드 제외 - QR코드는 별도 탭에서 생성)
+const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'postal', 'stacked', 'automotive', 'other'];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -1755,7 +1755,9 @@ export default function GeneratorScreen() {
                       </View>
                       <View style={s.categoryGrid}>
                         {barcodes.map((format) => {
+                          const isDefault = DEFAULT_BARCODE_BCIDS.includes(format.bcid);
                           const isFavorite = favoriteBarcodes.includes(format.bcid);
+                          const isChecked = isDefault || isFavorite;
                           const isSelected = selectedBarcodeFormat === format.bcid;
 
                           return (
@@ -1765,25 +1767,28 @@ export default function GeneratorScreen() {
                                 s.modalBarcodeItem,
                                 {
                                   backgroundColor: isSelected ? colors.primary : colors.background,
-                                  borderColor: isSelected ? colors.primary : isFavorite ? '#22c55e' : colors.border,
+                                  borderColor: isSelected ? colors.primary : isChecked ? '#22c55e' : colors.border,
                                 },
                               ]}
                               onPress={() => handleSelectBarcodeFromModal(format.bcid)}
                               activeOpacity={0.7}
                             >
-                              {/* 즐겨찾기 체크박스 */}
+                              {/* 즐겨찾기 체크박스 (기본 바코드는 비활성화) */}
                               <TouchableOpacity
                                 style={s.favoriteButton}
                                 onPress={(e) => {
                                   e.stopPropagation();
-                                  toggleFavoriteBarcode(format.bcid);
+                                  if (!isDefault) {
+                                    toggleFavoriteBarcode(format.bcid);
+                                  }
                                 }}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                disabled={isDefault}
                               >
                                 <Ionicons
-                                  name={isFavorite ? 'checkmark-circle' : 'ellipse-outline'}
+                                  name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
                                   size={20}
-                                  color={isFavorite ? '#22c55e' : colors.textTertiary}
+                                  color={isChecked ? '#22c55e' : colors.textTertiary}
                                 />
                               </TouchableOpacity>
 
