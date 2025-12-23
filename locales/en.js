@@ -442,6 +442,15 @@ export default {
     barcodeHeight: 'Height',
     barcodeFontSize: 'Font Size',
     barcodeShowText: 'Show Text',
+    // Barcode type modal
+    addBarcode: 'More',
+    selectBarcodeType: 'Select Barcode Type',
+    barcodePickerDescription: 'Tap the star to add to favorites',
+    barcodeCategories: {
+      industrial: 'Industrial/Logistics',
+      retail: 'Retail Products',
+      special: 'Special Purpose',
+    },
     barcodeHints: {
       CODE128: 'Alphanumeric, no length limit',
       EAN13: 'Enter 12 digits (checksum auto-calculated)',

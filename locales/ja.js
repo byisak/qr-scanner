@@ -434,6 +434,15 @@ export default {
     barcodeHeight: '高さ',
     barcodeFontSize: '文字サイズ',
     barcodeShowText: 'テキスト表示',
+    // バーコードタイプモーダル
+    addBarcode: 'その他',
+    selectBarcodeType: 'バーコードタイプを選択',
+    barcodePickerDescription: '星をタップしてお気に入りに追加',
+    barcodeCategories: {
+      industrial: '物流/産業用',
+      retail: '商品バーコード',
+      special: '特殊用途',
+    },
     barcodeHints: {
       CODE128: '英数字入力可、長さ制限なし',
       EAN13: '12桁入力（チェックサム自動計算）',

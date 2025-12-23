@@ -434,6 +434,15 @@ export default {
     barcodeHeight: '高度',
     barcodeFontSize: '字体大小',
     barcodeShowText: '显示文字',
+    // 条形码类型弹窗
+    addBarcode: '更多',
+    selectBarcodeType: '选择条形码类型',
+    barcodePickerDescription: '点击星标添加到收藏夹',
+    barcodeCategories: {
+      industrial: '物流/工业',
+      retail: '零售商品',
+      special: '特殊用途',
+    },
     barcodeHints: {
       CODE128: '可输入字母数字，无长度限制',
       EAN13: '输入12位数字（自动计算校验位）',

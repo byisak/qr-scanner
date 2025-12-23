@@ -442,6 +442,15 @@ export default {
     barcodeHeight: '높이',
     barcodeFontSize: '글자 크기',
     barcodeShowText: '숫자 표시',
+    // 바코드 타입 모달
+    addBarcode: '더보기',
+    selectBarcodeType: '바코드 타입 선택',
+    barcodePickerDescription: '별을 눌러 즐겨찾기에 추가하세요',
+    barcodeCategories: {
+      industrial: '물류/산업용',
+      retail: '상품 바코드',
+      special: '특수 용도',
+    },
     barcodeHints: {
       CODE128: '영숫자 입력 가능, 길이 제한 없음',
       EAN13: '12자리 숫자 입력 (체크섬 자동 계산)',

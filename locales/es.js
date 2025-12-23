@@ -434,6 +434,15 @@ export default {
     barcodeHeight: 'Alto',
     barcodeFontSize: 'Tamaño de fuente',
     barcodeShowText: 'Mostrar texto',
+    // Modal de tipo de código de barras
+    addBarcode: 'Más',
+    selectBarcodeType: 'Seleccionar tipo',
+    barcodePickerDescription: 'Toca la estrella para agregar a favoritos',
+    barcodeCategories: {
+      industrial: 'Industrial/Logística',
+      retail: 'Productos minoristas',
+      special: 'Propósito especial',
+    },
     barcodeHints: {
       CODE128: 'Alfanumérico, sin límite de longitud',
       EAN13: 'Ingresa 12 dígitos (suma de verificación automática)',
