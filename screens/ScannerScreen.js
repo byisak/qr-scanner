@@ -1094,12 +1094,39 @@ function ScannerScreen() {
   }, []);
 
   // 그룹 선택 핸들러
-  const handleSelectGroup = useCallback(async (groupId, groupName, isCloudSync = false) => {
+  const handleSelectGroup = useCallback(async (groupId, groupName, isCloudSync = false, isScanUrlGroup = false, scanUrlId = null) => {
     try {
       setCurrentGroupId(groupId);
       setCurrentGroupName(groupName);
       await AsyncStorage.setItem('selectedGroupId', groupId);
       setGroupModalVisible(false);
+
+      // 스캔 URL 그룹 선택 시 URL 활성화 연동
+      if (isScanUrlGroup && scanUrlId) {
+        // URL 목록에서 해당 URL 활성화
+        const urlListStr = await SecureStore.getItemAsync('scanUrlList');
+        if (urlListStr) {
+          const urlList = JSON.parse(urlListStr);
+          const updatedUrlList = urlList.map(item => ({
+            ...item,
+            enabled: item.id === scanUrlId,
+          }));
+          await SecureStore.setItemAsync('scanUrlList', JSON.stringify(updatedUrlList));
+
+          // 활성화된 URL 정보 설정
+          const activeUrl = updatedUrlList.find(item => item.id === scanUrlId);
+          if (activeUrl) {
+            setActiveScanUrl(activeUrl);
+            setScanUrlEnabled(true);
+            await SecureStore.setItemAsync('scanLinkEnabled', 'true');
+            await SecureStore.setItemAsync('baseUrl', activeUrl.url);
+            console.log('[handleSelectGroup] Activated scan URL:', activeUrl.name);
+          }
+        }
+      } else if (!isScanUrlGroup) {
+        // 일반 그룹 선택 시 스캔 URL 표시만 해제 (URL 설정은 유지)
+        setActiveScanUrl(null);
+      }
 
       // 세션 그룹(클라우드 동기화 그룹) 선택 시 WebSocket 연결
       if (isCloudSync && realtimeSyncEnabled) {
@@ -1408,12 +1435,15 @@ function ScannerScreen() {
                     styles.groupItem,
                     currentGroupId === group.id && styles.groupItemActive
                   ]}
-                  onPress={() => handleSelectGroup(group.id, group.name, group.isCloudSync)}
+                  onPress={() => handleSelectGroup(group.id, group.name, group.isCloudSync, group.isScanUrlGroup, group.scanUrlId)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.groupItemContent}>
                     {group.isCloudSync && (
                       <Ionicons name="cloud" size={18} color="#007AFF" style={{ marginRight: 8 }} />
+                    )}
+                    {group.isScanUrlGroup && (
+                      <Ionicons name="link" size={18} color="#2E7D32" style={{ marginRight: 8 }} />
                     )}
                     <Text style={[
                       styles.groupItemText,
