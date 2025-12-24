@@ -481,6 +481,54 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* 백업 및 복원 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>백업 및 복원</Text>
+
+          {/* 백업 내보내기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/backup-export')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>백업 내보내기</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>스캔 기록 및 설정을 백업합니다</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 백업 가져오기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/backup-import')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>백업 가져오기</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>백업 파일에서 데이터를 복원합니다</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 제품 검색 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>제품 검색</Text>
+
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/product-search-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>제품 검색 설정</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>바코드 스캔 시 자동으로 제품 정보를 검색합니다</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </View>
+
         {/* 앱 정보 및 지원 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
