@@ -44,10 +44,10 @@ const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'po
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const QR_TYPES = [
+  { id: 'text', icon: 'text-outline', gradient: ['#43e97b', '#38f9d7'] },
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
   { id: 'contact', icon: 'person-outline', gradient: ['#f093fb', '#f5576c'] },
   { id: 'wifi', icon: 'wifi-outline', gradient: ['#4facfe', '#00f2fe'] },
-  { id: 'text', icon: 'text-outline', gradient: ['#43e97b', '#38f9d7'] },
   { id: 'clipboard', icon: 'clipboard-outline', gradient: ['#fa709a', '#fee140'] },
   { id: 'email', icon: 'mail-outline', gradient: ['#30cfd0', '#330867'] },
   { id: 'sms', icon: 'chatbubble-outline', gradient: ['#a8edea', '#fed6e3'] },
@@ -2429,7 +2429,7 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 2,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     minWidth: 100,
