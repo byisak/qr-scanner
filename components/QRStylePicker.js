@@ -215,8 +215,8 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
                 <Path d="M50 50 L21.72 78.28 A40 40 0 0 1 10 50 Z" fill="#14B8A6" />
                 <Path d="M50 50 L10 50 A40 40 0 0 1 21.72 21.72 Z" fill="#3B82F6" />
                 <Path d="M50 50 L21.72 21.72 A40 40 0 0 1 50 10 Z" fill="#8B5CF6" />
-                {/* 중앙 원 */}
-                <Circle cx="50" cy="50" r="18" fill="#FEF3C7" />
+                {/* 중앙 원 - 현재 선택된 색상 표시 */}
+                <Circle cx="50" cy="50" r="18" fill={color} stroke="#fff" strokeWidth="3" />
               </Svg>
             </TouchableOpacity>
 
