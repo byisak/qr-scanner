@@ -200,7 +200,7 @@ export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 // 색상 선택 컴포넌트
 function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
-  const [rgbaColor, setRgbaColor] = useState(hexToRgba(color || '#000000'));
+  const [rgbaColor, setRgbaColor] = useState(() => hexToRgba(color || '#000000'));
 
   const isSwiftUIAvailable = Platform.OS === 'ios' && Host && SwiftUIColorPicker;
 
@@ -208,10 +208,19 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
     setRgbaColor(hexToRgba(color || '#000000'));
   }, [color]);
 
-  const handleSwiftUIColorChange = (newRgba) => {
-    setRgbaColor(newRgba);
-    const hexColor = rgbaToHex(newRgba);
-    onColorChange(hexColor);
+  const handleSwiftUIColorChange = (newColor) => {
+    // SwiftUI ColorPicker는 { red, green, blue, alpha } 형식으로 반환
+    if (newColor && typeof newColor === 'object') {
+      const rgba = {
+        red: newColor.red ?? 0,
+        green: newColor.green ?? 0,
+        blue: newColor.blue ?? 0,
+        alpha: newColor.alpha ?? 1,
+      };
+      setRgbaColor(rgba);
+      const hexColor = rgbaToHex(rgba);
+      onColorChange(hexColor);
+    }
   };
 
   return (
@@ -1163,20 +1172,22 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   colorButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   colorPickerIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
   swiftUIColorPickerHost: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   gradientRow: {
     flexDirection: 'row',
