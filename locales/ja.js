@@ -105,12 +105,12 @@ export default {
     urlSending: 'URLに送信中',
     noSessionUrl: '送信URLがありません',
     pleaseGenerateUrl: 'リアルタイム送信を使用するには、設定でURLを生成してください。',
-    uploadImage: '画像からスキャン',
+    uploadImage: 'コード自動分析',
   },
 
   // 画像分析画面
   imageAnalysis: {
-    title: '画像分析',
+    title: 'コード自動分析',
     selectPhoto: '写真を選択',
     noPhotos: '写真がありません',
     noImage: '分析する画像がありません。',

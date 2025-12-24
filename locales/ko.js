@@ -105,12 +105,12 @@ export default {
     urlSending: 'URL 전송 중',
     noSessionUrl: '전송 주소 없음',
     pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
-    uploadImage: '이미지에서 스캔',
+    uploadImage: '코드 자동 분석',
   },
 
   // 이미지 분석 화면
   imageAnalysis: {
-    title: '이미지 분석',
+    title: '코드 자동 분석',
     selectPhoto: '사진 선택',
     noPhotos: '사진이 없습니다',
     noImage: '분석할 이미지가 없습니다.',

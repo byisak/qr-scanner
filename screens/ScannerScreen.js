@@ -1218,11 +1218,19 @@ function ScannerScreen() {
     }
   }, [router, t]);
 
-  // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링, 기본 그룹 이름 다국어 적용)
+  // 표시할 그룹 목록 (실시간 서버전송이 꺼져있으면 세션 그룹 필터링, 스캔 연동이 꺼져있으면 스캔 URL 그룹 필터링)
   const displayGroups = useMemo(() => {
-    const filtered = realtimeSyncEnabled
-      ? availableGroups
-      : availableGroups.filter(g => !g.isCloudSync);
+    let filtered = availableGroups;
+
+    // 실시간 서버전송이 꺼져있으면 클라우드 동기화 그룹 숨김
+    if (!realtimeSyncEnabled) {
+      filtered = filtered.filter(g => !g.isCloudSync);
+    }
+
+    // 스캔 연동 URL이 꺼져있으면 스캔 URL 그룹 숨김
+    if (!scanUrlEnabled) {
+      filtered = filtered.filter(g => !g.isScanUrlGroup);
+    }
 
     // 기본 그룹 이름을 현재 언어로 변환
     return filtered.map(g => {
@@ -1231,7 +1239,7 @@ function ScannerScreen() {
       }
       return g;
     });
-  }, [availableGroups, realtimeSyncEnabled, t]);
+  }, [availableGroups, realtimeSyncEnabled, scanUrlEnabled, t]);
 
   if (hasPermission === null) {
     return (

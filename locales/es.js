@@ -105,12 +105,12 @@ export default {
     urlSending: 'Enviando a URL',
     noSessionUrl: 'Sin URL de sesión',
     pleaseGenerateUrl: 'Por favor, genera una URL en configuración para usar la sincronización en tiempo real.',
-    uploadImage: 'Escanear desde imagen',
+    uploadImage: 'Análisis automático',
   },
 
   // Pantalla de análisis de imagen
   imageAnalysis: {
-    title: 'Análisis de imagen',
+    title: 'Análisis automático',
     selectPhoto: 'Seleccionar foto',
     noPhotos: 'No hay fotos disponibles',
     noImage: 'No hay imagen para analizar.',

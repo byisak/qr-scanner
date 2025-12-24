@@ -105,12 +105,12 @@ export default {
     urlSending: '正在发送到URL',
     noSessionUrl: '没有传输地址',
     pleaseGenerateUrl: '要使用实时服务器传输，请先在设置中生成地址。',
-    uploadImage: '从图片扫描',
+    uploadImage: '代码自动分析',
   },
 
   // 图片分析界面
   imageAnalysis: {
-    title: '图片分析',
+    title: '代码自动分析',
     selectPhoto: '选择照片',
     noPhotos: '没有照片',
     noImage: '没有可分析的图片。',

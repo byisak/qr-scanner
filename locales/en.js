@@ -105,12 +105,12 @@ export default {
     urlSending: 'Sending to URL',
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
-    uploadImage: 'Scan from Image',
+    uploadImage: 'Auto Code Analysis',
   },
 
   // Image analysis screen
   imageAnalysis: {
-    title: 'Image Analysis',
+    title: 'Auto Code Analysis',
     selectPhoto: 'Select Photo',
     noPhotos: 'No photos available',
     noImage: 'No image to analyze.',
