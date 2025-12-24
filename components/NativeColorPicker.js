@@ -1,8 +1,9 @@
 // components/NativeColorPicker.js - 컬러 피커 모달 (컬러 휠 + HEX 입력)
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
+import { runOnJS } from 'react-native-reanimated';
 
 export default function NativeColorPicker({ visible, onClose, color, onColorChange, colors }) {
   const [tempColor, setTempColor] = useState(color || '#000000');
@@ -13,11 +14,16 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
     }
   }, [visible, color]);
 
-  const handleColorSelect = (selectedColor) => {
-    const hex = selectedColor.hex;
+  const updateColor = useCallback((hex) => {
     setTempColor(hex);
     onColorChange(hex);
-  };
+  }, [onColorChange]);
+
+  const handleColorSelect = useCallback((selectedColor) => {
+    'worklet';
+    const hex = selectedColor.hex;
+    runOnJS(updateColor)(hex);
+  }, [updateColor]);
 
   const handleHexChange = (text) => {
     const formatted = text.startsWith('#') ? text : '#' + text;
