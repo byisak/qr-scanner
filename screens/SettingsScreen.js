@@ -514,7 +514,7 @@ export default function SettingsScreen() {
           {/* 서비스 이용약관 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => Alert.alert(t('settings.termsOfService'), '준비 중입니다')}
+            onPress={() => router.push('/terms-of-service')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -527,7 +527,7 @@ export default function SettingsScreen() {
           {/* 개인정보 처리방침 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => Alert.alert(t('settings.privacyPolicy'), '준비 중입니다')}
+            onPress={() => router.push('/privacy-policy')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
