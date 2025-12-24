@@ -102,6 +102,7 @@ export default {
     clearBatch: 'Limpiar',
     viewBatchList: 'Ver lista',
     sending: 'Enviando',
+    urlSending: 'Enviando a URL',
     noSessionUrl: 'Sin URL de sesión',
     pleaseGenerateUrl: 'Por favor, genera una URL en configuración para usar la sincronización en tiempo real.',
     uploadImage: 'Escanear desde imagen',

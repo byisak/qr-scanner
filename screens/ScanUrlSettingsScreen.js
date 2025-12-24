@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -196,13 +197,67 @@ export default function ScanUrlSettingsScreen() {
     setEditingUrl('');
   };
 
+  // 스캔 URL 그룹 생성/확인 함수
+  const ensureScanUrlGroup = async (urlItem) => {
+    try {
+      const groupsData = await AsyncStorage.getItem('scanGroups');
+      let groups = groupsData ? JSON.parse(groupsData) : [];
+
+      // scanUrlId로 기존 그룹 검색 (이름이 아닌 ID로 구분)
+      const existingGroup = groups.find(g => g.scanUrlId === urlItem.id && !g.isDeleted);
+
+      if (!existingGroup) {
+        // 새 그룹 생성
+        const newGroup = {
+          id: `scan-url-${urlItem.id}`,
+          name: urlItem.name,
+          createdAt: Date.now(),
+          isCloudSync: false,
+          isScanUrlGroup: true,
+          scanUrlId: urlItem.id,
+          isDeleted: false,
+        };
+        groups.push(newGroup);
+        await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+
+        // 히스토리 초기화
+        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+        let historyByGroup = historyData ? JSON.parse(historyData) : {};
+        historyByGroup[newGroup.id] = [];
+        await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+        console.log('[ScanUrlSettings] Created new scan URL group:', newGroup.id);
+      } else {
+        // 기존 그룹 이름 동기화
+        if (existingGroup.name !== urlItem.name) {
+          const updatedGroups = groups.map(g =>
+            g.scanUrlId === urlItem.id ? { ...g, name: urlItem.name } : g
+          );
+          await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+          console.log('[ScanUrlSettings] Updated scan URL group name:', urlItem.name);
+        }
+      }
+    } catch (error) {
+      console.error('ensureScanUrlGroup error:', error);
+    }
+  };
+
   // URL 활성화 토글 (단일 선택만 허용)
-  const handleToggleUrl = (id, value) => {
-    setUrlList(prev => prev.map(item => ({
+  const handleToggleUrl = async (id, value) => {
+    const newList = urlList.map(item => ({
       ...item,
       // 선택된 항목만 활성화, 나머지는 비활성화 (라디오 버튼처럼 동작)
       enabled: item.id === id ? value : false,
-    })));
+    }));
+    setUrlList(newList);
+
+    // 활성화된 URL에 대한 그룹 생성/확인
+    if (value) {
+      const activeUrl = newList.find(item => item.id === id);
+      if (activeUrl) {
+        await ensureScanUrlGroup(activeUrl);
+      }
+    }
   };
 
   return (

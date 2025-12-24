@@ -236,6 +236,9 @@ export default function HistoryScreen() {
                 {group.isCloudSync && (
                   <Ionicons name="cloud" size={16} color={isActive ? '#fff' : colors.primary} style={{ marginRight: 6 }} />
                 )}
+                {group.isScanUrlGroup && (
+                  <Ionicons name="link" size={16} color={isActive ? '#fff' : '#2E7D32'} style={{ marginRight: 6 }} />
+                )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
                   {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
                 </Text>

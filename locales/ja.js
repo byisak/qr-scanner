@@ -102,6 +102,7 @@ export default {
     clearBatch: 'クリア',
     viewBatchList: 'リストを表示',
     sending: '送信中',
+    urlSending: 'URLに送信中',
     noSessionUrl: '送信URLがありません',
     pleaseGenerateUrl: 'リアルタイム送信を使用するには、設定でURLを生成してください。',
     uploadImage: '画像からスキャン',

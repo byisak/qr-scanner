@@ -102,6 +102,7 @@ export default {
     clearBatch: '清空',
     viewBatchList: '查看列表',
     sending: '发送中',
+    urlSending: '正在发送到URL',
     noSessionUrl: '没有传输地址',
     pleaseGenerateUrl: '要使用实时服务器传输，请先在设置中生成地址。',
     uploadImage: '从图片扫描',

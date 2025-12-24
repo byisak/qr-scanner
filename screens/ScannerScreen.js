@@ -90,6 +90,11 @@ function ScannerScreen() {
   const [activeSessionId, setActiveSessionId] = useState('');
   const [showSendMessage, setShowSendMessage] = useState(false); // "전송" 메시지 표시 여부
 
+  // 스캔 연동 URL 관련 상태
+  const [scanUrlEnabled, setScanUrlEnabled] = useState(false);
+  const [activeScanUrl, setActiveScanUrl] = useState(null); // { id, name, url }
+  const [showUrlSendMessage, setShowUrlSendMessage] = useState(false); // URL 전송 메시지 표시
+
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
   const resetTimerRef = useRef(null);
@@ -244,6 +249,23 @@ function ScannerScreen() {
             }
           }
         }
+
+        // 스캔 연동 URL 설정 로드
+        const scanLinkEnabledStr = await SecureStore.getItemAsync('scanLinkEnabled');
+        const isScanLinkEnabled = scanLinkEnabledStr === 'true';
+        setScanUrlEnabled(isScanLinkEnabled);
+
+        if (isScanLinkEnabled) {
+          const urlListStr = await SecureStore.getItemAsync('scanUrlList');
+          if (urlListStr) {
+            const urlList = JSON.parse(urlListStr);
+            const activeUrl = urlList.find(item => item.enabled);
+            setActiveScanUrl(activeUrl || null);
+            console.log('[ScannerScreen] Loaded active scan URL:', activeUrl?.name);
+          }
+        } else {
+          setActiveScanUrl(null);
+        }
       } catch (error) {
         console.error('Camera permission error:', error);
         setHasPermission(false);
@@ -388,6 +410,23 @@ function ScannerScreen() {
             // WebSocket 연결 해제
             websocketClient.disconnect();
           }
+
+          // 스캔 연동 URL 설정 로드
+          const scanLinkEnabledStr = await SecureStore.getItemAsync('scanLinkEnabled');
+          const isScanLinkEnabled = scanLinkEnabledStr === 'true';
+          setScanUrlEnabled(isScanLinkEnabled);
+
+          if (isScanLinkEnabled) {
+            const urlListStr = await SecureStore.getItemAsync('scanUrlList');
+            if (urlListStr) {
+              const urlList = JSON.parse(urlListStr);
+              const activeUrl = urlList.find(item => item.enabled);
+              setActiveScanUrl(activeUrl || null);
+              console.log('[ScannerScreen] Focus - Loaded active scan URL:', activeUrl?.name);
+            }
+          } else {
+            setActiveScanUrl(null);
+          }
         } catch (error) {
           console.error('Load barcode settings error:', error);
         }
@@ -419,10 +458,10 @@ function ScannerScreen() {
     }, [resetAll, clearAllTimers]),
   );
 
-  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null) => {
+  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null) => {
     try {
-      // 현재 선택된 그룹에 저장 (세션 그룹이면 세션 그룹에, 일반 그룹이면 일반 그룹에)
-      let selectedGroupId = currentGroupId;
+      // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
+      let selectedGroupId = targetGroupId || currentGroupId;
 
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
@@ -970,8 +1009,18 @@ function ScannerScreen() {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
               const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
-              // 히스토리 저장은 백그라운드에서
-              saveHistory(data, url, photoUri, normalizedType, detectedEcLevel).catch(console.error);
+
+              // 스캔 연동 URL 그룹 ID 찾기
+              let scanUrlGroupId = null;
+              if (activeScanUrl) {
+                scanUrlGroupId = `scan-url-${activeScanUrl.id}`;
+                // URL 전송 메시지 표시
+                setShowUrlSendMessage(true);
+                setTimeout(() => setShowUrlSendMessage(false), 1000);
+              }
+
+              // 히스토리 저장은 해당 URL 그룹에 저장
+              saveHistory(data, url, photoUri, normalizedType, detectedEcLevel, scanUrlGroupId).catch(console.error);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
@@ -1003,7 +1052,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -1013,9 +1062,15 @@ function ScannerScreen() {
     if (batchScannedItems.length === 0) return;
 
     try {
+      // 스캔 연동 URL이 활성화되어 있으면 해당 그룹에 저장
+      let targetGroupId = null;
+      if (scanUrlEnabled && activeScanUrl) {
+        targetGroupId = `scan-url-${activeScanUrl.id}`;
+      }
+
       // 모든 배치 항목을 히스토리에 저장
       for (const item of batchScannedItems) {
-        await saveHistory(item.code, null, item.photoUri, item.type, item.errorCorrectionLevel);
+        await saveHistory(item.code, null, item.photoUri, item.type, item.errorCorrectionLevel, targetGroupId);
       }
 
       // 배치 항목 초기화
@@ -1031,7 +1086,7 @@ function ScannerScreen() {
     } catch (error) {
       console.error('Finish batch error:', error);
     }
-  }, [batchScannedItems, saveHistory, router]);
+  }, [batchScannedItems, saveHistory, router, scanUrlEnabled, activeScanUrl]);
 
   // 배치 스캔 초기화
   const handleClearBatch = useCallback(() => {
@@ -1209,11 +1264,27 @@ function ScannerScreen() {
           </View>
         )}
 
+        {/* 스캔 연동 URL 표시 */}
+        {scanUrlEnabled && activeScanUrl && (
+          <View style={[styles.scanUrlBadge, { top: batchScanEnabled ? batchBadgeTop + 40 : batchBadgeTop }]}>
+            <Ionicons name="link" size={14} color="#fff" />
+            <Text style={styles.scanUrlBadgeText}>{activeScanUrl.name}</Text>
+          </View>
+        )}
+
         {/* 전송 메시지 (배치 + 실시간 전송 모드) */}
         {showSendMessage && (
           <View style={styles.sendMessageBadge}>
             <Ionicons name="cloud-upload" size={20} color="#fff" />
             <Text style={styles.sendMessageText}>{t('scanner.sending')}</Text>
+          </View>
+        )}
+
+        {/* URL 전송 메시지 */}
+        {showUrlSendMessage && (
+          <View style={[styles.sendMessageBadge, { backgroundColor: 'rgba(46, 125, 50, 0.95)' }]}>
+            <Ionicons name="link" size={20} color="#fff" />
+            <Text style={styles.sendMessageText}>{t('scanner.urlSending')}</Text>
           </View>
         )}
 
@@ -1464,6 +1535,27 @@ const styles = StyleSheet.create({
   batchModeBadgeText: {
     color: '#fff',
     fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  scanUrlBadge: {
+    position: 'absolute',
+    // top은 인라인 스타일로 동적 설정
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(46, 125, 50, 0.9)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  scanUrlBadgeText: {
+    color: '#fff',
+    fontSize: 12,
     fontWeight: '600',
     marginLeft: 6,
   },
