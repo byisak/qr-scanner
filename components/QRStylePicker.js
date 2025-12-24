@@ -198,20 +198,21 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
         <>
           {/* 색상 그리드 - 컬러피커 버튼 + 프리셋 색상 */}
           <View style={styles.colorGrid}>
-            {/* 컬러피커 버튼 (맨 앞) - 클릭시 모달 열림 */}
+            {/* 컬러피커 버튼 (맨 앞) - 알록달록한 무지개 원 */}
             <TouchableOpacity
-              style={[
-                styles.colorPickerIconButton,
-                {
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                  backgroundColor: colors.inputBackground,
-                },
-              ]}
+              style={styles.rainbowPickerButton}
               onPress={() => setShowColorPicker(true)}
               activeOpacity={0.7}
             >
-              <Ionicons name="color-palette" size={24} color={colors.primary} />
+              <View style={styles.rainbowOuter}>
+                <View style={[styles.rainbowQuarter, styles.rainbowTopLeft, { backgroundColor: '#FF3B30' }]} />
+                <View style={[styles.rainbowQuarter, styles.rainbowTopRight, { backgroundColor: '#FFCC00' }]} />
+                <View style={[styles.rainbowQuarter, styles.rainbowBottomLeft, { backgroundColor: '#AF52DE' }]} />
+                <View style={[styles.rainbowQuarter, styles.rainbowBottomRight, { backgroundColor: '#34C759' }]} />
+                <View style={styles.rainbowInner}>
+                  <Ionicons name="add" size={16} color="#666" />
+                </View>
+              </View>
             </TouchableOpacity>
 
             {/* 프리셋 색상들 */}
@@ -1106,6 +1107,55 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rainbowPickerButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rainbowOuter: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  rainbowQuarter: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+  },
+  rainbowTopLeft: {
+    top: 0,
+    left: 0,
+    borderTopLeftRadius: 22,
+  },
+  rainbowTopRight: {
+    top: 0,
+    right: 0,
+    borderTopRightRadius: 22,
+  },
+  rainbowBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomLeftRadius: 22,
+  },
+  rainbowBottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomRightRadius: 22,
+  },
+  rainbowInner: {
+    position: 'absolute',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    top: 10,
+    left: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
