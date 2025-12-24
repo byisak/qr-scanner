@@ -74,7 +74,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "serverUrl": "http://138.2.58.102:3000",
+      "serverUrl": "https://tidy-spiders-crash.loca.lt",
       "kakao": {
         "nativeAppKey": "YOUR_KAKAO_NATIVE_APP_KEY"
       },
