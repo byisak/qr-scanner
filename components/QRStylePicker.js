@@ -20,6 +20,40 @@ import { Colors } from '../constants/Colors';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
 
+// SwiftUI ColorPicker (iOS only)
+let Host, SwiftUIColorPicker;
+if (Platform.OS === 'ios') {
+  try {
+    const SwiftUI = require('@expo/ui/swift-ui');
+    Host = SwiftUI.Host;
+    SwiftUIColorPicker = SwiftUI.ColorPicker;
+  } catch (e) {
+    console.log('SwiftUI ColorPicker not available:', e.message);
+  }
+}
+
+// Hex to RGBA 변환
+function hexToRgba(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (result) {
+    return {
+      red: parseInt(result[1], 16) / 255,
+      green: parseInt(result[2], 16) / 255,
+      blue: parseInt(result[3], 16) / 255,
+      alpha: 1,
+    };
+  }
+  return { red: 0, green: 0, blue: 0, alpha: 1 };
+}
+
+// RGBA to Hex 변환
+function rgbaToHex(rgba) {
+  const r = Math.round(rgba.red * 255);
+  const g = Math.round(rgba.green * 255);
+  const b = Math.round(rgba.blue * 255);
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
 // 프리셋 색상 팔레트
 const COLOR_PRESETS = [
   '#000000', '#FFFFFF', '#007AFF', '#34C759', '#FF3B30',
@@ -167,24 +201,46 @@ export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
   const [hexInput, setHexInput] = useState(color || '#000000');
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [rgbaColor, setRgbaColor] = useState(hexToRgba(color || '#000000'));
+
+  const isSwiftUIAvailable = Platform.OS === 'ios' && Host && SwiftUIColorPicker;
 
   useEffect(() => {
     setHexInput(color || '#000000');
+    setRgbaColor(hexToRgba(color || '#000000'));
   }, [color]);
 
   const handleHexChange = (text) => {
     setHexInput(text);
     if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
       onColorChange(text);
+      setRgbaColor(hexToRgba(text));
     }
   };
 
   const handleHexSubmit = () => {
     if (/^#[0-9A-Fa-f]{6}$/.test(hexInput)) {
       onColorChange(hexInput);
+      setRgbaColor(hexToRgba(hexInput));
     } else if (/^[0-9A-Fa-f]{6}$/.test(hexInput)) {
       onColorChange('#' + hexInput);
       setHexInput('#' + hexInput);
+      setRgbaColor(hexToRgba('#' + hexInput));
+    }
+  };
+
+  const handleSwiftUIColorChange = (newRgba) => {
+    setRgbaColor(newRgba);
+    const hexColor = rgbaToHex(newRgba);
+    setHexInput(hexColor);
+    onColorChange(hexColor);
+  };
+
+  const handlePalettePress = () => {
+    if (isSwiftUIAvailable) {
+      setShowColorPicker(!showColorPicker);
+    } else {
+      setShowColorPicker(true);
     }
   };
 
@@ -221,7 +277,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
           <View style={styles.hexInputRow}>
             <TouchableOpacity
               style={[styles.colorPreviewSmall, { backgroundColor: color }]}
-              onPress={() => setShowColorPicker(true)}
+              onPress={handlePalettePress}
             />
             <TextInput
               style={[styles.hexInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground }]}
@@ -234,12 +290,25 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
               maxLength={7}
             />
             <TouchableOpacity
-              style={[styles.colorPickerButton, { backgroundColor: colors.primary }]}
-              onPress={() => setShowColorPicker(true)}
+              style={[styles.colorPickerButton, { backgroundColor: showColorPicker && isSwiftUIAvailable ? colors.primary : colors.primary }]}
+              onPress={handlePalettePress}
             >
               <Ionicons name="color-palette" size={20} color="#fff" />
             </TouchableOpacity>
           </View>
+
+          {/* SwiftUI ColorPicker (iOS - 인라인) */}
+          {isSwiftUIAvailable && showColorPicker && (
+            <View style={styles.swiftUIPickerInline}>
+              <Host style={styles.swiftUIHostInline}>
+                <SwiftUIColorPicker
+                  label=""
+                  selection={rgbaColor}
+                  onValueChanged={handleSwiftUIColorChange}
+                />
+              </Host>
+            </View>
+          )}
 
           {/* 프리셋 색상 */}
           <View style={styles.colorGrid}>
@@ -257,23 +326,26 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
                 onPress={() => {
                   onColorChange(presetColor);
                   setHexInput(presetColor);
+                  setRgbaColor(hexToRgba(presetColor));
                 }}
                 activeOpacity={0.7}
               />
             ))}
           </View>
 
-          {/* 네이티브 컬러 피커 */}
-          <NativeColorPicker
-            visible={showColorPicker}
-            onClose={() => setShowColorPicker(false)}
-            color={color}
-            onColorChange={(newColor) => {
-              onColorChange(newColor);
-              setHexInput(newColor);
-            }}
-            colors={colors}
-          />
+          {/* 네이티브 컬러 피커 (Android용 또는 SwiftUI 미지원시 fallback) */}
+          {!isSwiftUIAvailable && (
+            <NativeColorPicker
+              visible={showColorPicker}
+              onClose={() => setShowColorPicker(false)}
+              color={color}
+              onColorChange={(newColor) => {
+                onColorChange(newColor);
+                setHexInput(newColor);
+              }}
+              colors={colors}
+            />
+          )}
         </>
       ) : (
         <>
@@ -1204,6 +1276,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  swiftUIPickerInline: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  swiftUIHostInline: {
+    width: '100%',
+    height: 50,
   },
   // Logo Picker Styles
   logoSection: {
