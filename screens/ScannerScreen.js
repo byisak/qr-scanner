@@ -63,7 +63,7 @@ function ScannerScreen() {
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true); // 스캔 소리 활성화 여부
-  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 사진 저장 활성화 여부
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 사진 저장 활성화 여부 (기본값: 켬)
   const [batchScanEnabled, setBatchScanEnabled] = useState(false); // 배치 스캔 모드 활성화 여부
   const [batchScannedItems, setBatchScannedItems] = useState([]); // 배치로 스캔된 항목들
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
@@ -104,7 +104,7 @@ function ScannerScreen() {
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
   const cameraRef = useRef(null);
-  const photoSaveEnabledRef = useRef(false); // ref로 관리하여 함수 재생성 방지
+  const photoSaveEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지 (기본값: 켬)
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
@@ -176,9 +176,8 @@ function ScannerScreen() {
         }
 
         const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
-        if (photoSave !== null) {
-          setPhotoSaveEnabled(photoSave === 'true');
-        }
+        // null이면 기본값 true 유지, 저장된 값이 있으면 해당 값 사용
+        setPhotoSaveEnabled(photoSave === null ? true : photoSave === 'true');
 
         const batchScan = await AsyncStorage.getItem('batchScanEnabled');
         if (batchScan !== null) {
@@ -328,9 +327,7 @@ function ScannerScreen() {
           }
 
           const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
-          if (photoSave !== null) {
-            setPhotoSaveEnabled(photoSave === 'true');
-          }
+          setPhotoSaveEnabled(photoSave === null ? true : photoSave === 'true');
 
           const batchScan = await AsyncStorage.getItem('batchScanEnabled');
           if (batchScan !== null) {

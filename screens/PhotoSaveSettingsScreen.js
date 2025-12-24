@@ -30,16 +30,14 @@ export default function PhotoSaveSettingsScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
-  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
   const [selectedQuality, setSelectedQuality] = useState('0.8');
 
   useEffect(() => {
     (async () => {
       try {
         const enabled = await AsyncStorage.getItem('photoSaveEnabled');
-        if (enabled !== null) {
-          setPhotoSaveEnabled(enabled === 'true');
-        }
+        setPhotoSaveEnabled(enabled === null ? true : enabled === 'true');
 
         const quality = await AsyncStorage.getItem('photoQuality');
         if (quality !== null) {

@@ -39,7 +39,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
-  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
   const [batchScanEnabled, setBatchScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
@@ -84,9 +84,8 @@ export default function SettingsScreen() {
           setScanSoundEnabled(ss === 'true');
         }
 
-        if (p !== null) {
-          setPhotoSaveEnabled(p === 'true');
-        }
+        // null이면 기본값 true 유지
+        setPhotoSaveEnabled(p === null ? true : p === 'true');
 
         if (bs !== null) {
           setBatchScanEnabled(bs === 'true');
@@ -155,9 +154,7 @@ export default function SettingsScreen() {
 
           // 사진 저장 설정 로드
           const p = await AsyncStorage.getItem('photoSaveEnabled');
-          if (p !== null) {
-            setPhotoSaveEnabled(p === 'true');
-          }
+          setPhotoSaveEnabled(p === null ? true : p === 'true');
 
           const q = await AsyncStorage.getItem('photoQuality');
           if (q !== null) {
