@@ -2429,7 +2429,7 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 2,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
     gap: 8,
     minWidth: 100,
