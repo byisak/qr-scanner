@@ -154,19 +154,11 @@ const getWebViewHTML = (zxingScript) => `
 
       sendLog('Analysis complete, found ' + barcodes.length + ' codes');
 
-      // 결과 처리
+      // 결과 처리 - 전체 원본 데이터 저장
       var processedResults = barcodes.map(function(barcode, index) {
-        return {
-          id: index,
-          text: barcode.text,
-          format: barcode.format,
-          position: barcode.position ? {
-            topLeft: barcode.position.topLeft,
-            topRight: barcode.position.topRight,
-            bottomRight: barcode.position.bottomRight,
-            bottomLeft: barcode.position.bottomLeft,
-          } : null,
-        };
+        // 전체 barcode 객체를 복사하고 id 추가
+        var result = Object.assign({}, barcode, { id: index });
+        return result;
       });
 
       sendResults(processedResults);
@@ -527,7 +519,7 @@ function ImageAnalysisScreen() {
     }
   };
 
-  // 전체 JSON 다운로드
+  // 전체 JSON 다운로드 - ZXing WASM 원본 데이터 전체
   const handleDownloadAllJson = async () => {
     if (results.length === 0) return;
 
@@ -535,12 +527,14 @@ function ImageAnalysisScreen() {
       const jsonData = {
         analysisDate: new Date().toISOString(),
         totalCount: results.length,
-        results: results.map((result, index) => ({
-          index: index + 1,
-          text: result.text,
-          format: result.format,
-          position: result.position,
-        })),
+        results: results.map((result, index) => {
+          // 전체 원본 데이터 복사 (id 제외하고 index 추가)
+          const { id, ...rawData } = result;
+          return {
+            index: index + 1,
+            ...rawData,
+          };
+        }),
       };
 
       const jsonString = JSON.stringify(jsonData, null, 2);
@@ -575,15 +569,15 @@ function ImageAnalysisScreen() {
     }
   };
 
-  // 개별 JSON 다운로드
+  // 개별 JSON 다운로드 - ZXing WASM 원본 데이터 전체
   const handleDownloadSingleJson = async (result, index) => {
     try {
+      // 전체 원본 데이터 복사 (id 제외하고 index와 analysisDate 추가)
+      const { id, ...rawData } = result;
       const jsonData = {
         index: index + 1,
-        text: result.text,
-        format: result.format,
-        position: result.position,
         analysisDate: new Date().toISOString(),
+        ...rawData,
       };
 
       const jsonString = JSON.stringify(jsonData, null, 2);
