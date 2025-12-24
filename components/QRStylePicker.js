@@ -14,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
@@ -204,19 +205,19 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
               onPress={() => setShowColorPicker(true)}
               activeOpacity={0.7}
             >
-              <View style={styles.colorWheelOuter}>
-                {/* 8개 색상 세그먼트 */}
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#E74C3C', top: 0, left: 14, width: 16, height: 22 }]} />
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#E67E22', top: 3, right: 3, width: 18, height: 18, borderTopRightRadius: 22 }]} />
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#F1C40F', top: 14, right: 0, width: 22, height: 16 }]} />
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#2ECC71', bottom: 3, right: 3, width: 18, height: 18, borderBottomRightRadius: 22 }]} />
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#1ABC9C', bottom: 0, left: 14, width: 16, height: 22 }]} />
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#3498DB', bottom: 3, left: 3, width: 18, height: 18, borderBottomLeftRadius: 22 }]} />
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#9B59B6', top: 14, left: 0, width: 22, height: 16 }]} />
-                <View style={[styles.colorWheelSegment, { backgroundColor: '#E91E63', top: 3, left: 3, width: 18, height: 18, borderTopLeftRadius: 22 }]} />
+              <Svg width={44} height={44} viewBox="0 0 100 100">
+                {/* 8개 색상 세그먼트 - 원형 파이 조각 */}
+                <Path d="M50 50 L50 10 A40 40 0 0 1 78.28 21.72 Z" fill="#EC4899" />
+                <Path d="M50 50 L78.28 21.72 A40 40 0 0 1 90 50 Z" fill="#EF4444" />
+                <Path d="M50 50 L90 50 A40 40 0 0 1 78.28 78.28 Z" fill="#F97316" />
+                <Path d="M50 50 L78.28 78.28 A40 40 0 0 1 50 90 Z" fill="#EAB308" />
+                <Path d="M50 50 L50 90 A40 40 0 0 1 21.72 78.28 Z" fill="#22C55E" />
+                <Path d="M50 50 L21.72 78.28 A40 40 0 0 1 10 50 Z" fill="#14B8A6" />
+                <Path d="M50 50 L10 50 A40 40 0 0 1 21.72 21.72 Z" fill="#3B82F6" />
+                <Path d="M50 50 L21.72 21.72 A40 40 0 0 1 50 10 Z" fill="#8B5CF6" />
                 {/* 중앙 원 */}
-                <View style={styles.colorWheelCenter} />
-              </View>
+                <Circle cx="50" cy="50" r="18" fill="#FEF3C7" />
+              </Svg>
             </TouchableOpacity>
 
             {/* 프리셋 색상들 */}
@@ -1120,26 +1121,6 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  colorWheelOuter: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#DDD',
-  },
-  colorWheelSegment: {
-    position: 'absolute',
-  },
-  colorWheelCenter: {
-    position: 'absolute',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#FDF6E3',
-    top: 13,
-    left: 13,
   },
   swiftUIColorPickerHost: {
     width: 44,
