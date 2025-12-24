@@ -1667,17 +1667,17 @@ export default function GeneratorScreen() {
                         {t('generator.barcodeWidth') || '너비'}
                       </Text>
                     </View>
-                    <View style={[s.segmentControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       {[1, 2, 3, 4, 5].map((val) => (
                         <TouchableOpacity
                           key={`scale-${val}`}
                           style={[
-                            s.segmentButton,
+                            s.barcodeOptionBtn,
                             barcodeSettings.scale === val && { backgroundColor: colors.primary },
                           ]}
                           onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
                         >
-                          <Text style={[s.segmentText, { color: barcodeSettings.scale === val ? '#fff' : colors.text }]}>
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.scale === val ? '#fff' : colors.text }]}>
                             {val}x
                           </Text>
                         </TouchableOpacity>
@@ -1695,17 +1695,17 @@ export default function GeneratorScreen() {
                         {t('generator.barcodeHeight') || '높이'}
                       </Text>
                     </View>
-                    <View style={[s.segmentControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       {[40, 60, 80, 100, 120].map((val) => (
                         <TouchableOpacity
                           key={`height-${val}`}
                           style={[
-                            s.segmentButton,
+                            s.barcodeOptionBtn,
                             barcodeSettings.height === val && { backgroundColor: colors.primary },
                           ]}
                           onPress={() => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
                         >
-                          <Text style={[s.segmentText, { color: barcodeSettings.height === val ? '#fff' : colors.text }]}>
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.height === val ? '#fff' : colors.text }]}>
                             {val}
                           </Text>
                         </TouchableOpacity>
@@ -1756,17 +1756,17 @@ export default function GeneratorScreen() {
                         {t('generator.barcodeFontSize') || '글자 크기'}
                       </Text>
                     </View>
-                    <View style={[s.segmentControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       {[10, 12, 14, 16, 18].map((val) => (
                         <TouchableOpacity
                           key={`font-${val}`}
                           style={[
-                            s.segmentButton,
+                            s.barcodeOptionBtn,
                             barcodeSettings.fontSize === val && { backgroundColor: colors.primary },
                           ]}
                           onPress={() => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
                         >
-                          <Text style={[s.segmentText, { color: barcodeSettings.fontSize === val ? '#fff' : colors.text }]}>
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.fontSize === val ? '#fff' : colors.text }]}>
                             {val}
                           </Text>
                         </TouchableOpacity>
@@ -1810,7 +1810,7 @@ export default function GeneratorScreen() {
                         {t('generator.barcodeRotate') || '회전'}
                       </Text>
                     </View>
-                    <View style={[s.segmentControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       {[
                         { value: 'N', label: '0°' },
                         { value: 'R', label: '90°' },
@@ -1820,12 +1820,12 @@ export default function GeneratorScreen() {
                         <TouchableOpacity
                           key={`rotate-${item.value}`}
                           style={[
-                            s.segmentButton,
+                            s.barcodeOptionBtn,
                             barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
                           ]}
                           onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
                         >
-                          <Text style={[s.segmentText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
                             {item.label}
                           </Text>
                         </TouchableOpacity>
@@ -2403,14 +2403,14 @@ const s = StyleSheet.create({
     marginVertical: 14,
     opacity: 0.5,
   },
-  segmentControl: {
+  barcodeOptionControl: {
     flexDirection: 'row',
     borderRadius: 10,
     borderWidth: 1,
     padding: 3,
     gap: 2,
   },
-  segmentButton: {
+  barcodeOptionBtn: {
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -2418,7 +2418,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 40,
   },
-  segmentText: {
+  barcodeOptionText: {
     fontSize: 13,
     fontWeight: '600',
   },
