@@ -557,7 +557,7 @@ export default function QRStylePicker({
     <View style={styles.optionSection}>
       {/* Background Color */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        배경 설정 (Background)
+        배경 색상
       </Text>
 
       <ColorPickerSection
@@ -576,12 +576,14 @@ export default function QRStylePicker({
         }}
         colors={colors}
       />
+    </View>
+  );
 
-      <View style={styles.sectionDivider} />
-
+  const renderSettingsOptions = () => (
+    <View style={styles.optionSection}>
       {/* QR Size */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        크기 설정 (Size)
+        크기 설정
       </Text>
 
       <View style={styles.stepperContainer}>
@@ -650,14 +652,11 @@ export default function QRStylePicker({
 
       <View style={styles.sectionDivider} />
 
-      {/* QR Options */}
+      {/* Error Correction Level */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        QR 옵션
+        오류 보정 레벨
       </Text>
 
-      <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.errorCorrection') || '오류 보정 레벨'}
-      </Text>
       <View style={styles.optionRow}>
         {['L', 'M', 'Q', 'H'].map((level) => (
           <TouchableOpacity
@@ -814,6 +813,7 @@ export default function QRStylePicker({
     { id: 'corners', label: t('generator.qrStyle.corners') || '코너', icon: 'scan-outline' },
     { id: 'background', label: '배경', icon: 'image-outline' },
     { id: 'image', label: '이미지', icon: 'images-outline' },
+    { id: 'settings', label: '설정', icon: 'settings-outline' },
   ];
 
   return (
@@ -896,6 +896,7 @@ export default function QRStylePicker({
           {activeTab === 'corners' && renderCornerOptions()}
           {activeTab === 'background' && renderBackgroundOptions()}
           {activeTab === 'image' && renderImageOptions()}
+          {activeTab === 'settings' && renderSettingsOptions()}
         </ScrollView>
       </View>
     </Modal>
