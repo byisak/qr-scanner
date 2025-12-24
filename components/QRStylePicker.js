@@ -198,20 +198,24 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
         <>
           {/* 색상 그리드 - 컬러피커 버튼 + 프리셋 색상 */}
           <View style={styles.colorGrid}>
-            {/* 컬러피커 버튼 (맨 앞) - 알록달록한 무지개 원 */}
+            {/* 컬러피커 버튼 (맨 앞) - 컬러 휠 아이콘 */}
             <TouchableOpacity
               style={styles.rainbowPickerButton}
               onPress={() => setShowColorPicker(true)}
               activeOpacity={0.7}
             >
-              <View style={styles.rainbowOuter}>
-                <View style={[styles.rainbowQuarter, styles.rainbowTopLeft, { backgroundColor: '#FF3B30' }]} />
-                <View style={[styles.rainbowQuarter, styles.rainbowTopRight, { backgroundColor: '#FFCC00' }]} />
-                <View style={[styles.rainbowQuarter, styles.rainbowBottomLeft, { backgroundColor: '#AF52DE' }]} />
-                <View style={[styles.rainbowQuarter, styles.rainbowBottomRight, { backgroundColor: '#34C759' }]} />
-                <View style={styles.rainbowInner}>
-                  <Ionicons name="add" size={16} color="#666" />
-                </View>
+              <View style={styles.colorWheelOuter}>
+                {/* 8개 색상 세그먼트 */}
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#E74C3C', top: 0, left: 14, width: 16, height: 22 }]} />
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#E67E22', top: 3, right: 3, width: 18, height: 18, borderTopRightRadius: 22 }]} />
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#F1C40F', top: 14, right: 0, width: 22, height: 16 }]} />
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#2ECC71', bottom: 3, right: 3, width: 18, height: 18, borderBottomRightRadius: 22 }]} />
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#1ABC9C', bottom: 0, left: 14, width: 16, height: 22 }]} />
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#3498DB', bottom: 3, left: 3, width: 18, height: 18, borderBottomLeftRadius: 22 }]} />
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#9B59B6', top: 14, left: 0, width: 22, height: 16 }]} />
+                <View style={[styles.colorWheelSegment, { backgroundColor: '#E91E63', top: 3, left: 3, width: 18, height: 18, borderTopLeftRadius: 22 }]} />
+                {/* 중앙 원 */}
+                <View style={styles.colorWheelCenter} />
               </View>
             </TouchableOpacity>
 
@@ -1116,48 +1120,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  rainbowOuter: {
+  colorWheelOuter: {
     width: 44,
     height: 44,
     borderRadius: 22,
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#DDD',
   },
-  rainbowQuarter: {
+  colorWheelSegment: {
     position: 'absolute',
-    width: 22,
-    height: 22,
   },
-  rainbowTopLeft: {
-    top: 0,
-    left: 0,
-    borderTopLeftRadius: 22,
-  },
-  rainbowTopRight: {
-    top: 0,
-    right: 0,
-    borderTopRightRadius: 22,
-  },
-  rainbowBottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderBottomLeftRadius: 22,
-  },
-  rainbowBottomRight: {
-    bottom: 0,
-    right: 0,
-    borderBottomRightRadius: 22,
-  },
-  rainbowInner: {
+  colorWheelCenter: {
     position: 'absolute',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    top: 10,
-    left: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FDF6E3',
+    top: 13,
+    left: 13,
   },
   swiftUIColorPickerHost: {
     width: 44,
