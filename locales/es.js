@@ -360,6 +360,7 @@ export default {
     cannotDeleteDefault: 'No se puede eliminar el grupo predeterminado.',
     emptyName: 'Por favor, ingresa un nombre de grupo.',
     selectGroup: 'Seleccionar grupo',
+    dragToReorder: 'Mantén presionado ≡ para reordenar',
   },
 
   // Pantalla de exportar historial

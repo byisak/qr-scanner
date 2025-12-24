@@ -1,5 +1,5 @@
 // screens/GroupEditScreen.js - 그룹 편집 화면
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,15 +8,17 @@ import {
   TextInput,
   Alert,
   Modal,
-  ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback } from 'react';
+import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import config from '../config/config';
 
 const DEFAULT_GROUP_ID = 'default';
@@ -26,6 +28,7 @@ export default function GroupEditScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
+  const insets = useSafeAreaInsets();
 
   const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -230,17 +233,88 @@ export default function GroupEditScreen() {
     setShowEditModal(false);
   };
 
-  // 그룹 순서 변경
-  const moveGroup = async (fromIndex, toIndex) => {
-    if (toIndex < 0 || toIndex >= groups.length) return;
-
-    const updatedGroups = [...groups];
-    const [movedItem] = updatedGroups.splice(fromIndex, 1);
-    updatedGroups.splice(toIndex, 0, movedItem);
-
-    setGroups(updatedGroups);
-    await saveGroups(updatedGroups);
+  // 드래그로 그룹 순서 변경
+  const handleDragEnd = async ({ data }) => {
+    setGroups(data);
+    await saveGroups(data);
   };
+
+  // 그룹 아이템 렌더링
+  const renderItem = useCallback(({ item, drag, isActive }) => {
+    return (
+      <ScaleDecorator>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onLongPress={drag}
+          disabled={isActive}
+          style={[
+            s.groupItem,
+            { backgroundColor: colors.surface },
+            isActive && { shadowOpacity: 0.3, elevation: 8 }
+          ]}
+        >
+          {/* 드래그 핸들 */}
+          <TouchableOpacity
+            onPressIn={drag}
+            style={s.dragHandle}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="menu" size={22} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          <View style={s.groupInfo}>
+            {item.isCloudSync && (
+              <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+            )}
+            {item.isScanUrlGroup && (
+              <Ionicons name="link" size={18} color={colors.success} style={{ marginRight: 8 }} />
+            )}
+            <Text style={[s.groupName, { color: colors.text }]}>{item.name}</Text>
+            {item.id === DEFAULT_GROUP_ID && (
+              <View style={[s.badge, { backgroundColor: colors.primary + '20' }]}>
+                <Text style={[s.badgeText, { color: colors.primary }]}>
+                  {t('groupEdit.defaultGroup').split(' ')[0] || '기본'}
+                </Text>
+              </View>
+            )}
+            {item.isCloudSync && (
+              <View style={[s.badge, { backgroundColor: colors.primary, marginLeft: 6 }]}>
+                <Text style={[s.badgeText, { color: '#fff' }]}>Cloud</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={s.groupActions}>
+            {/* 이름 변경 버튼 */}
+            <TouchableOpacity
+              style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+              onPress={() => openEditModal(item)}
+              disabled={item.id === DEFAULT_GROUP_ID}
+            >
+              <Ionicons
+                name="create-outline"
+                size={22}
+                color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.primary}
+              />
+            </TouchableOpacity>
+
+            {/* 삭제 버튼 */}
+            <TouchableOpacity
+              style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+              onPress={() => deleteGroup(item.id)}
+              disabled={item.id === DEFAULT_GROUP_ID}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={22}
+                color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.error}
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </ScaleDecorator>
+    );
+  }, [colors, t]);
 
   // 그룹 이름 변경 모달 열기
   const openEditModal = (group) => {
@@ -249,109 +323,44 @@ export default function GroupEditScreen() {
     setShowEditModal(true);
   };
 
+  const headerPaddingTop = Platform.OS === 'ios' ? 60 : insets.top + 10;
+
   return (
-    <View style={[s.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={s.backButton}
-          onPress={() => router.back()}
-          accessibilityLabel={t('common.back')}
-        >
-          <Ionicons name="arrow-back" size={28} color={colors.primary} />
-        </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.text }]}>{t('groupEdit.title')}</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      {/* 그룹 목록 */}
-      <ScrollView style={s.listContainer} contentContainerStyle={s.listContent}>
-        {groups.map((item, index) => (
-          <View
-            key={item.id}
-            style={[s.groupItem, { backgroundColor: colors.surface }]}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={[s.container, { backgroundColor: colors.background }]}>
+        {/* 헤더 */}
+        <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: headerPaddingTop }]}>
+          <TouchableOpacity
+            style={s.backButton}
+            onPress={() => router.back()}
+            accessibilityLabel={t('common.back')}
           >
-            <View style={s.groupInfo}>
-              {item.isCloudSync && (
-                <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-              )}
-              <Text style={[s.groupName, { color: colors.text }]}>{item.name}</Text>
-              {item.id === DEFAULT_GROUP_ID && (
-                <View style={[s.badge, { backgroundColor: colors.primary + '20' }]}>
-                  <Text style={[s.badgeText, { color: colors.primary }]}>
-                    {t('groupEdit.defaultGroup').split(' ')[0] || '기본'}
-                  </Text>
-                </View>
-              )}
-              {item.isCloudSync && (
-                <View style={[s.badge, { backgroundColor: colors.primary, marginLeft: 6 }]}>
-                  <Text style={[s.badgeText, { color: '#fff' }]}>Cloud</Text>
-                </View>
-              )}
-            </View>
+            <Ionicons name="arrow-back" size={28} color={colors.primary} />
+          </TouchableOpacity>
+          <Text style={[s.headerTitle, { color: colors.text }]}>{t('groupEdit.title')}</Text>
+          <View style={{ width: 28 }} />
+        </View>
 
-            <View style={s.groupActions}>
-              {/* 순서 변경 버튼 */}
-              <View style={s.reorderButtons}>
-                <TouchableOpacity
-                  style={[s.reorderButton, index === 0 && s.iconButtonDisabled]}
-                  onPress={() => moveGroup(index, index - 1)}
-                  disabled={index === 0}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons
-                    name="chevron-up"
-                    size={20}
-                    color={index === 0 ? colors.borderLight : colors.textSecondary}
-                  />
-                </TouchableOpacity>
+        {/* 드래그 안내 문구 */}
+        <View style={[s.dragHint, { backgroundColor: colors.inputBackground }]}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
+          <Text style={[s.dragHintText, { color: colors.textSecondary }]}>
+            {t('groupEdit.dragToReorder') || '≡ 아이콘을 길게 눌러 순서를 변경하세요'}
+          </Text>
+        </View>
 
-                <TouchableOpacity
-                  style={[s.reorderButton, index === groups.length - 1 && s.iconButtonDisabled]}
-                  onPress={() => moveGroup(index, index + 1)}
-                  disabled={index === groups.length - 1}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons
-                    name="chevron-down"
-                    size={20}
-                    color={index === groups.length - 1 ? colors.borderLight : colors.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
+        {/* 그룹 목록 (드래그 가능) */}
+        <DraggableFlatList
+          data={groups}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          onDragEnd={handleDragEnd}
+          contentContainerStyle={s.listContent}
+          activationDistance={10}
+        />
 
-              {/* 이름 변경 버튼 */}
-              <TouchableOpacity
-                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
-                onPress={() => openEditModal(item)}
-                disabled={item.id === DEFAULT_GROUP_ID}
-              >
-                <Ionicons
-                  name="create-outline"
-                  size={22}
-                  color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.primary}
-                />
-              </TouchableOpacity>
-
-              {/* 삭제 버튼 */}
-              <TouchableOpacity
-                style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
-                onPress={() => deleteGroup(item.id)}
-                disabled={item.id === DEFAULT_GROUP_ID}
-              >
-                <Ionicons
-                  name="trash-outline"
-                  size={22}
-                  color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.error}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* 그룹 추가 버튼 */}
-      <View style={[s.addButtonContainer, { backgroundColor: colors.background }]}>
+        {/* 그룹 추가 버튼 */}
+        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 20 }]}>
         <TouchableOpacity
           style={[s.addButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowAddModal(true)}
@@ -447,7 +456,8 @@ export default function GroupEditScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -460,7 +470,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
@@ -471,8 +480,15 @@ const s = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  listContainer: {
-    flex: 1,
+  dragHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  dragHintText: {
+    fontSize: 13,
   },
   listContent: {
     padding: 15,
@@ -482,7 +498,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    paddingLeft: 16,
+    paddingLeft: 8,
     borderRadius: 14,
     marginBottom: 10,
     elevation: 2,
@@ -490,6 +506,10 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+  },
+  dragHandle: {
+    padding: 8,
+    marginRight: 4,
   },
   groupInfo: {
     flex: 1,
@@ -514,14 +534,6 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-  },
-  reorderButtons: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginRight: 4,
-  },
-  reorderButton: {
-    padding: 2,
   },
   iconButton: {
     padding: 8,

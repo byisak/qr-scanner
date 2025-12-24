@@ -361,6 +361,7 @@ export default {
     cannotDeleteDefault: 'Cannot delete default group.',
     emptyName: 'Please enter a group name.',
     selectGroup: 'Select Group',
+    dragToReorder: 'Hold ≡ icon to reorder',
   },
 
   // Export history screen

@@ -360,6 +360,7 @@ export default {
     cannotDeleteDefault: 'デフォルトグループは削除できません。',
     emptyName: 'グループ名を入力してください。',
     selectGroup: 'グループを選択',
+    dragToReorder: '≡アイコンを長押しして順序を変更',
   },
 
   // エクスポート画面

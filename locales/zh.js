@@ -360,6 +360,7 @@ export default {
     cannotDeleteDefault: '无法删除默认分组。',
     emptyName: '请输入分组名称。',
     selectGroup: '选择分组',
+    dragToReorder: '长按≡图标可调整顺序',
   },
 
   // 导出界面

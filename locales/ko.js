@@ -361,6 +361,7 @@ export default {
     cannotDeleteDefault: '기본 그룹은 삭제할 수 없습니다.',
     emptyName: '그룹 이름을 입력해주세요.',
     selectGroup: '그룹 선택',
+    dragToReorder: '≡ 아이콘을 길게 눌러 순서를 변경하세요',
   },
 
   // 내보내기 화면
