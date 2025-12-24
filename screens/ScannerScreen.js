@@ -27,6 +27,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,6 +46,8 @@ const RESET_DELAY_NORMAL = 800;
 function ScannerScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
@@ -1424,15 +1428,15 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="folder" size={24} color="#007AFF" />
-              <Text style={styles.modalTitle}>{t('groupEdit.selectGroup')}</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Ionicons name="folder" size={24} color={colors.primary} />
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
               <TouchableOpacity
                 onPress={() => setGroupModalVisible(false)}
                 style={styles.modalCloseButton}
               >
-                <Ionicons name="close" size={24} color="#8E8E93" />
+                <Ionicons name="close" size={24} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.groupList}>
@@ -1441,27 +1445,29 @@ function ScannerScreen() {
                   key={group.id}
                   style={[
                     styles.groupItem,
-                    currentGroupId === group.id && styles.groupItemActive
+                    { backgroundColor: colors.inputBackground },
+                    currentGroupId === group.id && [styles.groupItemActive, { borderColor: colors.primary }]
                   ]}
                   onPress={() => handleSelectGroup(group.id, group.name, group.isCloudSync, group.isScanUrlGroup, group.scanUrlId)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.groupItemContent}>
                     {group.isCloudSync && (
-                      <Ionicons name="cloud" size={18} color="#007AFF" style={{ marginRight: 8 }} />
+                      <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
                     )}
                     {group.isScanUrlGroup && (
-                      <Ionicons name="link" size={18} color="#2E7D32" style={{ marginRight: 8 }} />
+                      <Ionicons name="link" size={18} color={colors.success} style={{ marginRight: 8 }} />
                     )}
                     <Text style={[
                       styles.groupItemText,
-                      currentGroupId === group.id && styles.groupItemTextActive
+                      { color: colors.text },
+                      currentGroupId === group.id && { color: colors.primary }
                     ]}>
                       {group.name}
                     </Text>
                   </View>
                   {currentGroupId === group.id && (
-                    <Ionicons name="checkmark" size={24} color="#007AFF" />
+                    <Ionicons name="checkmark" size={24} color={colors.primary} />
                   )}
                 </TouchableOpacity>
               ))}
