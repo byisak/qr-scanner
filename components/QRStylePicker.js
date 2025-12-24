@@ -20,6 +20,40 @@ import { Colors } from '../constants/Colors';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
 
+// SwiftUI ColorPicker (iOS only)
+let Host, SwiftUIColorPicker;
+if (Platform.OS === 'ios') {
+  try {
+    const SwiftUI = require('@expo/ui/swift-ui');
+    Host = SwiftUI.Host;
+    SwiftUIColorPicker = SwiftUI.ColorPicker;
+  } catch (e) {
+    console.log('SwiftUI ColorPicker not available:', e.message);
+  }
+}
+
+// Hex to RGBA 변환
+function hexToRgba(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (result) {
+    return {
+      red: parseInt(result[1], 16) / 255,
+      green: parseInt(result[2], 16) / 255,
+      blue: parseInt(result[3], 16) / 255,
+      alpha: 1,
+    };
+  }
+  return { red: 0, green: 0, blue: 0, alpha: 1 };
+}
+
+// RGBA to Hex 변환
+function rgbaToHex(rgba) {
+  const r = Math.round(rgba.red * 255);
+  const g = Math.round(rgba.green * 255);
+  const b = Math.round(rgba.blue * 255);
+  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
 // 프리셋 색상 팔레트
 const COLOR_PRESETS = [
   '#000000', '#FFFFFF', '#007AFF', '#34C759', '#FF3B30',
@@ -166,6 +200,19 @@ export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 // 색상 선택 컴포넌트
 function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [rgbaColor, setRgbaColor] = useState(hexToRgba(color || '#000000'));
+
+  const isSwiftUIAvailable = Platform.OS === 'ios' && Host && SwiftUIColorPicker;
+
+  useEffect(() => {
+    setRgbaColor(hexToRgba(color || '#000000'));
+  }, [color]);
+
+  const handleSwiftUIColorChange = (newRgba) => {
+    setRgbaColor(newRgba);
+    const hexColor = rgbaToHex(newRgba);
+    onColorChange(hexColor);
+  };
 
   return (
     <View style={styles.colorPickerContainer}>
@@ -196,23 +243,34 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
 
       {(!showGradientOption || !useGradient) ? (
         <>
-          {/* 색상 그리드 - 컬러피커 버튼 + 프리셋 색상 */}
+          {/* 색상 그리드 - 컬러피커 + 프리셋 색상 */}
           <View style={styles.colorGrid}>
-            {/* 컬러피커 버튼 (맨 앞) - 클릭시 모달 열림 */}
-            <TouchableOpacity
-              style={[
-                styles.colorPickerIconButton,
-                {
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                  backgroundColor: colors.inputBackground,
-                },
-              ]}
-              onPress={() => setShowColorPicker(true)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="color-palette" size={22} color={colors.primary} />
-            </TouchableOpacity>
+            {/* SwiftUI ColorPicker (iOS) - 클릭시 바로 네이티브 피커 열림 */}
+            {isSwiftUIAvailable ? (
+              <Host style={styles.swiftUIColorPickerHost}>
+                <SwiftUIColorPicker
+                  label=""
+                  selection={rgbaColor}
+                  onValueChanged={handleSwiftUIColorChange}
+                />
+              </Host>
+            ) : (
+              /* Android/Expo Go - 모달 방식 */
+              <TouchableOpacity
+                style={[
+                  styles.colorPickerIconButton,
+                  {
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                    backgroundColor: colors.inputBackground,
+                  },
+                ]}
+                onPress={() => setShowColorPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="color-palette" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            )}
 
             {/* 프리셋 색상들 */}
             {COLOR_PRESETS.map((presetColor) => (
@@ -226,22 +284,27 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
                     borderWidth: color === presetColor ? 3 : 1,
                   },
                 ]}
-                onPress={() => onColorChange(presetColor)}
+                onPress={() => {
+                  onColorChange(presetColor);
+                  setRgbaColor(hexToRgba(presetColor));
+                }}
                 activeOpacity={0.7}
               />
             ))}
           </View>
 
-          {/* 네이티브 컬러 피커 모달 */}
-          <NativeColorPicker
-            visible={showColorPicker}
-            onClose={() => setShowColorPicker(false)}
-            color={color}
-            onColorChange={(newColor) => {
-              onColorChange(newColor);
-            }}
-            colors={colors}
-          />
+          {/* 네이티브 컬러 피커 모달 (Android/Expo Go용) */}
+          {!isSwiftUIAvailable && (
+            <NativeColorPicker
+              visible={showColorPicker}
+              onClose={() => setShowColorPicker(false)}
+              color={color}
+              onColorChange={(newColor) => {
+                onColorChange(newColor);
+              }}
+              colors={colors}
+            />
+          )}
         </>
       ) : (
         <>
@@ -1110,6 +1173,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  swiftUIColorPickerHost: {
+    width: 40,
+    height: 40,
   },
   gradientRow: {
     flexDirection: 'row',
