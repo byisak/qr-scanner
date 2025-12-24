@@ -122,6 +122,17 @@ export default {
     results: '识别的代码',
     noResults: '未找到条码',
     noResultsDesc: '在此图片中未检测到条码或二维码。\n请尝试其他图片。',
+    saveAll: '全部保存',
+    saveSuccess: '保存成功',
+    saveSuccessMessage: '条码 #{{number}} 已保存到相册。',
+    saveAllSuccess: '全部保存成功',
+    saveAllSuccessMessage: '{{count}} 个条码已保存到相册。',
+    saveError: '保存时发生错误。',
+    permissionDenied: '需要访问相册的权限。',
+    downloadJson: 'JSON下载',
+    jsonCopied: 'JSON已复制',
+    jsonCopiedMessage: 'JSON数据已复制到剪贴板。',
+    jsonError: 'JSON下载时发生错误。',
   },
 
   // 历史记录界面

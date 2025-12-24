@@ -129,6 +129,10 @@ export default {
     saveAllSuccessMessage: '{{count}}개의 바코드가 앨범에 저장되었습니다.',
     saveError: '저장 중 오류가 발생했습니다.',
     permissionDenied: '사진 앨범 접근 권한이 필요합니다.',
+    downloadJson: 'JSON 다운로드',
+    jsonCopied: 'JSON 복사됨',
+    jsonCopiedMessage: 'JSON 데이터가 클립보드에 복사되었습니다.',
+    jsonError: 'JSON 다운로드 중 오류가 발생했습니다.',
   },
 
   // 히스토리 화면

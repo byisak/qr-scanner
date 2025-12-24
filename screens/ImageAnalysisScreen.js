@@ -26,6 +26,7 @@ import { Asset } from 'expo-asset';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
@@ -526,6 +527,95 @@ function ImageAnalysisScreen() {
     }
   };
 
+  // 전체 JSON 다운로드
+  const handleDownloadAllJson = async () => {
+    if (results.length === 0) return;
+
+    try {
+      const jsonData = {
+        analysisDate: new Date().toISOString(),
+        totalCount: results.length,
+        results: results.map((result, index) => ({
+          index: index + 1,
+          text: result.text,
+          format: result.format,
+          position: result.position,
+        })),
+      };
+
+      const jsonString = JSON.stringify(jsonData, null, 2);
+      const fileName = `barcode_analysis_${Date.now()}.json`;
+      const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+
+      await FileSystem.writeAsStringAsync(filePath, jsonString, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      // 공유 가능 여부 확인
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(filePath, {
+          mimeType: 'application/json',
+          dialogTitle: t('imageAnalysis.downloadJson'),
+        });
+      } else {
+        // 공유 불가능 시 클립보드에 복사
+        await Clipboard.setStringAsync(jsonString);
+        Alert.alert(t('imageAnalysis.jsonCopied'), t('imageAnalysis.jsonCopiedMessage'));
+      }
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (err) {
+      console.error('Download all JSON error:', err);
+      Alert.alert(t('common.error'), t('imageAnalysis.jsonError'));
+    }
+  };
+
+  // 개별 JSON 다운로드
+  const handleDownloadSingleJson = async (result, index) => {
+    try {
+      const jsonData = {
+        index: index + 1,
+        text: result.text,
+        format: result.format,
+        position: result.position,
+        analysisDate: new Date().toISOString(),
+      };
+
+      const jsonString = JSON.stringify(jsonData, null, 2);
+      const fileName = `barcode_${index + 1}_${Date.now()}.json`;
+      const filePath = `${FileSystem.cacheDirectory}${fileName}`;
+
+      await FileSystem.writeAsStringAsync(filePath, jsonString, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(filePath, {
+          mimeType: 'application/json',
+          dialogTitle: t('imageAnalysis.downloadJson'),
+        });
+      } else {
+        await Clipboard.setStringAsync(jsonString);
+        Alert.alert(t('imageAnalysis.jsonCopied'), t('imageAnalysis.jsonCopiedMessage'));
+      }
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (err) {
+      console.error('Download single JSON error:', err);
+      Alert.alert(t('common.error'), t('imageAnalysis.jsonError'));
+    }
+  };
+
   // bounds를 화면 좌표로 변환
   const convertToDisplayCoords = (position) => {
     if (!position || !imageSize.width || !displaySize.width) return null;
@@ -667,22 +757,37 @@ function ImageAnalysisScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {t('imageAnalysis.results')} ({results.length})
             </Text>
-            {results.length > 0 && results.some(r => r.position) && (
-              <TouchableOpacity
-                style={[styles.saveAllButton, { backgroundColor: colors.primary }]}
-                onPress={handleSaveAllBarcodes}
-                activeOpacity={0.7}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="download-outline" size={16} color="#fff" />
-                    <Text style={styles.saveAllButtonText}>{t('imageAnalysis.saveAll')}</Text>
-                  </>
+            {results.length > 0 && (
+              <View style={styles.headerButtons}>
+                {/* JSON 다운로드 버튼 */}
+                <TouchableOpacity
+                  style={[styles.saveAllButton, { backgroundColor: '#2E7D32' }]}
+                  onPress={handleDownloadAllJson}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="code-download-outline" size={16} color="#fff" />
+                  <Text style={styles.saveAllButtonText}>JSON</Text>
+                </TouchableOpacity>
+
+                {/* 모두 저장 버튼 */}
+                {results.some(r => r.position) && (
+                  <TouchableOpacity
+                    style={[styles.saveAllButton, { backgroundColor: colors.primary }]}
+                    onPress={handleSaveAllBarcodes}
+                    activeOpacity={0.7}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <>
+                        <Ionicons name="download-outline" size={16} color="#fff" />
+                        <Text style={styles.saveAllButtonText}>{t('imageAnalysis.saveAll')}</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
+              </View>
             )}
           </View>
 
@@ -759,6 +864,14 @@ function ImageAnalysisScreen() {
                     <Text style={[styles.actionButtonText, { color: '#fff' }]}>
                       {t('result.open')}
                     </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.jsonButton]}
+                    onPress={() => handleDownloadSingleJson(result, index)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="code-slash-outline" size={18} color="#fff" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -904,6 +1017,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   saveAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -998,6 +1116,11 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: '#007AFF',
+  },
+  jsonButton: {
+    backgroundColor: '#2E7D32',
+    flex: 0,
+    paddingHorizontal: 12,
   },
   actionButtonText: {
     fontSize: 14,

@@ -122,6 +122,17 @@ export default {
     results: '検出されたコード',
     noResults: 'バーコードが見つかりません',
     noResultsDesc: 'この画像からバーコードやQRコードが検出されませんでした。\n別の画像をお試しください。',
+    saveAll: 'すべて保存',
+    saveSuccess: '保存完了',
+    saveSuccessMessage: 'バーコード #{{number}}がアルバムに保存されました。',
+    saveAllSuccess: 'すべて保存完了',
+    saveAllSuccessMessage: '{{count}}個のバーコードがアルバムに保存されました。',
+    saveError: '保存中にエラーが発生しました。',
+    permissionDenied: '写真アルバムへのアクセス権限が必要です。',
+    downloadJson: 'JSONダウンロード',
+    jsonCopied: 'JSONコピー完了',
+    jsonCopiedMessage: 'JSONデータがクリップボードにコピーされました。',
+    jsonError: 'JSONダウンロード中にエラーが発生しました。',
   },
 
   // 履歴画面

@@ -122,6 +122,17 @@ export default {
     results: 'Códigos detectados',
     noResults: 'No se encontraron códigos',
     noResultsDesc: 'No se detectaron códigos de barras ni QR en esta imagen.\nIntenta con otra imagen.',
+    saveAll: 'Guardar todo',
+    saveSuccess: 'Guardado',
+    saveSuccessMessage: 'El código #{{number}} se ha guardado en el álbum.',
+    saveAllSuccess: 'Todo guardado',
+    saveAllSuccessMessage: '{{count}} códigos se han guardado en el álbum.',
+    saveError: 'Ocurrió un error al guardar.',
+    permissionDenied: 'Se requiere permiso de acceso al álbum de fotos.',
+    downloadJson: 'Descargar JSON',
+    jsonCopied: 'JSON copiado',
+    jsonCopiedMessage: 'Los datos JSON se han copiado al portapapeles.',
+    jsonError: 'Ocurrió un error al descargar JSON.',
   },
 
   // Pantalla de historial

@@ -129,6 +129,10 @@ export default {
     saveAllSuccessMessage: '{{count}} barcodes have been saved to album.',
     saveError: 'An error occurred while saving.',
     permissionDenied: 'Photo album access permission is required.',
+    downloadJson: 'Download JSON',
+    jsonCopied: 'JSON Copied',
+    jsonCopiedMessage: 'JSON data has been copied to clipboard.',
+    jsonError: 'An error occurred while downloading JSON.',
   },
 
   // History screen
