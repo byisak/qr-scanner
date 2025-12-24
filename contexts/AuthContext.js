@@ -90,8 +90,14 @@ export const AuthProvider = ({ children }) => {
 
   // 회원가입
   const register = async (email, password, name) => {
+    const requestUrl = `${API_URL}/register`;
+    console.log('[Auth] ===== 회원가입 요청 =====');
+    console.log('[Auth] URL:', requestUrl);
+    console.log('[Auth] Email:', email);
+    console.log('[Auth] Name:', name);
+
     try {
-      const response = await fetch(`${API_URL}/register`, {
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,31 +105,44 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password, name }),
       });
 
+      console.log('[Auth] 응답 상태:', response.status, response.statusText);
+
       const data = await response.json();
+      console.log('[Auth] 응답 데이터:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
+        const errorMsg = data.error?.message || data.message || 'Registration failed';
+        console.error('[Auth] 회원가입 실패:', errorMsg);
         return {
           success: false,
-          error: data.error?.message || data.message || 'Registration failed'
+          error: errorMsg
         };
       }
 
       if (data.success && data.user && data.accessToken) {
         await login(data.user, data.accessToken, data.refreshToken);
+        console.log('[Auth] 회원가입 성공:', data.user.email);
         return { success: true, user: data.user };
       }
 
+      console.error('[Auth] 서버 응답 형식 오류');
       return { success: false, error: 'Invalid response from server' };
     } catch (error) {
-      console.error('Register error:', error);
+      console.error('[Auth] 회원가입 네트워크 오류:', error.message);
+      console.error('[Auth] 오류 상세:', error);
       return { success: false, error: error.message };
     }
   };
 
   // 이메일 로그인
   const loginWithEmail = async (email, password) => {
+    const requestUrl = `${API_URL}/login`;
+    console.log('[Auth] ===== 이메일 로그인 요청 =====');
+    console.log('[Auth] URL:', requestUrl);
+    console.log('[Auth] Email:', email);
+
     try {
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,23 +150,31 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
+      console.log('[Auth] 응답 상태:', response.status, response.statusText);
+
       const data = await response.json();
+      console.log('[Auth] 응답 데이터:', JSON.stringify(data, null, 2));
 
       if (!response.ok) {
+        const errorMsg = data.error?.message || data.message || 'Login failed';
+        console.error('[Auth] 로그인 실패:', errorMsg);
         return {
           success: false,
-          error: data.error?.message || data.message || 'Login failed'
+          error: errorMsg
         };
       }
 
       if (data.success && data.user && data.accessToken) {
         await login(data.user, data.accessToken, data.refreshToken);
+        console.log('[Auth] 로그인 성공:', data.user.email);
         return { success: true, user: data.user };
       }
 
+      console.error('[Auth] 서버 응답 형식 오류');
       return { success: false, error: 'Invalid response from server' };
     } catch (error) {
-      console.error('Email login error:', error);
+      console.error('[Auth] 로그인 네트워크 오류:', error.message);
+      console.error('[Auth] 오류 상세:', error);
       return { success: false, error: error.message };
     }
   };
