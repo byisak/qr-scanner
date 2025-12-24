@@ -205,16 +205,16 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
               onPress={() => setShowColorPicker(true)}
               activeOpacity={0.7}
             >
-              <Svg width={44} height={44} viewBox="0 0 100 100">
+              <Svg width={44} height={44} viewBox="5 5 90 90">
                 {/* 8개 색상 세그먼트 - 원형 파이 조각 */}
-                <Path d="M50 50 L50 10 A40 40 0 0 1 78.28 21.72 Z" fill="#EC4899" />
-                <Path d="M50 50 L78.28 21.72 A40 40 0 0 1 90 50 Z" fill="#EF4444" />
-                <Path d="M50 50 L90 50 A40 40 0 0 1 78.28 78.28 Z" fill="#F97316" />
-                <Path d="M50 50 L78.28 78.28 A40 40 0 0 1 50 90 Z" fill="#EAB308" />
-                <Path d="M50 50 L50 90 A40 40 0 0 1 21.72 78.28 Z" fill="#22C55E" />
-                <Path d="M50 50 L21.72 78.28 A40 40 0 0 1 10 50 Z" fill="#14B8A6" />
-                <Path d="M50 50 L10 50 A40 40 0 0 1 21.72 21.72 Z" fill="#3B82F6" />
-                <Path d="M50 50 L21.72 21.72 A40 40 0 0 1 50 10 Z" fill="#8B5CF6" />
+                <Path d="M50 50 L50 5 A45 45 0 0 1 81.82 18.18 Z" fill="#EC4899" />
+                <Path d="M50 50 L81.82 18.18 A45 45 0 0 1 95 50 Z" fill="#EF4444" />
+                <Path d="M50 50 L95 50 A45 45 0 0 1 81.82 81.82 Z" fill="#F97316" />
+                <Path d="M50 50 L81.82 81.82 A45 45 0 0 1 50 95 Z" fill="#EAB308" />
+                <Path d="M50 50 L50 95 A45 45 0 0 1 18.18 81.82 Z" fill="#22C55E" />
+                <Path d="M50 50 L18.18 81.82 A45 45 0 0 1 5 50 Z" fill="#14B8A6" />
+                <Path d="M50 50 L5 50 A45 45 0 0 1 18.18 18.18 Z" fill="#3B82F6" />
+                <Path d="M50 50 L18.18 18.18 A45 45 0 0 1 50 5 Z" fill="#8B5CF6" />
                 {/* 중앙 원 - 현재 선택된 색상 표시 */}
                 <Circle cx="50" cy="50" r="18" fill={color} stroke="#fff" strokeWidth="3" />
               </Svg>
