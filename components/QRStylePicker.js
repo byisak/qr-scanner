@@ -199,44 +199,22 @@ export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 
 // 색상 선택 컴포넌트
 function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
-  const [hexInput, setHexInput] = useState(color || '#000000');
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [rgbaColor, setRgbaColor] = useState(hexToRgba(color || '#000000'));
 
   const isSwiftUIAvailable = Platform.OS === 'ios' && Host && SwiftUIColorPicker;
 
   useEffect(() => {
-    setHexInput(color || '#000000');
     setRgbaColor(hexToRgba(color || '#000000'));
   }, [color]);
-
-  const handleHexChange = (text) => {
-    setHexInput(text);
-    if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
-      onColorChange(text);
-      setRgbaColor(hexToRgba(text));
-    }
-  };
-
-  const handleHexSubmit = () => {
-    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput)) {
-      onColorChange(hexInput);
-      setRgbaColor(hexToRgba(hexInput));
-    } else if (/^[0-9A-Fa-f]{6}$/.test(hexInput)) {
-      onColorChange('#' + hexInput);
-      setHexInput('#' + hexInput);
-      setRgbaColor(hexToRgba('#' + hexInput));
-    }
-  };
 
   const handleSwiftUIColorChange = (newRgba) => {
     setRgbaColor(newRgba);
     const hexColor = rgbaToHex(newRgba);
-    setHexInput(hexColor);
     onColorChange(hexColor);
   };
 
-  const handlePalettePress = () => {
+  const handleColorPickerPress = () => {
     if (isSwiftUIAvailable) {
       setShowColorPicker(!showColorPicker);
     } else {
@@ -273,28 +251,43 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
 
       {(!showGradientOption || !useGradient) ? (
         <>
-          {/* 색상 선택 버튼 */}
-          <View style={styles.hexInputRow}>
+          {/* 색상 그리드 - 컬러피커 버튼 + 프리셋 색상 */}
+          <View style={styles.colorGrid}>
+            {/* 컬러피커 버튼 (맨 앞) */}
             <TouchableOpacity
-              style={[styles.colorPreviewSmall, { backgroundColor: color }]}
-              onPress={handlePalettePress}
-            />
-            <TextInput
-              style={[styles.hexInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground }]}
-              value={hexInput}
-              onChangeText={handleHexChange}
-              onBlur={handleHexSubmit}
-              placeholder="#000000"
-              placeholderTextColor={colors.textTertiary}
-              autoCapitalize="characters"
-              maxLength={7}
-            />
-            <TouchableOpacity
-              style={[styles.colorPickerButton, { backgroundColor: showColorPicker && isSwiftUIAvailable ? colors.primary : colors.primary }]}
-              onPress={handlePalettePress}
+              style={[
+                styles.colorPickerIconButton,
+                {
+                  borderColor: showColorPicker ? colors.primary : colors.border,
+                  borderWidth: showColorPicker ? 3 : 1,
+                  backgroundColor: colors.inputBackground,
+                },
+              ]}
+              onPress={handleColorPickerPress}
+              activeOpacity={0.7}
             >
-              <Ionicons name="color-palette" size={20} color="#fff" />
+              <Ionicons name="color-palette" size={22} color={colors.primary} />
             </TouchableOpacity>
+
+            {/* 프리셋 색상들 */}
+            {COLOR_PRESETS.map((presetColor) => (
+              <TouchableOpacity
+                key={presetColor}
+                style={[
+                  styles.colorButton,
+                  {
+                    backgroundColor: presetColor,
+                    borderColor: color === presetColor ? colors.primary : colors.border,
+                    borderWidth: color === presetColor ? 3 : 1,
+                  },
+                ]}
+                onPress={() => {
+                  onColorChange(presetColor);
+                  setRgbaColor(hexToRgba(presetColor));
+                }}
+                activeOpacity={0.7}
+              />
+            ))}
           </View>
 
           {/* SwiftUI ColorPicker (iOS - 인라인) */}
@@ -310,29 +303,6 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
             </View>
           )}
 
-          {/* 프리셋 색상 */}
-          <View style={styles.colorGrid}>
-            {COLOR_PRESETS.map((presetColor) => (
-              <TouchableOpacity
-                key={presetColor}
-                style={[
-                  styles.colorButton,
-                  {
-                    backgroundColor: presetColor,
-                    borderColor: color === presetColor ? colors.primary : colors.border,
-                    borderWidth: color === presetColor ? 3 : 1,
-                  },
-                ]}
-                onPress={() => {
-                  onColorChange(presetColor);
-                  setHexInput(presetColor);
-                  setRgbaColor(hexToRgba(presetColor));
-                }}
-                activeOpacity={0.7}
-              />
-            ))}
-          </View>
-
           {/* 네이티브 컬러 피커 (Android용 또는 SwiftUI 미지원시 fallback) */}
           {!isSwiftUIAvailable && (
             <NativeColorPicker
@@ -341,7 +311,6 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
               color={color}
               onColorChange={(newColor) => {
                 onColorChange(newColor);
-                setHexInput(newColor);
               }}
               colors={colors}
             />
@@ -1207,6 +1176,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+  },
+  colorPickerIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   gradientRow: {
     flexDirection: 'row',
