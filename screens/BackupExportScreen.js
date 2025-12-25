@@ -18,19 +18,21 @@ import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 동적 import를 위한 변수
-let FileSystem = null;
-let Sharing = null;
-
 // 모듈 로딩 함수
 const loadModules = async () => {
-  if (!FileSystem) {
-    FileSystem = await import('expo-file-system');
+  try {
+    const fsModule = await import('expo-file-system');
+    const shModule = await import('expo-sharing');
+    return {
+      documentDirectory: fsModule.documentDirectory,
+      writeAsStringAsync: fsModule.writeAsStringAsync,
+      isAvailableAsync: shModule.isAvailableAsync,
+      shareAsync: shModule.shareAsync,
+    };
+  } catch (error) {
+    console.error('Module load error:', error);
+    throw new Error('네이티브 모듈을 로드할 수 없습니다. Development Build가 필요합니다.');
   }
-  if (!Sharing) {
-    Sharing = await import('expo-sharing');
-  }
-  return { FileSystem, Sharing };
 };
 
 export default function BackupExportScreen() {
@@ -105,16 +107,16 @@ export default function BackupExportScreen() {
 
     try {
       // 모듈 동적 로딩
-      const { FileSystem: FS, Sharing: SH } = await loadModules();
+      const { documentDirectory, writeAsStringAsync, isAvailableAsync, shareAsync } = await loadModules();
 
       const backupData = await createBackupData();
       const fileName = `qr_scanner_backup_${new Date().toISOString().split('T')[0]}.json`;
-      const filePath = `${FS.documentDirectory}${fileName}`;
+      const filePath = `${documentDirectory}${fileName}`;
 
-      await FS.writeAsStringAsync(filePath, JSON.stringify(backupData, null, 2));
+      await writeAsStringAsync(filePath, JSON.stringify(backupData, null, 2));
 
-      if (await SH.isAvailableAsync()) {
-        await SH.shareAsync(filePath, {
+      if (await isAvailableAsync()) {
+        await shareAsync(filePath, {
           mimeType: 'application/json',
           dialogTitle: '백업 파일 저장',
           UTI: 'public.json',
@@ -125,7 +127,7 @@ export default function BackupExportScreen() {
       }
     } catch (error) {
       console.error('Local backup error:', error);
-      Alert.alert('오류', '백업 생성 중 오류가 발생했습니다.');
+      Alert.alert('오류', error.message || '백업 생성 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
       setLoadingType(null);

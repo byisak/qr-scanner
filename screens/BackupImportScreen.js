@@ -18,19 +18,19 @@ import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 동적 import를 위한 변수
-let DocumentPicker = null;
-let FileSystem = null;
-
 // 모듈 로딩 함수
 const loadModules = async () => {
-  if (!DocumentPicker) {
-    DocumentPicker = await import('expo-document-picker');
+  try {
+    const dpModule = await import('expo-document-picker');
+    const fsModule = await import('expo-file-system');
+    return {
+      getDocumentAsync: dpModule.getDocumentAsync,
+      readAsStringAsync: fsModule.readAsStringAsync,
+    };
+  } catch (error) {
+    console.error('Module load error:', error);
+    throw new Error('네이티브 모듈을 로드할 수 없습니다. Development Build가 필요합니다.');
   }
-  if (!FileSystem) {
-    FileSystem = await import('expo-file-system');
-  }
-  return { DocumentPicker, FileSystem };
 };
 
 export default function BackupImportScreen() {
@@ -98,9 +98,9 @@ export default function BackupImportScreen() {
 
     try {
       // 모듈 동적 로딩
-      const { DocumentPicker: DP, FileSystem: FS } = await loadModules();
+      const { getDocumentAsync, readAsStringAsync } = await loadModules();
 
-      const result = await DP.getDocumentAsync({
+      const result = await getDocumentAsync({
         type: 'application/json',
         copyToCacheDirectory: true,
       });
@@ -112,7 +112,7 @@ export default function BackupImportScreen() {
       }
 
       const fileUri = result.assets[0].uri;
-      const fileContent = await FS.readAsStringAsync(fileUri);
+      const fileContent = await readAsStringAsync(fileUri);
       const backupData = JSON.parse(fileContent);
 
       Alert.alert(
