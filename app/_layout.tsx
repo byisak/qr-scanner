@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider } from '../contexts/AuthContext';
+import { SyncProvider } from '../contexts/SyncContext';
 import { FontAssets } from '../constants/Fonts';
 
 // Keep the splash screen visible while we fetch resources
@@ -29,8 +30,9 @@ export default function RootLayout() {
     <LanguageProvider>
       <ThemeProvider>
         <AuthProvider>
-          <StatusBar style="auto" />
-          <Stack
+          <SyncProvider>
+            <StatusBar style="auto" />
+            <Stack
             screenOptions={{
               headerShown: false,
             }}
@@ -82,7 +84,8 @@ export default function RootLayout() {
                 headerShown: false
               }}
             />
-          </Stack>
+            </Stack>
+          </SyncProvider>
         </AuthProvider>
       </ThemeProvider>
     </LanguageProvider>

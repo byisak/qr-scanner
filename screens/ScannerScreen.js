@@ -28,6 +28,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
@@ -47,6 +48,7 @@ function ScannerScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const { triggerSync } = useSync();
   const colors = isDark ? Colors.dark : Colors.light;
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -528,6 +530,7 @@ function ScannerScreen() {
 
       // 저장
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      triggerSync();
 
       // 중복 여부 반환 (ResultScreen에서 사용)
       return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1, errorCorrectionLevel: ecLevel };
@@ -566,6 +569,7 @@ function ScannerScreen() {
 
           historyByGroup[selectedGroupId] = currentHistory;
           await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+          triggerSync();
           console.log('[updateHistoryWithPhoto] Photo added to history:', photoUri);
         }
       }
