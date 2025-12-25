@@ -1,13 +1,20 @@
 // hooks/useSocialLogin.js - 소셜 로그인 SDK 통합 훅
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import config from '../config/config';
 
 // WebBrowser warm up for faster auth
 WebBrowser.maybeCompleteAuthSession();
+
+// Google OAuth discovery
+const googleDiscovery = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+};
 
 /**
  * 카카오 로그인 훅
@@ -98,16 +105,67 @@ export const useNaverLogin = () => {
 
 /**
  * 구글 로그인 훅
- * expo-auth-session/providers/google 사용
+ * PKCE Authorization Code 플로우 사용
  */
 export const useGoogleLogin = () => {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: config.google.webClientId,
-    iosClientId: config.google.iosClientId,
-    androidClientId: config.google.androidClientId,
-  });
-
   const [isLoading, setIsLoading] = useState(false);
+  const [accessToken, setAccessToken] = useState(null);
+
+  // iOS는 리버스 클라이언트 ID 사용
+  const redirectUri = Platform.OS === 'ios'
+    ? `com.googleusercontent.apps.${config.google.iosClientId.split('.')[0]}:/oauthredirect`
+    : AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
+
+  const clientId = Platform.OS === 'ios' ? config.google.iosClientId : config.google.webClientId;
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+    },
+    googleDiscovery
+  );
+
+  // Authorization Code를 Access Token으로 교환
+  const exchangeCodeForToken = async (code, codeVerifier) => {
+    try {
+      const tokenResponse = await AuthSession.exchangeCodeAsync(
+        {
+          clientId,
+          code,
+          redirectUri,
+          extraParams: {
+            code_verifier: codeVerifier,
+          },
+        },
+        googleDiscovery
+      );
+      return tokenResponse;
+    } catch (error) {
+      console.error('Google token exchange error:', error);
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    const handleResponse = async () => {
+      if (response?.type === 'success' && request?.codeVerifier) {
+        const { params } = response;
+        if (params?.code) {
+          try {
+            const tokenResponse = await exchangeCodeForToken(params.code, request.codeVerifier);
+            setAccessToken(tokenResponse.accessToken);
+          } catch (error) {
+            console.error('Token exchange failed:', error);
+          }
+        }
+      }
+    };
+    handleResponse();
+  }, [response]);
 
   const login = useCallback(async () => {
     setIsLoading(true);
@@ -115,12 +173,15 @@ export const useGoogleLogin = () => {
       const result = await promptAsync();
 
       if (result?.type === 'success') {
-        const { authentication } = result;
-        return {
-          success: true,
-          accessToken: authentication?.accessToken,
-          idToken: authentication?.idToken,
-        };
+        const { params } = result;
+        if (params?.code && request?.codeVerifier) {
+          const tokenResponse = await exchangeCodeForToken(params.code, request.codeVerifier);
+          return {
+            success: true,
+            accessToken: tokenResponse.accessToken,
+            idToken: tokenResponse.idToken,
+          };
+        }
       }
 
       return { success: false, error: 'Google login cancelled' };
@@ -130,7 +191,7 @@ export const useGoogleLogin = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [promptAsync]);
+  }, [promptAsync, request]);
 
   return { login, isLoading, isReady: !!request };
 };
