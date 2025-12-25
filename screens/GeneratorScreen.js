@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
+import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -911,14 +912,15 @@ export default function GeneratorScreen() {
   // 로고 이미지 선택
   const handlePickLogo = async () => {
     try {
-      const ImagePicker = await import('expo-image-picker');
+      // 권한 요청
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      if (!permissionResult.granted) {
         Alert.alert(t('common.error'), '갤러리 접근 권한이 필요합니다.');
         return;
       }
 
+      // 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
@@ -942,7 +944,7 @@ export default function GeneratorScreen() {
       console.error('Error picking logo:', error);
       Alert.alert(
         '앱 재빌드 필요',
-        '이미지 피커를 사용하려면 Xcode에서 앱을 다시 빌드해야 합니다.\n\n1. Xcode에서 Clean Build (Cmd+Shift+K)\n2. Build (Cmd+B)\n3. Run (Cmd+R)',
+        '이미지 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\nnpx expo prebuild --clean --platform ios\nnpx expo run:ios',
         [{ text: '확인' }]
       );
     }
