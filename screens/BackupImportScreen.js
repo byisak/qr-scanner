@@ -25,11 +25,11 @@ const loadModules = async () => {
     const fsModule = await import('expo-file-system');
     return {
       getDocumentAsync: dpModule.getDocumentAsync,
-      readAsStringAsync: fsModule.readAsStringAsync,
+      File: fsModule.File,
     };
   } catch (error) {
     console.error('Module load error:', error);
-    throw new Error('네이티브 모듈을 로드할 수 없습니다. Development Build가 필요합니다.');
+    throw new Error('네이티브 모듈을 로드할 수 없습니다.');
   }
 };
 
@@ -98,7 +98,7 @@ export default function BackupImportScreen() {
 
     try {
       // 모듈 동적 로딩
-      const { getDocumentAsync, readAsStringAsync } = await loadModules();
+      const { getDocumentAsync, File } = await loadModules();
 
       const result = await getDocumentAsync({
         type: 'application/json',
@@ -111,8 +111,10 @@ export default function BackupImportScreen() {
         return;
       }
 
+      // 새로운 File API 사용
       const fileUri = result.assets[0].uri;
-      const fileContent = await readAsStringAsync(fileUri);
+      const file = new File(fileUri);
+      const fileContent = await file.text();
       const backupData = JSON.parse(fileContent);
 
       Alert.alert(

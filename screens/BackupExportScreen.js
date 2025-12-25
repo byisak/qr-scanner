@@ -24,14 +24,14 @@ const loadModules = async () => {
     const fsModule = await import('expo-file-system');
     const shModule = await import('expo-sharing');
     return {
-      documentDirectory: fsModule.documentDirectory,
-      writeAsStringAsync: fsModule.writeAsStringAsync,
+      File: fsModule.File,
+      Paths: fsModule.Paths,
       isAvailableAsync: shModule.isAvailableAsync,
       shareAsync: shModule.shareAsync,
     };
   } catch (error) {
     console.error('Module load error:', error);
-    throw new Error('네이티브 모듈을 로드할 수 없습니다. Development Build가 필요합니다.');
+    throw new Error('네이티브 모듈을 로드할 수 없습니다.');
   }
 };
 
@@ -107,23 +107,25 @@ export default function BackupExportScreen() {
 
     try {
       // 모듈 동적 로딩
-      const { documentDirectory, writeAsStringAsync, isAvailableAsync, shareAsync } = await loadModules();
+      const { File, Paths, isAvailableAsync, shareAsync } = await loadModules();
 
       const backupData = await createBackupData();
       const fileName = `qr_scanner_backup_${new Date().toISOString().split('T')[0]}.json`;
-      const filePath = `${documentDirectory}${fileName}`;
 
-      await writeAsStringAsync(filePath, JSON.stringify(backupData, null, 2));
+      // 새로운 File API 사용
+      const backupFile = new File(Paths.cache, fileName);
+      await backupFile.create();
+      await backupFile.write(JSON.stringify(backupData, null, 2));
 
       if (await isAvailableAsync()) {
-        await shareAsync(filePath, {
+        await shareAsync(backupFile.uri, {
           mimeType: 'application/json',
           dialogTitle: '백업 파일 저장',
           UTI: 'public.json',
         });
         Alert.alert('성공', '백업 파일이 생성되었습니다.');
       } else {
-        Alert.alert('알림', `백업 파일이 저장되었습니다:\n${filePath}`);
+        Alert.alert('알림', `백업 파일이 저장되었습니다:\n${backupFile.uri}`);
       }
     } catch (error) {
       console.error('Local backup error:', error);
