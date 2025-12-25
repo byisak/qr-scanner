@@ -23,7 +23,12 @@
         "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
-        }
+        },
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"]
+          }
+        ]
       },
       "entitlements": {
         "com.apple.developer.icloud-container-identifiers": ["iCloud.com.cubion.qrscanner"],

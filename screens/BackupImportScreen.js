@@ -25,8 +25,9 @@ import { loadFromICloud, restoreFromBackup, getICloudBackupInfo } from '../servi
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Google OAuth 설정 - 웹 클라이언트 ID 사용
-const GOOGLE_CLIENT_ID = '585698187056-3tqjnjbcdidddn9ddvp2opp0mgj7tgd4.apps.googleusercontent.com';
+// Google OAuth 설정
+const GOOGLE_WEB_CLIENT_ID = '585698187056-3tqjnjbcdidddn9ddvp2opp0mgj7tgd4.apps.googleusercontent.com';
+const GOOGLE_IOS_CLIENT_ID = '585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot.apps.googleusercontent.com';
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -48,16 +49,15 @@ export default function BackupImportScreen() {
   const [googleFiles, setGoogleFiles] = useState([]);
   const [googleAccessToken, setGoogleAccessToken] = useState(null);
 
-  // 리다이렉트 URI
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: 'qrscanner',
-    useProxy: true,
-  });
+  // 리다이렉트 URI - iOS는 번들ID 기반 리버스 도메인 사용
+  const redirectUri = Platform.OS === 'ios'
+    ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.split('-')[0]}:/oauthredirect`
+    : AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
 
-  // Google OAuth - 웹 클라이언트 ID와 프록시 사용
+  // Google OAuth - iOS는 iOS 클라이언트 ID 사용
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
-      clientId: GOOGLE_CLIENT_ID,
+      clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID,
       scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.readonly'],
       redirectUri,
     },
