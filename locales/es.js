@@ -84,6 +84,8 @@ export default {
     signupSuccess: 'Registro completado',
     logoutSuccess: 'Sesión cerrada',
     profileUpdateSuccess: 'Perfil actualizado',
+    // Otros
+    orContinueWith: 'o continuar con',
   },
 
   // Pantalla de escaneo

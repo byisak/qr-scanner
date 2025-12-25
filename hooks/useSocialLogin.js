@@ -111,12 +111,21 @@ export const useGoogleLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
 
-  // iOS는 리버스 클라이언트 ID 사용
-  const redirectUri = Platform.OS === 'ios'
-    ? `com.googleusercontent.apps.${config.google.iosClientId.split('.')[0]}:/oauthredirect`
-    : AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
+  // 구글 클라이언트 ID 안전하게 가져오기
+  const iosClientId = config.google?.iosClientId || '';
+  const webClientId = config.google?.webClientId || '';
+  const clientId = Platform.OS === 'ios' ? iosClientId : webClientId;
 
-  const clientId = Platform.OS === 'ios' ? config.google.iosClientId : config.google.webClientId;
+  // iOS는 리버스 클라이언트 ID 사용
+  const getRedirectUri = () => {
+    if (Platform.OS === 'ios' && iosClientId) {
+      const reversedId = iosClientId.split('.')[0];
+      return `com.googleusercontent.apps.${reversedId}:/oauthredirect`;
+    }
+    return AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
+  };
+
+  const redirectUri = getRedirectUri();
 
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
@@ -132,6 +141,10 @@ export const useGoogleLogin = () => {
   // Authorization Code를 Access Token으로 교환
   const exchangeCodeForToken = async (code, codeVerifier) => {
     try {
+      console.log('Exchanging code for token...');
+      console.log('Client ID:', clientId);
+      console.log('Redirect URI:', redirectUri);
+
       const tokenResponse = await AuthSession.exchangeCodeAsync(
         {
           clientId,
@@ -143,9 +156,11 @@ export const useGoogleLogin = () => {
         },
         googleDiscovery
       );
+      console.log('Token exchange successful');
       return tokenResponse;
     } catch (error) {
       console.error('Google token exchange error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       throw error;
     }
   };
@@ -168,12 +183,23 @@ export const useGoogleLogin = () => {
   }, [response]);
 
   const login = useCallback(async () => {
+    if (!clientId) {
+      console.error('Google client ID is not configured');
+      return { success: false, error: 'Google login is not configured' };
+    }
+
     setIsLoading(true);
     try {
+      console.log('Starting Google login...');
+      console.log('Using redirect URI:', redirectUri);
+
       const result = await promptAsync();
+      console.log('Auth result type:', result?.type);
 
       if (result?.type === 'success') {
         const { params } = result;
+        console.log('Auth params:', JSON.stringify(params, null, 2));
+
         if (params?.code && request?.codeVerifier) {
           const tokenResponse = await exchangeCodeForToken(params.code, request.codeVerifier);
           return {
@@ -187,11 +213,13 @@ export const useGoogleLogin = () => {
       return { success: false, error: 'Google login cancelled' };
     } catch (error) {
       console.error('Google login error:', error);
-      return { success: false, error: error.message };
+      console.error('Error name:', error?.name);
+      console.error('Error message:', error?.message);
+      return { success: false, error: error?.message || 'Login failed' };
     } finally {
       setIsLoading(false);
     }
-  }, [promptAsync, request]);
+  }, [promptAsync, request, clientId, redirectUri]);
 
   return { login, isLoading, isReady: !!request };
 };

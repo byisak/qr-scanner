@@ -84,6 +84,8 @@ export default {
     signupSuccess: '회원가입이 완료되었습니다',
     logoutSuccess: '로그아웃되었습니다',
     profileUpdateSuccess: '프로필이 수정되었습니다',
+    // 기타
+    orContinueWith: '또는',
   },
 
   // 스캔 화면

@@ -84,6 +84,8 @@ export default {
     signupSuccess: 'Sign up completed',
     logoutSuccess: 'Logged out',
     profileUpdateSuccess: 'Profile updated',
+    // Other
+    orContinueWith: 'or continue with',
   },
 
   // Scanner screen

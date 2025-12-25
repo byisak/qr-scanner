@@ -84,6 +84,8 @@ export default {
     signupSuccess: '注册成功',
     logoutSuccess: '已退出登录',
     profileUpdateSuccess: '个人资料已更新',
+    // 其他
+    orContinueWith: '或',
   },
 
   // 扫描界面

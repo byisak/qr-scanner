@@ -84,6 +84,8 @@ export default {
     signupSuccess: '会員登録が完了しました',
     logoutSuccess: 'ログアウトしました',
     profileUpdateSuccess: 'プロフィールが更新されました',
+    // その他
+    orContinueWith: 'または',
   },
 
   // スキャン画面
