@@ -1,5 +1,5 @@
 // screens/BackupImportScreen.js - 백업 가져오기 화면
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   TextInput,
   Modal,
   KeyboardAvoidingView,
+  FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -21,7 +22,20 @@ import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
-import { File } from 'expo-file-system';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
+
+// Google OAuth 설정
+const GOOGLE_CLIENT_ID = '585698187056-3tqjnjbcdidddn9ddvp2opp0mgj7tgd4.apps.googleusercontent.com';
+const GOOGLE_IOS_CLIENT_ID = '585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot.apps.googleusercontent.com';
+
+const discovery = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+};
 
 export default function BackupImportScreen() {
   const router = useRouter();
@@ -35,16 +49,40 @@ export default function BackupImportScreen() {
   const [loadingType, setLoadingType] = useState(null);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteText, setPasteText] = useState('');
+  const [showFileListModal, setShowFileListModal] = useState(false);
+  const [googleFiles, setGoogleFiles] = useState([]);
+  const [googleAccessToken, setGoogleAccessToken] = useState(null);
+
+  // Google OAuth
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_CLIENT_ID,
+      scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.readonly'],
+      redirectUri: AuthSession.makeRedirectUri({
+        scheme: 'qrscanner',
+      }),
+    },
+    discovery
+  );
+
+  const [pendingGoogleImport, setPendingGoogleImport] = useState(false);
+
+  useEffect(() => {
+    if (response?.type === 'success' && pendingGoogleImport) {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        setGoogleAccessToken(authentication.accessToken);
+        listGoogleDriveFiles(authentication.accessToken);
+      }
+      setPendingGoogleImport(false);
+    } else if (response?.type === 'error' || response?.type === 'dismiss') {
+      setIsLoading(false);
+      setLoadingType(null);
+      setPendingGoogleImport(false);
+    }
+  }, [response]);
 
   const importOptions = [
-    {
-      id: 'local',
-      title: '로컬 파일에서 가져오기',
-      description: '기기에 저장된 백업 파일을 선택합니다',
-      icon: 'document-outline',
-      iconColor: '#007AFF',
-      available: false,
-    },
     {
       id: 'clipboard',
       title: '클립보드에서 가져오기',
@@ -64,29 +102,27 @@ export default function BackupImportScreen() {
     {
       id: 'icloud',
       title: 'iCloud에서 가져오기',
-      description: 'iCloud Drive에서 백업을 가져옵니다',
+      description: '클립보드에 백업 내용을 복사 후 가져오기',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
-      available: false,
+      available: Platform.OS === 'ios',
     },
     {
       id: 'google',
       title: 'Google Drive에서 가져오기',
-      description: 'Google Drive에서 백업을 가져옵니다',
+      description: 'Google Drive의 백업 파일을 선택합니다',
       icon: 'logo-google',
       iconColor: '#4285F4',
-      available: false,
+      available: true,
     },
   ];
 
   const restoreBackupData = async (backupData) => {
     try {
-      // 버전 확인
       if (!backupData.version || !backupData.data) {
         throw new Error('유효하지 않은 백업 파일입니다.');
       }
 
-      // 데이터 복원
       const entries = Object.entries(backupData.data);
       for (const [key, value] of entries) {
         const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
@@ -108,10 +144,7 @@ export default function BackupImportScreen() {
         '백업 복원',
         `백업 날짜: ${new Date(backupData.createdAt).toLocaleDateString()}\n\n기존 데이터를 덮어쓰시겠습니까?`,
         [
-          {
-            text: '취소',
-            style: 'cancel',
-          },
+          { text: '취소', style: 'cancel' },
           {
             text: '복원',
             style: 'destructive',
@@ -120,6 +153,7 @@ export default function BackupImportScreen() {
                 await restoreBackupData(backupData);
                 Alert.alert('성공', '백업이 성공적으로 복원되었습니다. 앱을 다시 시작해주세요.');
                 setShowPasteModal(false);
+                setShowFileListModal(false);
                 setPasteText('');
               } catch (error) {
                 Alert.alert('오류', error.message || '백업 복원 중 오류가 발생했습니다.');
@@ -130,52 +164,6 @@ export default function BackupImportScreen() {
       );
     } catch (error) {
       Alert.alert('오류', '유효한 JSON 형식이 아닙니다. 백업 파일 내용을 확인해주세요.');
-    }
-  };
-
-  const handleLocalImport = async () => {
-    setIsLoading(true);
-    setLoadingType('local');
-
-    try {
-      // expo-document-picker 동적 로딩
-      const DocumentPickerModule = await import('expo-document-picker');
-      // default export 또는 named export 확인
-      const getDocumentAsync = DocumentPickerModule.getDocumentAsync || DocumentPickerModule.default?.getDocumentAsync;
-
-      if (!getDocumentAsync) {
-        throw new Error('Cannot find native module ExpoDocumentPicker');
-      }
-
-      const result = await getDocumentAsync({
-        type: 'application/json',
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) {
-        return;
-      }
-
-      const fileUri = result.assets[0].uri;
-      const file = new File(fileUri);
-      const fileContent = await file.text();
-
-      await processBackupText(fileContent);
-    } catch (error) {
-      console.error('Local import error:', error);
-
-      // 네이티브 모듈 에러시 클립보드 방식 안내
-      if (error.message?.includes('native module') || error.message?.includes('ExpoDocumentPicker')) {
-        Alert.alert(
-          '파일 선택 불가',
-          'Development Build가 필요합니다.\n\n대신 "클립보드에서 가져오기"를 사용해주세요:\n\n1. 백업 파일을 텍스트 앱으로 엽니다\n2. 전체 내용을 복사합니다\n3. "클립보드에서 가져오기"를 탭합니다'
-        );
-      } else {
-        Alert.alert('오류', '백업 파일을 읽는 중 오류가 발생했습니다.');
-      }
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
     }
   };
 
@@ -222,23 +210,98 @@ export default function BackupImportScreen() {
     }
   };
 
-  const handleLocalImportDisabled = () => {
-    Alert.alert('준비 중', '로컬 파일 가져오기 기능은 준비 중입니다.\n\n클립보드에서 가져오기를 이용해주세요.');
-  };
-
   const handleICloudImport = () => {
-    Alert.alert('준비 중', 'iCloud 가져오기 기능은 준비 중입니다.');
+    Alert.alert(
+      'iCloud 가져오기',
+      '1. 파일 앱에서 iCloud Drive를 열기\n2. 백업 파일을 찾아 열기\n3. 전체 선택 → 복사\n4. 앱으로 돌아와 "클립보드에서 가져오기" 탭',
+      [
+        { text: '확인', style: 'default' },
+        {
+          text: '클립보드에서 가져오기',
+          onPress: () => handleClipboardImport(),
+        },
+      ]
+    );
   };
 
-  const handleGoogleImport = () => {
-    Alert.alert('준비 중', 'Google Drive 가져오기 기능은 준비 중입니다.');
+  const handleGoogleImport = async () => {
+    setIsLoading(true);
+    setLoadingType('google');
+    setPendingGoogleImport(true);
+
+    try {
+      await promptAsync();
+    } catch (error) {
+      console.error('Google auth error:', error);
+      Alert.alert('오류', 'Google 로그인 중 오류가 발생했습니다.');
+      setIsLoading(false);
+      setLoadingType(null);
+      setPendingGoogleImport(false);
+    }
+  };
+
+  const listGoogleDriveFiles = async (accessToken) => {
+    try {
+      const response = await fetch(
+        "https://www.googleapis.com/drive/v3/files?q=name contains 'QR_Scanner_Backup' and mimeType='application/json'&orderBy=modifiedTime desc&fields=files(id,name,modifiedTime)",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.files && data.files.length > 0) {
+          setGoogleFiles(data.files);
+          setShowFileListModal(true);
+        } else {
+          Alert.alert('알림', 'Google Drive에 백업 파일이 없습니다.');
+        }
+      } else {
+        throw new Error('파일 목록 조회 실패');
+      }
+    } catch (error) {
+      console.error('Google Drive list error:', error);
+      Alert.alert('오류', 'Google Drive에서 파일 목록을 가져오지 못했습니다.');
+    } finally {
+      setIsLoading(false);
+      setLoadingType(null);
+    }
+  };
+
+  const downloadGoogleDriveFile = async (fileId) => {
+    setIsLoading(true);
+    setLoadingType('google');
+
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${googleAccessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const fileContent = await response.text();
+        await processBackupText(fileContent);
+      } else {
+        throw new Error('파일 다운로드 실패');
+      }
+    } catch (error) {
+      console.error('Google Drive download error:', error);
+      Alert.alert('오류', 'Google Drive에서 파일을 다운로드하지 못했습니다.');
+    } finally {
+      setIsLoading(false);
+      setLoadingType(null);
+    }
   };
 
   const handleImport = (type) => {
     switch (type) {
-      case 'local':
-        handleLocalImportDisabled();
-        break;
       case 'clipboard':
         handleClipboardImport();
         break;
@@ -253,6 +316,24 @@ export default function BackupImportScreen() {
         break;
     }
   };
+
+  const renderGoogleFileItem = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.fileItem, { borderBottomColor: colors.border }]}
+      onPress={() => downloadGoogleDriveFile(item.id)}
+    >
+      <Ionicons name="document-text-outline" size={24} color={colors.primary} />
+      <View style={styles.fileInfo}>
+        <Text style={[styles.fileName, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          {item.name}
+        </Text>
+        <Text style={[styles.fileDate, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+          {new Date(item.modifiedTime).toLocaleDateString()}
+        </Text>
+      </View>
+      <Ionicons name="download-outline" size={24} color={colors.textTertiary} />
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -307,9 +388,9 @@ export default function BackupImportScreen() {
                 <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                   {option.description}
                 </Text>
-                {!option.available && (
+                {!option.available && Platform.OS === 'android' && option.id === 'icloud' && (
                   <Text style={[styles.unavailableText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    준비 중
+                    iOS 전용
                   </Text>
                 )}
               </View>
@@ -329,8 +410,9 @@ export default function BackupImportScreen() {
           </Text>
           <View style={styles.guideList}>
             {[
-              '• 로컬 파일: 파일 앱에서 백업 파일을 직접 선택',
               '• 클립보드: 백업 파일 내용 복사 후 붙여넣기',
+              '• iCloud: 파일 앱에서 백업 열기 → 복사',
+              '• Google Drive: 로그인 후 백업 파일 선택',
               '• 복원 후 앱을 다시 시작해야 적용됩니다',
             ].map((text, index) => (
               <View key={index} style={styles.guideItem}>
@@ -403,6 +485,39 @@ export default function BackupImportScreen() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Google Drive File List Modal */}
+      <Modal
+        visible={showFileListModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFileListModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: '70%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+                Google Drive 백업 파일
+              </Text>
+              <TouchableOpacity onPress={() => setShowFileListModal(false)}>
+                <Ionicons name="close" size={28} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              복원할 백업 파일을 선택하세요.
+            </Text>
+
+            <FlatList
+              data={googleFiles}
+              renderItem={renderGoogleFileItem}
+              keyExtractor={(item) => item.id}
+              style={styles.fileList}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -522,7 +637,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
-    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -556,5 +670,25 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 17,
     fontWeight: '600',
+  },
+  fileList: {
+    maxHeight: 300,
+  },
+  fileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    gap: 12,
+  },
+  fileInfo: {
+    flex: 1,
+  },
+  fileName: {
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  fileDate: {
+    fontSize: 13,
   },
 });

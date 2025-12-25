@@ -1,5 +1,5 @@
 // screens/BackupExportScreen.js - 백업 내보내기 화면
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,20 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AuthSession from 'expo-auth-session';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
+
+// Google OAuth 설정
+const GOOGLE_CLIENT_ID = '585698187056-3tqjnjbcdidddn9ddvp2opp0mgj7tgd4.apps.googleusercontent.com';
+const GOOGLE_IOS_CLIENT_ID = '585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot.apps.googleusercontent.com';
+
+const discovery = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+};
 
 // 모듈 로딩 함수
 const loadModules = async () => {
@@ -46,6 +60,34 @@ export default function BackupExportScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
 
+  // Google OAuth
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_CLIENT_ID,
+      scopes: ['https://www.googleapis.com/auth/drive.file'],
+      redirectUri: AuthSession.makeRedirectUri({
+        scheme: 'qrscanner',
+      }),
+    },
+    discovery
+  );
+
+  const [pendingGoogleBackup, setPendingGoogleBackup] = useState(false);
+
+  useEffect(() => {
+    if (response?.type === 'success' && pendingGoogleBackup) {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        uploadToGoogleDrive(authentication.accessToken);
+      }
+      setPendingGoogleBackup(false);
+    } else if (response?.type === 'error' || response?.type === 'dismiss') {
+      setIsLoading(false);
+      setLoadingType(null);
+      setPendingGoogleBackup(false);
+    }
+  }, [response]);
+
   const backupOptions = [
     {
       id: 'local',
@@ -61,7 +103,7 @@ export default function BackupExportScreen() {
       description: 'iCloud Drive에 백업을 저장합니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
-      available: false,
+      available: Platform.OS === 'ios',
     },
     {
       id: 'google',
@@ -69,13 +111,12 @@ export default function BackupExportScreen() {
       description: 'Google Drive에 백업을 저장합니다',
       icon: 'logo-google',
       iconColor: '#4285F4',
-      available: false,
+      available: true,
     },
   ];
 
   const createBackupData = async () => {
     try {
-      // AsyncStorage에서 모든 키 가져오기
       const allKeys = await AsyncStorage.getAllKeys();
       const allData = await AsyncStorage.multiGet(allKeys);
 
@@ -106,26 +147,20 @@ export default function BackupExportScreen() {
     setLoadingType('local');
 
     try {
-      // 모듈 동적 로딩
       const { File, Paths, isAvailableAsync, shareAsync } = await loadModules();
 
       const backupData = await createBackupData();
-      // 고유한 파일명 생성 (날짜 + 시간 + 랜덤)
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const random = Math.random().toString(36).substring(2, 8);
       const fileName = `qr_scanner_backup_${timestamp}_${random}.json`;
 
-      // 새로운 File API 사용
       const backupFile = new File(Paths.cache, fileName);
 
-      // 파일이 이미 존재하면 삭제 시도
       try {
         if (backupFile.exists) {
           await backupFile.delete();
         }
-      } catch (e) {
-        // 파일이 없으면 무시
-      }
+      } catch (e) {}
 
       await backupFile.create();
       await backupFile.write(JSON.stringify(backupData, null, 2));
@@ -149,12 +184,120 @@ export default function BackupExportScreen() {
     }
   };
 
-  const handleICloudBackup = () => {
-    Alert.alert('준비 중', 'iCloud 백업 기능은 준비 중입니다.');
+  const handleICloudBackup = async () => {
+    if (Platform.OS !== 'ios') {
+      Alert.alert('알림', 'iCloud 백업은 iOS에서만 사용 가능합니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingType('icloud');
+
+    try {
+      const { File, Paths, isAvailableAsync, shareAsync } = await loadModules();
+
+      const backupData = await createBackupData();
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `QR_Scanner_Backup_${timestamp}.json`;
+
+      const backupFile = new File(Paths.cache, fileName);
+
+      try {
+        if (backupFile.exists) {
+          await backupFile.delete();
+        }
+      } catch (e) {}
+
+      await backupFile.create();
+      await backupFile.write(JSON.stringify(backupData, null, 2));
+
+      if (await isAvailableAsync()) {
+        await shareAsync(backupFile.uri, {
+          mimeType: 'application/json',
+          dialogTitle: 'iCloud Drive에 저장',
+          UTI: 'public.json',
+        });
+        Alert.alert('성공', 'iCloud Drive에 백업 파일을 저장했습니다.\n\n파일 앱의 iCloud Drive에서 확인하세요.');
+      }
+    } catch (error) {
+      console.error('iCloud backup error:', error);
+      Alert.alert('오류', 'iCloud 백업 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+      setLoadingType(null);
+    }
   };
 
-  const handleGoogleBackup = () => {
-    Alert.alert('준비 중', 'Google Drive 백업 기능은 준비 중입니다.');
+  const handleGoogleBackup = async () => {
+    setIsLoading(true);
+    setLoadingType('google');
+    setPendingGoogleBackup(true);
+
+    try {
+      await promptAsync();
+    } catch (error) {
+      console.error('Google auth error:', error);
+      Alert.alert('오류', 'Google 로그인 중 오류가 발생했습니다.');
+      setIsLoading(false);
+      setLoadingType(null);
+      setPendingGoogleBackup(false);
+    }
+  };
+
+  const uploadToGoogleDrive = async (accessToken) => {
+    try {
+      const backupData = await createBackupData();
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `QR_Scanner_Backup_${timestamp}.json`;
+      const fileContent = JSON.stringify(backupData, null, 2);
+
+      // 파일 메타데이터
+      const metadata = {
+        name: fileName,
+        mimeType: 'application/json',
+      };
+
+      // Multipart 업로드
+      const boundary = 'foo_bar_baz';
+      const delimiter = `\r\n--${boundary}\r\n`;
+      const closeDelimiter = `\r\n--${boundary}--`;
+
+      const multipartBody =
+        delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        fileContent +
+        closeDelimiter;
+
+      const response = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': `multipart/related; boundary=${boundary}`,
+          },
+          body: multipartBody,
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        Alert.alert('성공', `Google Drive에 백업이 완료되었습니다.\n\n파일명: ${result.name}`);
+      } else {
+        const errorText = await response.text();
+        console.error('Google Drive upload error:', errorText);
+        throw new Error('업로드 실패');
+      }
+    } catch (error) {
+      console.error('Google Drive backup error:', error);
+      Alert.alert('오류', 'Google Drive 백업 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+      setLoadingType(null);
+    }
   };
 
   const handleBackup = (type) => {
@@ -224,9 +367,9 @@ export default function BackupExportScreen() {
                 <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                   {option.description}
                 </Text>
-                {!option.available && (
-                  <Text style={[styles.unavailableText, { color: colors.error, fontFamily: fonts.regular }]}>
-                    {Platform.OS === 'android' ? 'iOS 전용 기능입니다' : '사용 불가'}
+                {!option.available && Platform.OS === 'android' && option.id === 'icloud' && (
+                  <Text style={[styles.unavailableText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                    iOS 전용
                   </Text>
                 )}
               </View>
