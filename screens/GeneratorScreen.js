@@ -18,9 +18,16 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
-import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
+
+// ImagePicker는 네이티브 모듈이 필요하므로 동적 로딩
+let ImagePicker = null;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch (e) {
+  console.log('expo-image-picker not available - rebuild required');
+}
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -911,6 +918,16 @@ export default function GeneratorScreen() {
 
   // 로고 이미지 선택
   const handlePickLogo = async () => {
+    // ImagePicker 모듈 체크
+    if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
+      Alert.alert(
+        '앱 재빌드 필요',
+        '이미지 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\n터미널에서 실행:\nnpx expo prebuild --clean --platform ios\nnpx expo run:ios',
+        [{ text: '확인' }]
+      );
+      return;
+    }
+
     try {
       // 권한 요청
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -943,8 +960,8 @@ export default function GeneratorScreen() {
     } catch (error) {
       console.error('Error picking logo:', error);
       Alert.alert(
-        '앱 재빌드 필요',
-        '이미지 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\nnpx expo prebuild --clean --platform ios\nnpx expo run:ios',
+        '오류',
+        '이미지를 선택하는 중 오류가 발생했습니다.',
         [{ text: '확인' }]
       );
     }
