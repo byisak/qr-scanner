@@ -54,32 +54,77 @@ export default function BackupImportScreen() {
     ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.split('.')[0]}:/oauthredirect`
     : AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
 
-  // Google OAuth - iOS는 iOS 클라이언트 ID 사용 (Implicit Grant)
+  // Google OAuth - Authorization Code 플로우 (PKCE)
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID,
       scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive.readonly'],
       redirectUri,
-      responseType: AuthSession.ResponseType.Token, // 직접 access_token 받기
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
     },
     discovery
   );
 
   const [pendingGoogleImport, setPendingGoogleImport] = useState(false);
 
-  useEffect(() => {
-    if (response?.type === 'success' && pendingGoogleImport) {
-      const { authentication } = response;
-      if (authentication?.accessToken) {
-        setGoogleAccessToken(authentication.accessToken);
-        listGoogleDriveFiles(authentication.accessToken);
-      }
-      setPendingGoogleImport(false);
-    } else if (response?.type === 'error' || response?.type === 'dismiss') {
-      setIsLoading(false);
-      setLoadingType(null);
-      setPendingGoogleImport(false);
+  // Authorization Code를 Access Token으로 교환
+  const exchangeCodeForToken = async (code, codeVerifier) => {
+    try {
+      const tokenResponse = await AuthSession.exchangeCodeAsync(
+        {
+          clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID,
+          code,
+          redirectUri,
+          extraParams: {
+            code_verifier: codeVerifier,
+          },
+        },
+        discovery
+      );
+      return tokenResponse.accessToken;
+    } catch (error) {
+      console.error('Token exchange error:', error);
+      throw error;
     }
+  };
+
+  useEffect(() => {
+    const handleResponse = async () => {
+      if (response?.type === 'success' && pendingGoogleImport) {
+        const { params } = response;
+
+        if (params?.code && request?.codeVerifier) {
+          try {
+            const accessToken = await exchangeCodeForToken(params.code, request.codeVerifier);
+            if (accessToken) {
+              setGoogleAccessToken(accessToken);
+              listGoogleDriveFiles(accessToken);
+            } else {
+              Alert.alert('오류', '인증 토큰을 받지 못했습니다.');
+              setIsLoading(false);
+              setLoadingType(null);
+            }
+          } catch (error) {
+            Alert.alert('오류', `토큰 교환 실패: ${error.message}`);
+            setIsLoading(false);
+            setLoadingType(null);
+          }
+        }
+        setPendingGoogleImport(false);
+      } else if (response?.type === 'error') {
+        Alert.alert('오류', `Google 인증 실패: ${response.error?.message || '알 수 없는 오류'}`);
+        setIsLoading(false);
+        setLoadingType(null);
+        setPendingGoogleImport(false);
+      } else if (response?.type === 'dismiss') {
+        setIsLoading(false);
+        setLoadingType(null);
+        setPendingGoogleImport(false);
+      }
+    };
+
+    handleResponse();
   }, [response]);
 
   const importOptions = [

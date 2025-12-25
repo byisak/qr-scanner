@@ -45,6 +45,22 @@ export default function BackupExportScreen() {
   const statusBarHeight = Platform.OS === 'ios' ? 50 : insets.top;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
+  const [lastGoogleBackupTime, setLastGoogleBackupTime] = useState(null);
+
+  // 마지막 Google Drive 백업 시간 로드
+  useEffect(() => {
+    const loadLastBackupTime = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('lastGoogleDriveBackupTime');
+        if (saved) {
+          setLastGoogleBackupTime(new Date(saved));
+        }
+      } catch (error) {
+        console.log('Load last backup time error:', error);
+      }
+    };
+    loadLastBackupTime();
+  }, []);
 
   // 리다이렉트 URI - iOS는 리버스 클라이언트 ID 사용
   const redirectUri = Platform.OS === 'ios'
@@ -230,6 +246,9 @@ export default function BackupExportScreen() {
 
       if (response.ok) {
         const result = await response.json();
+        const now = new Date();
+        await AsyncStorage.setItem('lastGoogleDriveBackupTime', now.toISOString());
+        setLastGoogleBackupTime(now);
         Alert.alert('성공', `Google Drive에 백업이 완료되었습니다.\n\n파일명: ${result.name}`);
       } else {
         const errorText = await response.text();
@@ -387,7 +406,9 @@ export default function BackupExportScreen() {
                 Google Drive 백업
               </Text>
               <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                Google Drive에 수동으로 백업을 저장합니다
+                {lastGoogleBackupTime
+                  ? `마지막 백업: ${lastGoogleBackupTime.toLocaleDateString()} ${lastGoogleBackupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : '백업된 적 없음'}
               </Text>
             </View>
             {isLoading && loadingType === 'google' ? (
