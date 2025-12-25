@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import { saveToICloud, isICloudAvailable, getICloudBackupInfo } from '../services/iCloudService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -30,23 +31,6 @@ const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
   revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
-};
-
-// 모듈 로딩 함수
-const loadModules = async () => {
-  try {
-    const fsModule = await import('expo-file-system');
-    const shModule = await import('expo-sharing');
-    return {
-      File: fsModule.File,
-      Paths: fsModule.Paths,
-      isAvailableAsync: shModule.isAvailableAsync,
-      shareAsync: shModule.shareAsync,
-    };
-  } catch (error) {
-    console.error('Module load error:', error);
-    throw new Error('네이티브 모듈을 로드할 수 없습니다.');
-  }
 };
 
 export default function BackupExportScreen() {
@@ -92,7 +76,7 @@ export default function BackupExportScreen() {
     {
       id: 'icloud',
       title: 'iCloud 백업',
-      description: 'iCloud Drive에 백업을 저장합니다',
+      description: 'iCloud에 자동 동기화됩니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
       available: Platform.OS === 'ios',
@@ -144,34 +128,17 @@ export default function BackupExportScreen() {
     setLoadingType('icloud');
 
     try {
-      const { File, Paths, isAvailableAsync, shareAsync } = await loadModules();
+      const result = await saveToICloud();
 
-      const backupData = await createBackupData();
-      const timestamp = new Date().toISOString().split('T')[0];
-      const fileName = `QR_Scanner_Backup_${timestamp}.json`;
-
-      const backupFile = new File(Paths.cache, fileName);
-
-      try {
-        if (backupFile.exists) {
-          await backupFile.delete();
-        }
-      } catch (e) {}
-
-      await backupFile.create();
-      await backupFile.write(JSON.stringify(backupData, null, 2));
-
-      if (await isAvailableAsync()) {
-        await shareAsync(backupFile.uri, {
-          mimeType: 'application/json',
-          dialogTitle: 'iCloud Drive에 저장',
-          UTI: 'public.json',
-        });
-        Alert.alert('성공', 'iCloud Drive에 백업 파일을 저장했습니다.\n\n파일 앱의 iCloud Drive에서 확인하세요.');
+      if (result.success) {
+        Alert.alert(
+          '백업 완료',
+          `iCloud에 자동으로 백업되었습니다.\n\n백업 시간: ${new Date(result.timestamp).toLocaleString()}\n\n다른 기기에서도 자동으로 동기화됩니다.`
+        );
       }
     } catch (error) {
       console.error('iCloud backup error:', error);
-      Alert.alert('오류', 'iCloud 백업 중 오류가 발생했습니다.');
+      Alert.alert('오류', error.message || 'iCloud 백업 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
       setLoadingType(null);

@@ -9,9 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  TextInput,
   Modal,
-  KeyboardAvoidingView,
   FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import { loadFromICloud, restoreFromBackup, getICloudBackupInfo } from '../services/iCloudService';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -46,8 +45,6 @@ export default function BackupImportScreen() {
   const statusBarHeight = Platform.OS === 'ios' ? 50 : insets.top;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
-  const [showPasteModal, setShowPasteModal] = useState(false);
-  const [pasteText, setPasteText] = useState('');
   const [showFileListModal, setShowFileListModal] = useState(false);
   const [googleFiles, setGoogleFiles] = useState([]);
   const [googleAccessToken, setGoogleAccessToken] = useState(null);
@@ -84,8 +81,8 @@ export default function BackupImportScreen() {
   const importOptions = [
     {
       id: 'icloud',
-      title: 'iCloud에서 가져오기',
-      description: 'iCloud Drive의 백업 파일을 선택합니다',
+      title: 'iCloud에서 복원',
+      description: 'iCloud에 동기화된 백업을 복원합니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
       available: Platform.OS === 'ios',
@@ -119,13 +116,49 @@ export default function BackupImportScreen() {
     }
   };
 
-  const processBackupText = async (text) => {
+  const processGoogleBackupData = async (backupData) => {
+    Alert.alert(
+      '백업 복원',
+      `백업 날짜: ${new Date(backupData.createdAt).toLocaleDateString()}\n\n기존 데이터를 덮어쓰시겠습니까?`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '복원',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await restoreBackupData(backupData);
+              Alert.alert('성공', '백업이 성공적으로 복원되었습니다.\n\n앱을 다시 시작해주세요.');
+              setShowFileListModal(false);
+            } catch (error) {
+              Alert.alert('오류', error.message || '백업 복원 중 오류가 발생했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleICloudImport = async () => {
+    if (Platform.OS !== 'ios') {
+      Alert.alert('알림', 'iCloud는 iOS에서만 사용 가능합니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingType('icloud');
+
     try {
-      const backupData = JSON.parse(text.trim());
+      const backupData = await loadFromICloud();
+
+      if (!backupData) {
+        Alert.alert('알림', 'iCloud에 저장된 백업이 없습니다.\n\n먼저 "백업 내보내기"에서 iCloud 백업을 생성해주세요.');
+        return;
+      }
 
       Alert.alert(
         '백업 복원',
-        `백업 날짜: ${new Date(backupData.createdAt).toLocaleDateString()}\n\n기존 데이터를 덮어쓰시겠습니까?`,
+        `백업 날짜: ${new Date(backupData.createdAt).toLocaleString()}\n\n기존 데이터를 덮어쓰시겠습니까?`,
         [
           { text: '취소', style: 'cancel' },
           {
@@ -133,11 +166,8 @@ export default function BackupImportScreen() {
             style: 'destructive',
             onPress: async () => {
               try {
-                await restoreBackupData(backupData);
-                Alert.alert('성공', '백업이 성공적으로 복원되었습니다. 앱을 다시 시작해주세요.');
-                setShowPasteModal(false);
-                setShowFileListModal(false);
-                setPasteText('');
+                await restoreFromBackup(backupData);
+                Alert.alert('성공', '백업이 성공적으로 복원되었습니다.\n\n앱을 다시 시작해주세요.');
               } catch (error) {
                 Alert.alert('오류', error.message || '백업 복원 중 오류가 발생했습니다.');
               }
@@ -146,39 +176,12 @@ export default function BackupImportScreen() {
         ]
       );
     } catch (error) {
-      Alert.alert('오류', '유효한 JSON 형식이 아닙니다. 백업 파일 내용을 확인해주세요.');
-    }
-  };
-
-  const handlePasteSubmit = async () => {
-    if (!pasteText || pasteText.trim() === '') {
-      Alert.alert('알림', '백업 데이터를 입력해주세요.');
-      return;
-    }
-
-    setIsLoading(true);
-    setLoadingType('paste');
-
-    try {
-      await processBackupText(pasteText);
+      console.error('iCloud import error:', error);
+      Alert.alert('오류', error.message || 'iCloud에서 백업을 불러오는 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
       setLoadingType(null);
     }
-  };
-
-  const handleICloudImport = () => {
-    Alert.alert(
-      'iCloud에서 가져오기',
-      '파일 앱에서 iCloud Drive의 백업 파일을 열고 내용을 복사한 후, 아래에 붙여넣기 해주세요.',
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '붙여넣기 화면 열기',
-          onPress: () => setShowPasteModal(true),
-        },
-      ]
-    );
   };
 
   const handleGoogleImport = async () => {
@@ -244,7 +247,12 @@ export default function BackupImportScreen() {
 
       if (response.ok) {
         const fileContent = await response.text();
-        await processBackupText(fileContent);
+        try {
+          const backupData = JSON.parse(fileContent.trim());
+          await processGoogleBackupData(backupData);
+        } catch (parseError) {
+          Alert.alert('오류', '유효한 백업 파일이 아닙니다.');
+        }
       } else {
         throw new Error('파일 다운로드 실패');
       }
@@ -361,7 +369,7 @@ export default function BackupImportScreen() {
           </Text>
           <View style={styles.guideList}>
             {[
-              '• iCloud: 파일 앱에서 백업 파일 열기 → 복사 후 붙여넣기',
+              '• iCloud: 자동 동기화된 백업을 바로 복원',
               '• Google Drive: 로그인 후 백업 파일 선택',
               '• 복원 후 앱을 다시 시작해야 적용됩니다',
             ].map((text, index) => (
@@ -376,66 +384,6 @@ export default function BackupImportScreen() {
 
         <View style={styles.bottomSpace} />
       </ScrollView>
-
-      {/* Paste Modal */}
-      <Modal
-        visible={showPasteModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowPasteModal(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-                iCloud 백업 붙여넣기
-              </Text>
-              <TouchableOpacity onPress={() => setShowPasteModal(false)}>
-                <Ionicons name="close" size={28} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              iCloud Drive의 백업 파일 내용을 아래에 붙여넣으세요.
-            </Text>
-
-            <TextInput
-              style={[
-                styles.pasteInput,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                  borderColor: colors.border,
-                  fontFamily: fonts.regular,
-                }
-              ]}
-              multiline
-              placeholder='{"version": "1.0", "data": {...}}'
-              placeholderTextColor={colors.textTertiary}
-              value={pasteText}
-              onChangeText={setPasteText}
-              textAlignVertical="top"
-            />
-
-            <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: colors.primary }]}
-              onPress={handlePasteSubmit}
-              disabled={isLoading}
-            >
-              {isLoading && loadingType === 'paste' ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={[styles.submitButtonText, { fontFamily: fonts.semiBold }]}>
-                  복원하기
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
       {/* Google Drive File List Modal */}
       <Modal
@@ -601,25 +549,6 @@ const styles = StyleSheet.create({
   modalDescription: {
     fontSize: 14,
     marginBottom: 16,
-  },
-  pasteInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    minHeight: 200,
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  submitButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '600',
   },
   fileList: {
     maxHeight: 300,

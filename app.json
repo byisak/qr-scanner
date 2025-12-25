@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cubion.qrscanner",
+      "usesIcloudStorage": true,
       "infoPlist": {
         "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
         "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다.",
@@ -23,6 +24,11 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         }
+      },
+      "entitlements": {
+        "com.apple.developer.icloud-container-identifiers": ["iCloud.com.cubion.qrscanner"],
+        "com.apple.developer.icloud-services": ["CloudDocuments"],
+        "com.apple.developer.ubiquity-container-identifiers": ["iCloud.com.cubion.qrscanner"]
       }
     },
     "android": {
@@ -49,6 +55,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-cloud-store",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
       [
         "expo-camera",
         {
