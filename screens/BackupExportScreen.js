@@ -46,9 +46,9 @@ export default function BackupExportScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
 
-  // 리다이렉트 URI - iOS는 번들ID 기반 리버스 도메인 사용
+  // 리다이렉트 URI - iOS는 리버스 클라이언트 ID 사용
   const redirectUri = Platform.OS === 'ios'
-    ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.split('-')[0]}:/oauthredirect`
+    ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.split('.')[0]}:/oauthredirect`
     : AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
 
   console.log('Google OAuth Redirect URI:', redirectUri);

@@ -49,9 +49,9 @@ export default function BackupImportScreen() {
   const [googleFiles, setGoogleFiles] = useState([]);
   const [googleAccessToken, setGoogleAccessToken] = useState(null);
 
-  // 리다이렉트 URI - iOS는 번들ID 기반 리버스 도메인 사용
+  // 리다이렉트 URI - iOS는 리버스 클라이언트 ID 사용
   const redirectUri = Platform.OS === 'ios'
-    ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.split('-')[0]}:/oauthredirect`
+    ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.split('.')[0]}:/oauthredirect`
     : AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
 
   // Google OAuth - iOS는 iOS 클라이언트 ID 사용
