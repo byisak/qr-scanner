@@ -17,8 +17,21 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
+
+// 동적 import를 위한 변수
+let FileSystem = null;
+let Sharing = null;
+
+// 모듈 로딩 함수
+const loadModules = async () => {
+  if (!FileSystem) {
+    FileSystem = await import('expo-file-system');
+  }
+  if (!Sharing) {
+    Sharing = await import('expo-sharing');
+  }
+  return { FileSystem, Sharing };
+};
 
 export default function BackupExportScreen() {
   const router = useRouter();
@@ -91,14 +104,17 @@ export default function BackupExportScreen() {
     setLoadingType('local');
 
     try {
+      // 모듈 동적 로딩
+      const { FileSystem: FS, Sharing: SH } = await loadModules();
+
       const backupData = await createBackupData();
       const fileName = `qr_scanner_backup_${new Date().toISOString().split('T')[0]}.json`;
-      const filePath = `${FileSystem.documentDirectory}${fileName}`;
+      const filePath = `${FS.documentDirectory}${fileName}`;
 
-      await FileSystem.writeAsStringAsync(filePath, JSON.stringify(backupData, null, 2));
+      await FS.writeAsStringAsync(filePath, JSON.stringify(backupData, null, 2));
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(filePath, {
+      if (await SH.isAvailableAsync()) {
+        await SH.shareAsync(filePath, {
           mimeType: 'application/json',
           dialogTitle: '백업 파일 저장',
           UTI: 'public.json',

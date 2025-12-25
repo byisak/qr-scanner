@@ -17,8 +17,21 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+
+// 동적 import를 위한 변수
+let DocumentPicker = null;
+let FileSystem = null;
+
+// 모듈 로딩 함수
+const loadModules = async () => {
+  if (!DocumentPicker) {
+    DocumentPicker = await import('expo-document-picker');
+  }
+  if (!FileSystem) {
+    FileSystem = await import('expo-file-system');
+  }
+  return { DocumentPicker, FileSystem };
+};
 
 export default function BackupImportScreen() {
   const router = useRouter();
@@ -84,7 +97,10 @@ export default function BackupImportScreen() {
     setLoadingType('local');
 
     try {
-      const result = await DocumentPicker.getDocumentAsync({
+      // 모듈 동적 로딩
+      const { DocumentPicker: DP, FileSystem: FS } = await loadModules();
+
+      const result = await DP.getDocumentAsync({
         type: 'application/json',
         copyToCacheDirectory: true,
       });
@@ -96,7 +112,7 @@ export default function BackupImportScreen() {
       }
 
       const fileUri = result.assets[0].uri;
-      const fileContent = await FileSystem.readAsStringAsync(fileUri);
+      const fileContent = await FS.readAsStringAsync(fileUri);
       const backupData = JSON.parse(fileContent);
 
       Alert.alert(
