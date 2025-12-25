@@ -66,13 +66,30 @@ export default function BackupExportScreen() {
   const [pendingGoogleBackup, setPendingGoogleBackup] = useState(false);
 
   useEffect(() => {
+    console.log('Google OAuth Response:', JSON.stringify(response, null, 2));
+
     if (response?.type === 'success' && pendingGoogleBackup) {
-      const { authentication } = response;
-      if (authentication?.accessToken) {
-        uploadToGoogleDrive(authentication.accessToken);
+      const { authentication, params } = response;
+      // authentication 또는 params에서 accessToken 가져오기
+      const accessToken = authentication?.accessToken || params?.access_token;
+      console.log('Access Token:', accessToken ? 'Found' : 'Not found');
+
+      if (accessToken) {
+        uploadToGoogleDrive(accessToken);
+      } else {
+        Alert.alert('오류', '인증 토큰을 받지 못했습니다.');
+        setIsLoading(false);
+        setLoadingType(null);
       }
       setPendingGoogleBackup(false);
-    } else if (response?.type === 'error' || response?.type === 'dismiss') {
+    } else if (response?.type === 'error') {
+      console.log('OAuth Error:', response.error);
+      Alert.alert('오류', `Google 인증 실패: ${response.error?.message || '알 수 없는 오류'}`);
+      setIsLoading(false);
+      setLoadingType(null);
+      setPendingGoogleBackup(false);
+    } else if (response?.type === 'dismiss') {
+      console.log('OAuth Dismissed');
       setIsLoading(false);
       setLoadingType(null);
       setPendingGoogleBackup(false);
