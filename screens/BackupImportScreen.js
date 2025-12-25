@@ -131,9 +131,15 @@ export default function BackupImportScreen() {
 
     try {
       // expo-document-picker 동적 로딩
-      const DocumentPicker = await import('expo-document-picker');
+      const DocumentPickerModule = await import('expo-document-picker');
+      // default export 또는 named export 확인
+      const getDocumentAsync = DocumentPickerModule.getDocumentAsync || DocumentPickerModule.default?.getDocumentAsync;
 
-      const result = await DocumentPicker.getDocumentAsync({
+      if (!getDocumentAsync) {
+        throw new Error('Cannot find native module ExpoDocumentPicker');
+      }
+
+      const result = await getDocumentAsync({
         type: 'application/json',
         copyToCacheDirectory: true,
       });
