@@ -21,7 +21,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Clipboard from 'expo-clipboard';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -84,25 +83,9 @@ export default function BackupImportScreen() {
 
   const importOptions = [
     {
-      id: 'clipboard',
-      title: '클립보드에서 가져오기',
-      description: '복사한 백업 데이터를 붙여넣기합니다',
-      icon: 'clipboard-outline',
-      iconColor: '#34C759',
-      available: true,
-    },
-    {
-      id: 'paste',
-      title: '직접 입력하기',
-      description: '백업 JSON 데이터를 직접 붙여넣습니다',
-      icon: 'create-outline',
-      iconColor: '#FF9500',
-      available: true,
-    },
-    {
       id: 'icloud',
       title: 'iCloud에서 가져오기',
-      description: '클립보드에 백업 내용을 복사 후 가져오기',
+      description: 'iCloud Drive의 백업 파일을 선택합니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
       available: Platform.OS === 'ios',
@@ -167,32 +150,6 @@ export default function BackupImportScreen() {
     }
   };
 
-  const handleClipboardImport = async () => {
-    setIsLoading(true);
-    setLoadingType('clipboard');
-
-    try {
-      const clipboardContent = await Clipboard.getStringAsync();
-
-      if (!clipboardContent || clipboardContent.trim() === '') {
-        Alert.alert('알림', '클립보드가 비어있습니다. 백업 파일 내용을 먼저 복사해주세요.');
-        return;
-      }
-
-      await processBackupText(clipboardContent);
-    } catch (error) {
-      console.error('Clipboard import error:', error);
-      Alert.alert('오류', '클립보드에서 데이터를 읽는 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
-    }
-  };
-
-  const handlePasteImport = () => {
-    setShowPasteModal(true);
-  };
-
   const handlePasteSubmit = async () => {
     if (!pasteText || pasteText.trim() === '') {
       Alert.alert('알림', '백업 데이터를 입력해주세요.');
@@ -212,13 +169,13 @@ export default function BackupImportScreen() {
 
   const handleICloudImport = () => {
     Alert.alert(
-      'iCloud 가져오기',
-      '1. 파일 앱에서 iCloud Drive를 열기\n2. 백업 파일을 찾아 열기\n3. 전체 선택 → 복사\n4. 앱으로 돌아와 "클립보드에서 가져오기" 탭',
+      'iCloud에서 가져오기',
+      '파일 앱에서 iCloud Drive의 백업 파일을 열고 내용을 복사한 후, 아래에 붙여넣기 해주세요.',
       [
-        { text: '확인', style: 'default' },
+        { text: '취소', style: 'cancel' },
         {
-          text: '클립보드에서 가져오기',
-          onPress: () => handleClipboardImport(),
+          text: '붙여넣기 화면 열기',
+          onPress: () => setShowPasteModal(true),
         },
       ]
     );
@@ -302,12 +259,6 @@ export default function BackupImportScreen() {
 
   const handleImport = (type) => {
     switch (type) {
-      case 'clipboard':
-        handleClipboardImport();
-        break;
-      case 'paste':
-        handlePasteImport();
-        break;
       case 'icloud':
         handleICloudImport();
         break;
@@ -410,8 +361,7 @@ export default function BackupImportScreen() {
           </Text>
           <View style={styles.guideList}>
             {[
-              '• 클립보드: 백업 파일 내용 복사 후 붙여넣기',
-              '• iCloud: 파일 앱에서 백업 열기 → 복사',
+              '• iCloud: 파일 앱에서 백업 파일 열기 → 복사 후 붙여넣기',
               '• Google Drive: 로그인 후 백업 파일 선택',
               '• 복원 후 앱을 다시 시작해야 적용됩니다',
             ].map((text, index) => (
@@ -441,7 +391,7 @@ export default function BackupImportScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-                백업 데이터 입력
+                iCloud 백업 붙여넣기
               </Text>
               <TouchableOpacity onPress={() => setShowPasteModal(false)}>
                 <Ionicons name="close" size={28} color={colors.text} />
@@ -449,7 +399,7 @@ export default function BackupImportScreen() {
             </View>
 
             <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              백업 파일의 JSON 내용을 아래에 붙여넣으세요.
+              iCloud Drive의 백업 파일 내용을 아래에 붙여넣으세요.
             </Text>
 
             <TextInput

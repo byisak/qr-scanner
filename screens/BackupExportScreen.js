@@ -90,14 +90,6 @@ export default function BackupExportScreen() {
 
   const backupOptions = [
     {
-      id: 'local',
-      title: '로컬 백업',
-      description: '기기에 백업 파일을 저장합니다',
-      icon: 'phone-portrait-outline',
-      iconColor: '#007AFF',
-      available: true,
-    },
-    {
       id: 'icloud',
       title: 'iCloud 백업',
       description: 'iCloud Drive에 백업을 저장합니다',
@@ -139,48 +131,6 @@ export default function BackupExportScreen() {
     } catch (error) {
       console.error('Create backup data error:', error);
       throw error;
-    }
-  };
-
-  const handleLocalBackup = async () => {
-    setIsLoading(true);
-    setLoadingType('local');
-
-    try {
-      const { File, Paths, isAvailableAsync, shareAsync } = await loadModules();
-
-      const backupData = await createBackupData();
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const random = Math.random().toString(36).substring(2, 8);
-      const fileName = `qr_scanner_backup_${timestamp}_${random}.json`;
-
-      const backupFile = new File(Paths.cache, fileName);
-
-      try {
-        if (backupFile.exists) {
-          await backupFile.delete();
-        }
-      } catch (e) {}
-
-      await backupFile.create();
-      await backupFile.write(JSON.stringify(backupData, null, 2));
-
-      if (await isAvailableAsync()) {
-        await shareAsync(backupFile.uri, {
-          mimeType: 'application/json',
-          dialogTitle: '백업 파일 저장',
-          UTI: 'public.json',
-        });
-        Alert.alert('성공', '백업 파일이 생성되었습니다.');
-      } else {
-        Alert.alert('알림', `백업 파일이 저장되었습니다:\n${backupFile.uri}`);
-      }
-    } catch (error) {
-      console.error('Local backup error:', error);
-      Alert.alert('오류', error.message || '백업 생성 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
     }
   };
 
@@ -302,9 +252,6 @@ export default function BackupExportScreen() {
 
   const handleBackup = (type) => {
     switch (type) {
-      case 'local':
-        handleLocalBackup();
-        break;
       case 'icloud':
         handleICloudBackup();
         break;
