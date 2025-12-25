@@ -22,8 +22,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { loadFromICloud, restoreFromBackup, getICloudBackupInfo } from '../services/iCloudService';
-import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -82,14 +80,6 @@ export default function BackupImportScreen() {
 
   const importOptions = [
     {
-      id: 'local',
-      title: '로컬 파일에서 가져오기',
-      description: '기기에 저장된 백업 파일을 선택합니다',
-      icon: 'document-outline',
-      iconColor: '#34C759',
-      available: true,
-    },
-    {
       id: 'icloud',
       title: 'iCloud에서 복원',
       description: 'iCloud에 동기화된 백업을 복원합니다',
@@ -147,56 +137,6 @@ export default function BackupImportScreen() {
         },
       ]
     );
-  };
-
-  const handleLocalImport = async () => {
-    setIsLoading(true);
-    setLoadingType('local');
-
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/json',
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) {
-        return;
-      }
-
-      const fileUri = result.assets[0].uri;
-      const fileContent = await FileSystem.readAsStringAsync(fileUri);
-      const backupData = JSON.parse(fileContent.trim());
-
-      Alert.alert(
-        '백업 복원',
-        `백업 날짜: ${new Date(backupData.createdAt).toLocaleString()}\n\n기존 데이터를 덮어쓰시겠습니까?`,
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '복원',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await restoreBackupData(backupData);
-                Alert.alert('성공', '백업이 성공적으로 복원되었습니다.\n\n앱을 다시 시작해주세요.');
-              } catch (error) {
-                Alert.alert('오류', error.message || '백업 복원 중 오류가 발생했습니다.');
-              }
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error('Local import error:', error);
-      if (error.message?.includes('JSON')) {
-        Alert.alert('오류', '유효한 백업 파일이 아닙니다.');
-      } else {
-        Alert.alert('오류', '파일을 읽는 중 오류가 발생했습니다.');
-      }
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
-    }
   };
 
   const handleICloudImport = async () => {
@@ -327,9 +267,6 @@ export default function BackupImportScreen() {
 
   const handleImport = (type) => {
     switch (type) {
-      case 'local':
-        handleLocalImport();
-        break;
       case 'icloud':
         handleICloudImport();
         break;
@@ -432,7 +369,6 @@ export default function BackupImportScreen() {
           </Text>
           <View style={styles.guideList}>
             {[
-              '• 로컬 파일: 기기에 저장된 백업 파일 선택',
               '• iCloud: 자동 동기화된 백업을 바로 복원',
               '• Google Drive: 로그인 후 백업 파일 선택',
               '• 복원 후 앱을 다시 시작해야 적용됩니다',

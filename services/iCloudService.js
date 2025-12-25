@@ -73,7 +73,7 @@ const createBackupData = async () => {
   }
 };
 
-// iCloud에 백업 저장
+// iCloud에 백업 저장 (key-value storage 사용)
 export const saveToICloud = async () => {
   if (Platform.OS !== 'ios') {
     throw new Error('iCloud는 iOS에서만 사용 가능합니다.');
@@ -91,10 +91,12 @@ export const saveToICloud = async () => {
     }
 
     const backupData = await createBackupData();
-    const jsonString = JSON.stringify(backupData, null, 2);
+    const jsonString = JSON.stringify(backupData);
 
-    // iCloud Documents에 파일 저장
-    await cloud.writeFile(BACKUP_FILENAME, jsonString);
+    // iCloud key-value storage 사용 (더 안정적)
+    await cloud.kvSync();
+    await cloud.kvSetItem('backup_data', jsonString);
+    await cloud.kvSync();
 
     return {
       success: true,
@@ -123,16 +125,16 @@ export const loadFromICloud = async () => {
       throw new Error('iCloud가 활성화되어 있지 않습니다.');
     }
 
-    // 파일 존재 여부 확인
-    const exists = await cloud.existsFile(BACKUP_FILENAME);
-    if (!exists) {
+    // iCloud에서 동기화
+    await cloud.kvSync();
+
+    // key-value storage에서 읽기
+    const content = await cloud.kvGetItem('backup_data');
+    if (!content) {
       return null;
     }
 
-    // iCloud에서 파일 읽기
-    const content = await cloud.readFile(BACKUP_FILENAME);
     const backupData = JSON.parse(content);
-
     return backupData;
   } catch (error) {
     console.error('iCloud load error:', error);
@@ -173,10 +175,10 @@ export const getICloudBackupInfo = async () => {
     const isAvailable = await cloud.isICloudAvailable();
     if (!isAvailable) return null;
 
-    const exists = await cloud.existsFile(BACKUP_FILENAME);
-    if (!exists) return null;
+    await cloud.kvSync();
+    const content = await cloud.kvGetItem('backup_data');
+    if (!content) return null;
 
-    const content = await cloud.readFile(BACKUP_FILENAME);
     const backupData = JSON.parse(content);
 
     return {

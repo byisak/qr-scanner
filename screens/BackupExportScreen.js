@@ -20,8 +20,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { saveToICloud, isICloudAvailable, getICloudBackupInfo } from '../services/iCloudService';
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -76,14 +74,6 @@ export default function BackupExportScreen() {
 
   const backupOptions = [
     {
-      id: 'local',
-      title: '로컬 파일로 저장',
-      description: '기기에 백업 파일을 저장합니다',
-      icon: 'phone-portrait-outline',
-      iconColor: '#34C759',
-      available: true,
-    },
-    {
       id: 'icloud',
       title: 'iCloud 백업',
       description: 'iCloud에 자동 동기화됩니다',
@@ -125,37 +115,6 @@ export default function BackupExportScreen() {
     } catch (error) {
       console.error('Create backup data error:', error);
       throw error;
-    }
-  };
-
-  const handleLocalBackup = async () => {
-    setIsLoading(true);
-    setLoadingType('local');
-
-    try {
-      const backupData = await createBackupData();
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `QR_Scanner_Backup_${timestamp}.json`;
-      const fileUri = FileSystem.cacheDirectory + fileName;
-
-      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(backupData, null, 2));
-
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'application/json',
-          dialogTitle: '백업 파일 저장',
-          UTI: 'public.json',
-        });
-        Alert.alert('성공', '백업 파일이 생성되었습니다.');
-      } else {
-        Alert.alert('오류', '공유 기능을 사용할 수 없습니다.');
-      }
-    } catch (error) {
-      console.error('Local backup error:', error);
-      Alert.alert('오류', error.message || '백업 생성 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
     }
   };
 
@@ -260,9 +219,6 @@ export default function BackupExportScreen() {
 
   const handleBackup = (type) => {
     switch (type) {
-      case 'local':
-        handleLocalBackup();
-        break;
       case 'icloud':
         handleICloudBackup();
         break;
