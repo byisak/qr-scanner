@@ -24,9 +24,8 @@ import * as WebBrowser from 'expo-web-browser';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Google OAuth 설정
+// Google OAuth 설정 - 웹 클라이언트 ID 사용
 const GOOGLE_CLIENT_ID = '585698187056-3tqjnjbcdidddn9ddvp2opp0mgj7tgd4.apps.googleusercontent.com';
-const GOOGLE_IOS_CLIENT_ID = '585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot.apps.googleusercontent.com';
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -46,14 +45,18 @@ export default function BackupExportScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
 
-  // Google OAuth
+  // 리다이렉트 URI
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: 'qrscanner',
+    useProxy: true,
+  });
+
+  // Google OAuth - 웹 클라이언트 ID와 프록시 사용
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
-      clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_CLIENT_ID,
+      clientId: GOOGLE_CLIENT_ID,
       scopes: ['https://www.googleapis.com/auth/drive.file'],
-      redirectUri: AuthSession.makeRedirectUri({
-        scheme: 'qrscanner',
-      }),
+      redirectUri,
     },
     discovery
   );
