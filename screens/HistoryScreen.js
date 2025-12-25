@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ export default function HistoryScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const { triggerSync } = useSync();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
@@ -83,6 +85,7 @@ export default function HistoryScreen() {
           const migrated = { [DEFAULT_GROUP_ID]: parsed };
           setScanHistory(migrated);
           await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(migrated));
+          triggerSync();
         }
       }
 
@@ -140,6 +143,7 @@ export default function HistoryScreen() {
           const updatedHistory = { ...scanHistory, [selectedGroupId]: [] };
           setScanHistory(updatedHistory);
           await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(updatedHistory));
+          triggerSync();
           setQuery('');
         },
       },
@@ -235,6 +239,9 @@ export default function HistoryScreen() {
               >
                 {group.isCloudSync && (
                   <Ionicons name="cloud" size={16} color={isActive ? '#fff' : colors.primary} style={{ marginRight: 6 }} />
+                )}
+                {group.isScanUrlGroup && (
+                  <Ionicons name="link" size={16} color={isActive ? '#fff' : '#2E7D32'} style={{ marginRight: 6 }} />
                 )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
                   {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}

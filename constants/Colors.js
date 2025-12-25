@@ -11,6 +11,7 @@ export const Colors = {
     borderLight: '#F0F0F0',
     inputBackground: '#F2F2F7',
     success: '#34C759',
+    error: '#FF3B30',
     shadow: '#000',
   },
   dark: {
@@ -24,6 +25,7 @@ export const Colors = {
     borderLight: '#2c2c2e',
     inputBackground: '#2c2c2e',
     success: '#30D158',
+    error: '#FF453A',
     shadow: '#000',
   },
 };

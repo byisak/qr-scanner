@@ -39,7 +39,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
-  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false);
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
   const [batchScanEnabled, setBatchScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
@@ -84,9 +84,8 @@ export default function SettingsScreen() {
           setScanSoundEnabled(ss === 'true');
         }
 
-        if (p !== null) {
-          setPhotoSaveEnabled(p === 'true');
-        }
+        // null이면 기본값 true 유지
+        setPhotoSaveEnabled(p === null ? true : p === 'true');
 
         if (bs !== null) {
           setBatchScanEnabled(bs === 'true');
@@ -155,9 +154,7 @@ export default function SettingsScreen() {
 
           // 사진 저장 설정 로드
           const p = await AsyncStorage.getItem('photoSaveEnabled');
-          if (p !== null) {
-            setPhotoSaveEnabled(p === 'true');
-          }
+          setPhotoSaveEnabled(p === null ? true : p === 'true');
 
           const q = await AsyncStorage.getItem('photoQuality');
           if (q !== null) {
@@ -484,6 +481,54 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* 백업 및 복원 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>백업 및 복원</Text>
+
+          {/* 백업 내보내기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/backup-export')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>백업 내보내기</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>스캔 기록 및 설정을 백업합니다</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 백업 가져오기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/backup-import')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>백업 가져오기</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>백업 파일에서 데이터를 복원합니다</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 제품 검색 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>제품 검색</Text>
+
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/product-search-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>제품 검색 설정</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>바코드 스캔 시 자동으로 제품 정보를 검색합니다</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </View>
+
         {/* 앱 정보 및 지원 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
@@ -517,7 +562,7 @@ export default function SettingsScreen() {
           {/* 서비스 이용약관 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => Alert.alert(t('settings.termsOfService'), '준비 중입니다')}
+            onPress={() => router.push('/terms-of-service')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -530,7 +575,7 @@ export default function SettingsScreen() {
           {/* 개인정보 처리방침 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => Alert.alert(t('settings.privacyPolicy'), '준비 중입니다')}
+            onPress={() => router.push('/privacy-policy')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>

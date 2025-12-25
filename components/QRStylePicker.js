@@ -14,6 +14,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
@@ -165,28 +166,7 @@ export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 
 // 색상 선택 컴포넌트
 function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
-  const [hexInput, setHexInput] = useState(color || '#000000');
   const [showColorPicker, setShowColorPicker] = useState(false);
-
-  useEffect(() => {
-    setHexInput(color || '#000000');
-  }, [color]);
-
-  const handleHexChange = (text) => {
-    setHexInput(text);
-    if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
-      onColorChange(text);
-    }
-  };
-
-  const handleHexSubmit = () => {
-    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput)) {
-      onColorChange(hexInput);
-    } else if (/^[0-9A-Fa-f]{6}$/.test(hexInput)) {
-      onColorChange('#' + hexInput);
-      setHexInput('#' + hexInput);
-    }
-  };
 
   return (
     <View style={styles.colorPickerContainer}>
@@ -217,32 +197,30 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
 
       {(!showGradientOption || !useGradient) ? (
         <>
-          {/* 색상 선택 버튼 */}
-          <View style={styles.hexInputRow}>
-            <TouchableOpacity
-              style={[styles.colorPreviewSmall, { backgroundColor: color }]}
-              onPress={() => setShowColorPicker(true)}
-            />
-            <TextInput
-              style={[styles.hexInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground }]}
-              value={hexInput}
-              onChangeText={handleHexChange}
-              onBlur={handleHexSubmit}
-              placeholder="#000000"
-              placeholderTextColor={colors.textTertiary}
-              autoCapitalize="characters"
-              maxLength={7}
-            />
-            <TouchableOpacity
-              style={[styles.colorPickerButton, { backgroundColor: colors.primary }]}
-              onPress={() => setShowColorPicker(true)}
-            >
-              <Ionicons name="color-palette" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          {/* 프리셋 색상 */}
+          {/* 색상 그리드 - 컬러피커 버튼 + 프리셋 색상 */}
           <View style={styles.colorGrid}>
+            {/* 컬러피커 버튼 (맨 앞) - 컬러 휠 아이콘 */}
+            <TouchableOpacity
+              style={styles.rainbowPickerButton}
+              onPress={() => setShowColorPicker(true)}
+              activeOpacity={0.7}
+            >
+              <Svg width={44} height={44} viewBox="5 5 90 90">
+                {/* 8개 색상 세그먼트 - 원형 파이 조각 */}
+                <Path d="M50 50 L50 5 A45 45 0 0 1 81.82 18.18 Z" fill="#EC4899" />
+                <Path d="M50 50 L81.82 18.18 A45 45 0 0 1 95 50 Z" fill="#EF4444" />
+                <Path d="M50 50 L95 50 A45 45 0 0 1 81.82 81.82 Z" fill="#F97316" />
+                <Path d="M50 50 L81.82 81.82 A45 45 0 0 1 50 95 Z" fill="#EAB308" />
+                <Path d="M50 50 L50 95 A45 45 0 0 1 18.18 81.82 Z" fill="#22C55E" />
+                <Path d="M50 50 L18.18 81.82 A45 45 0 0 1 5 50 Z" fill="#14B8A6" />
+                <Path d="M50 50 L5 50 A45 45 0 0 1 18.18 18.18 Z" fill="#3B82F6" />
+                <Path d="M50 50 L18.18 18.18 A45 45 0 0 1 50 5 Z" fill="#8B5CF6" />
+                {/* 중앙 원 - 현재 선택된 색상 표시 */}
+                <Circle cx="50" cy="50" r="18" fill={color} stroke="#fff" strokeWidth="3" />
+              </Svg>
+            </TouchableOpacity>
+
+            {/* 프리셋 색상들 */}
             {COLOR_PRESETS.map((presetColor) => (
               <TouchableOpacity
                 key={presetColor}
@@ -254,24 +232,18 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
                     borderWidth: color === presetColor ? 3 : 1,
                   },
                 ]}
-                onPress={() => {
-                  onColorChange(presetColor);
-                  setHexInput(presetColor);
-                }}
+                onPress={() => onColorChange(presetColor)}
                 activeOpacity={0.7}
               />
             ))}
           </View>
 
-          {/* 네이티브 컬러 피커 */}
+          {/* 컬러 피커 모달 */}
           <NativeColorPicker
             visible={showColorPicker}
             onClose={() => setShowColorPicker(false)}
             color={color}
-            onColorChange={(newColor) => {
-              onColorChange(newColor);
-              setHexInput(newColor);
-            }}
+            onColorChange={(newColor) => onColorChange(newColor)}
             colors={colors}
           />
         </>
@@ -586,7 +558,7 @@ export default function QRStylePicker({
     <View style={styles.optionSection}>
       {/* Background Color */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        배경 설정 (Background)
+        배경 색상
       </Text>
 
       <ColorPickerSection
@@ -605,12 +577,14 @@ export default function QRStylePicker({
         }}
         colors={colors}
       />
+    </View>
+  );
 
-      <View style={styles.sectionDivider} />
-
+  const renderSettingsOptions = () => (
+    <View style={styles.optionSection}>
       {/* QR Size */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        크기 설정 (Size)
+        크기 설정
       </Text>
 
       <View style={styles.stepperContainer}>
@@ -679,14 +653,11 @@ export default function QRStylePicker({
 
       <View style={styles.sectionDivider} />
 
-      {/* QR Options */}
+      {/* Error Correction Level */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        QR 옵션
+        오류 보정 레벨
       </Text>
 
-      <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.errorCorrection') || '오류 보정 레벨'}
-      </Text>
       <View style={styles.optionRow}>
         {['L', 'M', 'Q', 'H'].map((level) => (
           <TouchableOpacity
@@ -842,7 +813,8 @@ export default function QRStylePicker({
     { id: 'dots', label: t('generator.qrStyle.dots') || '도트', icon: 'grid-outline' },
     { id: 'corners', label: t('generator.qrStyle.corners') || '코너', icon: 'scan-outline' },
     { id: 'background', label: '배경', icon: 'image-outline' },
-    { id: 'image', label: '이미지', icon: 'images-outline' },
+    // { id: 'image', label: '이미지', icon: 'images-outline' }, // 추후 개발 예정
+    { id: 'settings', label: '설정', icon: 'settings-outline' },
   ];
 
   return (
@@ -924,7 +896,8 @@ export default function QRStylePicker({
           {activeTab === 'dots' && renderDotOptions()}
           {activeTab === 'corners' && renderCornerOptions()}
           {activeTab === 'background' && renderBackgroundOptions()}
-          {activeTab === 'image' && renderImageOptions()}
+          {/* {activeTab === 'image' && renderImageOptions()} */}{/* 추후 개발 예정 */}
+          {activeTab === 'settings' && renderSettingsOptions()}
         </ScrollView>
       </View>
     </Modal>
@@ -1130,11 +1103,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+    justifyContent: 'center',
   },
   colorButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  colorPickerIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rainbowPickerButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  swiftUIColorPickerHost: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   gradientRow: {
     flexDirection: 'row',
@@ -1204,6 +1197,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  swiftUIPickerInline: {
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  swiftUIHostInline: {
+    width: '100%',
+    height: 50,
   },
   // Logo Picker Styles
   logoSection: {

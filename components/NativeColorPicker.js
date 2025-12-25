@@ -1,55 +1,41 @@
-// components/NativeColorPicker.js - 컬러 피커 (프리셋 + HEX 입력)
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput, ScrollView } from 'react-native';
+// components/NativeColorPicker.js - 컬러 피커 모달 (컬러 휠 + HEX 입력)
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-// 프리셋 색상 (더 많은 색상 추가)
-const COLOR_PRESETS = [
-  // 기본
-  '#000000', '#FFFFFF', '#808080', '#C0C0C0',
-  // 빨강/분홍
-  '#FF3B30', '#FF2D55', '#FF6B6B', '#FF9999',
-  // 주황/노랑
-  '#FF9500', '#FFCC00', '#FFD60A', '#FFF3CD',
-  // 초록
-  '#34C759', '#00C853', '#4CAF50', '#8BC34A',
-  // 파랑/청록
-  '#007AFF', '#5856D6', '#00BCD4', '#03A9F4',
-  // 보라/마젠타
-  '#AF52DE', '#9C27B0', '#E91E63', '#FF4081',
-];
+import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
+import { runOnJS } from 'react-native-reanimated';
 
 export default function NativeColorPicker({ visible, onClose, color, onColorChange, colors }) {
-  const [tempColor, setTempColor] = useState(color);
-  const [hexInput, setHexInput] = useState(color);
+  const [tempColor, setTempColor] = useState(color || '#000000');
 
   useEffect(() => {
     if (visible) {
-      setTempColor(color);
-      setHexInput(color);
+      setTempColor(color || '#000000');
     }
   }, [visible, color]);
 
-  const handleColorChange = (newColor) => {
-    setTempColor(newColor);
-    setHexInput(newColor);
-    onColorChange(newColor);
-  };
+  const updateColor = useCallback((hex) => {
+    setTempColor(hex);
+    onColorChange(hex);
+  }, [onColorChange]);
+
+  const handleColorSelect = useCallback((selectedColor) => {
+    'worklet';
+    const hex = selectedColor.hex;
+    runOnJS(updateColor)(hex);
+  }, [updateColor]);
 
   const handleHexChange = (text) => {
-    setHexInput(text);
-    if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
-      setTempColor(text);
-      onColorChange(text);
+    const formatted = text.startsWith('#') ? text : '#' + text;
+    setTempColor(formatted);
+    if (/^#[0-9A-Fa-f]{6}$/.test(formatted)) {
+      onColorChange(formatted.toUpperCase());
     }
   };
 
   const handleHexSubmit = () => {
-    if (/^#[0-9A-Fa-f]{6}$/.test(hexInput)) {
-      handleColorChange(hexInput);
-    } else if (/^[0-9A-Fa-f]{6}$/.test(hexInput)) {
-      handleColorChange('#' + hexInput);
-      setHexInput('#' + hexInput);
+    if (/^#[0-9A-Fa-f]{6}$/.test(tempColor)) {
+      onColorChange(tempColor.toUpperCase());
     }
   };
 
@@ -65,17 +51,28 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Color Preview */}
-            <View style={styles.previewSection}>
-              <View style={[styles.colorPreview, { backgroundColor: tempColor }]} />
+          <View style={styles.content}>
+            {/* Color Picker */}
+            <ColorPicker
+              value={tempColor}
+              onComplete={handleColorSelect}
+              style={styles.colorPicker}
+            >
+              <Preview style={styles.preview} />
+              <Panel1 style={styles.panel} />
+              <HueSlider style={styles.hueSlider} />
+            </ColorPicker>
+
+            {/* HEX Input */}
+            <View style={styles.hexInputContainer}>
+              <Text style={[styles.hexLabel, { color: colors?.text || '#000' }]}>HEX</Text>
               <TextInput
                 style={[styles.hexInput, {
                   color: colors?.text || '#000',
                   borderColor: colors?.border || '#ddd',
                   backgroundColor: colors?.inputBackground || '#f5f5f5'
                 }]}
-                value={hexInput}
+                value={tempColor}
                 onChangeText={handleHexChange}
                 onBlur={handleHexSubmit}
                 onSubmitEditing={handleHexSubmit}
@@ -85,28 +82,7 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
                 maxLength={7}
               />
             </View>
-
-            {/* Preset Colors */}
-            <Text style={[styles.sectionTitle, { color: colors?.text || '#000' }]}>프리셋 색상</Text>
-            <View style={styles.presetGrid}>
-              {COLOR_PRESETS.map((presetColor) => (
-                <TouchableOpacity
-                  key={presetColor}
-                  style={[
-                    styles.presetButton,
-                    {
-                      backgroundColor: presetColor,
-                      borderColor: tempColor?.toUpperCase() === presetColor ? (colors?.primary || '#007AFF') : 'transparent',
-                      borderWidth: tempColor?.toUpperCase() === presetColor ? 3 : 1,
-                    },
-                    presetColor === '#FFFFFF' && { borderColor: '#ddd', borderWidth: 1 }
-                  ]}
-                  onPress={() => handleColorChange(presetColor)}
-                  activeOpacity={0.7}
-                />
-              ))}
-            </View>
-          </ScrollView>
+          </View>
 
           {/* Done Button */}
           <TouchableOpacity
@@ -131,7 +107,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    maxHeight: '70%',
   },
   header: {
     flexDirection: 'row',
@@ -149,49 +124,47 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   content: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  previewSection: {
+  colorPicker: {
+    width: '100%',
+    gap: 16,
+  },
+  preview: {
+    height: 50,
+    borderRadius: 12,
+  },
+  panel: {
+    height: 200,
+    borderRadius: 12,
+  },
+  hueSlider: {
+    height: 36,
+    borderRadius: 18,
+  },
+  hexInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    marginTop: 16,
     gap: 12,
   },
-  colorPreview: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
+  hexLabel: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   hexInput: {
     flex: 1,
-    height: 50,
+    height: 44,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 18,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    fontSize: 16,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     fontWeight: '600',
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  presetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
-  },
-  presetButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-  },
   doneButton: {
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: 8,
     paddingVertical: 14,
     borderRadius: 12,

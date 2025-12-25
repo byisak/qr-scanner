@@ -1,13 +1,20 @@
 // hooks/useSocialLogin.js - 소셜 로그인 SDK 통합 훅
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Platform, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import config from '../config/config';
 
 // WebBrowser warm up for faster auth
 WebBrowser.maybeCompleteAuthSession();
+
+// Google OAuth discovery
+const googleDiscovery = {
+  authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+  tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  revocationEndpoint: 'https://oauth2.googleapis.com/revoke',
+};
 
 /**
  * 카카오 로그인 훅
@@ -98,39 +105,121 @@ export const useNaverLogin = () => {
 
 /**
  * 구글 로그인 훅
- * expo-auth-session/providers/google 사용
+ * PKCE Authorization Code 플로우 사용
  */
 export const useGoogleLogin = () => {
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: config.google.webClientId,
-    iosClientId: config.google.iosClientId,
-    androidClientId: config.google.androidClientId,
-  });
-
   const [isLoading, setIsLoading] = useState(false);
+  const [accessToken, setAccessToken] = useState(null);
+
+  // 구글 클라이언트 ID 안전하게 가져오기
+  const iosClientId = config.google?.iosClientId || '';
+  const webClientId = config.google?.webClientId || '';
+  const clientId = Platform.OS === 'ios' ? iosClientId : webClientId;
+
+  // iOS는 리버스 클라이언트 ID 사용
+  const getRedirectUri = () => {
+    if (Platform.OS === 'ios' && iosClientId) {
+      const reversedId = iosClientId.split('.')[0];
+      return `com.googleusercontent.apps.${reversedId}:/oauthredirect`;
+    }
+    return AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
+  };
+
+  const redirectUri = getRedirectUri();
+
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId,
+      scopes: ['openid', 'profile', 'email'],
+      redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+    },
+    googleDiscovery
+  );
+
+  // Authorization Code를 Access Token으로 교환
+  const exchangeCodeForToken = async (code, codeVerifier) => {
+    try {
+      console.log('Exchanging code for token...');
+      console.log('Client ID:', clientId);
+      console.log('Redirect URI:', redirectUri);
+
+      const tokenResponse = await AuthSession.exchangeCodeAsync(
+        {
+          clientId,
+          code,
+          redirectUri,
+          extraParams: {
+            code_verifier: codeVerifier,
+          },
+        },
+        googleDiscovery
+      );
+      console.log('Token exchange successful');
+      return tokenResponse;
+    } catch (error) {
+      console.error('Google token exchange error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    const handleResponse = async () => {
+      if (response?.type === 'success' && request?.codeVerifier) {
+        const { params } = response;
+        if (params?.code) {
+          try {
+            const tokenResponse = await exchangeCodeForToken(params.code, request.codeVerifier);
+            setAccessToken(tokenResponse.accessToken);
+          } catch (error) {
+            console.error('Token exchange failed:', error);
+          }
+        }
+      }
+    };
+    handleResponse();
+  }, [response]);
 
   const login = useCallback(async () => {
+    if (!clientId) {
+      console.error('Google client ID is not configured');
+      return { success: false, error: 'Google login is not configured' };
+    }
+
     setIsLoading(true);
     try {
+      console.log('Starting Google login...');
+      console.log('Using redirect URI:', redirectUri);
+
       const result = await promptAsync();
+      console.log('Auth result type:', result?.type);
 
       if (result?.type === 'success') {
-        const { authentication } = result;
-        return {
-          success: true,
-          accessToken: authentication?.accessToken,
-          idToken: authentication?.idToken,
-        };
+        const { params } = result;
+        console.log('Auth params:', JSON.stringify(params, null, 2));
+
+        if (params?.code && request?.codeVerifier) {
+          const tokenResponse = await exchangeCodeForToken(params.code, request.codeVerifier);
+          return {
+            success: true,
+            accessToken: tokenResponse.accessToken,
+            idToken: tokenResponse.idToken,
+          };
+        }
       }
 
       return { success: false, error: 'Google login cancelled' };
     } catch (error) {
       console.error('Google login error:', error);
-      return { success: false, error: error.message };
+      console.error('Error name:', error?.name);
+      console.error('Error message:', error?.message);
+      return { success: false, error: error?.message || 'Login failed' };
     } finally {
       setIsLoading(false);
     }
-  }, [promptAsync]);
+  }, [promptAsync, request, clientId, redirectUri]);
 
   return { login, isLoading, isReady: !!request };
 };

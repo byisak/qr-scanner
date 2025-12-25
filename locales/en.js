@@ -84,6 +84,8 @@ export default {
     signupSuccess: 'Sign up completed',
     logoutSuccess: 'Logged out',
     profileUpdateSuccess: 'Profile updated',
+    // Other
+    orContinueWith: 'or continue with',
   },
 
   // Scanner screen
@@ -102,14 +104,15 @@ export default {
     clearBatch: 'Clear',
     viewBatchList: 'View List',
     sending: 'Sending',
+    urlSending: 'Sending to URL',
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
-    uploadImage: 'Scan from Image',
+    uploadImage: 'Auto Code Analysis',
   },
 
   // Image analysis screen
   imageAnalysis: {
-    title: 'Image Analysis',
+    title: 'Auto Code Analysis',
     selectPhoto: 'Select Photo',
     noPhotos: 'No photos available',
     noImage: 'No image to analyze.',
@@ -128,6 +131,10 @@ export default {
     saveAllSuccessMessage: '{{count}} barcodes have been saved to album.',
     saveError: 'An error occurred while saving.',
     permissionDenied: 'Photo album access permission is required.',
+    downloadJson: 'Download JSON',
+    jsonCopied: 'JSON Copied',
+    jsonCopiedMessage: 'JSON data has been copied to clipboard.',
+    jsonError: 'An error occurred while downloading JSON.',
   },
 
   // History screen
@@ -356,6 +363,7 @@ export default {
     cannotDeleteDefault: 'Cannot delete default group.',
     emptyName: 'Please enter a group name.',
     selectGroup: 'Select Group',
+    dragToReorder: 'Hold ≡ icon to reorder',
   },
 
   // Export history screen
@@ -727,6 +735,107 @@ export default {
       errorCorrection: 'Error Correction Level',
       errorCorrectionHint: 'Higher level allows damaged QR codes to be scanned',
     },
+  },
+
+  // Backup Export
+  backupExport: {
+    title: 'Backup Export',
+    icloudAutoSync: 'iCloud Auto Sync',
+    icloudAutoSyncDesc: 'Automatically sync to iCloud when data changes.',
+    syncNow: 'Sync Now',
+    enableIcloud: 'Please enable iCloud in Settings.',
+    googleDriveBackup: 'Google Drive Backup',
+    lastBackup: 'Last backup',
+    neverBackedUp: 'Never backed up',
+    backupIncludes: 'Items included in backup',
+    scanHistory: 'Scan history',
+    groupInfo: 'Group info',
+    appSettings: 'App settings',
+    favorites: 'Favorites',
+    barcodeTypeSettings: 'Barcode type settings',
+    // Sync status
+    syncing: 'Syncing...',
+    syncComplete: 'Sync complete',
+    syncFailed: 'Sync failed',
+    icloudUnavailable: 'iCloud unavailable',
+    neverSynced: 'Never synced',
+    justNow: 'Just now',
+    minutesAgo: '{{count}} min ago',
+    hoursAgo: '{{count}} hours ago',
+    daysAgo: '{{count}} days ago',
+    // Messages
+    syncedToIcloud: 'Synced to iCloud.',
+    backupComplete: 'Backup to Google Drive complete.',
+    fileName: 'File name',
+  },
+
+  // Backup Import
+  backupImport: {
+    title: 'Backup Import',
+    icloudRestore: 'Restore from iCloud',
+    googleDriveRestore: 'Restore from Google Drive',
+    restoreTitle: 'Restore Backup',
+    restoreConfirm: 'Restore data from previous backup?\nCurrent data will be overwritten.',
+    cancel: 'Cancel',
+    restore: 'Restore',
+    restoreSuccess: 'Backup restored successfully.',
+    restartApp: 'Please restart the app.',
+    restoreError: 'Error restoring backup.',
+    noBackupInIcloud: 'No backup found in iCloud.',
+    createBackupFirst: 'Please create a backup in "Backup Export" first.',
+    noBackupInGoogleDrive: 'No backup file in Google Drive.',
+    invalidBackupFile: 'Invalid backup file.',
+    icloudOnlyIOS: 'iCloud is only available on iOS.',
+  },
+
+  // Product Search Settings
+  productSearch: {
+    title: 'Product Search Settings',
+    description: 'Set up sites to search automatically when scanning barcodes.',
+    searchSites: 'Search Sites',
+    addSite: 'Add Site',
+    editSite: 'Edit Site',
+    siteName: 'Site Name',
+    siteUrl: 'URL',
+    siteNamePlaceholder: 'Enter site name',
+    urlPlaceholder: 'https://example.com/search?q={code}',
+    urlHint: 'Use {code} in URL to be replaced with scanned value.',
+    enterBothFields: 'Please enter both site name and URL.',
+    includePlaceholder: 'Please include {code} placeholder in URL.',
+    deleteConfirmTitle: 'Delete Confirmation',
+    deleteConfirmMessage: 'Delete this search site?',
+    openMode: 'Open Mode',
+    inAppBrowser: 'In-app Browser',
+    defaultBrowser: 'Default Browser',
+    activationMode: 'Activation Mode',
+    allCodes: 'All Codes',
+    productCodes: 'Product Codes',
+    // Country names
+    countries: {
+      KR: 'South Korea',
+      US: 'United States',
+      JP: 'Japan',
+      CN: 'China',
+      DE: 'Germany',
+      GB: 'United Kingdom',
+      FR: 'France',
+      DK: 'Denmark',
+    },
+  },
+
+  // Common error messages
+  errors: {
+    authTokenNotReceived: 'Authentication token not received.',
+    tokenExchangeFailed: 'Token exchange failed',
+    googleAuthFailed: 'Google authentication failed',
+    unknownError: 'Unknown error',
+    icloudSyncError: 'Error syncing with iCloud.',
+    googleLoginError: 'Error logging in with Google.',
+    uploadFailed: 'Upload failed',
+    googleDriveBackupError: 'Error backing up to Google Drive.',
+    fileListFetchFailed: 'Could not fetch file list from Google Drive.',
+    fileDownloadFailed: 'Could not download file from Google Drive.',
+    icloudLoadError: 'Error loading backup from iCloud.',
   },
 
   // Photo save settings

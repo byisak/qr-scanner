@@ -16,10 +16,26 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cubion.qrscanner",
+      "usesIcloudStorage": true,
       "infoPlist": {
         "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
+        "NSPhotoLibraryUsageDescription": "QR 코드에 로고를 추가하기 위해 사진 접근이 필요합니다.",
         "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다.",
-        "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"]
+        "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"]
+          }
+        ]
+      },
+      "entitlements": {
+        "com.apple.developer.icloud-container-identifiers": ["iCloud.com.cubion.qrscanner"],
+        "com.apple.developer.icloud-services": ["CloudDocuments", "CloudKit"],
+        "com.apple.developer.ubiquity-container-identifiers": ["iCloud.com.cubion.qrscanner"],
+        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner"
       }
     },
     "android": {
@@ -28,10 +44,13 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.cubion.qrscanner",
+      "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ],
       "config": {
         "googleMaps": {
@@ -45,6 +64,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-cloud-store",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
       [
         "expo-camera",
         {
@@ -64,13 +89,19 @@
           "enableMicrophonePermission": false,
           "enableCodeScanner": true
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "QR 코드에 로고를 추가하기 위해 사진 접근이 필요합니다."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "serverUrl": "http://138.2.58.102:3000",
+      "serverUrl": "https://tiny-llamas-repair.loca.lt",
       "kakao": {
         "nativeAppKey": "YOUR_KAKAO_NATIVE_APP_KEY"
       },

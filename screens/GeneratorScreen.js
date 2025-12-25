@@ -20,6 +20,14 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
+
+// ImagePicker는 네이티브 모듈이 필요하므로 동적 로딩
+let ImagePicker = null;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch (e) {
+  console.log('expo-image-picker not available - rebuild required');
+}
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -44,10 +52,10 @@ const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'po
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const QR_TYPES = [
+  { id: 'text', icon: 'text-outline', gradient: ['#43e97b', '#38f9d7'] },
   { id: 'website', icon: 'globe-outline', gradient: ['#667eea', '#764ba2'] },
   { id: 'contact', icon: 'person-outline', gradient: ['#f093fb', '#f5576c'] },
   { id: 'wifi', icon: 'wifi-outline', gradient: ['#4facfe', '#00f2fe'] },
-  { id: 'text', icon: 'text-outline', gradient: ['#43e97b', '#38f9d7'] },
   { id: 'clipboard', icon: 'clipboard-outline', gradient: ['#fa709a', '#fee140'] },
   { id: 'email', icon: 'mail-outline', gradient: ['#30cfd0', '#330867'] },
   { id: 'sms', icon: 'chatbubble-outline', gradient: ['#a8edea', '#fed6e3'] },
@@ -910,15 +918,26 @@ export default function GeneratorScreen() {
 
   // 로고 이미지 선택
   const handlePickLogo = async () => {
-    try {
-      const ImagePicker = await import('expo-image-picker');
+    // ImagePicker 모듈 체크
+    if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
+      Alert.alert(
+        '앱 재빌드 필요',
+        '이미지 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\n터미널에서 실행:\nnpx expo prebuild --clean --platform ios\nnpx expo run:ios',
+        [{ text: '확인' }]
+      );
+      return;
+    }
 
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+    try {
+      // 권한 요청
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
         Alert.alert(t('common.error'), '갤러리 접근 권한이 필요합니다.');
         return;
       }
 
+      // 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
@@ -941,8 +960,8 @@ export default function GeneratorScreen() {
     } catch (error) {
       console.error('Error picking logo:', error);
       Alert.alert(
-        '앱 재빌드 필요',
-        '이미지 피커를 사용하려면 Xcode에서 앱을 다시 빌드해야 합니다.\n\n1. Xcode에서 Clean Build (Cmd+Shift+K)\n2. Build (Cmd+B)\n3. Run (Cmd+R)',
+        '오류',
+        '이미지를 선택하는 중 오류가 발생했습니다.',
         [{ text: '확인' }]
       );
     }
@@ -1657,166 +1676,139 @@ export default function GeneratorScreen() {
               </TouchableOpacity>
               {barcodeSettingsExpanded && (
               <View style={s.settingsContainer}>
-                {/* 바코드 너비 */}
-                <View style={s.settingRow}>
-                  <Text style={[s.settingLabel, { color: colors.text }]}>
-                    {t('generator.barcodeWidth') || '너비'}
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.settingScrollButtons}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
-                      <TouchableOpacity
-                        key={`scale-${val}`}
-                        style={[
-                          s.settingButton,
-                          {
-                            backgroundColor: barcodeSettings.scale === val ? colors.primary : colors.background,
-                            borderColor: barcodeSettings.scale === val ? colors.primary : colors.border,
-                          },
-                        ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
-                      >
-                        <Text style={{ color: barcodeSettings.scale === val ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
-                          {val}x
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                {/* 바코드 높이 */}
-                <View style={s.settingRow}>
-                  <Text style={[s.settingLabel, { color: colors.text }]}>
-                    {t('generator.barcodeHeight') || '높이'}
-                  </Text>
-                  <View style={s.settingButtons}>
-                    {[40, 60, 80, 100, 120].map((val) => (
-                      <TouchableOpacity
-                        key={`height-${val}`}
-                        style={[
-                          s.settingButton,
-                          {
-                            backgroundColor: barcodeSettings.height === val ? colors.primary : colors.background,
-                            borderColor: barcodeSettings.height === val ? colors.primary : colors.border,
-                          },
-                        ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
-                      >
-                        <Text style={{ color: barcodeSettings.height === val ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
-                          {val}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* 폰트 크기 */}
-                <View style={s.settingRow}>
-                  <Text style={[s.settingLabel, { color: colors.text }]}>
-                    {t('generator.barcodeFontSize') || '글자 크기'}
-                  </Text>
-                  <View style={s.settingButtons}>
-                    {[10, 12, 14, 16, 18].map((val) => (
-                      <TouchableOpacity
-                        key={`font-${val}`}
-                        style={[
-                          s.settingButton,
-                          {
-                            backgroundColor: barcodeSettings.fontSize === val ? colors.primary : colors.background,
-                            borderColor: barcodeSettings.fontSize === val ? colors.primary : colors.border,
-                          },
-                        ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
-                      >
-                        <Text style={{ color: barcodeSettings.fontSize === val ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
-                          {val}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* 텍스트 표시 */}
-                <View style={s.settingRow}>
-                  <Text style={[s.settingLabel, { color: colors.text }]}>
-                    {t('generator.barcodeShowText') || '숫자 표시'}
-                  </Text>
-                  <View style={s.settingButtons}>
-                    <TouchableOpacity
-                      style={[
-                        s.settingButton,
-                        s.settingButtonWide,
-                        {
-                          backgroundColor: barcodeSettings.showText ? colors.primary : colors.background,
-                          borderColor: barcodeSettings.showText ? colors.primary : colors.border,
-                        },
-                      ]}
-                      onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
-                    >
-                      <Text style={{ color: barcodeSettings.showText ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
-                        ON
+                {/* 크기 설정 그룹 */}
+                <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
+                  {/* 바코드 너비 */}
+                  <View style={s.settingItem}>
+                    <View style={s.settingLabelRow}>
+                      <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                      <Text style={[s.settingLabel, { color: colors.text }]}>
+                        {t('generator.barcodeWidth') || '너비'}
                       </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        s.settingButton,
-                        s.settingButtonWide,
-                        {
-                          backgroundColor: !barcodeSettings.showText ? colors.primary : colors.background,
-                          borderColor: !barcodeSettings.showText ? colors.primary : colors.border,
-                        },
-                      ]}
-                      onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
-                    >
-                      <Text style={{ color: !barcodeSettings.showText ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
-                        OFF
+                    </View>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {[1, 2, 3, 4, 5].map((val) => (
+                        <TouchableOpacity
+                          key={`scale-${val}`}
+                          style={[
+                            s.barcodeOptionBtn,
+                            barcodeSettings.scale === val && { backgroundColor: colors.primary },
+                          ]}
+                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
+                        >
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.scale === val ? '#fff' : colors.text }]}>
+                            {val}x
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 바코드 높이 */}
+                  <View style={s.settingItem}>
+                    <View style={s.settingLabelRow}>
+                      <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
+                      <Text style={[s.settingLabel, { color: colors.text }]}>
+                        {t('generator.barcodeHeight') || '높이'}
                       </Text>
-                    </TouchableOpacity>
+                    </View>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {[40, 60, 80, 100, 120].map((val) => (
+                        <TouchableOpacity
+                          key={`height-${val}`}
+                          style={[
+                            s.barcodeOptionBtn,
+                            barcodeSettings.height === val && { backgroundColor: colors.primary },
+                          ]}
+                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
+                        >
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.height === val ? '#fff' : colors.text }]}>
+                            {val}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   </View>
                 </View>
 
-                {/* 바코드 회전 */}
-                <View style={s.settingRow}>
-                  <Text style={[s.settingLabel, { color: colors.text }]}>
-                    {t('generator.barcodeRotate') || '회전'}
-                  </Text>
-                  <View style={s.settingButtons}>
-                    {[
-                      { value: 'N', label: '0°' },
-                      { value: 'R', label: '90°' },
-                      { value: 'I', label: '180°' },
-                      { value: 'L', label: '270°' },
-                    ].map((item) => (
+                {/* 텍스트 설정 그룹 */}
+                <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
+                  {/* 텍스트 표시 */}
+                  <View style={s.settingItem}>
+                    <View style={s.settingLabelRow}>
+                      <Ionicons name="text-outline" size={18} color={colors.primary} />
+                      <Text style={[s.settingLabel, { color: colors.text }]}>
+                        {t('generator.barcodeShowText') || '숫자 표시'}
+                      </Text>
+                    </View>
+                    <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                       <TouchableOpacity
-                        key={`rotate-${item.value}`}
                         style={[
-                          s.settingButton,
-                          {
-                            backgroundColor: barcodeSettings.rotate === item.value ? colors.primary : colors.background,
-                            borderColor: barcodeSettings.rotate === item.value ? colors.primary : colors.border,
-                          },
+                          s.toggleButton,
+                          barcodeSettings.showText && { backgroundColor: colors.primary },
                         ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
+                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
                       >
-                        <Text style={{ color: barcodeSettings.rotate === item.value ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>
-                          {item.label}
-                        </Text>
+                        <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
                       </TouchableOpacity>
-                    ))}
+                      <TouchableOpacity
+                        style={[
+                          s.toggleButton,
+                          !barcodeSettings.showText && { backgroundColor: colors.primary },
+                        ]}
+                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
+                      >
+                        <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
 
-                {/* 커스텀 텍스트 */}
-                <View style={s.settingRow}>
-                  <Text style={[s.settingLabel, { color: colors.text }]}>
-                    {t('generator.barcodeCustomText') || '표시 텍스트'}
-                  </Text>
-                </View>
-                <View style={s.customTextInputContainer}>
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 폰트 크기 */}
+                  <View style={s.settingItem}>
+                    <View style={s.settingLabelRow}>
+                      <Ionicons name="text" size={18} color={colors.primary} />
+                      <Text style={[s.settingLabel, { color: colors.text }]}>
+                        {t('generator.barcodeFontSize') || '글자 크기'}
+                      </Text>
+                    </View>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {[10, 12, 14, 16, 18].map((val) => (
+                        <TouchableOpacity
+                          key={`font-${val}`}
+                          style={[
+                            s.barcodeOptionBtn,
+                            barcodeSettings.fontSize === val && { backgroundColor: colors.primary },
+                          ]}
+                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
+                        >
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.fontSize === val ? '#fff' : colors.text }]}>
+                            {val}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 커스텀 텍스트 */}
+                  <View style={s.settingItem}>
+                    <View style={s.settingLabelRow}>
+                      <Ionicons name="create-outline" size={18} color={colors.primary} />
+                      <Text style={[s.settingLabel, { color: colors.text }]}>
+                        {t('generator.barcodeCustomText') || '표시 텍스트'}
+                      </Text>
+                    </View>
+                  </View>
                   <TextInput
                     style={[
                       s.customTextInput,
                       {
-                        backgroundColor: colors.background,
+                        backgroundColor: colors.surface,
                         borderColor: colors.border,
                         color: colors.text,
                       }
@@ -1826,6 +1818,39 @@ export default function GeneratorScreen() {
                     value={barcodeSettings.customText}
                     onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
                   />
+                </View>
+
+                {/* 회전 설정 그룹 */}
+                <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
+                  <View style={s.settingItem}>
+                    <View style={s.settingLabelRow}>
+                      <Ionicons name="refresh-outline" size={18} color={colors.primary} />
+                      <Text style={[s.settingLabel, { color: colors.text }]}>
+                        {t('generator.barcodeRotate') || '회전'}
+                      </Text>
+                    </View>
+                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {[
+                        { value: 'N', label: '0°' },
+                        { value: 'R', label: '90°' },
+                        { value: 'I', label: '180°' },
+                        { value: 'L', label: '270°' },
+                      ].map((item) => (
+                        <TouchableOpacity
+                          key={`rotate-${item.value}`}
+                          style={[
+                            s.barcodeOptionBtn,
+                            barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
+                          ]}
+                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
+                        >
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
+                            {item.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
                 </View>
               </View>
               )}
@@ -2369,51 +2394,78 @@ const s = StyleSheet.create({
   },
   // 바코드 설정 스타일
   settingsContainer: {
-    gap: 16,
+    gap: 12,
     marginTop: 16,
   },
-  settingRow: {
+  settingGroup: {
+    borderRadius: 14,
+    padding: 16,
+  },
+  settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 12,
+  },
+  settingLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
   settingLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    minWidth: 70,
+    fontWeight: '600',
   },
-  settingButtons: {
+  settingDivider: {
+    height: 1,
+    marginVertical: 14,
+    opacity: 0.5,
+  },
+  barcodeOptionControl: {
     flexDirection: 'row',
-    gap: 8,
-    flex: 1,
-    justifyContent: 'flex-end',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 3,
+    gap: 2,
   },
-  settingButton: {
+  barcodeOptionBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderRadius: 8,
-    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 44,
+    minWidth: 40,
   },
-  settingButtonWide: {
-    minWidth: 60,
+  barcodeOptionText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  settingScrollButtons: {
-    flexGrow: 0,
-    marginLeft: 8,
+  toggleControl: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 3,
+    gap: 2,
   },
-  customTextInputContainer: {
-    paddingHorizontal: 4,
-    marginTop: -4,
+  toggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   customTextInput: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 14,
+    marginTop: 10,
   },
   typesScroll: {
     maxHeight: 110,

@@ -84,6 +84,8 @@ export default {
     signupSuccess: '회원가입이 완료되었습니다',
     logoutSuccess: '로그아웃되었습니다',
     profileUpdateSuccess: '프로필이 수정되었습니다',
+    // 기타
+    orContinueWith: '또는',
   },
 
   // 스캔 화면
@@ -102,14 +104,15 @@ export default {
     clearBatch: '초기화',
     viewBatchList: '목록 보기',
     sending: '전송',
+    urlSending: 'URL 전송 중',
     noSessionUrl: '전송 주소 없음',
     pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
-    uploadImage: '이미지에서 스캔',
+    uploadImage: '코드 자동 분석',
   },
 
   // 이미지 분석 화면
   imageAnalysis: {
-    title: '이미지 분석',
+    title: '코드 자동 분석',
     selectPhoto: '사진 선택',
     noPhotos: '사진이 없습니다',
     noImage: '분석할 이미지가 없습니다.',
@@ -128,6 +131,10 @@ export default {
     saveAllSuccessMessage: '{{count}}개의 바코드가 앨범에 저장되었습니다.',
     saveError: '저장 중 오류가 발생했습니다.',
     permissionDenied: '사진 앨범 접근 권한이 필요합니다.',
+    downloadJson: 'JSON 다운로드',
+    jsonCopied: 'JSON 복사됨',
+    jsonCopiedMessage: 'JSON 데이터가 클립보드에 복사되었습니다.',
+    jsonError: 'JSON 다운로드 중 오류가 발생했습니다.',
   },
 
   // 히스토리 화면
@@ -356,6 +363,7 @@ export default {
     cannotDeleteDefault: '기본 그룹은 삭제할 수 없습니다.',
     emptyName: '그룹 이름을 입력해주세요.',
     selectGroup: '그룹 선택',
+    dragToReorder: '≡ 아이콘을 길게 눌러 순서를 변경하세요',
   },
 
   // 내보내기 화면
@@ -727,6 +735,107 @@ export default {
       errorCorrection: '오류 보정 레벨',
       errorCorrectionHint: '높을수록 손상된 QR코드도 인식 가능',
     },
+  },
+
+  // 백업 내보내기
+  backupExport: {
+    title: '백업 내보내기',
+    icloudAutoSync: 'iCloud 자동 동기화',
+    icloudAutoSyncDesc: '데이터가 변경되면 자동으로 iCloud에 동기화됩니다.',
+    syncNow: '지금 동기화',
+    enableIcloud: '설정에서 iCloud를 활성화해주세요.',
+    googleDriveBackup: 'Google Drive 백업',
+    lastBackup: '마지막 백업',
+    neverBackedUp: '백업된 적 없음',
+    backupIncludes: '백업에 포함되는 항목',
+    scanHistory: '스캔 기록',
+    groupInfo: '그룹 정보',
+    appSettings: '앱 설정',
+    favorites: '즐겨찾기',
+    barcodeTypeSettings: '바코드 타입 설정',
+    // 동기화 상태
+    syncing: '동기화 중...',
+    syncComplete: '동기화 완료',
+    syncFailed: '동기화 실패',
+    icloudUnavailable: 'iCloud 사용 불가',
+    neverSynced: '동기화된 적 없음',
+    justNow: '방금 전',
+    minutesAgo: '{{count}}분 전',
+    hoursAgo: '{{count}}시간 전',
+    daysAgo: '{{count}}일 전',
+    // 메시지
+    syncedToIcloud: 'iCloud에 동기화되었습니다.',
+    backupComplete: 'Google Drive에 백업이 완료되었습니다.',
+    fileName: '파일명',
+  },
+
+  // 백업 가져오기
+  backupImport: {
+    title: '백업 가져오기',
+    icloudRestore: 'iCloud에서 복원',
+    googleDriveRestore: 'Google Drive에서 복원',
+    restoreTitle: '백업 복원',
+    restoreConfirm: '이전 백업으로 데이터를 복원하시겠습니까?\n현재 데이터는 덮어쓰기됩니다.',
+    cancel: '취소',
+    restore: '복원',
+    restoreSuccess: '백업이 성공적으로 복원되었습니다.',
+    restartApp: '앱을 다시 시작해주세요.',
+    restoreError: '백업 복원 중 오류가 발생했습니다.',
+    noBackupInIcloud: 'iCloud에 저장된 백업이 없습니다.',
+    createBackupFirst: '먼저 "백업 내보내기"에서 백업을 생성해주세요.',
+    noBackupInGoogleDrive: 'Google Drive에 백업 파일이 없습니다.',
+    invalidBackupFile: '유효한 백업 파일이 아닙니다.',
+    icloudOnlyIOS: 'iCloud는 iOS에서만 사용 가능합니다.',
+  },
+
+  // 제품 검색 설정
+  productSearch: {
+    title: '제품 검색 설정',
+    description: '바코드 스캔 시 자동으로 검색할 사이트를 설정합니다.',
+    searchSites: '검색 사이트',
+    addSite: '사이트 추가',
+    editSite: '사이트 수정',
+    siteName: '사이트 이름',
+    siteUrl: 'URL',
+    siteNamePlaceholder: '사이트 이름을 입력하세요',
+    urlPlaceholder: 'https://example.com/search?q={code}',
+    urlHint: 'URL에 {code}를 넣으면 스캔 값으로 대체됩니다.',
+    enterBothFields: '사이트 이름과 URL을 모두 입력해주세요.',
+    includePlaceholder: 'URL에 {code} 플레이스홀더를 포함해주세요.',
+    deleteConfirmTitle: '삭제 확인',
+    deleteConfirmMessage: '이 검색 사이트를 삭제하시겠습니까?',
+    openMode: '열기 방식',
+    inAppBrowser: '앱 내 브라우저',
+    defaultBrowser: '기본 브라우저',
+    activationMode: '활성화 조건',
+    allCodes: '모든 코드',
+    productCodes: '제품 코드',
+    // 국가명
+    countries: {
+      KR: '대한민국',
+      US: '미국',
+      JP: '일본',
+      CN: '중국',
+      DE: '독일',
+      GB: '영국',
+      FR: '프랑스',
+      DK: '덴마크',
+    },
+  },
+
+  // 공통 에러 메시지
+  errors: {
+    authTokenNotReceived: '인증 토큰을 받지 못했습니다.',
+    tokenExchangeFailed: '토큰 교환 실패',
+    googleAuthFailed: 'Google 인증 실패',
+    unknownError: '알 수 없는 오류',
+    icloudSyncError: 'iCloud 동기화 중 오류가 발생했습니다.',
+    googleLoginError: 'Google 로그인 중 오류가 발생했습니다.',
+    uploadFailed: '업로드 실패',
+    googleDriveBackupError: 'Google Drive 백업 중 오류가 발생했습니다.',
+    fileListFetchFailed: 'Google Drive에서 파일 목록을 가져오지 못했습니다.',
+    fileDownloadFailed: 'Google Drive에서 파일을 다운로드하지 못했습니다.',
+    icloudLoadError: 'iCloud에서 백업을 불러오는 중 오류가 발생했습니다.',
   },
 
   // 사진 저장 설정

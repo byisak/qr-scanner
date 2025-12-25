@@ -8,12 +8,14 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
 
 export default function ResultScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const { triggerSync } = useSync();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
   const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed } = params;
@@ -240,6 +242,7 @@ export default function ResultScreen() {
 
       historyByGroup[groupId] = groupHistory;
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      triggerSync();
 
       Alert.alert(t('result.editSuccess'), t('result.editSuccessMessage'), [
         {
@@ -288,6 +291,7 @@ export default function ResultScreen() {
 
               historyByGroup[groupId] = filteredHistory;
               await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+              triggerSync();
 
               Alert.alert(t('result.deleteSuccess'), t('result.deleteSuccessMessage'), [
                 {
