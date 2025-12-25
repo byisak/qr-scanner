@@ -21,6 +21,7 @@ import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Clipboard from 'expo-clipboard';
+import { File } from 'expo-file-system';
 
 export default function BackupImportScreen() {
   const router = useRouter();
@@ -37,11 +38,19 @@ export default function BackupImportScreen() {
 
   const importOptions = [
     {
+      id: 'local',
+      title: '로컬 파일에서 가져오기',
+      description: '기기에 저장된 백업 파일을 선택합니다',
+      icon: 'document-outline',
+      iconColor: '#007AFF',
+      available: true,
+    },
+    {
       id: 'clipboard',
       title: '클립보드에서 가져오기',
       description: '복사한 백업 데이터를 붙여넣기합니다',
       icon: 'clipboard-outline',
-      iconColor: '#007AFF',
+      iconColor: '#34C759',
       available: true,
     },
     {
@@ -49,7 +58,7 @@ export default function BackupImportScreen() {
       title: '직접 입력하기',
       description: '백업 JSON 데이터를 직접 붙여넣습니다',
       icon: 'create-outline',
-      iconColor: '#34C759',
+      iconColor: '#FF9500',
       available: true,
     },
     {
@@ -58,14 +67,6 @@ export default function BackupImportScreen() {
       description: 'iCloud Drive에서 백업을 가져옵니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
-      available: false,
-    },
-    {
-      id: 'google',
-      title: 'Google Drive에서 가져오기',
-      description: 'Google Drive에서 백업을 가져옵니다',
-      icon: 'logo-google',
-      iconColor: '#4285F4',
       available: false,
     },
   ];
@@ -124,6 +125,46 @@ export default function BackupImportScreen() {
     }
   };
 
+  const handleLocalImport = async () => {
+    setIsLoading(true);
+    setLoadingType('local');
+
+    try {
+      // expo-document-picker 동적 로딩
+      const DocumentPicker = await import('expo-document-picker');
+
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/json',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const fileUri = result.assets[0].uri;
+      const file = new File(fileUri);
+      const fileContent = await file.text();
+
+      await processBackupText(fileContent);
+    } catch (error) {
+      console.error('Local import error:', error);
+
+      // 네이티브 모듈 에러시 클립보드 방식 안내
+      if (error.message?.includes('native module') || error.message?.includes('ExpoDocumentPicker')) {
+        Alert.alert(
+          '파일 선택 불가',
+          'Development Build가 필요합니다.\n\n대신 "클립보드에서 가져오기"를 사용해주세요:\n\n1. 백업 파일을 텍스트 앱으로 엽니다\n2. 전체 내용을 복사합니다\n3. "클립보드에서 가져오기"를 탭합니다'
+        );
+      } else {
+        Alert.alert('오류', '백업 파일을 읽는 중 오류가 발생했습니다.');
+      }
+    } finally {
+      setIsLoading(false);
+      setLoadingType(null);
+    }
+  };
+
   const handleClipboardImport = async () => {
     setIsLoading(true);
     setLoadingType('clipboard');
@@ -171,12 +212,11 @@ export default function BackupImportScreen() {
     Alert.alert('준비 중', 'iCloud 가져오기 기능은 준비 중입니다.');
   };
 
-  const handleGoogleImport = async () => {
-    Alert.alert('준비 중', 'Google Drive 가져오기 기능은 준비 중입니다.');
-  };
-
   const handleImport = (type) => {
     switch (type) {
+      case 'local':
+        handleLocalImport();
+        break;
       case 'clipboard':
         handleClipboardImport();
         break;
@@ -185,9 +225,6 @@ export default function BackupImportScreen() {
         break;
       case 'icloud':
         handleICloudImport();
-        break;
-      case 'google':
-        handleGoogleImport();
         break;
     }
   };
@@ -267,10 +304,9 @@ export default function BackupImportScreen() {
           </Text>
           <View style={styles.guideList}>
             {[
-              '1. 백업 파일(.json)을 텍스트 앱으로 엽니다',
-              '2. 전체 내용을 선택하여 복사합니다',
-              '3. "클립보드에서 가져오기"를 탭합니다',
-              '4. 복원 후 앱을 다시 시작합니다',
+              '• 로컬 파일: 파일 앱에서 백업 파일을 직접 선택',
+              '• 클립보드: 백업 파일 내용 복사 후 붙여넣기',
+              '• 복원 후 앱을 다시 시작해야 적용됩니다',
             ].map((text, index) => (
               <View key={index} style={styles.guideItem}>
                 <Text style={[styles.guideText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
