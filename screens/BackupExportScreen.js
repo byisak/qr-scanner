@@ -110,16 +110,21 @@ export default function BackupExportScreen() {
       const { File, Paths, isAvailableAsync, shareAsync } = await loadModules();
 
       const backupData = await createBackupData();
-      // 고유한 파일명 생성 (날짜 + 시간)
+      // 고유한 파일명 생성 (날짜 + 시간 + 랜덤)
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileName = `qr_scanner_backup_${timestamp}.json`;
+      const random = Math.random().toString(36).substring(2, 8);
+      const fileName = `qr_scanner_backup_${timestamp}_${random}.json`;
 
       // 새로운 File API 사용
       const backupFile = new File(Paths.cache, fileName);
 
-      // 파일이 이미 존재하면 삭제
-      if (await backupFile.exists()) {
-        await backupFile.delete();
+      // 파일이 이미 존재하면 삭제 시도
+      try {
+        if (backupFile.exists) {
+          await backupFile.delete();
+        }
+      } catch (e) {
+        // 파일이 없으면 무시
       }
 
       await backupFile.create();
