@@ -813,7 +813,7 @@ export default function QRStylePicker({
     { id: 'dots', label: t('generator.qrStyle.dots') || '도트', icon: 'grid-outline' },
     { id: 'corners', label: t('generator.qrStyle.corners') || '코너', icon: 'scan-outline' },
     { id: 'background', label: '배경', icon: 'image-outline' },
-    { id: 'image', label: '이미지', icon: 'images-outline' },
+    // { id: 'image', label: '이미지', icon: 'images-outline' }, // 추후 개발 예정
     { id: 'settings', label: '설정', icon: 'settings-outline' },
   ];
 
@@ -896,7 +896,7 @@ export default function QRStylePicker({
           {activeTab === 'dots' && renderDotOptions()}
           {activeTab === 'corners' && renderCornerOptions()}
           {activeTab === 'background' && renderBackgroundOptions()}
-          {activeTab === 'image' && renderImageOptions()}
+          {/* {activeTab === 'image' && renderImageOptions()} */}{/* 추후 개발 예정 */}
           {activeTab === 'settings' && renderSettingsOptions()}
         </ScrollView>
       </View>
