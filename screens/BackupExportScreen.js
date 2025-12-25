@@ -51,6 +51,8 @@ export default function BackupExportScreen() {
     useProxy: true,
   });
 
+  console.log('Google OAuth Redirect URI:', redirectUri);
+
   // Google OAuth - 웹 클라이언트 ID와 프록시 사용
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
