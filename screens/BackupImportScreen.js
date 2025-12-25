@@ -43,7 +43,7 @@ export default function BackupImportScreen() {
       description: '기기에 저장된 백업 파일을 선택합니다',
       icon: 'document-outline',
       iconColor: '#007AFF',
-      available: true,
+      available: false,
     },
     {
       id: 'clipboard',
@@ -67,6 +67,14 @@ export default function BackupImportScreen() {
       description: 'iCloud Drive에서 백업을 가져옵니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
+      available: false,
+    },
+    {
+      id: 'google',
+      title: 'Google Drive에서 가져오기',
+      description: 'Google Drive에서 백업을 가져옵니다',
+      icon: 'logo-google',
+      iconColor: '#4285F4',
       available: false,
     },
   ];
@@ -214,14 +222,22 @@ export default function BackupImportScreen() {
     }
   };
 
-  const handleICloudImport = async () => {
+  const handleLocalImportDisabled = () => {
+    Alert.alert('준비 중', '로컬 파일 가져오기 기능은 준비 중입니다.\n\n클립보드에서 가져오기를 이용해주세요.');
+  };
+
+  const handleICloudImport = () => {
     Alert.alert('준비 중', 'iCloud 가져오기 기능은 준비 중입니다.');
+  };
+
+  const handleGoogleImport = () => {
+    Alert.alert('준비 중', 'Google Drive 가져오기 기능은 준비 중입니다.');
   };
 
   const handleImport = (type) => {
     switch (type) {
       case 'local':
-        handleLocalImport();
+        handleLocalImportDisabled();
         break;
       case 'clipboard':
         handleClipboardImport();
@@ -231,6 +247,9 @@ export default function BackupImportScreen() {
         break;
       case 'icloud':
         handleICloudImport();
+        break;
+      case 'google':
+        handleGoogleImport();
         break;
     }
   };

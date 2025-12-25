@@ -61,7 +61,7 @@ export default function BackupExportScreen() {
       description: 'iCloud Drive에 백업을 저장합니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
-      available: Platform.OS === 'ios',
+      available: false,
     },
     {
       id: 'google',
@@ -69,7 +69,7 @@ export default function BackupExportScreen() {
       description: 'Google Drive에 백업을 저장합니다',
       icon: 'logo-google',
       iconColor: '#4285F4',
-      available: true,
+      available: false,
     },
   ];
 
@@ -149,43 +149,12 @@ export default function BackupExportScreen() {
     }
   };
 
-  const handleICloudBackup = async () => {
-    if (Platform.OS !== 'ios') {
-      Alert.alert('알림', 'iCloud 백업은 iOS에서만 사용 가능합니다.');
-      return;
-    }
-
-    setIsLoading(true);
-    setLoadingType('icloud');
-
-    try {
-      const backupData = await createBackupData();
-      // iCloud 백업 로직 (추후 구현)
-      Alert.alert('준비 중', 'iCloud 백업 기능은 준비 중입니다.');
-    } catch (error) {
-      console.error('iCloud backup error:', error);
-      Alert.alert('오류', 'iCloud 백업 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
-    }
+  const handleICloudBackup = () => {
+    Alert.alert('준비 중', 'iCloud 백업 기능은 준비 중입니다.');
   };
 
-  const handleGoogleBackup = async () => {
-    setIsLoading(true);
-    setLoadingType('google');
-
-    try {
-      const backupData = await createBackupData();
-      // Google Drive 백업 로직 (추후 구현)
-      Alert.alert('준비 중', 'Google Drive 백업 기능은 준비 중입니다.');
-    } catch (error) {
-      console.error('Google backup error:', error);
-      Alert.alert('오류', 'Google Drive 백업 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
-    }
+  const handleGoogleBackup = () => {
+    Alert.alert('준비 중', 'Google Drive 백업 기능은 준비 중입니다.');
   };
 
   const handleBackup = (type) => {
