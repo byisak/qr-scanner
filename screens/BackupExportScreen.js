@@ -53,12 +53,13 @@ export default function BackupExportScreen() {
 
   console.log('Google OAuth Redirect URI:', redirectUri);
 
-  // Google OAuth - iOS는 iOS 클라이언트 ID 사용
+  // Google OAuth - iOS는 iOS 클라이언트 ID 사용 (Implicit Grant)
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID,
       scopes: ['https://www.googleapis.com/auth/drive.file'],
       redirectUri,
+      responseType: AuthSession.ResponseType.Token, // 직접 access_token 받기
     },
     discovery
   );
