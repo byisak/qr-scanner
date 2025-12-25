@@ -9,6 +9,9 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,21 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// 모듈 로딩 함수
-const loadModules = async () => {
-  try {
-    const dpModule = await import('expo-document-picker');
-    const fsModule = await import('expo-file-system');
-    return {
-      getDocumentAsync: dpModule.getDocumentAsync,
-      File: fsModule.File,
-    };
-  } catch (error) {
-    console.error('Module load error:', error);
-    throw new Error('네이티브 모듈을 로드할 수 없습니다.');
-  }
-};
+import * as Clipboard from 'expo-clipboard';
 
 export default function BackupImportScreen() {
   const router = useRouter();
@@ -43,14 +32,24 @@ export default function BackupImportScreen() {
   const statusBarHeight = Platform.OS === 'ios' ? 50 : insets.top;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
   const importOptions = [
     {
-      id: 'local',
-      title: '로컬에서 가져오기',
-      description: '기기에 저장된 백업 파일을 선택합니다',
-      icon: 'phone-portrait-outline',
+      id: 'clipboard',
+      title: '클립보드에서 가져오기',
+      description: '복사한 백업 데이터를 붙여넣기합니다',
+      icon: 'clipboard-outline',
       iconColor: '#007AFF',
+      available: true,
+    },
+    {
+      id: 'paste',
+      title: '직접 입력하기',
+      description: '백업 JSON 데이터를 직접 붙여넣습니다',
+      icon: 'create-outline',
+      iconColor: '#34C759',
       available: true,
     },
     {
@@ -59,7 +58,7 @@ export default function BackupImportScreen() {
       description: 'iCloud Drive에서 백업을 가져옵니다',
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
-      available: Platform.OS === 'ios',
+      available: false,
     },
     {
       id: 'google',
@@ -67,7 +66,7 @@ export default function BackupImportScreen() {
       description: 'Google Drive에서 백업을 가져옵니다',
       icon: 'logo-google',
       iconColor: '#4285F4',
-      available: true,
+      available: false,
     },
   ];
 
@@ -92,30 +91,9 @@ export default function BackupImportScreen() {
     }
   };
 
-  const handleLocalImport = async () => {
-    setIsLoading(true);
-    setLoadingType('local');
-
+  const processBackupText = async (text) => {
     try {
-      // 모듈 동적 로딩
-      const { getDocumentAsync, File } = await loadModules();
-
-      const result = await getDocumentAsync({
-        type: 'application/json',
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) {
-        setIsLoading(false);
-        setLoadingType(null);
-        return;
-      }
-
-      // 새로운 File API 사용
-      const fileUri = result.assets[0].uri;
-      const file = new File(fileUri);
-      const fileContent = await file.text();
-      const backupData = JSON.parse(fileContent);
+      const backupData = JSON.parse(text.trim());
 
       Alert.alert(
         '백업 복원',
@@ -132,6 +110,8 @@ export default function BackupImportScreen() {
               try {
                 await restoreBackupData(backupData);
                 Alert.alert('성공', '백업이 성공적으로 복원되었습니다. 앱을 다시 시작해주세요.');
+                setShowPasteModal(false);
+                setPasteText('');
               } catch (error) {
                 Alert.alert('오류', error.message || '백업 복원 중 오류가 발생했습니다.');
               }
@@ -140,8 +120,47 @@ export default function BackupImportScreen() {
         ]
       );
     } catch (error) {
-      console.error('Local import error:', error);
-      Alert.alert('오류', '백업 파일을 읽는 중 오류가 발생했습니다.');
+      Alert.alert('오류', '유효한 JSON 형식이 아닙니다. 백업 파일 내용을 확인해주세요.');
+    }
+  };
+
+  const handleClipboardImport = async () => {
+    setIsLoading(true);
+    setLoadingType('clipboard');
+
+    try {
+      const clipboardContent = await Clipboard.getStringAsync();
+
+      if (!clipboardContent || clipboardContent.trim() === '') {
+        Alert.alert('알림', '클립보드가 비어있습니다. 백업 파일 내용을 먼저 복사해주세요.');
+        return;
+      }
+
+      await processBackupText(clipboardContent);
+    } catch (error) {
+      console.error('Clipboard import error:', error);
+      Alert.alert('오류', '클립보드에서 데이터를 읽는 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+      setLoadingType(null);
+    }
+  };
+
+  const handlePasteImport = () => {
+    setShowPasteModal(true);
+  };
+
+  const handlePasteSubmit = async () => {
+    if (!pasteText || pasteText.trim() === '') {
+      Alert.alert('알림', '백업 데이터를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingType('paste');
+
+    try {
+      await processBackupText(pasteText);
     } finally {
       setIsLoading(false);
       setLoadingType(null);
@@ -149,46 +168,20 @@ export default function BackupImportScreen() {
   };
 
   const handleICloudImport = async () => {
-    if (Platform.OS !== 'ios') {
-      Alert.alert('알림', 'iCloud 가져오기는 iOS에서만 사용 가능합니다.');
-      return;
-    }
-
-    setIsLoading(true);
-    setLoadingType('icloud');
-
-    try {
-      // iCloud 가져오기 로직 (추후 구현)
-      Alert.alert('준비 중', 'iCloud 가져오기 기능은 준비 중입니다.');
-    } catch (error) {
-      console.error('iCloud import error:', error);
-      Alert.alert('오류', 'iCloud에서 가져오는 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
-    }
+    Alert.alert('준비 중', 'iCloud 가져오기 기능은 준비 중입니다.');
   };
 
   const handleGoogleImport = async () => {
-    setIsLoading(true);
-    setLoadingType('google');
-
-    try {
-      // Google Drive 가져오기 로직 (추후 구현)
-      Alert.alert('준비 중', 'Google Drive 가져오기 기능은 준비 중입니다.');
-    } catch (error) {
-      console.error('Google import error:', error);
-      Alert.alert('오류', 'Google Drive에서 가져오는 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-      setLoadingType(null);
-    }
+    Alert.alert('준비 중', 'Google Drive 가져오기 기능은 준비 중입니다.');
   };
 
   const handleImport = (type) => {
     switch (type) {
-      case 'local':
-        handleLocalImport();
+      case 'clipboard':
+        handleClipboardImport();
+        break;
+      case 'paste':
+        handlePasteImport();
         break;
       case 'icloud':
         handleICloudImport();
@@ -253,8 +246,8 @@ export default function BackupImportScreen() {
                   {option.description}
                 </Text>
                 {!option.available && (
-                  <Text style={[styles.unavailableText, { color: colors.error, fontFamily: fonts.regular }]}>
-                    {Platform.OS === 'android' ? 'iOS 전용 기능입니다' : '사용 불가'}
+                  <Text style={[styles.unavailableText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                    준비 중
                   </Text>
                 )}
               </View>
@@ -270,17 +263,16 @@ export default function BackupImportScreen() {
         {/* 복원 안내 */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            복원 안내
+            복원 방법
           </Text>
           <View style={styles.guideList}>
             {[
-              '백업 파일은 .json 형식이어야 합니다',
-              '복원 후 앱을 다시 시작해야 적용됩니다',
-              '다른 기기의 백업도 복원 가능합니다',
-              '호환되지 않는 버전은 복원이 불가합니다',
+              '1. 백업 파일(.json)을 텍스트 앱으로 엽니다',
+              '2. 전체 내용을 선택하여 복사합니다',
+              '3. "클립보드에서 가져오기"를 탭합니다',
+              '4. 복원 후 앱을 다시 시작합니다',
             ].map((text, index) => (
               <View key={index} style={styles.guideItem}>
-                <View style={[styles.bulletPoint, { backgroundColor: colors.primary }]} />
                 <Text style={[styles.guideText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {text}
                 </Text>
@@ -291,6 +283,66 @@ export default function BackupImportScreen() {
 
         <View style={styles.bottomSpace} />
       </ScrollView>
+
+      {/* Paste Modal */}
+      <Modal
+        visible={showPasteModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPasteModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+                백업 데이터 입력
+              </Text>
+              <TouchableOpacity onPress={() => setShowPasteModal(false)}>
+                <Ionicons name="close" size={28} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              백업 파일의 JSON 내용을 아래에 붙여넣으세요.
+            </Text>
+
+            <TextInput
+              style={[
+                styles.pasteInput,
+                {
+                  backgroundColor: colors.background,
+                  color: colors.text,
+                  borderColor: colors.border,
+                  fontFamily: fonts.regular,
+                }
+              ]}
+              multiline
+              placeholder='{"version": "1.0", "data": {...}}'
+              placeholderTextColor={colors.textTertiary}
+              value={pasteText}
+              onChangeText={setPasteText}
+              textAlignVertical="top"
+            />
+
+            <TouchableOpacity
+              style={[styles.submitButton, { backgroundColor: colors.primary }]}
+              onPress={handlePasteSubmit}
+              disabled={isLoading}
+            >
+              {isLoading && loadingType === 'paste' ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[styles.submitButtonText, { fontFamily: fonts.semiBold }]}>
+                  복원하기
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -392,12 +444,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
   },
-  bulletPoint: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 7,
-  },
   guideText: {
     flex: 1,
     fontSize: 14,
@@ -405,5 +451,49 @@ const styles = StyleSheet.create({
   },
   bottomSpace: {
     height: 40,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalDescription: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  pasteInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    minHeight: 200,
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  submitButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
   },
 });
