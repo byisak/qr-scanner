@@ -107,9 +107,12 @@ function ScannerScreen() {
   const [scannerReady, setScannerReady] = useState(false);
   const qrIconOpacity = useRef(new Animated.Value(1)).current;
   const guideTextOpacity = useRef(new Animated.Value(1)).current;
-  const cornerScale = useRef(new Animated.Value(1)).current;
+  const cornerExpand = useRef(new Animated.Value(0)).current; // 0: 안쪽, 1: 바깥쪽
   const cornerOpacity = useRef(new Animated.Value(1)).current;
   const crosshairOpacity = useRef(new Animated.Value(0)).current;
+
+  // 코너 이동 거리 (안쪽에서 바깥쪽으로)
+  const CORNER_MOVE_DISTANCE = 50;
 
   // 스캔 화면 로딩 애니메이션 시퀀스
   useEffect(() => {
@@ -117,13 +120,13 @@ function ScannerScreen() {
       // 애니메이션 값 초기화
       qrIconOpacity.setValue(1);
       guideTextOpacity.setValue(1);
-      cornerScale.setValue(1); // 처음부터 최종 크기
+      cornerExpand.setValue(0); // 안쪽에서 시작
       cornerOpacity.setValue(1);
       crosshairOpacity.setValue(0);
 
       // Step 1: 초기 상태 1초 유지
       const step1Timer = setTimeout(() => {
-        // Step 2: QR 아이콘/안내 텍스트 페이드 아웃
+        // Step 2: QR 아이콘/안내 텍스트 페이드 아웃 + 코너 바깥으로 확장
         Animated.parallel([
           Animated.timing(qrIconOpacity, {
             toValue: 0,
@@ -133,6 +136,11 @@ function ScannerScreen() {
           Animated.timing(guideTextOpacity, {
             toValue: 0,
             duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cornerExpand, {
+            toValue: 1,
+            duration: 800,
             useNativeDriver: true,
           }),
         ]).start(() => {
@@ -1494,37 +1502,77 @@ function ScannerScreen() {
             <Ionicons name="qr-code" size={80} color="rgba(255, 255, 255, 0.9)" />
           </Animated.View>
 
-          {/* Step 1-2: 코너 사각형 (애니메이션으로 확장) */}
-          <Animated.View
-            style={[
-              styles.cornerContainer,
-              {
-                opacity: cornerOpacity,
-                transform: [{ scale: cornerScale }],
-              },
-            ]}
-          >
-            {/* 좌상단 코너 ⌜ */}
-            <View style={[styles.corner, styles.cornerTopLeft]}>
+          {/* Step 1-2: 코너 사각형 (위치 이동 애니메이션) */}
+          <View style={styles.cornerContainer}>
+            {/* 좌상단 코너 ⌜ - 안쪽에서 바깥쪽으로 이동 */}
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerTopLeft,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
+                  ],
+                },
+              ]}
+            >
               <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, left: 0 }]} />
               <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, left: 0 }]} />
-            </View>
+            </Animated.View>
             {/* 우상단 코너 ⌝ */}
-            <View style={[styles.corner, styles.cornerTopRight]}>
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerTopRight,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
+                  ],
+                },
+              ]}
+            >
               <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, right: 0 }]} />
               <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, right: 0 }]} />
-            </View>
+            </Animated.View>
             {/* 좌하단 코너 ⌞ */}
-            <View style={[styles.corner, styles.cornerBottomLeft]}>
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerBottomLeft,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
+                  ],
+                },
+              ]}
+            >
               <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, left: 0 }]} />
               <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, left: 0 }]} />
-            </View>
+            </Animated.View>
             {/* 우하단 코너 ⌟ */}
-            <View style={[styles.corner, styles.cornerBottomRight]}>
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerBottomRight,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
+                  ],
+                },
+              ]}
+            >
               <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, right: 0 }]} />
               <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, right: 0 }]} />
-            </View>
-          </Animated.View>
+            </Animated.View>
+          </View>
 
           {/* Step 1: 안내 텍스트 */}
           <Animated.View style={[styles.guideTextContainer, { opacity: guideTextOpacity }]}>
