@@ -412,7 +412,7 @@ export default function ProductSearchSettingsScreen() {
           >
             <Text style={styles.countryFlag}>{selectedCountryData?.flag}</Text>
             <Text style={[styles.countryName, { color: colors.text, fontFamily: fonts.semiBold }]}>
-              {selectedCountryData?.name}
+              {t(`productSearch.countries.${selectedCountry}`)}
             </Text>
             <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -507,7 +507,7 @@ export default function ProductSearchSettingsScreen() {
                 >
                   <Text style={styles.countryItemFlag}>{country.flag}</Text>
                   <Text style={[styles.countryItemName, { color: colors.text, fontFamily: fonts.regular }]}>
-                    {country.name}
+                    {t(`productSearch.countries.${country.code}`)}
                   </Text>
                   {selectedCountry === country.code && (
                     <Ionicons name="checkmark" size={24} color={colors.primary} />
