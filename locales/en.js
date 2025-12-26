@@ -210,6 +210,8 @@ export default {
   // Settings screen
   settings: {
     title: 'Settings',
+    backupAndRestore: 'Backup & Restore',
+    productSearchSection: 'Product Search',
     barcodeSettings: 'Barcode Settings',
     hapticFeedback: 'Haptic Feedback',
     hapticDesc: 'Vibrate on scan',
@@ -742,6 +744,7 @@ export default {
   // Backup Export
   backupExport: {
     title: 'Backup Export',
+    description: 'Backup scan history and settings',
     icloudAutoSync: 'iCloud Auto Sync',
     icloudAutoSyncDesc: 'Automatically sync to iCloud when data changes.',
     syncNow: 'Sync Now',
@@ -774,6 +777,7 @@ export default {
   // Backup Import
   backupImport: {
     title: 'Backup Import',
+    description: 'Restore data from backup file',
     icloudRestore: 'Restore from iCloud',
     googleDriveRestore: 'Restore from Google Drive',
     restoreFromIcloud: 'Restore from iCloud',

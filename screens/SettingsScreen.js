@@ -483,7 +483,7 @@ export default function SettingsScreen() {
 
         {/* 백업 및 복원 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>백업 및 복원</Text>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.backupAndRestore')}</Text>
 
           {/* 백업 내보내기 */}
           <TouchableOpacity
@@ -492,8 +492,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>백업 내보내기</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>스캔 기록 및 설정을 백업합니다</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('backupExport.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('backupExport.description')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -505,8 +505,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>백업 가져오기</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>백업 파일에서 데이터를 복원합니다</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('backupImport.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('backupImport.description')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -514,7 +514,7 @@ export default function SettingsScreen() {
 
         {/* 제품 검색 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>제품 검색</Text>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.productSearchSection')}</Text>
 
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
@@ -522,8 +522,8 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>제품 검색 설정</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>바코드 스캔 시 자동으로 제품 정보를 검색합니다</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('productSearch.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>

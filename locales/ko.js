@@ -210,6 +210,8 @@ export default {
   // 설정 화면
   settings: {
     title: '설정',
+    backupAndRestore: '백업 및 복원',
+    productSearchSection: '제품 검색',
     barcodeSettings: '바코드 설정',
     hapticFeedback: '햅틱 피드백',
     hapticDesc: '스캔 시 진동으로 알림',
@@ -742,6 +744,7 @@ export default {
   // 백업 내보내기
   backupExport: {
     title: '백업 내보내기',
+    description: '스캔 기록 및 설정을 백업합니다',
     icloudAutoSync: 'iCloud 자동 동기화',
     icloudAutoSyncDesc: '데이터가 변경되면 자동으로 iCloud에 동기화됩니다.',
     syncNow: '지금 동기화',
@@ -774,6 +777,7 @@ export default {
   // 백업 가져오기
   backupImport: {
     title: '백업 가져오기',
+    description: '백업 파일에서 데이터를 복원합니다',
     icloudRestore: 'iCloud에서 복원',
     googleDriveRestore: 'Google Drive에서 복원',
     restoreFromIcloud: 'iCloud에서 복원',

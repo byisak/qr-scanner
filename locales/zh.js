@@ -209,6 +209,8 @@ export default {
   // 设置界面
   settings: {
     title: '设置',
+    backupAndRestore: '备份与恢复',
+    productSearchSection: '商品搜索',
     barcodeSettings: '条形码设置',
     hapticFeedback: '触觉反馈',
     hapticDesc: '扫描时通过振动提示',
@@ -741,6 +743,7 @@ export default {
   // 备份导出
   backupExport: {
     title: '备份导出',
+    description: '备份扫描历史和设置',
     icloudAutoSync: 'iCloud自动同步',
     icloudAutoSyncDesc: '数据更改时自动同步到iCloud。',
     syncNow: '立即同步',
@@ -771,6 +774,7 @@ export default {
   // 备份导入
   backupImport: {
     title: '备份导入',
+    description: '从备份文件恢复数据',
     icloudRestore: '从iCloud恢复',
     googleDriveRestore: '从Google Drive恢复',
     restoreFromIcloud: '从iCloud恢复',

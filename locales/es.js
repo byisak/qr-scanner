@@ -209,6 +209,8 @@ export default {
   // Pantalla de configuración
   settings: {
     title: 'Configuración',
+    backupAndRestore: 'Copia de seguridad y restauración',
+    productSearchSection: 'Búsqueda de productos',
     barcodeSettings: 'Configuración de códigos de barras',
     hapticFeedback: 'Retroalimentación háptica',
     hapticDesc: 'Vibrar al escanear',
@@ -738,6 +740,7 @@ export default {
   // Exportar copia de seguridad
   backupExport: {
     title: 'Exportar copia de seguridad',
+    description: 'Hacer copia de seguridad del historial y configuración',
     icloudAutoSync: 'Sincronización automática de iCloud',
     icloudAutoSyncDesc: 'Sincroniza automáticamente con iCloud cuando cambian los datos.',
     syncNow: 'Sincronizar ahora',
@@ -768,6 +771,7 @@ export default {
   // Importar copia de seguridad
   backupImport: {
     title: 'Importar copia de seguridad',
+    description: 'Restaurar datos desde archivo de copia',
     icloudRestore: 'Restaurar desde iCloud',
     googleDriveRestore: 'Restaurar desde Google Drive',
     restoreFromIcloud: 'Restaurar desde iCloud',

@@ -209,6 +209,8 @@ export default {
   // 設定画面
   settings: {
     title: '設定',
+    backupAndRestore: 'バックアップと復元',
+    productSearchSection: '商品検索',
     barcodeSettings: 'バーコード設定',
     hapticFeedback: 'ハプティックフィードバック',
     hapticDesc: 'スキャン時に振動で通知',
@@ -741,6 +743,7 @@ export default {
   // バックアップエクスポート
   backupExport: {
     title: 'バックアップエクスポート',
+    description: 'スキャン履歴と設定をバックアップします',
     icloudAutoSync: 'iCloud自動同期',
     icloudAutoSyncDesc: 'データ変更時に自動的にiCloudに同期します。',
     syncNow: '今すぐ同期',
@@ -771,6 +774,7 @@ export default {
   // バックアップインポート
   backupImport: {
     title: 'バックアップインポート',
+    description: 'バックアップファイルからデータを復元します',
     icloudRestore: 'iCloudから復元',
     googleDriveRestore: 'Google Driveから復元',
     restoreFromIcloud: 'iCloudから復元',
