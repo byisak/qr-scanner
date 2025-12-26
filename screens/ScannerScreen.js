@@ -126,48 +126,42 @@ function ScannerScreen() {
 
       // Step 1: 초기 상태 1초 유지
       const step1Timer = setTimeout(() => {
-        // Step 2: QR 아이콘/안내 텍스트 페이드 아웃 + 코너 바깥으로 확장
+        // Step 2: QR 아이콘/안내 텍스트 페이드 아웃 + 코너 빠르게 바깥으로 확장
         Animated.parallel([
           Animated.timing(qrIconOpacity, {
             toValue: 0,
-            duration: 500,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(guideTextOpacity, {
             toValue: 0,
-            duration: 500,
+            duration: 400,
             useNativeDriver: true,
           }),
+          // 빠르게 바깥으로 (오버슛)
           Animated.timing(cornerExpand, {
-            toValue: 1,
-            duration: 800,
+            toValue: 1.15,
+            duration: 400,
             useNativeDriver: true,
           }),
         ]).start(() => {
-          // Step 2.5: 페이드 인/아웃 3번 반복
-          Animated.sequence([
-            // 1회차
-            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 400, useNativeDriver: true }),
-            Animated.timing(cornerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-            // 2회차
-            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 400, useNativeDriver: true }),
-            Animated.timing(cornerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-            // 3회차
-            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 400, useNativeDriver: true }),
-            Animated.timing(cornerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-          ]).start(() => {
-            // Step 3: 코너 페이드 아웃 + 십자가 페이드 인
-            Animated.parallel([
-              Animated.timing(cornerOpacity, {
-                toValue: 0,
-                duration: 500,
-                useNativeDriver: true,
-              }),
-              Animated.timing(crosshairOpacity, {
-                toValue: 1,
-                duration: 500,
-                useNativeDriver: true,
-              }),
+          // Step 2.5: 약간 안쪽으로 모임
+          Animated.timing(cornerExpand, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            // Step 3: 페이드 인/아웃으로 사라짐
+            Animated.sequence([
+              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+              // 마지막 페이드 아웃 + 십자가 페이드 인
+              Animated.parallel([
+                Animated.timing(cornerOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+                Animated.timing(crosshairOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+              ]),
             ]).start(() => {
               setScannerReady(true);
             });
@@ -1512,8 +1506,8 @@ function ScannerScreen() {
                 {
                   opacity: cornerOpacity,
                   transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
                   ],
                 },
               ]}
@@ -1529,8 +1523,8 @@ function ScannerScreen() {
                 {
                   opacity: cornerOpacity,
                   transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
                   ],
                 },
               ]}
@@ -1546,8 +1540,8 @@ function ScannerScreen() {
                 {
                   opacity: cornerOpacity,
                   transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [CORNER_MOVE_DISTANCE, 0] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
                   ],
                 },
               ]}
@@ -1563,8 +1557,8 @@ function ScannerScreen() {
                 {
                   opacity: cornerOpacity,
                   transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1], outputRange: [-CORNER_MOVE_DISTANCE, 0] }) },
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
                   ],
                 },
               ]}
