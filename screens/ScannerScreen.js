@@ -144,19 +144,21 @@ function ScannerScreen() {
             useNativeDriver: true,
           }),
         ]).start(() => {
-          // Step 2.5: 숨쉬기 애니메이션 (줄었다 늘었다 - 부드럽게)
+          // Step 2.5: 숨쉬기 애니메이션 (바깥→안쪽→바깥 자연스럽게)
           breathingAnimation = Animated.loop(
             Animated.sequence([
+              // 안쪽으로 모임 (부드럽게 감속)
               Animated.timing(cornerScale, {
-                toValue: 0.94,
-                duration: 800,
-                easing: Easing.inOut(Easing.sin),
+                toValue: 0.93,
+                duration: 1000,
+                easing: Easing.inOut(Easing.ease),
                 useNativeDriver: true,
               }),
+              // 바깥으로 퍼짐 (부드럽게 감속)
               Animated.timing(cornerScale, {
                 toValue: 1,
-                duration: 800,
-                easing: Easing.inOut(Easing.sin),
+                duration: 1000,
+                easing: Easing.inOut(Easing.ease),
                 useNativeDriver: true,
               }),
             ])
