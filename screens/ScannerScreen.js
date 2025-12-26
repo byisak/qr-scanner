@@ -1214,6 +1214,9 @@ function ScannerScreen() {
   const [galleryModalVisible, setGalleryModalVisible] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryEndCursor, setGalleryEndCursor] = useState(null);
+  const [galleryHasMore, setGalleryHasMore] = useState(true);
+  const [galleryLoadingMore, setGalleryLoadingMore] = useState(false);
 
   // 갤러리 열기
   const handlePickImage = useCallback(async () => {
@@ -1231,15 +1234,20 @@ function ScannerScreen() {
 
       setGalleryLoading(true);
       setGalleryModalVisible(true);
+      setGalleryPhotos([]);
+      setGalleryEndCursor(null);
+      setGalleryHasMore(true);
 
-      // 최근 사진 500개 가져오기
+      // 최근 사진 100개씩 가져오기 (무한 스크롤)
       const assets = await MediaLibrary.getAssetsAsync({
         mediaType: 'photo',
-        first: 500,
+        first: 100,
         sortBy: [MediaLibrary.SortBy.creationTime],
       });
 
       setGalleryPhotos(assets.assets);
+      setGalleryEndCursor(assets.endCursor);
+      setGalleryHasMore(assets.hasNextPage);
       setGalleryLoading(false);
     } catch (error) {
       console.error('Gallery error:', error);
@@ -1247,6 +1255,30 @@ function ScannerScreen() {
       Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
     }
   }, [t]);
+
+  // 갤러리 더 불러오기 (무한 스크롤)
+  const handleLoadMorePhotos = useCallback(async () => {
+    if (galleryLoadingMore || !galleryHasMore || !galleryEndCursor) return;
+
+    try {
+      setGalleryLoadingMore(true);
+
+      const assets = await MediaLibrary.getAssetsAsync({
+        mediaType: 'photo',
+        first: 100,
+        after: galleryEndCursor,
+        sortBy: [MediaLibrary.SortBy.creationTime],
+      });
+
+      setGalleryPhotos(prev => [...prev, ...assets.assets]);
+      setGalleryEndCursor(assets.endCursor);
+      setGalleryHasMore(assets.hasNextPage);
+      setGalleryLoadingMore(false);
+    } catch (error) {
+      console.error('Load more photos error:', error);
+      setGalleryLoadingMore(false);
+    }
+  }, [galleryLoadingMore, galleryHasMore, galleryEndCursor]);
 
   // 사진 선택 시
   const handleSelectPhoto = useCallback(async (asset) => {
@@ -1568,6 +1600,15 @@ function ScannerScreen() {
                     />
                   </TouchableOpacity>
                 )}
+                onEndReached={handleLoadMorePhotos}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  galleryLoadingMore ? (
+                    <View style={styles.galleryFooterLoading}>
+                      <ActivityIndicator size="small" color="#fff" />
+                    </View>
+                  ) : null
+                }
                 ListEmptyComponent={
                   <View style={styles.galleryEmpty}>
                     <Ionicons name="images-outline" size={48} color="#666" />
@@ -1959,6 +2000,10 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
     marginTop: 12,
+  },
+  galleryFooterLoading: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });
 
