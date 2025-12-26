@@ -101,19 +101,19 @@ export default function BackupImportScreen() {
               setGoogleAccessToken(accessToken);
               listGoogleDriveFiles(accessToken);
             } else {
-              Alert.alert('오류', '인증 토큰을 받지 못했습니다.');
+              Alert.alert(t('settings.error'), t('errors.authTokenNotReceived'));
               setIsLoading(false);
               setLoadingType(null);
             }
           } catch (error) {
-            Alert.alert('오류', `토큰 교환 실패: ${error.message}`);
+            Alert.alert(t('settings.error'), `${t('errors.tokenExchangeFailed')}: ${error.message}`);
             setIsLoading(false);
             setLoadingType(null);
           }
         }
         setPendingGoogleImport(false);
       } else if (response?.type === 'error') {
-        Alert.alert('오류', `Google 인증 실패: ${response.error?.message || '알 수 없는 오류'}`);
+        Alert.alert(t('settings.error'), `${t('errors.googleAuthFailed')}: ${response.error?.message || t('errors.unknownError')}`);
         setIsLoading(false);
         setLoadingType(null);
         setPendingGoogleImport(false);
@@ -130,16 +130,16 @@ export default function BackupImportScreen() {
   const importOptions = [
     {
       id: 'icloud',
-      title: 'iCloud에서 복원',
-      description: 'iCloud에 동기화된 백업을 복원합니다',
+      title: t('backupImport.restoreFromIcloud'),
+      description: t('backupImport.restoreFromIcloudDesc'),
       icon: 'cloud-outline',
       iconColor: '#5AC8FA',
       available: Platform.OS === 'ios',
     },
     {
       id: 'google',
-      title: 'Google Drive에서 가져오기',
-      description: 'Google Drive의 백업 파일을 선택합니다',
+      title: t('backupImport.importFromGoogleDrive'),
+      description: t('backupImport.importFromGoogleDriveDesc'),
       icon: 'logo-google',
       iconColor: '#4285F4',
       available: true,
@@ -149,7 +149,7 @@ export default function BackupImportScreen() {
   const restoreBackupData = async (backupData) => {
     try {
       if (!backupData.version || !backupData.data) {
-        throw new Error('유효하지 않은 백업 파일입니다.');
+        throw new Error(t('errors.invalidBackupFile'));
       }
 
       const entries = Object.entries(backupData.data);
@@ -167,20 +167,20 @@ export default function BackupImportScreen() {
 
   const processGoogleBackupData = async (backupData) => {
     Alert.alert(
-      '백업 복원',
-      `백업 날짜: ${new Date(backupData.createdAt).toLocaleDateString()}\n\n기존 데이터를 덮어쓰시겠습니까?`,
+      t('backupImport.restoreTitle'),
+      `${t('backupImport.backupDate')}: ${new Date(backupData.createdAt).toLocaleDateString()}\n\n${t('backupImport.overwriteConfirm')}`,
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '복원',
+          text: t('backupImport.restore'),
           style: 'destructive',
           onPress: async () => {
             try {
               await restoreBackupData(backupData);
-              Alert.alert('성공', '백업이 성공적으로 복원되었습니다.\n\n앱을 다시 시작해주세요.');
+              Alert.alert(t('common.success'), t('backupImport.restoreSuccessRestart'));
               setShowFileListModal(false);
             } catch (error) {
-              Alert.alert('오류', error.message || '백업 복원 중 오류가 발생했습니다.');
+              Alert.alert(t('settings.error'), error.message || t('errors.restoreError'));
             }
           },
         },
@@ -190,7 +190,7 @@ export default function BackupImportScreen() {
 
   const handleICloudImport = async () => {
     if (Platform.OS !== 'ios') {
-      Alert.alert('알림', 'iCloud는 iOS에서만 사용 가능합니다.');
+      Alert.alert(t('common.notice'), t('backupImport.icloudIosOnly'));
       return;
     }
 
@@ -201,24 +201,24 @@ export default function BackupImportScreen() {
       const backupData = await loadFromICloud();
 
       if (!backupData) {
-        Alert.alert('알림', 'iCloud에 저장된 백업이 없습니다.\n\n먼저 "백업 내보내기"에서 iCloud 백업을 생성해주세요.');
+        Alert.alert(t('common.notice'), t('backupImport.noIcloudBackup'));
         return;
       }
 
       Alert.alert(
-        '백업 복원',
-        `백업 날짜: ${new Date(backupData.createdAt).toLocaleString()}\n\n기존 데이터를 덮어쓰시겠습니까?`,
+        t('backupImport.restoreTitle'),
+        `${t('backupImport.backupDate')}: ${new Date(backupData.createdAt).toLocaleString()}\n\n${t('backupImport.overwriteConfirm')}`,
         [
-          { text: '취소', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: '복원',
+            text: t('backupImport.restore'),
             style: 'destructive',
             onPress: async () => {
               try {
                 await restoreFromBackup(backupData);
-                Alert.alert('성공', '백업이 성공적으로 복원되었습니다.\n\n앱을 다시 시작해주세요.');
+                Alert.alert(t('common.success'), t('backupImport.restoreSuccessRestart'));
               } catch (error) {
-                Alert.alert('오류', error.message || '백업 복원 중 오류가 발생했습니다.');
+                Alert.alert(t('settings.error'), error.message || t('errors.restoreError'));
               }
             },
           },
@@ -226,7 +226,7 @@ export default function BackupImportScreen() {
       );
     } catch (error) {
       console.error('iCloud import error:', error);
-      Alert.alert('오류', error.message || 'iCloud에서 백업을 불러오는 중 오류가 발생했습니다.');
+      Alert.alert(t('settings.error'), error.message || t('errors.icloudLoadError'));
     } finally {
       setIsLoading(false);
       setLoadingType(null);
@@ -242,7 +242,7 @@ export default function BackupImportScreen() {
       await promptAsync();
     } catch (error) {
       console.error('Google auth error:', error);
-      Alert.alert('오류', 'Google 로그인 중 오류가 발생했습니다.');
+      Alert.alert(t('settings.error'), t('errors.googleLoginError'));
       setIsLoading(false);
       setLoadingType(null);
       setPendingGoogleImport(false);
@@ -266,14 +266,14 @@ export default function BackupImportScreen() {
           setGoogleFiles(data.files);
           setShowFileListModal(true);
         } else {
-          Alert.alert('알림', 'Google Drive에 백업 파일이 없습니다.');
+          Alert.alert(t('common.notice'), t('backupImport.noGoogleDriveBackup'));
         }
       } else {
-        throw new Error('파일 목록 조회 실패');
+        throw new Error(t('errors.fileListFetchFailed'));
       }
     } catch (error) {
       console.error('Google Drive list error:', error);
-      Alert.alert('오류', 'Google Drive에서 파일 목록을 가져오지 못했습니다.');
+      Alert.alert(t('settings.error'), t('errors.googleDriveListError'));
     } finally {
       setIsLoading(false);
       setLoadingType(null);
@@ -300,14 +300,14 @@ export default function BackupImportScreen() {
           const backupData = JSON.parse(fileContent.trim());
           await processGoogleBackupData(backupData);
         } catch (parseError) {
-          Alert.alert('오류', '유효한 백업 파일이 아닙니다.');
+          Alert.alert(t('settings.error'), t('errors.invalidBackupFile'));
         }
       } else {
-        throw new Error('파일 다운로드 실패');
+        throw new Error(t('errors.fileDownloadFailed'));
       }
     } catch (error) {
       console.error('Google Drive download error:', error);
-      Alert.alert('오류', 'Google Drive에서 파일을 다운로드하지 못했습니다.');
+      Alert.alert(t('settings.error'), t('errors.googleDriveDownloadError'));
     } finally {
       setIsLoading(false);
       setLoadingType(null);
@@ -351,7 +351,7 @@ export default function BackupImportScreen() {
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          백업 가져오기
+          {t('backupImport.title')}
         </Text>
         <View style={styles.headerRight} />
       </View>
@@ -365,7 +365,7 @@ export default function BackupImportScreen() {
         <View style={[styles.warningCard, { backgroundColor: '#FEF3C7' }]}>
           <Ionicons name="warning-outline" size={24} color="#D97706" />
           <Text style={[styles.warningText, { color: '#92400E', fontFamily: fonts.regular }]}>
-            백업을 복원하면 현재 데이터가 덮어쓰기됩니다. 중요한 데이터는 미리 백업해주세요.
+            {t('backupImport.warningOverwrite')}
           </Text>
         </View>
 
@@ -398,7 +398,7 @@ export default function BackupImportScreen() {
                 </Text>
                 {!option.available && Platform.OS === 'android' && option.id === 'icloud' && (
                   <Text style={[styles.unavailableText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    iOS 전용
+                    {t('backupImport.iosOnly')}
                   </Text>
                 )}
               </View>
@@ -414,13 +414,13 @@ export default function BackupImportScreen() {
         {/* 복원 안내 */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            복원 방법
+            {t('backupImport.howToRestore')}
           </Text>
           <View style={styles.guideList}>
             {[
-              '• iCloud: 자동 동기화된 백업을 바로 복원',
-              '• Google Drive: 로그인 후 백업 파일 선택',
-              '• 복원 후 앱을 다시 시작해야 적용됩니다',
+              t('backupImport.guideIcloud'),
+              t('backupImport.guideGoogleDrive'),
+              t('backupImport.guideRestart'),
             ].map((text, index) => (
               <View key={index} style={styles.guideItem}>
                 <Text style={[styles.guideText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
@@ -445,7 +445,7 @@ export default function BackupImportScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: '70%' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-                Google Drive 백업 파일
+                {t('backupImport.googleDriveBackupFiles')}
               </Text>
               <TouchableOpacity onPress={() => setShowFileListModal(false)}>
                 <Ionicons name="close" size={28} color={colors.text} />
@@ -453,7 +453,7 @@ export default function BackupImportScreen() {
             </View>
 
             <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              복원할 백업 파일을 선택하세요.
+              {t('backupImport.selectBackupFile')}
             </Text>
 
             <FlatList

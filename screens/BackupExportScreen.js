@@ -119,12 +119,12 @@ export default function BackupExportScreen() {
             if (accessToken) {
               uploadToGoogleDrive(accessToken);
             } else {
-              Alert.alert('오류', '인증 토큰을 받지 못했습니다.');
+              Alert.alert(t('settings.error'), t('errors.authTokenNotReceived'));
               setIsLoading(false);
               setLoadingType(null);
             }
           } catch (error) {
-            Alert.alert('오류', `토큰 교환 실패: ${error.message}`);
+            Alert.alert(t('settings.error'), `${t('errors.tokenExchangeFailed')}: ${error.message}`);
             setIsLoading(false);
             setLoadingType(null);
           }
@@ -132,7 +132,7 @@ export default function BackupExportScreen() {
         setPendingGoogleBackup(false);
       } else if (response?.type === 'error') {
         console.log('OAuth Error:', response.error);
-        Alert.alert('오류', `Google 인증 실패: ${response.error?.message || '알 수 없는 오류'}`);
+        Alert.alert(t('settings.error'), `${t('errors.googleAuthFailed')}: ${response.error?.message || t('errors.unknownError')}`);
         setIsLoading(false);
         setLoadingType(null);
         setPendingGoogleBackup(false);
@@ -180,9 +180,9 @@ export default function BackupExportScreen() {
 
     try {
       await syncNow();
-      Alert.alert('동기화 완료', 'iCloud에 동기화되었습니다.');
+      Alert.alert(t('backupExport.syncComplete'), t('backupExport.syncedToIcloud'));
     } catch (error) {
-      Alert.alert('오류', error.message || 'iCloud 동기화 중 오류가 발생했습니다.');
+      Alert.alert(t('settings.error'), error.message || t('errors.icloudSyncError'));
     } finally {
       setIsLoading(false);
       setLoadingType(null);
@@ -198,7 +198,7 @@ export default function BackupExportScreen() {
       await promptAsync();
     } catch (error) {
       console.error('Google auth error:', error);
-      Alert.alert('오류', 'Google 로그인 중 오류가 발생했습니다.');
+      Alert.alert(t('settings.error'), t('errors.googleLoginError'));
       setIsLoading(false);
       setLoadingType(null);
       setPendingGoogleBackup(false);
@@ -249,15 +249,15 @@ export default function BackupExportScreen() {
         const now = new Date();
         await AsyncStorage.setItem('lastGoogleDriveBackupTime', now.toISOString());
         setLastGoogleBackupTime(now);
-        Alert.alert('성공', `Google Drive에 백업이 완료되었습니다.\n\n파일명: ${result.name}`);
+        Alert.alert(t('settings.success'), `${t('backupExport.backupComplete')}\n\n${t('backupExport.fileName')}: ${result.name}`);
       } else {
         const errorText = await response.text();
         console.error('Google Drive upload error:', errorText);
-        throw new Error('업로드 실패');
+        throw new Error(t('errors.uploadFailed'));
       }
     } catch (error) {
       console.error('Google Drive backup error:', error);
-      Alert.alert('오류', 'Google Drive 백업 중 오류가 발생했습니다.');
+      Alert.alert(t('settings.error'), t('errors.googleDriveBackupError'));
     } finally {
       setIsLoading(false);
       setLoadingType(null);
@@ -265,7 +265,7 @@ export default function BackupExportScreen() {
   };
 
   const formatLastSyncTime = () => {
-    if (!lastSyncTime) return '동기화된 적 없음';
+    if (!lastSyncTime) return t('backupExport.neverSynced');
 
     const now = new Date();
     const diff = now - lastSyncTime;
@@ -273,10 +273,10 @@ export default function BackupExportScreen() {
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return '방금 전';
-    if (minutes < 60) return `${minutes}분 전`;
-    if (hours < 24) return `${hours}시간 전`;
-    if (days < 7) return `${days}일 전`;
+    if (minutes < 1) return t('backupExport.justNow');
+    if (minutes < 60) return t('backupExport.minutesAgo').replace('{{count}}', minutes);
+    if (hours < 24) return t('backupExport.hoursAgo').replace('{{count}}', hours);
+    if (days < 7) return t('backupExport.daysAgo').replace('{{count}}', days);
 
     return lastSyncTime.toLocaleDateString();
   };
@@ -284,13 +284,13 @@ export default function BackupExportScreen() {
   const getSyncStatusText = () => {
     switch (syncStatus) {
       case SYNC_STATUS.SYNCING:
-        return '동기화 중...';
+        return t('backupExport.syncing');
       case SYNC_STATUS.SUCCESS:
-        return '동기화 완료';
+        return t('backupExport.syncComplete');
       case SYNC_STATUS.ERROR:
-        return '동기화 실패';
+        return t('backupExport.syncFailed');
       case SYNC_STATUS.DISABLED:
-        return 'iCloud 사용 불가';
+        return t('backupExport.icloudUnavailable');
       default:
         return formatLastSyncTime();
     }
@@ -311,6 +311,14 @@ export default function BackupExportScreen() {
     }
   };
 
+  const backupItems = [
+    { icon: 'scan-outline', key: 'scanHistory' },
+    { icon: 'folder-outline', key: 'groupInfo' },
+    { icon: 'settings-outline', key: 'appSettings' },
+    { icon: 'star-outline', key: 'favorites' },
+    { icon: 'barcode-outline', key: 'barcodeTypeSettings' },
+  ];
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
@@ -319,7 +327,7 @@ export default function BackupExportScreen() {
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          백업 내보내기
+          {t('backupExport.title')}
         </Text>
         <View style={styles.headerRight} />
       </View>
@@ -338,7 +346,7 @@ export default function BackupExportScreen() {
               </View>
               <View style={styles.icloudInfo}>
                 <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  iCloud 자동 동기화
+                  {t('backupExport.icloudAutoSync')}
                 </Text>
                 <View style={styles.syncStatusRow}>
                   {syncStatus === SYNC_STATUS.SYNCING && (
@@ -361,7 +369,7 @@ export default function BackupExportScreen() {
             {iCloudEnabled && autoSyncEnabled && (
               <View style={[styles.icloudActions, { borderTopColor: colors.border }]}>
                 <Text style={[styles.icloudDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                  데이터가 변경되면 자동으로 iCloud에 동기화됩니다.
+                  {t('backupExport.icloudAutoSyncDesc')}
                 </Text>
                 <TouchableOpacity
                   style={[styles.syncNowButton, { backgroundColor: colors.background }]}
@@ -374,7 +382,7 @@ export default function BackupExportScreen() {
                     <>
                       <Ionicons name="sync-outline" size={18} color={colors.primary} />
                       <Text style={[styles.syncNowText, { color: colors.primary, fontFamily: fonts.medium }]}>
-                        지금 동기화
+                        {t('backupExport.syncNow')}
                       </Text>
                     </>
                   )}
@@ -384,7 +392,7 @@ export default function BackupExportScreen() {
 
             {!iCloudEnabled && (
               <Text style={[styles.icloudDisabledText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                설정에서 iCloud를 활성화해주세요.
+                {t('backupExport.enableIcloud')}
               </Text>
             )}
           </View>
@@ -403,12 +411,12 @@ export default function BackupExportScreen() {
             </View>
             <View style={styles.optionContent}>
               <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                Google Drive 백업
+                {t('backupExport.googleDriveBackup')}
               </Text>
               <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {lastGoogleBackupTime
-                  ? `마지막 백업: ${lastGoogleBackupTime.toLocaleDateString()} ${lastGoogleBackupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-                  : '백업된 적 없음'}
+                  ? `${t('backupExport.lastBackup')}: ${lastGoogleBackupTime.toLocaleDateString()} ${lastGoogleBackupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                  : t('backupExport.neverBackedUp')}
               </Text>
             </View>
             {isLoading && loadingType === 'google' ? (
@@ -422,20 +430,14 @@ export default function BackupExportScreen() {
         {/* 백업 포함 항목 */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            백업에 포함되는 항목
+            {t('backupExport.backupIncludes')}
           </Text>
           <View style={styles.includeList}>
-            {[
-              { icon: 'scan-outline', text: '스캔 기록' },
-              { icon: 'folder-outline', text: '그룹 정보' },
-              { icon: 'settings-outline', text: '앱 설정' },
-              { icon: 'star-outline', text: '즐겨찾기' },
-              { icon: 'barcode-outline', text: '바코드 타입 설정' },
-            ].map((item, index) => (
+            {backupItems.map((item, index) => (
               <View key={index} style={styles.includeItem}>
                 <Ionicons name={item.icon} size={20} color={colors.success} />
                 <Text style={[styles.includeText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                  {item.text}
+                  {t(`backupExport.${item.key}`)}
                 </Text>
               </View>
             ))}
