@@ -14,6 +14,7 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -1029,6 +1030,53 @@ function ScannerScreen() {
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAY_LINK);
               return;
+            }
+          }
+
+          // 제품 검색 자동 실행 (상품 바코드인 경우)
+          const productBarcodeTypes = ['ean13', 'ean8', 'upca', 'upce', 'itf14'];
+          const isProductBarcode = productBarcodeTypes.includes(normalizedType);
+
+          if (isProductBarcode) {
+            const productAutoSearch = await AsyncStorage.getItem('productAutoSearch');
+
+            if (productAutoSearch === 'true') {
+              const savedSitesJson = await AsyncStorage.getItem('productSearchSites');
+
+              if (savedSitesJson) {
+                const searchSites = JSON.parse(savedSitesJson);
+                // 활성화된 사이트 중 첫 번째 사이트로 검색
+                const enabledSite = searchSites.find(site => site.enabled);
+
+                if (enabledSite) {
+                  const searchUrl = enabledSite.url.replace('{code}', data);
+
+                  // 히스토리 저장
+                  saveHistory(data, searchUrl, photoUri, normalizedType, detectedEcLevel).catch(console.error);
+
+                  // openMode에 따라 웹뷰 또는 외부 브라우저로 열기
+                  if (enabledSite.openMode === 'inApp') {
+                    router.push({ pathname: '/webview', params: { url: searchUrl } });
+                  } else {
+                    // 외부 브라우저로 열기
+                    Linking.openURL(searchUrl).catch(console.error);
+                    // 결과 화면으로 이동
+                    router.push({
+                      pathname: '/result',
+                      params: {
+                        code: data,
+                        isDuplicate: 'false',
+                        scanCount: '1',
+                        photoUri: photoUri || '',
+                        type: normalizedType,
+                        errorCorrectionLevel: detectedEcLevel || '',
+                      }
+                    });
+                  }
+                  startResetTimer(RESET_DELAY_LINK);
+                  return;
+                }
+              }
             }
           }
 
