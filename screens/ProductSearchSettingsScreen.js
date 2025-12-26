@@ -140,12 +140,12 @@ export default function ProductSearchSettingsScreen() {
 
   const handleAddSite = () => {
     if (!newSiteName.trim() || !newSiteUrl.trim()) {
-      Alert.alert('알림', '사이트 이름과 URL을 모두 입력해주세요.');
+      Alert.alert(t('common.notice'), t('productSearch.enterNameAndUrl'));
       return;
     }
 
     if (!newSiteUrl.includes('{code}')) {
-      Alert.alert('알림', 'URL에 {code} 플레이스홀더를 포함해주세요.\n예: https://example.com/search?q={code}');
+      Alert.alert(t('common.notice'), t('productSearch.includePlaceholder'));
       return;
     }
 
@@ -169,12 +169,12 @@ export default function ProductSearchSettingsScreen() {
 
   const handleDeleteSite = (siteId) => {
     Alert.alert(
-      '삭제 확인',
-      '이 검색 사이트를 삭제하시겠습니까?',
+      t('productSearch.deleteConfirmTitle'),
+      t('productSearch.deleteConfirmMessage'),
       [
-        { text: '취소', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: '삭제',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             const updatedSites = searchSites.filter(site => site.id !== siteId);
@@ -196,7 +196,7 @@ export default function ProductSearchSettingsScreen() {
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          제품 검색 설정
+          {t('productSearch.title')}
         </Text>
         <View style={styles.headerRight} />
       </View>
@@ -211,10 +211,10 @@ export default function ProductSearchSettingsScreen() {
           <View style={styles.toggleRow}>
             <View style={styles.toggleContent}>
               <Text style={[styles.toggleTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                자동 제품 검색
+                {t('productSearch.autoProductSearch')}
               </Text>
               <Text style={[styles.toggleDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                바코드 스캔 시 자동으로 제품 정보를 검색합니다
+                {t('productSearch.autoProductSearchDesc')}
               </Text>
             </View>
             <Switch
@@ -229,7 +229,7 @@ export default function ProductSearchSettingsScreen() {
         {/* 국가 선택 */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-            국가 설정
+            {t('productSearch.countrySettings')}
           </Text>
           <TouchableOpacity
             style={[styles.countrySelector, { borderColor: colors.border }]}
@@ -248,7 +248,7 @@ export default function ProductSearchSettingsScreen() {
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-              검색 사이트
+              {t('productSearch.searchSites')}
             </Text>
             <TouchableOpacity
               style={[styles.addButton, { backgroundColor: colors.primary }]}
@@ -276,12 +276,12 @@ export default function ProductSearchSettingsScreen() {
                 <View style={styles.siteTags}>
                   <View style={[styles.tag, { backgroundColor: colors.background }]}>
                     <Text style={[styles.tagText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                      {site.openMode === 'inApp' ? '앱 내 브라우저' : '기본 브라우저'}
+                      {site.openMode === 'inApp' ? t('productSearch.inAppBrowser') : t('productSearch.defaultBrowser')}
                     </Text>
                   </View>
                   <View style={[styles.tag, { backgroundColor: colors.background }]}>
                     <Text style={[styles.tagText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                      {site.activationMode === 'all' ? '모든 코드' : '제품 코드'}
+                      {site.activationMode === 'all' ? t('productSearch.allCodes') : t('productSearch.productCodes')}
                     </Text>
                   </View>
                 </View>
@@ -315,7 +315,7 @@ export default function ProductSearchSettingsScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-                국가 선택
+                {t('productSearch.selectCountry')}
               </Text>
               <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
@@ -351,7 +351,7 @@ export default function ProductSearchSettingsScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-                검색 사이트 추가
+                {t('productSearch.addSearchSite')}
               </Text>
               <TouchableOpacity onPress={() => setShowAddSiteModal(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
@@ -359,17 +359,17 @@ export default function ProductSearchSettingsScreen() {
             </View>
             <View style={styles.addSiteForm}>
               <Text style={[styles.inputLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                사이트 이름
+                {t('productSearch.siteName')}
               </Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
-                placeholder="예: Google 쇼핑"
+                placeholder={t('productSearch.siteNamePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={newSiteName}
                 onChangeText={setNewSiteName}
               />
               <Text style={[styles.inputLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                검색 URL
+                {t('productSearch.searchUrl')}
               </Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
@@ -381,14 +381,14 @@ export default function ProductSearchSettingsScreen() {
                 autoCorrect={false}
               />
               <Text style={[styles.inputHint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {'{code}'} 부분이 스캔한 코드로 대체됩니다
+                {t('productSearch.urlHint')}
               </Text>
               <TouchableOpacity
                 style={[styles.addSiteButton, { backgroundColor: colors.primary }]}
                 onPress={handleAddSite}
               >
                 <Text style={[styles.addSiteButtonText, { fontFamily: fonts.semiBold }]}>
-                  추가하기
+                  {t('productSearch.add')}
                 </Text>
               </TouchableOpacity>
             </View>
