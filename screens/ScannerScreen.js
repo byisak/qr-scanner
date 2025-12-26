@@ -1585,7 +1585,7 @@ function ScannerScreen() {
             ) : (
               <FlatList
                 data={galleryPhotos}
-                numColumns={3}
+                numColumns={5}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.galleryGrid}
                 renderItem={({ item }) => (
@@ -1984,7 +1984,7 @@ const styles = StyleSheet.create({
   galleryPhotoItem: {
     flex: 1,
     aspectRatio: 1,
-    margin: 2,
+    margin: 1,
   },
   galleryPhotoImage: {
     flex: 1,
