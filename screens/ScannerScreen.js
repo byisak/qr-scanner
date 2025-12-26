@@ -1232,10 +1232,10 @@ function ScannerScreen() {
       setGalleryLoading(true);
       setGalleryModalVisible(true);
 
-      // 최근 사진 50개 가져오기
+      // 최근 사진 500개 가져오기
       const assets = await MediaLibrary.getAssetsAsync({
         mediaType: 'photo',
-        first: 50,
+        first: 500,
         sortBy: [MediaLibrary.SortBy.creationTime],
       });
 
