@@ -107,7 +107,7 @@ function ScannerScreen() {
   const [scannerReady, setScannerReady] = useState(false);
   const qrIconOpacity = useRef(new Animated.Value(1)).current;
   const guideTextOpacity = useRef(new Animated.Value(1)).current;
-  const cornerScale = useRef(new Animated.Value(0.6)).current;
+  const cornerScale = useRef(new Animated.Value(1)).current;
   const cornerOpacity = useRef(new Animated.Value(1)).current;
   const crosshairOpacity = useRef(new Animated.Value(0)).current;
 
@@ -117,13 +117,13 @@ function ScannerScreen() {
       // 애니메이션 값 초기화
       qrIconOpacity.setValue(1);
       guideTextOpacity.setValue(1);
-      cornerScale.setValue(0.6);
+      cornerScale.setValue(1); // 처음부터 최종 크기
       cornerOpacity.setValue(1);
       crosshairOpacity.setValue(0);
 
       // Step 1: 초기 상태 1초 유지
       const step1Timer = setTimeout(() => {
-        // Step 2: QR 아이콘/안내 텍스트 페이드 아웃 + 코너 확장
+        // Step 2: QR 아이콘/안내 텍스트 페이드 아웃
         Animated.parallel([
           Animated.timing(qrIconOpacity, {
             toValue: 0,
@@ -133,11 +133,6 @@ function ScannerScreen() {
           Animated.timing(guideTextOpacity, {
             toValue: 0,
             duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(cornerScale, {
-            toValue: 1,
-            duration: 800,
             useNativeDriver: true,
           }),
         ]).start(() => {
