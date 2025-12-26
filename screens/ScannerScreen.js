@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Linking,
   Animated,
+  Easing,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -143,17 +144,19 @@ function ScannerScreen() {
             useNativeDriver: true,
           }),
         ]).start(() => {
-          // Step 2.5: 숨쉬기 애니메이션 (줄었다 늘었다)
+          // Step 2.5: 숨쉬기 애니메이션 (줄었다 늘었다 - 부드럽게)
           breathingAnimation = Animated.loop(
             Animated.sequence([
               Animated.timing(cornerScale, {
-                toValue: 0.92,
-                duration: 600,
+                toValue: 0.94,
+                duration: 800,
+                easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
               Animated.timing(cornerScale, {
                 toValue: 1,
-                duration: 600,
+                duration: 800,
+                easing: Easing.inOut(Easing.sin),
                 useNativeDriver: true,
               }),
             ])
