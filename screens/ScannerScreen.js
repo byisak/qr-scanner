@@ -16,7 +16,6 @@ import {
   ActivityIndicator,
   Linking,
   Animated,
-  Easing,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -122,8 +121,6 @@ function ScannerScreen() {
       cornerOpacity.setValue(1);
       crosshairOpacity.setValue(0);
 
-      let breathingAnimation = null;
-
       // Step 1: 초기 상태 1초 유지
       const step1Timer = setTimeout(() => {
         // Step 2: QR 아이콘/안내 텍스트 페이드 아웃 + 코너 확장
@@ -144,58 +141,39 @@ function ScannerScreen() {
             useNativeDriver: true,
           }),
         ]).start(() => {
-          // 바깥쪽 최대 위치에서 잠시 대기 후 숨쉬기 시작
-          setTimeout(() => {
-            // Step 2.5: 숨쉬기 애니메이션 (바깥쪽에서 시작 → 안쪽 수축 → 바깥쪽 확장)
-            breathingAnimation = Animated.loop(
-              Animated.sequence([
-                // 바깥쪽(1.0)에서 안쪽(0.90)으로 수축 - 끝에서 감속
-                Animated.timing(cornerScale, {
-                  toValue: 0.90,
-                  duration: 900,
-                  easing: Easing.out(Easing.cubic),
-                  useNativeDriver: true,
-                }),
-                // 안쪽(0.90)에서 바깥쪽(1.0)으로 확장 - 끝에서 감속
-                Animated.timing(cornerScale, {
-                  toValue: 1,
-                  duration: 900,
-                  easing: Easing.out(Easing.cubic),
-                  useNativeDriver: true,
-                }),
-              ])
-            );
-            breathingAnimation.start();
-
-            // Step 3: 숨쉬기 후 코너 페이드 아웃 + 십자가 페이드 인
-            setTimeout(() => {
-              if (breathingAnimation) {
-                breathingAnimation.stop();
-              }
-              Animated.parallel([
-                Animated.timing(cornerOpacity, {
-                  toValue: 0,
-                  duration: 500,
-                  useNativeDriver: true,
-                }),
-                Animated.timing(crosshairOpacity, {
-                  toValue: 1,
-                  duration: 500,
-                  useNativeDriver: true,
-                }),
-              ]).start(() => {
-                setScannerReady(true);
-              });
-            }, 2000);
-          }, 300);
+          // Step 2.5: 페이드 인/아웃 3번 반복
+          Animated.sequence([
+            // 1회차
+            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+            Animated.timing(cornerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+            // 2회차
+            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+            Animated.timing(cornerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+            // 3회차
+            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 400, useNativeDriver: true }),
+            Animated.timing(cornerOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+          ]).start(() => {
+            // Step 3: 코너 페이드 아웃 + 십자가 페이드 인
+            Animated.parallel([
+              Animated.timing(cornerOpacity, {
+                toValue: 0,
+                duration: 500,
+                useNativeDriver: true,
+              }),
+              Animated.timing(crosshairOpacity, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              setScannerReady(true);
+            });
+          });
         });
       }, 1000);
 
       return () => {
         clearTimeout(step1Timer);
-        if (breathingAnimation) {
-          breathingAnimation.stop();
-        }
       };
     }
   }, [isActive, scannerReady]);
