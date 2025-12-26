@@ -1220,7 +1220,8 @@ function ScannerScreen() {
     try {
       // 미디어 라이브러리 권한 요청
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
+      // iOS 14+에서는 'limited' 권한도 허용
+      if (status !== 'granted' && status !== 'limited') {
         Alert.alert(
           t('result.permissionDenied'),
           t('result.permissionDeniedMessage')
