@@ -107,6 +107,7 @@ export default {
     viewBatchList: '목록 보기',
     sending: '전송',
     urlSending: 'URL 전송 중',
+    guideText: 'QR 코드 또는 바코드를 스캔하세요',
     noSessionUrl: '전송 주소 없음',
     pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
     uploadImage: '코드 자동 분석',

@@ -15,6 +15,7 @@ import {
   Image,
   ActivityIndicator,
   Linking,
+  Animated,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -101,6 +102,77 @@ function ScannerScreen() {
   const [scanUrlEnabled, setScanUrlEnabled] = useState(false);
   const [activeScanUrl, setActiveScanUrl] = useState(null); // { id, name, url }
   const [showUrlSendMessage, setShowUrlSendMessage] = useState(false); // URL 전송 메시지 표시
+
+  // 스캔 화면 로딩 애니메이션 상태
+  const [scannerReady, setScannerReady] = useState(false);
+  const qrIconOpacity = useRef(new Animated.Value(1)).current;
+  const guideTextOpacity = useRef(new Animated.Value(1)).current;
+  const cornerScale = useRef(new Animated.Value(0.6)).current;
+  const cornerOpacity = useRef(new Animated.Value(1)).current;
+  const crosshairOpacity = useRef(new Animated.Value(0)).current;
+
+  // 스캔 화면 로딩 애니메이션 시퀀스
+  useEffect(() => {
+    if (isActive && !scannerReady) {
+      // 애니메이션 값 초기화
+      qrIconOpacity.setValue(1);
+      guideTextOpacity.setValue(1);
+      cornerScale.setValue(0.6);
+      cornerOpacity.setValue(1);
+      crosshairOpacity.setValue(0);
+
+      // Step 1: 초기 상태 1초 유지
+      const step1Timer = setTimeout(() => {
+        // Step 2: QR 아이콘/안내 텍스트 페이드 아웃 + 코너 확장
+        Animated.parallel([
+          Animated.timing(qrIconOpacity, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(guideTextOpacity, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(cornerScale, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          // Step 3: 코너 페이드 아웃 + 십자가 페이드 인
+          setTimeout(() => {
+            Animated.parallel([
+              Animated.timing(cornerOpacity, {
+                toValue: 0,
+                duration: 500,
+                useNativeDriver: true,
+              }),
+              Animated.timing(crosshairOpacity, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              setScannerReady(true);
+            });
+          }, 300);
+        });
+      }, 1000);
+
+      return () => {
+        clearTimeout(step1Timer);
+      };
+    }
+  }, [isActive, scannerReady]);
+
+  // 화면 비활성화 시 애니메이션 리셋
+  useEffect(() => {
+    if (!isActive) {
+      setScannerReady(false);
+    }
+  }, [isActive]);
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -1409,14 +1481,59 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 중앙 십자가 타겟 (항상 표시) */}
-        <View style={styles.centerTarget} pointerEvents="none">
-          {/* 수평선 */}
-          <View style={styles.targetLineHorizontal} />
-          {/* 수직선 */}
-          <View style={styles.targetLineVertical} />
-          {/* 중심 원 */}
-          <View style={styles.targetCenter} />
+        {/* 스캔 로딩 애니메이션 오버레이 */}
+        <View style={styles.scanAnimationContainer} pointerEvents="none">
+          {/* Step 1: QR 아이콘 */}
+          <Animated.View style={[styles.qrIconContainer, { opacity: qrIconOpacity }]}>
+            <Ionicons name="qr-code" size={80} color="rgba(255, 255, 255, 0.9)" />
+          </Animated.View>
+
+          {/* Step 1-2: 코너 사각형 (애니메이션으로 확장) */}
+          <Animated.View
+            style={[
+              styles.cornerContainer,
+              {
+                opacity: cornerOpacity,
+                transform: [{ scale: cornerScale }],
+              },
+            ]}
+          >
+            {/* 좌상단 코너 */}
+            <View style={[styles.corner, styles.cornerTopLeft]}>
+              <View style={styles.cornerLineH} />
+              <View style={styles.cornerLineV} />
+            </View>
+            {/* 우상단 코너 */}
+            <View style={[styles.corner, styles.cornerTopRight]}>
+              <View style={[styles.cornerLineH, styles.cornerLineHRight]} />
+              <View style={styles.cornerLineV} />
+            </View>
+            {/* 좌하단 코너 */}
+            <View style={[styles.corner, styles.cornerBottomLeft]}>
+              <View style={styles.cornerLineH} />
+              <View style={[styles.cornerLineV, styles.cornerLineVBottom]} />
+            </View>
+            {/* 우하단 코너 */}
+            <View style={[styles.corner, styles.cornerBottomRight]}>
+              <View style={[styles.cornerLineH, styles.cornerLineHRight]} />
+              <View style={[styles.cornerLineV, styles.cornerLineVBottom]} />
+            </View>
+          </Animated.View>
+
+          {/* Step 1: 안내 텍스트 */}
+          <Animated.View style={[styles.guideTextContainer, { opacity: guideTextOpacity }]}>
+            <Text style={styles.guideText}>{t('scanner.guideText')}</Text>
+          </Animated.View>
+
+          {/* Step 3: 중앙 십자가 (최종 상태) */}
+          <Animated.View style={[styles.centerTarget, { opacity: crosshairOpacity }]}>
+            {/* 수평선 */}
+            <View style={styles.targetLineHorizontal} />
+            {/* 수직선 */}
+            <View style={styles.targetLineVertical} />
+            {/* 중심 원 */}
+            <View style={styles.targetCenter} />
+          </Animated.View>
         </View>
       </View>
 
@@ -1833,6 +1950,87 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     color: '#fff',
     padding: 20,
+  },
+  // 스캔 애니메이션 컨테이너
+  scanAnimationContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrIconContainer: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cornerContainer: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+  },
+  corner: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+  },
+  cornerTopLeft: {
+    top: 0,
+    left: 0,
+  },
+  cornerTopRight: {
+    top: 0,
+    right: 0,
+  },
+  cornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+  },
+  cornerBottomRight: {
+    bottom: 0,
+    right: 0,
+  },
+  cornerLineH: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 40,
+    height: 4,
+    backgroundColor: '#FFD60A',
+    borderRadius: 2,
+  },
+  cornerLineHRight: {
+    left: undefined,
+    right: 0,
+  },
+  cornerLineV: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 4,
+    height: 40,
+    backgroundColor: '#FFD60A',
+    borderRadius: 2,
+  },
+  cornerLineVBottom: {
+    top: undefined,
+    bottom: 0,
+  },
+  guideTextContainer: {
+    position: 'absolute',
+    bottom: '30%',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+  },
+  guideText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   centerTarget: {
     position: 'absolute',

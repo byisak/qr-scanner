@@ -107,6 +107,7 @@ export default {
     viewBatchList: 'リストを表示',
     sending: '送信中',
     urlSending: 'URLに送信中',
+    guideText: 'QRコードまたはバーコードをスキャン',
     noSessionUrl: '送信URLがありません',
     pleaseGenerateUrl: 'リアルタイム送信を使用するには、設定でURLを生成してください。',
     uploadImage: 'コード自動分析',

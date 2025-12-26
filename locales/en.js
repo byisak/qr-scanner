@@ -107,6 +107,7 @@ export default {
     viewBatchList: 'View List',
     sending: 'Sending',
     urlSending: 'Sending to URL',
+    guideText: 'Scan a QR code or barcode',
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
     uploadImage: 'Auto Code Analysis',

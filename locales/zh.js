@@ -107,6 +107,7 @@ export default {
     viewBatchList: '查看列表',
     sending: '发送中',
     urlSending: '正在发送到URL',
+    guideText: '请扫描二维码或条形码',
     noSessionUrl: '没有传输地址',
     pleaseGenerateUrl: '要使用实时服务器传输，请先在设置中生成地址。',
     uploadImage: '代码自动分析',

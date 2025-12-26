@@ -107,6 +107,7 @@ export default {
     viewBatchList: 'Ver lista',
     sending: 'Enviando',
     urlSending: 'Enviando a URL',
+    guideText: 'Escanea un código QR o de barras',
     noSessionUrl: 'Sin URL de sesión',
     pleaseGenerateUrl: 'Por favor, genera una URL en configuración para usar la sincronización en tiempo real.',
     uploadImage: 'Análisis automático',
