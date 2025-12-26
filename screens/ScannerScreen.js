@@ -144,47 +144,50 @@ function ScannerScreen() {
             useNativeDriver: true,
           }),
         ]).start(() => {
-          // Step 2.5: 숨쉬기 애니메이션 (바깥→안쪽→바깥 자연스럽게)
-          breathingAnimation = Animated.loop(
-            Animated.sequence([
-              // 안쪽으로 모임 (부드럽게 감속)
-              Animated.timing(cornerScale, {
-                toValue: 0.93,
-                duration: 1000,
-                easing: Easing.inOut(Easing.ease),
-                useNativeDriver: true,
-              }),
-              // 바깥으로 퍼짐 (부드럽게 감속)
-              Animated.timing(cornerScale, {
-                toValue: 1,
-                duration: 1000,
-                easing: Easing.inOut(Easing.ease),
-                useNativeDriver: true,
-              }),
-            ])
-          );
-          breathingAnimation.start();
-
-          // Step 3: 숨쉬기 후 코너 페이드 아웃 + 십자가 페이드 인
+          // 바깥쪽 최대 위치에서 잠시 대기 후 숨쉬기 시작
           setTimeout(() => {
-            if (breathingAnimation) {
-              breathingAnimation.stop();
-            }
-            Animated.parallel([
-              Animated.timing(cornerOpacity, {
-                toValue: 0,
-                duration: 500,
-                useNativeDriver: true,
-              }),
-              Animated.timing(crosshairOpacity, {
-                toValue: 1,
-                duration: 500,
-                useNativeDriver: true,
-              }),
-            ]).start(() => {
-              setScannerReady(true);
-            });
-          }, 1800);
+            // Step 2.5: 숨쉬기 애니메이션 (바깥쪽에서 시작 → 안쪽 수축 → 바깥쪽 확장)
+            breathingAnimation = Animated.loop(
+              Animated.sequence([
+                // 바깥쪽(1.0)에서 안쪽(0.90)으로 수축 - 끝에서 감속
+                Animated.timing(cornerScale, {
+                  toValue: 0.90,
+                  duration: 900,
+                  easing: Easing.out(Easing.cubic),
+                  useNativeDriver: true,
+                }),
+                // 안쪽(0.90)에서 바깥쪽(1.0)으로 확장 - 끝에서 감속
+                Animated.timing(cornerScale, {
+                  toValue: 1,
+                  duration: 900,
+                  easing: Easing.out(Easing.cubic),
+                  useNativeDriver: true,
+                }),
+              ])
+            );
+            breathingAnimation.start();
+
+            // Step 3: 숨쉬기 후 코너 페이드 아웃 + 십자가 페이드 인
+            setTimeout(() => {
+              if (breathingAnimation) {
+                breathingAnimation.stop();
+              }
+              Animated.parallel([
+                Animated.timing(cornerOpacity, {
+                  toValue: 0,
+                  duration: 500,
+                  useNativeDriver: true,
+                }),
+                Animated.timing(crosshairOpacity, {
+                  toValue: 1,
+                  duration: 500,
+                  useNativeDriver: true,
+                }),
+              ]).start(() => {
+                setScannerReady(true);
+              });
+            }, 2000);
+          }, 300);
         });
       }, 1000);
 
