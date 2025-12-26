@@ -121,6 +121,8 @@ function ScannerScreen() {
       cornerOpacity.setValue(1);
       crosshairOpacity.setValue(0);
 
+      let breathingAnimation = null;
+
       // Step 1: 초기 상태 1초 유지
       const step1Timer = setTimeout(() => {
         // Step 2: QR 아이콘/안내 텍스트 페이드 아웃 + 코너 확장
@@ -141,8 +143,28 @@ function ScannerScreen() {
             useNativeDriver: true,
           }),
         ]).start(() => {
-          // Step 3: 코너 페이드 아웃 + 십자가 페이드 인
+          // Step 2.5: 숨쉬기 애니메이션 (줄었다 늘었다)
+          breathingAnimation = Animated.loop(
+            Animated.sequence([
+              Animated.timing(cornerScale, {
+                toValue: 0.92,
+                duration: 600,
+                useNativeDriver: true,
+              }),
+              Animated.timing(cornerScale, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+              }),
+            ])
+          );
+          breathingAnimation.start();
+
+          // Step 3: 숨쉬기 후 코너 페이드 아웃 + 십자가 페이드 인
           setTimeout(() => {
+            if (breathingAnimation) {
+              breathingAnimation.stop();
+            }
             Animated.parallel([
               Animated.timing(cornerOpacity, {
                 toValue: 0,
@@ -157,12 +179,15 @@ function ScannerScreen() {
             ]).start(() => {
               setScannerReady(true);
             });
-          }, 300);
+          }, 1800);
         });
       }, 1000);
 
       return () => {
         clearTimeout(step1Timer);
+        if (breathingAnimation) {
+          breathingAnimation.stop();
+        }
       };
     }
   }, [isActive, scannerReady]);
@@ -1498,25 +1523,25 @@ function ScannerScreen() {
               },
             ]}
           >
-            {/* 좌상단 코너 */}
+            {/* 좌상단 코너 ⌜ */}
             <View style={[styles.corner, styles.cornerTopLeft]}>
-              <View style={styles.cornerLineH} />
-              <View style={styles.cornerLineV} />
+              <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, left: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, left: 0 }]} />
             </View>
-            {/* 우상단 코너 */}
+            {/* 우상단 코너 ⌝ */}
             <View style={[styles.corner, styles.cornerTopRight]}>
-              <View style={[styles.cornerLineH, styles.cornerLineHRight]} />
-              <View style={styles.cornerLineV} />
+              <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, right: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, right: 0 }]} />
             </View>
-            {/* 좌하단 코너 */}
+            {/* 좌하단 코너 ⌞ */}
             <View style={[styles.corner, styles.cornerBottomLeft]}>
-              <View style={styles.cornerLineH} />
-              <View style={[styles.cornerLineV, styles.cornerLineVBottom]} />
+              <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, left: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, left: 0 }]} />
             </View>
-            {/* 우하단 코너 */}
+            {/* 우하단 코너 ⌟ */}
             <View style={[styles.corner, styles.cornerBottomRight]}>
-              <View style={[styles.cornerLineH, styles.cornerLineHRight]} />
-              <View style={[styles.cornerLineV, styles.cornerLineVBottom]} />
+              <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, right: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, right: 0 }]} />
             </View>
           </Animated.View>
 
@@ -1992,31 +2017,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 0,
   },
-  cornerLineH: {
+  cornerLine: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 40,
-    height: 4,
     backgroundColor: '#FFD60A',
     borderRadius: 2,
-  },
-  cornerLineHRight: {
-    left: undefined,
-    right: 0,
-  },
-  cornerLineV: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 4,
-    height: 40,
-    backgroundColor: '#FFD60A',
-    borderRadius: 2,
-  },
-  cornerLineVBottom: {
-    top: undefined,
-    bottom: 0,
   },
   guideTextContainer: {
     position: 'absolute',
@@ -2045,10 +2049,10 @@ const styles = StyleSheet.create({
   },
   targetLineHorizontal: {
     position: 'absolute',
-    width: 40,
-    height: 3,
+    width: 30,
+    height: 1.5,
     backgroundColor: '#FFD60A',
-    borderRadius: 2,
+    borderRadius: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
@@ -2056,19 +2060,19 @@ const styles = StyleSheet.create({
   },
   targetLineVertical: {
     position: 'absolute',
-    width: 3,
-    height: 40,
+    width: 1.5,
+    height: 30,
     backgroundColor: '#FFD60A',
-    borderRadius: 2,
+    borderRadius: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
   },
   targetCenter: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: '#FFD60A',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
