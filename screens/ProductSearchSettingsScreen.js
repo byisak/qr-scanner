@@ -113,17 +113,6 @@ const createCommonSites = (googleDomain, ebayDomain, amazonDomain) => {
     activationMode: 'product',
   });
 
-  // 가격 비교 사이트
-  sites.push({
-    id: 'lsmsys',
-    name: 'lsmsys.com',
-    url: 'https://lsmsys.com/m/rsearch?q={code}',
-    enabled: true,
-    openMode: 'inApp',
-    activationMode: 'product',
-    autoSelected: true,
-  });
-
   return sites;
 };
 
@@ -141,7 +130,6 @@ const COUNTRY_SEARCH_SITES = {
     { id: 'gmarket', name: 'G마켓', url: 'https://browse.gmarket.co.kr/search?keyword={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'auction', name: '옥션', url: 'https://browse.auction.co.kr/search?keyword={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
-    { id: 'lsmsys', name: 'lsmsys.com', url: 'https://lsmsys.com/m/rsearch?q={code}', enabled: true, openMode: 'inApp', activationMode: 'product', autoSelected: true },
   ],
   // 덴마크
   DK: createCommonSites('google.dk', 'ebay.com', 'amazon.de'),
@@ -200,7 +188,6 @@ const COUNTRY_SEARCH_SITES = {
     { id: 'yahoo', name: 'Yahoo!ショッピング', url: 'https://shopping.yahoo.co.jp/search?p={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'amazon', name: 'Amazon.co.jp', url: 'https://www.amazon.co.jp/s/?keywords={code}&language=', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
-    { id: 'lsmsys', name: 'lsmsys.com', url: 'https://lsmsys.com/m/rsearch?q={code}', enabled: true, openMode: 'inApp', activationMode: 'product', autoSelected: true },
   ],
   // 중국 본토
   CN: [
@@ -208,7 +195,6 @@ const COUNTRY_SEARCH_SITES = {
     { id: 'taobao', name: '淘宝', url: 'https://s.taobao.com/search?q={code}', enabled: true, openMode: 'browser', activationMode: 'product' },
     { id: 'jd', name: '京东', url: 'https://search.jd.com/Search?keyword={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
-    { id: 'lsmsys', name: 'lsmsys.com', url: 'https://lsmsys.com/m/rsearch?q={code}', enabled: true, openMode: 'inApp', activationMode: 'product', autoSelected: true },
   ],
   // 체코
   CZ: createCommonSites('google.cz', 'ebay.com', 'amazon.de'),
@@ -232,7 +218,6 @@ const COUNTRY_SEARCH_SITES = {
     { id: 'ebay', name: 'eBay.com.hk', url: 'https://www.ebay.com.hk/sch/i.html?_nkw={code}&mkcid=1&mkrid=711-53200-19255-0&campid=5338057533&toolid=20008&mkevt=1', enabled: true, openMode: 'browser', activationMode: 'product' },
     { id: 'amazon', name: 'Amazon.com', url: 'https://www.amazon.com/s/?keywords={code}&language=', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
-    { id: 'lsmsys', name: 'lsmsys.com', url: 'https://lsmsys.com/m/rsearch?q={code}', enabled: true, openMode: 'inApp', activationMode: 'product', autoSelected: true },
   ],
 };
 
