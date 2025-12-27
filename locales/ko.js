@@ -262,7 +262,7 @@ export default {
     deleteUrlConfirm: '이 URL을 삭제하시겠습니까?',
     urlToggleInfo: '활성화된 URL만 스캔 시 사용됩니다',
     // 실시간 서버전송
-    realtimeSync: '',
+    realtimeSync: '실시간 서버 전송',
     enableRealtimeSync: '실시간 서버 전송',
     realtimeSyncDesc: '스캔한 데이터를 실시간으로 서버에 전송합니다',
     generateSessionUrl: '주소 생성',
