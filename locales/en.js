@@ -215,6 +215,7 @@ export default {
     notification: 'Notification',
     scan: 'Scan',
     urlIntegration: 'URL Integration',
+    advancedScanFeatures: 'Advanced Scan Features',
     data: 'Data',
     general: 'General',
     backupAndRestore: 'Backup & Restore',

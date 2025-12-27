@@ -215,6 +215,7 @@ export default {
     notification: '알림',
     scan: '스캔',
     urlIntegration: 'URL 연동',
+    advancedScanFeatures: '고급 스캔 기능',
     data: '데이터',
     general: '일반',
     backupAndRestore: '백업 및 복원',

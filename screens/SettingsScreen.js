@@ -354,24 +354,9 @@ export default function SettingsScreen() {
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.scan')}</Text>
 
-          {/* 배치 스캔 모드 */}
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
-            </View>
-            <Switch
-              value={batchScanEnabled}
-              onValueChange={setBatchScanEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.batchScanMode')}
-            />
-          </View>
-
           {/* 바코드 선택 */}
           <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push('/barcode-selection')}
             activeOpacity={0.7}
           >
@@ -414,29 +399,6 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
           </TouchableOpacity>
-        </View>
-
-        {/* URL 연동 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.urlIntegration')}</Text>
-
-          {/* 스캔 연동 URL */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/scan-url-settings')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.useScanUrl')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {on ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </TouchableOpacity>
 
           {/* URL 열기 방식 */}
           <TouchableOpacity
@@ -451,6 +413,44 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 고급 스캔 기능 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.advancedScanFeatures')}</Text>
+
+          {/* 배치 스캔 모드 */}
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
+            </View>
+            <Switch
+              value={batchScanEnabled}
+              onValueChange={setBatchScanEnabled}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.batchScanMode')}
+            />
+          </View>
+
+          {/* 스캔 연동 URL */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/scan-url-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.useScanUrl')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
+            </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {on ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
           </TouchableOpacity>
 
           {/* 실시간 서버전송 */}

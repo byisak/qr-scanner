@@ -214,6 +214,7 @@ export default {
     notification: '通知',
     scan: 'スキャン',
     urlIntegration: 'URL連動',
+    advancedScanFeatures: '高度なスキャン機能',
     data: 'データ',
     general: '一般',
     backupAndRestore: 'バックアップと復元',

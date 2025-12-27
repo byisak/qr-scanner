@@ -214,6 +214,7 @@ export default {
     notification: '通知',
     scan: '扫描',
     urlIntegration: 'URL联动',
+    advancedScanFeatures: '高级扫描功能',
     data: '数据',
     general: '常规',
     backupAndRestore: '备份与恢复',

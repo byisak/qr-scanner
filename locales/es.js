@@ -214,6 +214,7 @@ export default {
     notification: 'Notificación',
     scan: 'Escaneo',
     urlIntegration: 'Integración URL',
+    advancedScanFeatures: 'Funciones avanzadas de escaneo',
     data: 'Datos',
     general: 'General',
     backupAndRestore: 'Copia de seguridad y restauración',
