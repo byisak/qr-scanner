@@ -311,6 +311,7 @@ export default function SettingsScreen() {
           >
             <Ionicons name="play-circle-outline" size={20} color={colors.primary} />
             <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
+            <Text style={[s.watchAdSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}> - {t('proVersion.freeUnlock')}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
 
