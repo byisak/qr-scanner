@@ -13,16 +13,19 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Pro 기능 목록 - 실제 앱에 구현된 기능들 (8개)
+// Pro 기능 목록 - 실제 앱에 구현된 기능들 (11개)
 const PRO_FEATURES = [
   { key: 'exclusiveQrDesign', icon: 'qr-code-outline' },
   { key: 'customLogoQr', icon: 'camera-outline' },
   { key: 'additionalFormats', icon: 'layers-outline' },
   { key: 'batchScan', icon: 'rocket-outline' },
-  { key: 'deleteScannedBarcode', icon: 'trash-outline' },
-  { key: 'copyToClipboard', icon: 'clipboard-outline' },
+  { key: 'deleteScannedBarcode', icon: 'menu-outline' },
+  { key: 'copyToClipboard', icon: 'copy-outline' },
   { key: 'manualScanConfirm', icon: 'checkmark-circle-outline' },
-  { key: 'icloudSync', icon: 'cloud-outline' },
+  { key: 'icloudSync', icon: 'cloud-upload-outline' },
+  { key: 'extraThemes', icon: 'happy-outline' },
+  { key: 'unlimitedExport', icon: 'infinite-outline' },
+  { key: 'businessScannerMode', icon: 'wifi-outline' },
 ];
 
 export default function ProVersionScreen() {
@@ -79,9 +82,9 @@ export default function ProVersionScreen() {
       >
         {/* 헤더 섹션 */}
         <View style={s.headerSection}>
-          {/* 로고 박스 with glow */}
+          {/* 다이아몬드 아이콘 with 배경 & glow */}
           <View style={s.logoBox}>
-            <Ionicons name="cube-outline" size={40} color="#2ecc71" />
+            <Ionicons name="diamond-outline" size={48} color="#2ecc71" />
           </View>
           <Text style={[s.title, { fontFamily: fonts.bold }]}>
             {t('proPurchase.title')}
@@ -252,7 +255,7 @@ const s = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#2ecc71',
     marginBottom: 12,
   },
   subFeatures: {
