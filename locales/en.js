@@ -965,6 +965,8 @@ export default {
     adComingSoon: 'Ad feature coming soon',
     removeAds: 'Remove Ads',
     removeAdsDesc: 'Upgrade to Pro to use all features permanently without ads',
+    additionalFormats: 'Additional Formats',
+    alreadyUnlocked: 'This feature is already unlocked',
     features: {
       batchScan: 'Batch Scan',
       deleteScannedBarcode: 'Delete Scanned Barcode',

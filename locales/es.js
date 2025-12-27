@@ -958,6 +958,8 @@ export default {
     adComingSoon: 'Función de anuncios próximamente',
     removeAds: 'Eliminar anuncios',
     removeAdsDesc: 'Actualiza a Pro para usar todas las funciones permanentemente sin anuncios',
+    additionalFormats: 'Formatos adicionales',
+    alreadyUnlocked: 'Esta función ya está desbloqueada',
     features: {
       batchScan: 'Escaneo por lotes',
       deleteScannedBarcode: 'Eliminar código escaneado',

@@ -965,6 +965,8 @@ export default {
     adComingSoon: '광고 기능이 곧 추가됩니다',
     removeAds: '광고 제거',
     removeAdsDesc: 'Pro 버전으로 업그레이드하면 모든 기능을 광고 없이 영구적으로 사용할 수 있습니다',
+    additionalFormats: '추가 형식 생성',
+    alreadyUnlocked: '이미 잠금해제된 기능입니다',
     features: {
       batchScan: '배치 스캔',
       deleteScannedBarcode: '복사한 바코드 삭제',

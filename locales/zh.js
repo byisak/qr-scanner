@@ -961,6 +961,8 @@ export default {
     adComingSoon: '广告功能即将推出',
     removeAds: '移除广告',
     removeAdsDesc: '升级到Pro版可永久无广告使用所有功能',
+    additionalFormats: '额外格式生成',
+    alreadyUnlocked: '此功能已解锁',
     features: {
       batchScan: '批量扫描',
       deleteScannedBarcode: '删除已扫描条码',

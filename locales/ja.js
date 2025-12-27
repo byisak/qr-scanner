@@ -961,6 +961,8 @@ export default {
     adComingSoon: '広告機能は近日公開予定です',
     removeAds: '広告を削除',
     removeAdsDesc: 'Proにアップグレードすると、すべての機能を広告なしで永続的に使用できます',
+    additionalFormats: '追加フォーマット生成',
+    alreadyUnlocked: 'この機能はすでにアンロックされています',
     features: {
       batchScan: 'バッチスキャン',
       deleteScannedBarcode: 'スキャンしたバーコードを削除',

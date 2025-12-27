@@ -15,24 +15,40 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// 고급 기능 목록
+// 고급 기능 목록 (adCount: 필요한 광고 시청 횟수)
 const ADVANCED_FEATURES = [
-  { key: 'batchScan', icon: 'layers-outline', color: '#007AFF' },
-  { key: 'deleteScannedBarcode', icon: 'trash-outline', color: '#FF3B30' },
-  { key: 'copyToClipboard', icon: 'copy-outline', color: '#34C759' },
-  { key: 'manualScanConfirm', icon: 'hand-left-outline', color: '#FF9500' },
-  { key: 'icloudSync', icon: 'cloud-outline', color: '#5856D6' },
-  { key: 'unlimitedExport', icon: 'download-outline', color: '#AF52DE' },
-  { key: 'businessScannerMode', icon: 'briefcase-outline', color: '#00C7BE' },
+  { key: 'batchScan', icon: 'layers-outline', color: '#007AFF', adCount: 2 },
+  { key: 'deleteScannedBarcode', icon: 'trash-outline', color: '#FF3B30', adCount: 2 },
+  { key: 'copyToClipboard', icon: 'copy-outline', color: '#34C759', adCount: 2 },
+  { key: 'manualScanConfirm', icon: 'hand-left-outline', color: '#FF9500', adCount: 2 },
+  { key: 'icloudSync', icon: 'cloud-outline', color: '#5856D6', adCount: 4 },
+  { key: 'unlimitedExport', icon: 'download-outline', color: '#AF52DE', adCount: 2 },
+  { key: 'businessScannerMode', icon: 'briefcase-outline', color: '#00C7BE', adCount: 4 },
 ];
 
 // 추가 테마 목록
 const EXTRA_THEMES = [
-  { key: 'oceanBreeze', colors: ['#0077B6', '#00B4D8', '#90E0EF'] },
-  { key: 'classicLook', colors: ['#6B705C', '#A5A58D', '#B7B7A4'] },
-  { key: 'urbanVibe', colors: ['#2D3436', '#636E72', '#B2BEC3'] },
-  { key: 'darkPlanet', colors: ['#1A1A2E', '#16213E', '#0F3460'] },
-  { key: 'custom', colors: ['#667EEA', '#764BA2', '#F093FB'] },
+  { key: 'oceanBreeze', colors: ['#0077B6', '#00B4D8', '#90E0EF'], adCount: 2 },
+  { key: 'classicLook', colors: ['#6B705C', '#A5A58D', '#B7B7A4'], adCount: 2 },
+  { key: 'urbanVibe', colors: ['#2D3436', '#636E72', '#B2BEC3'], adCount: 2 },
+  { key: 'darkPlanet', colors: ['#1A1A2E', '#16213E', '#0F3460'], adCount: 2 },
+  { key: 'custom', colors: ['#667EEA', '#764BA2', '#F093FB'], adCount: 4 },
+];
+
+// 추가 형식 생성 (바코드 타입)
+const BARCODE_FORMATS = [
+  { key: 'ean13', name: 'EAN-13', adCount: 2 },
+  { key: 'upca', name: 'UPC-A', adCount: 2 },
+  { key: 'upce', name: 'UPC-E', adCount: 2 },
+  { key: 'ean8', name: 'EAN-8', adCount: 2 },
+  { key: 'code39', name: 'Code 39', adCount: 2 },
+  { key: 'code128', name: 'Code 128', adCount: 2 },
+  { key: 'itf', name: 'ITF', adCount: 2 },
+  { key: 'datamatrix', name: 'Data Matrix', adCount: 2, unlocked: true },
+  { key: 'aztec', name: 'Aztec', adCount: 2 },
+  { key: 'pdf417', name: 'PDF417', adCount: 2 },
+  { key: 'microqr', name: 'Micro\nQR code', adCount: 2 },
+  { key: 'micropdf417', name: 'Micro\nPDF417', adCount: 2 },
 ];
 
 export default function ProFeaturesScreen() {
@@ -41,7 +57,7 @@ export default function ProFeaturesScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
-  const handleFeaturePress = (featureKey) => {
+  const handleFeaturePress = (featureKey, adCount) => {
     Alert.alert(
       t('proFeatures.watchAdToUnlock'),
       t('proFeatures.watchAdDesc'),
@@ -50,7 +66,6 @@ export default function ProFeaturesScreen() {
         {
           text: t('proVersion.watchAd'),
           onPress: () => {
-            // 광고 시청 로직
             Alert.alert(t('common.notice'), t('proFeatures.adComingSoon'));
           }
         },
@@ -58,7 +73,27 @@ export default function ProFeaturesScreen() {
     );
   };
 
-  const handleThemePress = (themeKey) => {
+  const handleThemePress = (themeKey, adCount) => {
+    Alert.alert(
+      t('proFeatures.watchAdToUnlock'),
+      t('proFeatures.watchAdDesc'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('proVersion.watchAd'),
+          onPress: () => {
+            Alert.alert(t('common.notice'), t('proFeatures.adComingSoon'));
+          }
+        },
+      ]
+    );
+  };
+
+  const handleBarcodePress = (barcodeKey, unlocked) => {
+    if (unlocked) {
+      Alert.alert(t('common.notice'), t('proFeatures.alreadyUnlocked'));
+      return;
+    }
     Alert.alert(
       t('proFeatures.watchAdToUnlock'),
       t('proFeatures.watchAdDesc'),
@@ -119,7 +154,7 @@ export default function ProFeaturesScreen() {
               <TouchableOpacity
                 key={feature.key}
                 style={[s.featureItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
-                onPress={() => handleFeaturePress(feature.key)}
+                onPress={() => handleFeaturePress(feature.key, feature.adCount)}
                 activeOpacity={0.7}
               >
                 <View style={[s.featureIconContainer, { backgroundColor: `${feature.color}15` }]}>
@@ -128,8 +163,10 @@ export default function ProFeaturesScreen() {
                 <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={2}>
                   {t(`proFeatures.features.${feature.key}`)}
                 </Text>
-                <View style={[s.lockBadge, { backgroundColor: colors.textTertiary }]}>
-                  <Ionicons name="lock-closed" size={10} color="#fff" />
+                <View style={[s.adCountBadge, { backgroundColor: isDark ? '#333' : '#E5E5EA' }]}>
+                  <Text style={[s.adCountText, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                    {feature.adCount}
+                  </Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -146,22 +183,72 @@ export default function ProFeaturesScreen() {
               <TouchableOpacity
                 key={theme.key}
                 style={s.themeItem}
-                onPress={() => handleThemePress(theme.key)}
+                onPress={() => handleThemePress(theme.key, theme.adCount)}
                 activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={theme.colors}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.themePreview}
-                >
-                  <View style={s.themeLockOverlay}>
-                    <Ionicons name="lock-closed" size={16} color="#fff" />
+                <View style={s.themePreviewContainer}>
+                  <LinearGradient
+                    colors={theme.colors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={s.themePreview}
+                  />
+                  <View style={[s.themeAdBadge, { backgroundColor: isDark ? '#333' : '#E5E5EA' }]}>
+                    <Text style={[s.adCountText, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                      {theme.adCount}
+                    </Text>
                   </View>
-                </LinearGradient>
+                </View>
                 <Text style={[s.themeName, { color: colors.text, fontFamily: fonts.medium }]}>
                   {t(`proFeatures.themes.${theme.key}`)}
                 </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* 추가 형식 생성 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('proFeatures.additionalFormats')}
+          </Text>
+          <View style={s.barcodeGrid}>
+            {BARCODE_FORMATS.map((barcode) => (
+              <TouchableOpacity
+                key={barcode.key}
+                style={[
+                  s.barcodeItem,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' },
+                  barcode.unlocked && { borderColor: colors.success, borderWidth: 2 }
+                ]}
+                onPress={() => handleBarcodePress(barcode.key, barcode.unlocked)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="barcode-outline"
+                  size={28}
+                  color={barcode.unlocked ? colors.success : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    s.barcodeName,
+                    { color: colors.text, fontFamily: fonts.medium }
+                  ]}
+                  numberOfLines={2}
+                >
+                  {barcode.name}
+                </Text>
+                {barcode.unlocked ? (
+                  <View style={[s.checkBadge, { backgroundColor: colors.success }]}>
+                    <Ionicons name="checkmark" size={12} color="#fff" />
+                  </View>
+                ) : (
+                  <View style={[s.adCountBadge, { backgroundColor: isDark ? '#333' : '#E5E5EA' }]}>
+                    <Text style={[s.adCountText, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                      {barcode.adCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -264,19 +351,23 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   featureName: {
-    fontSize: 12,
+    fontSize: 11,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 14,
   },
-  lockBadge: {
+  adCountBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  adCountText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   themeGrid: {
     flexDirection: 'row',
@@ -289,25 +380,60 @@ const s = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
   },
+  themePreviewContainer: {
+    width: '100%',
+    position: 'relative',
+  },
   themePreview: {
     width: '100%',
     aspectRatio: 1.2,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
   },
-  themeLockOverlay: {
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  themeAdBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
   },
   themeName: {
     fontSize: 12,
     textAlign: 'center',
+    marginTop: 8,
+  },
+  barcodeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+  },
+  barcodeItem: {
+    width: '23%',
+    marginHorizontal: '1%',
+    marginBottom: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  barcodeName: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 6,
+    lineHeight: 14,
+  },
+  checkBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   removeAdsButton: {
     marginTop: 10,
