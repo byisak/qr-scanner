@@ -124,47 +124,54 @@ function ScannerScreen() {
       cornerOpacity.setValue(1);
       crosshairOpacity.setValue(0);
 
-      // QR 아이콘/안내 텍스트 페이드 아웃 + 코너 빠르게 바깥으로 확장
-      Animated.parallel([
-        Animated.timing(qrIconOpacity, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(guideTextOpacity, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        // 빠르게 바깥으로 (오버슛)
-        Animated.timing(cornerExpand, {
-          toValue: 1.15,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // 약간 안쪽으로 모임
-        Animated.timing(cornerExpand, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start(() => {
-          // 페이드 인/아웃으로 사라짐
-          Animated.sequence([
-            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
-            Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-            Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
-            Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-            // 마지막 페이드 아웃 + 십자가 페이드 인
-            Animated.parallel([
-              Animated.timing(cornerOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-              Animated.timing(crosshairOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-            ]),
-          ]).start(() => {
-            setScannerReady(true);
+      // 초기 상태 0.5초 유지 후 애니메이션 시작
+      const startTimer = setTimeout(() => {
+        // QR 아이콘/안내 텍스트 페이드 아웃 + 코너 빠르게 바깥으로 확장
+        Animated.parallel([
+          Animated.timing(qrIconOpacity, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(guideTextOpacity, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          // 빠르게 바깥으로 (오버슛)
+          Animated.timing(cornerExpand, {
+            toValue: 1.15,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          // 약간 안쪽으로 모임
+          Animated.timing(cornerExpand, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            // 페이드 인/아웃으로 사라짐
+            Animated.sequence([
+              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+              // 마지막 페이드 아웃 + 십자가 페이드 인
+              Animated.parallel([
+                Animated.timing(cornerOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+                Animated.timing(crosshairOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+              ]),
+            ]).start(() => {
+              setScannerReady(true);
+            });
           });
         });
-      });
+      }, 500);
+
+      return () => {
+        clearTimeout(startTimer);
+      };
     }
   }, [isActive, scannerReady]);
 
