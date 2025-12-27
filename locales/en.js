@@ -954,6 +954,37 @@ export default {
     allFeaturesDesc: 'Use all features without limits',
   },
 
+  // Pro Version Purchase Page
+  proPurchase: {
+    title: 'Pro Version',
+    noAds: 'No Ads',
+    advancedFeatures: 'Advanced Features',
+    oneTimePurchase: 'One-time Purchase',
+    watchAd: 'Watch Ad',
+    freeUnlock: 'Unlock features for free',
+    new: 'New',
+    restorePurchase: 'Restore Purchase',
+    terms: 'Terms',
+    privacy: 'Privacy',
+    purchaseTitle: 'Confirm Purchase',
+    purchaseConfirm: 'Would you like to purchase Pro Version for $11.99?',
+    comingSoon: 'Payment feature coming soon',
+    restoring: 'Restoring purchases...',
+    features: {
+      exclusiveQrDesign: 'Exclusive QR Code Design',
+      customLogoQr: 'Custom Logo QR Code',
+      additionalFormats: 'Additional Formats',
+      batchScan: 'Batch Scan',
+      deleteScannedBarcode: 'Delete Scanned Barcode',
+      copyToClipboard: 'Copy to Clipboard',
+      manualScanConfirm: 'Manual Scan Confirm',
+      icloudSync: 'iCloud Sync',
+      extraThemes: 'Extra Themes',
+      unlimitedExport: 'Unlimited Export',
+      businessScannerMode: 'Business Scanner Mode',
+    },
+  },
+
   // Feature unlock with ads
   proFeatures: {
     title: 'Unlock Features',

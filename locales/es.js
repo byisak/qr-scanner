@@ -947,6 +947,37 @@ export default {
     allFeaturesDesc: 'Usa todas las funciones sin límites',
   },
 
+  // Página de compra Pro
+  proPurchase: {
+    title: 'Versión Pro',
+    noAds: 'Sin anuncios',
+    advancedFeatures: 'Funciones avanzadas',
+    oneTimePurchase: 'Compra única',
+    watchAd: 'Ver anuncio',
+    freeUnlock: 'Desbloquear funciones gratis',
+    new: 'Nuevo',
+    restorePurchase: 'Restaurar compra',
+    terms: 'Términos',
+    privacy: 'Privacidad',
+    purchaseTitle: 'Confirmar compra',
+    purchaseConfirm: '¿Deseas comprar la Versión Pro por €11.99?',
+    comingSoon: 'Función de pago próximamente',
+    restoring: 'Restaurando compras...',
+    features: {
+      exclusiveQrDesign: 'Diseño exclusivo de QR',
+      customLogoQr: 'QR con logo personalizado',
+      additionalFormats: 'Formatos adicionales',
+      batchScan: 'Escaneo por lotes',
+      deleteScannedBarcode: 'Eliminar código escaneado',
+      copyToClipboard: 'Copiar al portapapeles',
+      manualScanConfirm: 'Confirmación manual de escaneo',
+      icloudSync: 'Sincronización iCloud',
+      extraThemes: 'Temas adicionales',
+      unlimitedExport: 'Exportación ilimitada',
+      businessScannerMode: 'Modo escáner empresarial',
+    },
+  },
+
   // Desbloqueo de funciones con anuncios
   proFeatures: {
     title: 'Desbloquear funciones',

@@ -950,6 +950,37 @@ export default {
     allFeaturesDesc: '无限制使用所有功能',
   },
 
+  // Pro版本购买页面
+  proPurchase: {
+    title: 'Pro版本',
+    noAds: '无广告',
+    advancedFeatures: '高级功能',
+    oneTimePurchase: '一次性购买',
+    watchAd: '观看广告',
+    freeUnlock: '免费解锁功能',
+    new: '新',
+    restorePurchase: '恢复购买',
+    terms: '条款',
+    privacy: '隐私',
+    purchaseTitle: '确认购买',
+    purchaseConfirm: '是否以¥68购买Pro版本？',
+    comingSoon: '支付功能即将推出',
+    restoring: '正在恢复购买...',
+    features: {
+      exclusiveQrDesign: '独家QR码设计',
+      customLogoQr: '自定义Logo QR码',
+      additionalFormats: '额外格式',
+      batchScan: '批量扫描',
+      deleteScannedBarcode: '删除已扫描条码',
+      copyToClipboard: '复制到剪贴板',
+      manualScanConfirm: '手动确认扫描',
+      icloudSync: 'iCloud同步',
+      extraThemes: '额外主题',
+      unlimitedExport: '无限导出',
+      businessScannerMode: '商务扫描模式',
+    },
+  },
+
   // 功能广告解锁
   proFeatures: {
     title: '解锁功能',

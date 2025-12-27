@@ -950,6 +950,37 @@ export default {
     allFeaturesDesc: '制限なくすべての機能を使用',
   },
 
+  // Proバージョン購入ページ
+  proPurchase: {
+    title: 'Proバージョン',
+    noAds: '広告なし',
+    advancedFeatures: '高度な機能',
+    oneTimePurchase: '一度限りの購入',
+    watchAd: '広告を見る',
+    freeUnlock: '無料で機能をアンロック',
+    new: '新しい',
+    restorePurchase: '購入を復元',
+    terms: '利用規約',
+    privacy: 'プライバシー',
+    purchaseTitle: '購入確認',
+    purchaseConfirm: 'Proバージョンを¥1,500で購入しますか？',
+    comingSoon: '決済機能は近日公開予定です',
+    restoring: '購入を復元中...',
+    features: {
+      exclusiveQrDesign: '限定QRコードデザイン',
+      customLogoQr: 'カスタムロゴQRコード',
+      additionalFormats: '追加フォーマット',
+      batchScan: 'バッチスキャン',
+      deleteScannedBarcode: 'スキャンしたバーコードを削除',
+      copyToClipboard: 'クリップボードにコピー',
+      manualScanConfirm: '手動スキャン確認',
+      icloudSync: 'iCloud同期',
+      extraThemes: '追加テーマ',
+      unlimitedExport: '無制限エクスポート',
+      businessScannerMode: 'ビジネススキャナーモード',
+    },
+  },
+
   // 機能別広告解除
   proFeatures: {
     title: '機能のアンロック',

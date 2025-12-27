@@ -954,6 +954,37 @@ export default {
     allFeaturesDesc: '제한 없이 모든 기능 사용',
   },
 
+  // Pro 버전 구매 페이지
+  proPurchase: {
+    title: 'Pro 버전',
+    noAds: '광고 없음',
+    advancedFeatures: '고급 기능',
+    oneTimePurchase: '일회성 구매',
+    watchAd: '광고 보기',
+    freeUnlock: '무료로 기능 잠금 해제',
+    new: '새로운',
+    restorePurchase: '구매 항목 복원',
+    terms: '약관',
+    privacy: '개인정보 보호',
+    purchaseTitle: '구매 확인',
+    purchaseConfirm: 'Pro 버전을 ₩15,000에 구매하시겠습니까?',
+    comingSoon: '결제 기능이 곧 추가됩니다',
+    restoring: '구매 항목을 복원하는 중...',
+    features: {
+      exclusiveQrDesign: '독점 QR 코드 디자인',
+      customLogoQr: '맞춤형 로고 포함 QR 코드',
+      additionalFormats: '추가 형식 생성',
+      batchScan: '배치 스캔',
+      deleteScannedBarcode: '복사한 바코드 삭제',
+      copyToClipboard: '클립보드에 복사',
+      manualScanConfirm: '수동으로 스캔 확인',
+      icloudSync: 'iCloud 동기화',
+      extraThemes: '추가 테마',
+      unlimitedExport: '무제한 내보내기',
+      businessScannerMode: '비즈니스 스캐너 모드',
+    },
+  },
+
   // 기능별 광고 해제
   proFeatures: {
     title: '기능 잠금해제',
