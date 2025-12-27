@@ -13,19 +13,19 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Pro 기능 목록
+// Pro 기능 목록 - 실제 앱에 구현된 기능들
 const PRO_FEATURES = [
-  { key: 'exclusiveQrDesign', icon: 'qr-code-outline' },
-  { key: 'customLogoQr', icon: 'camera-outline' },
-  { key: 'additionalFormats', icon: 'options-outline' },
-  { key: 'batchScan', icon: 'rocket-outline' },
-  { key: 'deleteScannedBarcode', icon: 'reorder-three-outline' },
-  { key: 'copyToClipboard', icon: 'copy-outline' },
-  { key: 'manualScanConfirm', icon: 'checkmark-circle-outline' },
-  { key: 'icloudSync', icon: 'cloud-upload-outline' },
-  { key: 'extraThemes', icon: 'color-palette-outline' },
-  { key: 'unlimitedExport', icon: 'infinite-outline' },
-  { key: 'businessScannerMode', icon: 'radio-outline' },
+  { key: 'exclusiveQrDesign', icon: 'qr-code-outline' },      // QR 스타일 커스터마이징
+  { key: 'customLogoQr', icon: 'camera-outline' },            // 로고 포함 QR 코드
+  { key: 'additionalFormats', icon: 'options-outline' },      // 추가 바코드 형식 생성
+  { key: 'batchScan', icon: 'rocket-outline' },               // 배치 스캔 모드
+  { key: 'deleteScannedBarcode', icon: 'menu-outline' },      // 스캔 기록 삭제
+  { key: 'copyToClipboard', icon: 'copy-outline' },           // 클립보드 복사
+  { key: 'manualScanConfirm', icon: 'checkmark-circle-outline' }, // 수동 스캔 확인
+  { key: 'icloudSync', icon: 'cloud-upload-outline' },        // iCloud/백업 동기화
+  { key: 'extraThemes', icon: 'color-palette-outline' },      // 추가 테마
+  { key: 'unlimitedExport', icon: 'infinite-outline' },       // 무제한 내보내기
+  { key: 'businessScannerMode', icon: 'wifi-outline' },       // 비즈니스 스캐너 (실시간 전송)
 ];
 
 export default function ProVersionScreen() {
@@ -60,7 +60,9 @@ export default function ProVersionScreen() {
     <View style={s.container}>
       {/* 배경 그라데이션 */}
       <LinearGradient
-        colors={['#1a1a2e', '#16213e', '#1a1a2e']}
+        colors={['#0f0c29', '#302b63', '#24243e']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={s.backgroundGradient}
       />
 
@@ -75,14 +77,16 @@ export default function ProVersionScreen() {
         </View>
       </TouchableOpacity>
 
-      <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        style={s.content}
+        contentContainerStyle={s.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 헤더 아이콘 및 타이틀 */}
         <View style={s.headerSection}>
           {/* 3D 큐브 아이콘 with glow */}
           <View style={s.iconGlow}>
-            <View style={s.iconContainer}>
-              <Ionicons name="cube-outline" size={64} color="#00E5CC" />
-            </View>
+            <Ionicons name="cube-outline" size={72} color="#00E5CC" />
           </View>
           <Text style={[s.title, { fontFamily: fonts.bold }]}>
             {t('proPurchase.title')}
@@ -95,13 +99,13 @@ export default function ProVersionScreen() {
             <Text style={[s.benefitText, { fontFamily: fonts.medium }]}>
               {t('proPurchase.noAds')}
             </Text>
-            <Ionicons name="checkmark" size={18} color="#00E5CC" />
+            <Ionicons name="checkmark" size={20} color="#00E5CC" style={s.checkIcon} />
           </View>
           <View style={s.benefitItem}>
             <Text style={[s.benefitText, { fontFamily: fonts.medium }]}>
               {t('proPurchase.advancedFeatures')}
             </Text>
-            <Ionicons name="checkmark" size={18} color="#00E5CC" />
+            <Ionicons name="checkmark" size={20} color="#00E5CC" style={s.checkIcon} />
           </View>
         </View>
 
@@ -109,7 +113,7 @@ export default function ProVersionScreen() {
         <View style={s.featuresList}>
           {PRO_FEATURES.map((feature) => (
             <View key={feature.key} style={s.featureItem}>
-              <Ionicons name={feature.icon} size={22} color="rgba(255,255,255,0.7)" />
+              <Ionicons name={feature.icon} size={24} color="rgba(255,255,255,0.6)" style={s.featureIcon} />
               <Text style={[s.featureText, { fontFamily: fonts.regular }]}>
                 {t(`proPurchase.features.${feature.key}`)}
               </Text>
@@ -121,7 +125,7 @@ export default function ProVersionScreen() {
         <TouchableOpacity
           style={s.purchaseButton}
           onPress={handlePurchase}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
           <Text style={[s.purchaseButtonText, { fontFamily: fonts.bold }]}>
             {t('proPurchase.oneTimePurchase')} · ₩15,000
@@ -132,11 +136,11 @@ export default function ProVersionScreen() {
         <TouchableOpacity
           style={s.watchAdSection}
           onPress={handleWatchAd}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
           <View style={s.watchAdLeft}>
-            <View style={s.watchAdIconContainer}>
-              <Ionicons name="play-circle" size={28} color="rgba(255,255,255,0.9)" />
+            <View style={s.playIconCircle}>
+              <Ionicons name="play" size={16} color="#fff" />
             </View>
             <View style={s.watchAdTextContainer}>
               <Text style={[s.watchAdTitle, { fontFamily: fonts.semiBold }]}>
@@ -153,7 +157,7 @@ export default function ProVersionScreen() {
                 {t('proPurchase.new')}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.6)" />
+            <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.5)" />
           </View>
         </TouchableOpacity>
 
@@ -163,7 +167,7 @@ export default function ProVersionScreen() {
           onPress={handleRestorePurchase}
           activeOpacity={0.7}
         >
-          <Ionicons name="time-outline" size={18} color="rgba(255,255,255,0.5)" />
+          <Ionicons name="time-outline" size={18} color="rgba(255,255,255,0.45)" />
           <Text style={[s.restoreText, { fontFamily: fonts.regular }]}>
             {t('proPurchase.restorePurchase')}
           </Text>
@@ -184,7 +188,7 @@ export default function ProVersionScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 50 }} />
       </ScrollView>
     </View>
   );
@@ -193,7 +197,7 @@ export default function ProVersionScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#0f0c29',
   },
   backgroundGradient: {
     position: 'absolute',
@@ -204,15 +208,15 @@ const s = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
+    top: 55,
     right: 20,
     zIndex: 10,
   },
   closeButtonCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -220,52 +224,55 @@ const s = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingHorizontal: 28,
+    paddingTop: 70,
   },
   headerSection: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   iconGlow: {
-    marginBottom: 16,
+    marginBottom: 12,
     shadowColor: '#00E5CC',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-  },
-  iconContainer: {
-    padding: 10,
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+    elevation: 10,
   },
   title: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '700',
     color: '#00E5CC',
   },
   benefitsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 24,
-    marginBottom: 32,
+    gap: 28,
+    marginBottom: 28,
   },
   benefitItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
   benefitText: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
+    color: 'rgba(255,255,255,0.85)',
+    marginRight: 6,
+  },
+  checkIcon: {
+    marginLeft: 2,
   },
   featuresList: {
-    marginBottom: 32,
-    paddingHorizontal: 8,
+    marginBottom: 28,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    gap: 16,
+    paddingVertical: 11,
+  },
+  featureIcon: {
+    width: 32,
+    marginRight: 14,
   },
   featureText: {
     fontSize: 16,
@@ -274,10 +281,10 @@ const s = StyleSheet.create({
   },
   purchaseButton: {
     backgroundColor: '#00A693',
-    borderRadius: 28,
+    borderRadius: 30,
     paddingVertical: 18,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   purchaseButtonText: {
     color: '#fff',
@@ -288,9 +295,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#8B2942',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#7B2D42',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     marginBottom: 24,
   },
   watchAdLeft: {
@@ -298,21 +306,27 @@ const s = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  watchAdIconContainer: {
+  playIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
   watchAdTextContainer: {
     flex: 1,
   },
   watchAdTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#fff',
   },
   watchAdDesc: {
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 2,
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.65)',
   },
   watchAdRight: {
     flexDirection: 'row',
@@ -322,12 +336,12 @@ const s = StyleSheet.create({
   newBadge: {
     backgroundColor: '#E74C3C',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   newBadgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   restoreButton: {
@@ -335,24 +349,24 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   restoreText: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,255,255,0.45)',
   },
   footerLinks: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   footerLink: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.35)',
   },
   footerDot: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.4)',
+    color: 'rgba(255,255,255,0.35)',
   },
 });
