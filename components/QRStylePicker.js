@@ -165,7 +165,7 @@ const QR_STYLE_PRESETS = [
 export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
 
 // 색상 선택 컴포넌트
-function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true }) {
+function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true, t }) {
   const [showColorPicker, setShowColorPicker] = useState(false);
 
   return (
@@ -180,7 +180,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
           >
             <Ionicons name="color-fill" size={16} color={!useGradient ? colors.primary : colors.textSecondary} />
             <Text style={[styles.colorTypeText, { color: !useGradient ? colors.primary : colors.textSecondary }]}>
-              단색
+              {t('generator.qrStyle.solidColor')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -189,7 +189,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
           >
             <Ionicons name="color-palette" size={16} color={useGradient ? colors.primary : colors.textSecondary} />
             <Text style={[styles.colorTypeText, { color: useGradient ? colors.primary : colors.textSecondary }]}>
-              그라데이션
+              {t('generator.qrStyle.gradient')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -276,7 +276,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
           {/* 그라데이션 회전 */}
           {gradient && (
             <View style={styles.stepperContainer}>
-              <Text style={[styles.stepperLabel, { color: colors.text }]}>회전</Text>
+              <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.rotation')}</Text>
               <View style={styles.stepperControls}>
                 <TouchableOpacity
                   style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -401,7 +401,7 @@ export default function QRStylePicker({
   const renderDotOptions = () => (
     <View style={styles.optionSection}>
       <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.dotType') || '도트 스타일'}
+        {t('generator.qrStyle.dotType')}
       </Text>
       <View style={styles.optionRow}>
         {DOT_TYPES.map((type) => (
@@ -432,7 +432,7 @@ export default function QRStylePicker({
       <View style={styles.sectionDivider} />
 
       <ColorPickerSection
-        label={t('generator.qrStyle.dotColor') || '도트 색상'}
+        label={t('generator.qrStyle.dotColor')}
         color={tempStyle.dotColor}
         onColorChange={(color) => updateStyle('dotColor', color)}
         useGradient={!!tempStyle.dotGradient}
@@ -446,6 +446,7 @@ export default function QRStylePicker({
           }
         }}
         colors={colors}
+        t={t}
       />
     </View>
   );
@@ -454,11 +455,11 @@ export default function QRStylePicker({
     <View style={styles.optionSection}>
       {/* Corner Square */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        코너 사각형 (Corners Square)
+        {t('generator.qrStyle.cornerSquare')}
       </Text>
 
       <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.cornerSquareType') || '스타일'}
+        {t('generator.qrStyle.cornerSquareType')}
       </Text>
       <View style={styles.optionRow}>
         {CORNER_SQUARE_TYPES.map((type) => (
@@ -487,7 +488,7 @@ export default function QRStylePicker({
       </View>
 
       <ColorPickerSection
-        label="색상"
+        label={t('generator.qrStyle.color')}
         color={tempStyle.cornerSquareColor}
         onColorChange={(color) => updateStyle('cornerSquareColor', color)}
         useGradient={!!tempStyle.cornerSquareGradient}
@@ -501,17 +502,18 @@ export default function QRStylePicker({
           }
         }}
         colors={colors}
+        t={t}
       />
 
       <View style={styles.sectionDivider} />
 
       {/* Corner Dot */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        코너 도트 (Corners Dot)
+        {t('generator.qrStyle.cornerDot')}
       </Text>
 
       <Text style={[styles.optionTitle, { color: colors.text }]}>
-        {t('generator.qrStyle.cornerDotType') || '스타일'}
+        {t('generator.qrStyle.cornerDotType')}
       </Text>
       <View style={styles.optionRow}>
         {CORNER_DOT_TYPES.map((type) => (
@@ -540,7 +542,7 @@ export default function QRStylePicker({
       </View>
 
       <ColorPickerSection
-        label="색상"
+        label={t('generator.qrStyle.color')}
         color={tempStyle.cornerDotColor}
         onColorChange={(color) => updateStyle('cornerDotColor', color)}
         useGradient={!!tempStyle.cornerDotGradient}
@@ -554,6 +556,7 @@ export default function QRStylePicker({
           }
         }}
         colors={colors}
+        t={t}
       />
     </View>
   );
@@ -562,11 +565,11 @@ export default function QRStylePicker({
     <View style={styles.optionSection}>
       {/* Background Color */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        배경 색상
+        {t('generator.qrStyle.backgroundColor')}
       </Text>
 
       <ColorPickerSection
-        label="배경 색상"
+        label={t('generator.qrStyle.backgroundColor')}
         color={tempStyle.backgroundColor}
         onColorChange={(color) => updateStyle('backgroundColor', color)}
         useGradient={!!tempStyle.backgroundGradient}
@@ -580,6 +583,7 @@ export default function QRStylePicker({
           }
         }}
         colors={colors}
+        t={t}
       />
     </View>
   );
@@ -588,11 +592,11 @@ export default function QRStylePicker({
     <View style={styles.optionSection}>
       {/* QR Size */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        크기 설정
+        {t('generator.qrStyle.sizeSettings')}
       </Text>
 
       <View style={styles.stepperContainer}>
-        <Text style={[styles.stepperLabel, { color: colors.text }]}>가로 (Width)</Text>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.width')}</Text>
         <View style={styles.stepperControls}>
           <TouchableOpacity
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -611,7 +615,7 @@ export default function QRStylePicker({
       </View>
 
       <View style={styles.stepperContainer}>
-        <Text style={[styles.stepperLabel, { color: colors.text }]}>세로 (Height)</Text>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.height')}</Text>
         <View style={styles.stepperControls}>
           <TouchableOpacity
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -633,11 +637,11 @@ export default function QRStylePicker({
 
       {/* Margin */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        여백 설정
+        {t('generator.qrStyle.marginSettings')}
       </Text>
 
       <View style={styles.stepperContainer}>
-        <Text style={[styles.stepperLabel, { color: colors.text }]}>여백 (Margin)</Text>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.margin')}</Text>
         <View style={styles.stepperControls}>
           <TouchableOpacity
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -659,7 +663,7 @@ export default function QRStylePicker({
 
       {/* Error Correction Level */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        오류 보정 레벨
+        {t('generator.qrStyle.errorCorrection')}
       </Text>
 
       <View style={styles.optionRow}>
@@ -697,7 +701,7 @@ export default function QRStylePicker({
         ))}
       </View>
       <Text style={[styles.optionHint, { color: colors.textTertiary }]}>
-        {t('generator.qrStyle.errorCorrectionHint') || '높을수록 손상된 QR코드도 인식 가능'}
+        {t('generator.qrStyle.errorCorrectionHint')}
       </Text>
     </View>
   );
@@ -706,7 +710,7 @@ export default function QRStylePicker({
     <View style={styles.optionSection}>
       {/* 로고 이미지 업로드 */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        로고 이미지
+        {t('generator.qrStyle.logoImage')}
       </Text>
 
       <View style={styles.logoSection}>
@@ -726,7 +730,7 @@ export default function QRStylePicker({
                 activeOpacity={0.7}
               >
                 <Ionicons name="swap-horizontal" size={18} color={colors.text} />
-                <Text style={[styles.logoButtonText, { color: colors.text }]}>변경</Text>
+                <Text style={[styles.logoButtonText, { color: colors.text }]}>{t('generator.qrStyle.change')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.logoButton, { backgroundColor: '#FF3B30' }]}
@@ -734,7 +738,7 @@ export default function QRStylePicker({
                 activeOpacity={0.7}
               >
                 <Ionicons name="trash" size={18} color="#fff" />
-                <Text style={[styles.logoButtonText, { color: '#fff' }]}>삭제</Text>
+                <Text style={[styles.logoButtonText, { color: '#fff' }]}>{t('common.delete')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -745,9 +749,9 @@ export default function QRStylePicker({
             activeOpacity={0.7}
           >
             <Ionicons name="add-circle-outline" size={28} color={colors.primary} />
-            <Text style={[styles.logoAddText, { color: colors.text }]}>로고 추가</Text>
+            <Text style={[styles.logoAddText, { color: colors.text }]}>{t('generator.qrStyle.addLogo')}</Text>
             <Text style={[styles.logoAddHint, { color: colors.textTertiary }]}>
-              QR 코드 중앙에 로고가 표시됩니다
+              {t('generator.qrStyle.logoHint')}
             </Text>
           </TouchableOpacity>
         )}
@@ -757,12 +761,12 @@ export default function QRStylePicker({
 
       {/* 이미지 옵션 */}
       <Text style={[styles.sectionHeader, { color: colors.text }]}>
-        이미지 옵션
+        {t('generator.qrStyle.imageOptions')}
       </Text>
 
       <View style={styles.switchRow}>
         <Text style={[styles.switchLabel, { color: colors.text }]}>
-          배경 도트 숨기기
+          {t('generator.qrStyle.hideBackgroundDots')}
         </Text>
         <Switch
           value={tempStyle.imageOptions?.hideBackgroundDots ?? true}
@@ -773,7 +777,7 @@ export default function QRStylePicker({
       </View>
 
       <View style={styles.stepperContainer}>
-        <Text style={[styles.stepperLabel, { color: colors.text }]}>이미지 크기</Text>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.imageSize')}</Text>
         <View style={styles.stepperControls}>
           <TouchableOpacity
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -792,7 +796,7 @@ export default function QRStylePicker({
       </View>
 
       <View style={styles.stepperContainer}>
-        <Text style={[styles.stepperLabel, { color: colors.text }]}>이미지 여백</Text>
+        <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.imageMargin')}</Text>
         <View style={styles.stepperControls}>
           <TouchableOpacity
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
@@ -813,12 +817,12 @@ export default function QRStylePicker({
   );
 
   const tabs = [
-    { id: 'presets', label: t('generator.qrStyle.presets') || '프리셋', icon: 'color-palette-outline' },
-    { id: 'dots', label: t('generator.qrStyle.dots') || '도트', icon: 'grid-outline' },
-    { id: 'corners', label: t('generator.qrStyle.corners') || '코너', icon: 'scan-outline' },
-    { id: 'background', label: '배경', icon: 'image-outline' },
+    { id: 'presets', label: t('generator.qrStyle.presets'), icon: 'color-palette-outline' },
+    { id: 'dots', label: t('generator.qrStyle.dots'), icon: 'grid-outline' },
+    { id: 'corners', label: t('generator.qrStyle.corners'), icon: 'scan-outline' },
+    { id: 'background', label: t('generator.qrStyle.background'), icon: 'image-outline' },
     // { id: 'image', label: '이미지', icon: 'images-outline' }, // 추후 개발 예정
-    { id: 'settings', label: '설정', icon: 'settings-outline' },
+    { id: 'settings', label: t('generator.qrStyle.settings'), icon: 'settings-outline' },
   ];
 
   return (
@@ -830,11 +834,11 @@ export default function QRStylePicker({
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t('generator.qrStyle.title') || 'QR 스타일'}
+            {t('generator.qrStyle.title')}
           </Text>
           <TouchableOpacity onPress={handleApply} style={styles.headerButton}>
             <Text style={[styles.applyText, { color: colors.primary }]}>
-              {t('common.apply') || '적용'}
+              {t('common.apply')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -851,7 +855,7 @@ export default function QRStylePicker({
           </View>
           {(tempStyle.width || tempStyle.height) && (
             <Text style={[styles.sizeIndicator, { color: colors.textSecondary }]}>
-              실제 크기: {tempStyle.width || 300} × {tempStyle.height || 300}px
+              {t('generator.qrStyle.actualSize')}: {tempStyle.width || 300} × {tempStyle.height || 300}px
             </Text>
           )}
         </View>
