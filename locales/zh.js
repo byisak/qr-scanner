@@ -950,6 +950,35 @@ export default {
     allFeaturesDesc: '无限制使用所有功能',
   },
 
+  // 功能广告解锁
+  proFeatures: {
+    title: '解锁功能',
+    description: '观看广告免费解锁功能',
+    advancedFeatures: '高级功能',
+    extraThemes: '额外主题',
+    watchAdToUnlock: '观看广告解锁',
+    watchAdDesc: '观看30秒广告可使用此功能24小时',
+    adComingSoon: '广告功能即将推出',
+    removeAds: '移除广告',
+    removeAdsDesc: '升级到Pro版可永久无广告使用所有功能',
+    features: {
+      batchScan: '批量扫描',
+      deleteScannedBarcode: '删除已扫描条码',
+      copyToClipboard: '复制到剪贴板',
+      manualScanConfirm: '手动确认扫描',
+      icloudSync: 'iCloud同步',
+      unlimitedExport: '无限导出',
+      businessScannerMode: '商务扫描模式',
+    },
+    themes: {
+      oceanBreeze: 'Ocean Breeze',
+      classicLook: 'Classic Look',
+      urbanVibe: 'Urban Vibe',
+      darkPlanet: 'Dark Planet',
+      custom: 'Custom',
+    },
+  },
+
   // 照片保存设置
   photoSaveSettings: {
     title: '照片保存设置',

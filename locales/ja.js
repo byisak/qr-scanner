@@ -950,6 +950,35 @@ export default {
     allFeaturesDesc: '制限なくすべての機能を使用',
   },
 
+  // 機能別広告解除
+  proFeatures: {
+    title: '機能のアンロック',
+    description: '広告を見て機能を無料でアンロックしましょう',
+    advancedFeatures: '高度な機能',
+    extraThemes: '追加テーマ',
+    watchAdToUnlock: '広告を見てアンロック',
+    watchAdDesc: '30秒の広告を見ると24時間この機能を使用できます',
+    adComingSoon: '広告機能は近日公開予定です',
+    removeAds: '広告を削除',
+    removeAdsDesc: 'Proにアップグレードすると、すべての機能を広告なしで永続的に使用できます',
+    features: {
+      batchScan: 'バッチスキャン',
+      deleteScannedBarcode: 'スキャンしたバーコードを削除',
+      copyToClipboard: 'クリップボードにコピー',
+      manualScanConfirm: '手動スキャン確認',
+      icloudSync: 'iCloud同期',
+      unlimitedExport: '無制限エクスポート',
+      businessScannerMode: 'ビジネススキャナーモード',
+    },
+    themes: {
+      oceanBreeze: 'Ocean Breeze',
+      classicLook: 'Classic Look',
+      urbanVibe: 'Urban Vibe',
+      darkPlanet: 'Dark Planet',
+      custom: 'Custom',
+    },
+  },
+
   // 写真保存設定
   photoSaveSettings: {
     title: '写真保存設定',

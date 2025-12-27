@@ -306,14 +306,11 @@ export default function SettingsScreen() {
           </LinearGradient>
           <TouchableOpacity
             style={s.watchAdButton}
-            onPress={() => Alert.alert(t('proVersion.watchAd'), t('proVersion.watchAdDesc'))}
+            onPress={() => router.push('/pro-features')}
             activeOpacity={0.7}
           >
             <Ionicons name="play-circle-outline" size={20} color={colors.primary} />
-            <View style={s.watchAdTextContainer}>
-              <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
-              <Text style={[s.watchAdSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('proVersion.freeUnlock')}</Text>
-            </View>
+            <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
 

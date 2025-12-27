@@ -954,6 +954,35 @@ export default {
     allFeaturesDesc: '제한 없이 모든 기능 사용',
   },
 
+  // 기능별 광고 해제
+  proFeatures: {
+    title: '기능 잠금해제',
+    description: '광고를 시청하고 원하는 기능을 무료로 잠금해제하세요',
+    advancedFeatures: '고급 기능',
+    extraThemes: '추가 테마',
+    watchAdToUnlock: '광고 보고 잠금해제',
+    watchAdDesc: '30초 광고를 시청하면 24시간 동안 이 기능을 사용할 수 있습니다',
+    adComingSoon: '광고 기능이 곧 추가됩니다',
+    removeAds: '광고 제거',
+    removeAdsDesc: 'Pro 버전으로 업그레이드하면 모든 기능을 광고 없이 영구적으로 사용할 수 있습니다',
+    features: {
+      batchScan: '배치 스캔',
+      deleteScannedBarcode: '복사한 바코드 삭제',
+      copyToClipboard: '클립보드에 복사',
+      manualScanConfirm: '수동으로 스캔 확인',
+      icloudSync: 'iCloud 동기화',
+      unlimitedExport: '무제한 내보내기',
+      businessScannerMode: '비즈니스 스캐너 모드',
+    },
+    themes: {
+      oceanBreeze: 'Ocean Breeze',
+      classicLook: 'Classic Look',
+      urbanVibe: 'Urban Vibe',
+      darkPlanet: 'Dark Planet',
+      custom: 'Custom',
+    },
+  },
+
   // 사진 저장 설정
   photoSaveSettings: {
     title: '스캔 사진 저장',

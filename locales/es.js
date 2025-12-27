@@ -947,6 +947,35 @@ export default {
     allFeaturesDesc: 'Usa todas las funciones sin límites',
   },
 
+  // Desbloqueo de funciones con anuncios
+  proFeatures: {
+    title: 'Desbloquear funciones',
+    description: 'Ver anuncios para desbloquear funciones gratis',
+    advancedFeatures: 'Funciones avanzadas',
+    extraThemes: 'Temas adicionales',
+    watchAdToUnlock: 'Ver anuncio para desbloquear',
+    watchAdDesc: 'Ver un anuncio de 30 segundos para usar esta función durante 24 horas',
+    adComingSoon: 'Función de anuncios próximamente',
+    removeAds: 'Eliminar anuncios',
+    removeAdsDesc: 'Actualiza a Pro para usar todas las funciones permanentemente sin anuncios',
+    features: {
+      batchScan: 'Escaneo por lotes',
+      deleteScannedBarcode: 'Eliminar código escaneado',
+      copyToClipboard: 'Copiar al portapapeles',
+      manualScanConfirm: 'Confirmación manual de escaneo',
+      icloudSync: 'Sincronización iCloud',
+      unlimitedExport: 'Exportación ilimitada',
+      businessScannerMode: 'Modo escáner empresarial',
+    },
+    themes: {
+      oceanBreeze: 'Ocean Breeze',
+      classicLook: 'Classic Look',
+      urbanVibe: 'Urban Vibe',
+      darkPlanet: 'Dark Planet',
+      custom: 'Custom',
+    },
+  },
+
   // Configuración de guardado de fotos
   photoSaveSettings: {
     title: 'Guardar fotos',

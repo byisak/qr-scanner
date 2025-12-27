@@ -954,6 +954,35 @@ export default {
     allFeaturesDesc: 'Use all features without limits',
   },
 
+  // Feature unlock with ads
+  proFeatures: {
+    title: 'Unlock Features',
+    description: 'Watch ads to unlock features for free',
+    advancedFeatures: 'Advanced Features',
+    extraThemes: 'Extra Themes',
+    watchAdToUnlock: 'Watch Ad to Unlock',
+    watchAdDesc: 'Watch a 30-second ad to use this feature for 24 hours',
+    adComingSoon: 'Ad feature coming soon',
+    removeAds: 'Remove Ads',
+    removeAdsDesc: 'Upgrade to Pro to use all features permanently without ads',
+    features: {
+      batchScan: 'Batch Scan',
+      deleteScannedBarcode: 'Delete Scanned Barcode',
+      copyToClipboard: 'Copy to Clipboard',
+      manualScanConfirm: 'Manual Scan Confirm',
+      icloudSync: 'iCloud Sync',
+      unlimitedExport: 'Unlimited Export',
+      businessScannerMode: 'Business Scanner Mode',
+    },
+    themes: {
+      oceanBreeze: 'Ocean Breeze',
+      classicLook: 'Classic Look',
+      urbanVibe: 'Urban Vibe',
+      darkPlanet: 'Dark Planet',
+      custom: 'Custom',
+    },
+  },
+
   // Photo save settings
   photoSaveSettings: {
     title: 'Photo Save Settings',
