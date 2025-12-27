@@ -412,6 +412,8 @@ export default {
     safariDesc: 'Abre en el navegador Safari',
     chrome: 'Abrir en Chrome',
     chromeDesc: 'Abre en el navegador Chrome',
+    default: 'Navegador predeterminado',
+    defaultDesc: 'Abre en el navegador predeterminado del sistema',
     selected: 'Seleccionado',
   },
 

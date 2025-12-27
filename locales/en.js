@@ -413,6 +413,8 @@ export default {
     safariDesc: 'Opens in Safari browser',
     chrome: 'Open in Chrome',
     chromeDesc: 'Opens in Chrome browser',
+    default: 'Default Browser',
+    defaultDesc: 'Opens in system default browser',
     selected: 'Selected',
   },
 

@@ -412,6 +412,8 @@ export default {
     safariDesc: '使用Safari浏览器打开',
     chrome: '用Chrome打开',
     chromeDesc: '使用Chrome浏览器打开',
+    default: '默认浏览器',
+    defaultDesc: '使用系统默认浏览器打开',
     selected: '已选择',
   },
 

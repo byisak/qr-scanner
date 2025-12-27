@@ -413,6 +413,8 @@ export default {
     safariDesc: 'Safari 브라우저로 엽니다',
     chrome: 'Chrome으로 열기',
     chromeDesc: 'Chrome 브라우저로 엽니다',
+    default: '기본 브라우저',
+    defaultDesc: '시스템 기본 브라우저로 엽니다',
     selected: '선택됨',
   },
 

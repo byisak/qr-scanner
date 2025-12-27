@@ -37,6 +37,12 @@ const getUrlOpenModes = () => {
     });
   }
 
+  // 기본 브라우저 옵션 추가 (Linking.openURL 사용)
+  modes.push({
+    id: 'default',
+    icon: 'globe-outline',
+  });
+
   return modes;
 };
 

@@ -412,6 +412,8 @@ export default {
     safariDesc: 'Safariブラウザで開きます',
     chrome: 'Chromeで開く',
     chromeDesc: 'Chromeブラウザで開きます',
+    default: 'デフォルトブラウザ',
+    defaultDesc: 'システムのデフォルトブラウザで開きます',
     selected: '選択済み',
   },
 
