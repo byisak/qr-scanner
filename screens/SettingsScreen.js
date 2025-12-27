@@ -160,6 +160,10 @@ export default function SettingsScreen() {
           if (q !== null) {
             setPhotoQuality(q);
           }
+
+          // 배치 스캔 설정 로드
+          const bs = await AsyncStorage.getItem('batchScanEnabled');
+          setBatchScanEnabled(bs === 'true');
         } catch (error) {
           console.error('Load settings error:', error);
         }
