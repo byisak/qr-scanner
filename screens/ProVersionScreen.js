@@ -13,19 +13,16 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Pro 기능 목록 - 실제 앱에 구현된 기능들
+// Pro 기능 목록 - 실제 앱에 구현된 기능들 (8개)
 const PRO_FEATURES = [
-  { key: 'exclusiveQrDesign', icon: 'qr-code-outline' },      // QR 스타일 커스터마이징
-  { key: 'customLogoQr', icon: 'camera-outline' },            // 로고 포함 QR 코드
-  { key: 'additionalFormats', icon: 'options-outline' },      // 추가 바코드 형식 생성
-  { key: 'batchScan', icon: 'rocket-outline' },               // 배치 스캔 모드
-  { key: 'deleteScannedBarcode', icon: 'menu-outline' },      // 스캔 기록 삭제
-  { key: 'copyToClipboard', icon: 'copy-outline' },           // 클립보드 복사
-  { key: 'manualScanConfirm', icon: 'checkmark-circle-outline' }, // 수동 스캔 확인
-  { key: 'icloudSync', icon: 'cloud-upload-outline' },        // iCloud/백업 동기화
-  { key: 'extraThemes', icon: 'color-palette-outline' },      // 추가 테마
-  { key: 'unlimitedExport', icon: 'infinite-outline' },       // 무제한 내보내기
-  { key: 'businessScannerMode', icon: 'wifi-outline' },       // 비즈니스 스캐너 (실시간 전송)
+  { key: 'exclusiveQrDesign', icon: 'qr-code-outline' },
+  { key: 'customLogoQr', icon: 'camera-outline' },
+  { key: 'additionalFormats', icon: 'layers-outline' },
+  { key: 'batchScan', icon: 'rocket-outline' },
+  { key: 'deleteScannedBarcode', icon: 'trash-outline' },
+  { key: 'copyToClipboard', icon: 'clipboard-outline' },
+  { key: 'manualScanConfirm', icon: 'checkmark-circle-outline' },
+  { key: 'icloudSync', icon: 'cloud-outline' },
 ];
 
 export default function ProVersionScreen() {
@@ -60,9 +57,9 @@ export default function ProVersionScreen() {
     <View style={s.container}>
       {/* 배경 그라데이션 */}
       <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={['#121212', '#000000']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         style={s.backgroundGradient}
       />
 
@@ -72,9 +69,7 @@ export default function ProVersionScreen() {
         onPress={() => router.back()}
         activeOpacity={0.7}
       >
-        <View style={s.closeButtonCircle}>
-          <Ionicons name="close" size={20} color="#fff" />
-        </View>
+        <Ionicons name="close" size={24} color="#a0a0a0" />
       </TouchableOpacity>
 
       <ScrollView
@@ -82,30 +77,30 @@ export default function ProVersionScreen() {
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 헤더 아이콘 및 타이틀 */}
+        {/* 헤더 섹션 */}
         <View style={s.headerSection}>
-          {/* 3D 큐브 아이콘 with glow */}
-          <View style={s.iconGlow}>
-            <Ionicons name="cube-outline" size={72} color="#00E5CC" />
+          {/* 로고 박스 with glow */}
+          <View style={s.logoBox}>
+            <Ionicons name="cube-outline" size={40} color="#2ecc71" />
           </View>
           <Text style={[s.title, { fontFamily: fonts.bold }]}>
             {t('proPurchase.title')}
           </Text>
-        </View>
 
-        {/* 주요 혜택 */}
-        <View style={s.benefitsRow}>
-          <View style={s.benefitItem}>
-            <Text style={[s.benefitText, { fontFamily: fonts.medium }]}>
-              {t('proPurchase.noAds')}
-            </Text>
-            <Ionicons name="checkmark" size={20} color="#00E5CC" style={s.checkIcon} />
-          </View>
-          <View style={s.benefitItem}>
-            <Text style={[s.benefitText, { fontFamily: fonts.medium }]}>
-              {t('proPurchase.advancedFeatures')}
-            </Text>
-            <Ionicons name="checkmark" size={20} color="#00E5CC" style={s.checkIcon} />
+          {/* 서브 기능 표시 */}
+          <View style={s.subFeatures}>
+            <View style={s.subFeatureItem}>
+              <Ionicons name="checkmark" size={16} color="#2ecc71" />
+              <Text style={[s.subFeatureText, { fontFamily: fonts.regular }]}>
+                {t('proPurchase.noAds')}
+              </Text>
+            </View>
+            <View style={s.subFeatureItem}>
+              <Ionicons name="checkmark" size={16} color="#2ecc71" />
+              <Text style={[s.subFeatureText, { fontFamily: fonts.regular }]}>
+                {t('proPurchase.advancedFeatures')}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -113,7 +108,7 @@ export default function ProVersionScreen() {
         <View style={s.featuresList}>
           {PRO_FEATURES.map((feature) => (
             <View key={feature.key} style={s.featureItem}>
-              <Ionicons name={feature.icon} size={24} color="rgba(255,255,255,0.6)" style={s.featureIcon} />
+              <Ionicons name={feature.icon} size={24} color="#a0a0a0" style={s.featureIcon} />
               <Text style={[s.featureText, { fontFamily: fonts.regular }]}>
                 {t(`proPurchase.features.${feature.key}`)}
               </Text>
@@ -121,71 +116,82 @@ export default function ProVersionScreen() {
           ))}
         </View>
 
-        {/* 구매 버튼 */}
-        <TouchableOpacity
-          style={s.purchaseButton}
-          onPress={handlePurchase}
-          activeOpacity={0.85}
-        >
-          <Text style={[s.purchaseButtonText, { fontFamily: fonts.bold }]}>
-            {t('proPurchase.oneTimePurchase')} · ₩15,000
-          </Text>
-        </TouchableOpacity>
-
-        {/* 광고 보기 섹션 */}
-        <TouchableOpacity
-          style={s.watchAdSection}
-          onPress={handleWatchAd}
-          activeOpacity={0.85}
-        >
-          <View style={s.watchAdLeft}>
-            <View style={s.playIconCircle}>
-              <Ionicons name="play" size={16} color="#fff" />
-            </View>
-            <View style={s.watchAdTextContainer}>
-              <Text style={[s.watchAdTitle, { fontFamily: fonts.semiBold }]}>
-                {t('proPurchase.watchAd')}
+        {/* 액션 영역 */}
+        <View style={s.actionArea}>
+          {/* 구매 버튼 */}
+          <TouchableOpacity
+            style={s.purchaseButton}
+            onPress={handlePurchase}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#2ecc71', '#27ae60']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={s.purchaseButtonGradient}
+            >
+              <Text style={[s.purchaseButtonText, { fontFamily: fonts.bold }]}>
+                {t('proPurchase.oneTimePurchase')} • ₩15,000
               </Text>
-              <Text style={[s.watchAdDesc, { fontFamily: fonts.regular }]}>
-                {t('proPurchase.freeUnlock')}
-              </Text>
-            </View>
-          </View>
-          <View style={s.watchAdRight}>
-            <View style={s.newBadge}>
-              <Text style={[s.newBadgeText, { fontFamily: fonts.bold }]}>
-                {t('proPurchase.new')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={22} color="rgba(255,255,255,0.5)" />
-          </View>
-        </TouchableOpacity>
+            </LinearGradient>
+          </TouchableOpacity>
 
-        {/* 구매 항목 복원 */}
-        <TouchableOpacity
-          style={s.restoreButton}
-          onPress={handleRestorePurchase}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="time-outline" size={18} color="rgba(255,255,255,0.45)" />
-          <Text style={[s.restoreText, { fontFamily: fonts.regular }]}>
-            {t('proPurchase.restorePurchase')}
-          </Text>
-        </TouchableOpacity>
+          {/* 광고 보기 버튼 */}
+          <TouchableOpacity
+            style={s.adButton}
+            onPress={handleWatchAd}
+            activeOpacity={0.85}
+          >
+            <View style={s.adContent}>
+              <Ionicons name="play-circle-outline" size={28} color="#fff" />
+              <View style={s.adTextContainer}>
+                <Text style={[s.adTitle, { fontFamily: fonts.medium }]}>
+                  {t('proPurchase.watchAd')}
+                </Text>
+                <Text style={[s.adDesc, { fontFamily: fonts.regular }]}>
+                  {t('proPurchase.freeUnlock')}
+                </Text>
+              </View>
+            </View>
+            <View style={s.adRight}>
+              <View style={s.newBadge}>
+                <Text style={[s.newBadgeText, { fontFamily: fonts.bold }]}>
+                  {t('proPurchase.new')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#a0a0a0" />
+            </View>
+          </TouchableOpacity>
+        </View>
 
-        {/* 약관 및 개인정보 */}
-        <View style={s.footerLinks}>
-          <TouchableOpacity onPress={() => router.push('/terms-of-service')}>
-            <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
-              {t('proPurchase.terms')}
+        {/* 푸터 링크 */}
+        <View style={s.footerArea}>
+          {/* 구매 항목 복원 */}
+          <TouchableOpacity
+            style={s.restoreButton}
+            onPress={handleRestorePurchase}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="time-outline" size={14} color="#a0a0a0" />
+            <Text style={[s.restoreText, { fontFamily: fonts.regular }]}>
+              {t('proPurchase.restorePurchase')}
             </Text>
           </TouchableOpacity>
-          <Text style={s.footerDot}>·</Text>
-          <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
-            <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
-              {t('proPurchase.privacy')}
-            </Text>
-          </TouchableOpacity>
+
+          {/* 약관 및 개인정보 */}
+          <View style={s.footerLinks}>
+            <TouchableOpacity onPress={() => router.push('/terms-of-service')}>
+              <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
+                {t('proPurchase.terms')}
+              </Text>
+            </TouchableOpacity>
+            <Text style={s.footerDot}>•</Text>
+            <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+              <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
+                {t('proPurchase.privacy')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={{ height: 50 }} />
@@ -197,7 +203,7 @@ export default function ProVersionScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
+    backgroundColor: '#0d0d0d',
   },
   backgroundGradient: {
     position: 'absolute',
@@ -208,165 +214,175 @@ const s = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 55,
+    top: 50,
     right: 20,
     zIndex: 10,
-  },
-  closeButtonCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 28,
-    paddingTop: 70,
+    paddingHorizontal: 24,
+    paddingTop: 40,
   },
+
+  // 헤더 섹션
   headerSection: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 40,
   },
-  iconGlow: {
-    marginBottom: 12,
-    shadowColor: '#00E5CC',
+  logoBox: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(46, 204, 113, 0.3)',
+    // Glow effect
+    shadowColor: '#2ecc71',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 30,
+    shadowOpacity: 0.4,
+    shadowRadius: 25,
     elevation: 10,
   },
   title: {
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#00E5CC',
+    color: '#ffffff',
+    marginBottom: 12,
   },
-  benefitsRow: {
+  subFeatures: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 28,
-    marginBottom: 28,
+    gap: 15,
   },
-  benefitItem: {
+  subFeatureItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
-  benefitText: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    marginRight: 6,
+  subFeatureText: {
+    fontSize: 14,
+    color: '#a0a0a0',
   },
-  checkIcon: {
-    marginLeft: 2,
-  },
+
+  // 기능 목록
   featuresList: {
-    marginBottom: 28,
+    marginBottom: 40,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 11,
+    marginBottom: 20,
+    opacity: 0.9,
   },
   featureIcon: {
-    width: 32,
-    marginRight: 14,
+    width: 24,
+    marginRight: 16,
   },
   featureText: {
     fontSize: 16,
-    color: '#fff',
+    color: '#ffffff',
     flex: 1,
+  },
+
+  // 액션 영역
+  actionArea: {
+    gap: 12,
   },
   purchaseButton: {
-    backgroundColor: '#00A693',
-    borderRadius: 30,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#2ecc71',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  purchaseButtonGradient: {
     paddingVertical: 18,
     alignItems: 'center',
-    marginBottom: 14,
   },
   purchaseButtonText: {
-    color: '#fff',
-    fontSize: 17,
+    color: '#000000',
+    fontSize: 18,
     fontWeight: '700',
   },
-  watchAdSection: {
+  adButton: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#7B2D42',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333333',
   },
-  watchAdLeft: {
+  adContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: 12,
   },
-  playIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  adTextContainer: {
+    gap: 2,
   },
-  watchAdTextContainer: {
-    flex: 1,
+  adTitle: {
+    fontSize: 14,
+    color: '#ffffff',
   },
-  watchAdTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
+  adDesc: {
+    fontSize: 11,
+    color: '#a0a0a0',
   },
-  watchAdDesc: {
-    fontSize: 12,
-    marginTop: 2,
-    color: 'rgba(255,255,255,0.65)',
-  },
-  watchAdRight: {
+  adRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
   newBadge: {
-    backgroundColor: '#E74C3C',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: '#ff4757',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   newBadgeText: {
-    color: '#fff',
-    fontSize: 11,
+    color: '#ffffff',
+    fontSize: 10,
     fontWeight: '700',
+  },
+
+  // 푸터 영역
+  footerArea: {
+    marginTop: 25,
+    alignItems: 'center',
   },
   restoreButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginBottom: 14,
+    gap: 4,
+    marginBottom: 15,
   },
   restoreText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.45)',
+    fontSize: 12,
+    color: '#a0a0a0',
   },
   footerLinks: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 10,
   },
   footerLink: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.35)',
+    fontSize: 12,
+    color: '#a0a0a0',
+    marginHorizontal: 8,
   },
   footerDot: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.35)',
+    fontSize: 12,
+    color: '#a0a0a0',
   },
 });
