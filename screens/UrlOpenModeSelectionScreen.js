@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -14,20 +15,32 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 
-const urlOpenModes = [
-  {
-    id: 'inApp',
-    icon: 'phone-portrait-outline',
-  },
-  {
-    id: 'safari',
-    icon: 'compass-outline',
-  },
-  {
-    id: 'chrome',
-    icon: 'logo-chrome',
-  },
-];
+// 플랫폼별 URL 열기 모드
+const getUrlOpenModes = () => {
+  const modes = [
+    {
+      id: 'inApp',
+      icon: 'phone-portrait-outline',
+    },
+  ];
+
+  if (Platform.OS === 'ios') {
+    modes.push({
+      id: 'safari',
+      icon: 'compass-outline',
+    });
+  } else {
+    // Android
+    modes.push({
+      id: 'chrome',
+      icon: 'logo-chrome',
+    });
+  }
+
+  return modes;
+};
+
+const urlOpenModes = getUrlOpenModes();
 
 export default function UrlOpenModeSelectionScreen() {
   const router = useRouter();
