@@ -1010,6 +1010,24 @@ export default {
     },
   },
 
+  // Configuración de escaneo por lotes
+  batchScan: {
+    title: 'Configuración de escaneo por lotes',
+    enable: 'Modo de escaneo por lotes',
+    enableDesc: 'Escanea múltiples códigos de barras rápidamente en sucesión',
+    displayOptions: 'Opciones de visualización',
+    showCounter: 'Mostrar contador de escaneos',
+    showCounterDesc: 'Muestra el número de códigos de barras escaneados en tiempo real',
+    duplicateSection: 'Detección de duplicados',
+    duplicateDetection: 'Detectar códigos duplicados',
+    duplicateDetectionDesc: 'Detecta cuando se escanea un código que ya fue escaneado',
+    duplicateAction: 'Manejo de duplicados',
+    actionAlert: 'Alertar y agregar',
+    actionSkip: 'Omitir automáticamente',
+    actionAllow: 'Permitir todos',
+    infoMessage: 'Cuando el modo de escaneo por lotes está habilitado, puede escanear continuamente en la pantalla de escaneo. Los códigos escaneados se guardan en el historial.',
+  },
+
   // Configuración de guardado de fotos
   photoSaveSettings: {
     title: 'Guardar fotos',

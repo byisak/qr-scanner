@@ -1013,6 +1013,24 @@ export default {
     },
   },
 
+  // バッチスキャン設定
+  batchScan: {
+    title: 'バッチスキャン設定',
+    enable: 'バッチスキャンモード',
+    enableDesc: '複数のバーコードを連続で素早くスキャンします',
+    displayOptions: '表示オプション',
+    showCounter: 'スキャンカウンター表示',
+    showCounterDesc: 'スキャンしたバーコードの数をリアルタイムで表示します',
+    duplicateSection: '重複検出',
+    duplicateDetection: '重複バーコード検出',
+    duplicateDetectionDesc: '既にスキャンしたバーコードを再スキャンした時に検出します',
+    duplicateAction: '重複時の処理方法',
+    actionAlert: '通知して追加',
+    actionSkip: '自動的にスキップ',
+    actionAllow: 'すべて許可',
+    infoMessage: 'バッチスキャンモードが有効になると、スキャン画面で連続スキャンが可能になります。スキャンしたバーコードは履歴に保存されます。',
+  },
+
   // 写真保存設定
   photoSaveSettings: {
     title: '写真保存設定',

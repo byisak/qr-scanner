@@ -1013,6 +1013,24 @@ export default {
     },
   },
 
+  // 批量扫描设置
+  batchScan: {
+    title: '批量扫描设置',
+    enable: '批量扫描模式',
+    enableDesc: '快速连续扫描多个条形码',
+    displayOptions: '显示选项',
+    showCounter: '显示扫描计数器',
+    showCounterDesc: '实时显示已扫描条形码的数量',
+    duplicateSection: '重复检测',
+    duplicateDetection: '检测重复条形码',
+    duplicateDetectionDesc: '检测已扫描过的条形码再次被扫描',
+    duplicateAction: '重复条形码处理方式',
+    actionAlert: '提醒后添加',
+    actionSkip: '自动跳过',
+    actionAllow: '全部允许',
+    infoMessage: '启用批量扫描模式后，可以在扫描界面进行连续扫描。扫描的条形码将保存到历史记录。',
+  },
+
   // 照片保存设置
   photoSaveSettings: {
     title: '照片保存设置',

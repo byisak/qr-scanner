@@ -1017,6 +1017,24 @@ export default {
     },
   },
 
+  // 배치 스캔 설정
+  batchScan: {
+    title: '배치 스캔 설정',
+    enable: '배치 스캔 모드',
+    enableDesc: '여러 바코드를 연속으로 빠르게 스캔합니다',
+    displayOptions: '표시 옵션',
+    showCounter: '스캔 카운터 표시',
+    showCounterDesc: '스캔한 바코드 개수를 화면에 실시간으로 표시합니다',
+    duplicateSection: '중복 감지',
+    duplicateDetection: '중복 바코드 감지',
+    duplicateDetectionDesc: '이미 스캔한 바코드를 다시 스캔할 때 감지합니다',
+    duplicateAction: '중복 바코드 처리 방식',
+    actionAlert: '알림 후 추가',
+    actionSkip: '자동으로 건너뛰기',
+    actionAllow: '모두 허용',
+    infoMessage: '배치 스캔 모드가 활성화되면 스캔 화면에서 연속 스캔이 가능합니다. 스캔된 바코드는 기록에 저장됩니다.',
+  },
+
   // 사진 저장 설정
   photoSaveSettings: {
     title: '스캔 사진 저장',

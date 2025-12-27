@@ -421,19 +421,22 @@ export default function SettingsScreen() {
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.advancedScanFeatures')}</Text>
 
           {/* 배치 스캔 모드 */}
-          <View style={s.row}>
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/batch-scan-settings')}
+            activeOpacity={0.7}
+          >
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
             </View>
-            <Switch
-              value={batchScanEnabled}
-              onValueChange={setBatchScanEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.batchScanMode')}
-            />
-          </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: batchScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {batchScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
 
           {/* 스캔 연동 URL */}
           <TouchableOpacity

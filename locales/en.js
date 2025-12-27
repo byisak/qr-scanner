@@ -1017,6 +1017,24 @@ export default {
     },
   },
 
+  // Batch scan settings
+  batchScan: {
+    title: 'Batch Scan Settings',
+    enable: 'Batch Scan Mode',
+    enableDesc: 'Quickly scan multiple barcodes in succession',
+    displayOptions: 'Display Options',
+    showCounter: 'Show Scan Counter',
+    showCounterDesc: 'Display the number of scanned barcodes in real-time',
+    duplicateSection: 'Duplicate Detection',
+    duplicateDetection: 'Detect Duplicate Barcodes',
+    duplicateDetectionDesc: 'Detect when scanning a barcode that was already scanned',
+    duplicateAction: 'Duplicate Handling',
+    actionAlert: 'Alert and Add',
+    actionSkip: 'Skip Automatically',
+    actionAllow: 'Allow All',
+    infoMessage: 'When batch scan mode is enabled, you can continuously scan on the scan screen. Scanned barcodes are saved to history.',
+  },
+
   // Photo save settings
   photoSaveSettings: {
     title: 'Photo Save Settings',
