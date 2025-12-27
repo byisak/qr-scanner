@@ -1029,6 +1029,12 @@ export default {
     actionSkip: '自動的にスキップ',
     actionAllow: 'すべて許可',
     infoMessage: 'バッチスキャンモードが有効になると、スキャン画面で連続スキャンが可能になります。スキャンしたバーコードは履歴に保存されます。',
+    // 重複アラートダイアログ
+    duplicateAlertTitle: '重複バーコード',
+    duplicateAlertMessage: 'このバーコードは既にスキャンされています。\n再度追加しますか？',
+    duplicateAlertAdd: '追加',
+    duplicateAlertCancel: 'キャンセル',
+    duplicateSkipped: '重複バーコードをスキップしました',
   },
 
   // 写真保存設定

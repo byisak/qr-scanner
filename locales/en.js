@@ -1033,6 +1033,12 @@ export default {
     actionSkip: 'Skip Automatically',
     actionAllow: 'Allow All',
     infoMessage: 'When batch scan mode is enabled, you can continuously scan on the scan screen. Scanned barcodes are saved to history.',
+    // Duplicate alert dialog
+    duplicateAlertTitle: 'Duplicate Barcode',
+    duplicateAlertMessage: 'This barcode has already been scanned.\nDo you want to add it again?',
+    duplicateAlertAdd: 'Add',
+    duplicateAlertCancel: 'Cancel',
+    duplicateSkipped: 'Duplicate barcode skipped',
   },
 
   // Photo save settings

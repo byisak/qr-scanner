@@ -1029,6 +1029,12 @@ export default {
     actionSkip: '自动跳过',
     actionAllow: '全部允许',
     infoMessage: '启用批量扫描模式后，可以在扫描界面进行连续扫描。扫描的条形码将保存到历史记录。',
+    // 重复提示对话框
+    duplicateAlertTitle: '重复条形码',
+    duplicateAlertMessage: '此条形码已被扫描。\n是否再次添加？',
+    duplicateAlertAdd: '添加',
+    duplicateAlertCancel: '取消',
+    duplicateSkipped: '已跳过重复条形码',
   },
 
   // 照片保存设置

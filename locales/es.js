@@ -1026,6 +1026,12 @@ export default {
     actionSkip: 'Omitir automáticamente',
     actionAllow: 'Permitir todos',
     infoMessage: 'Cuando el modo de escaneo por lotes está habilitado, puede escanear continuamente en la pantalla de escaneo. Los códigos escaneados se guardan en el historial.',
+    // Diálogo de alerta de duplicados
+    duplicateAlertTitle: 'Código duplicado',
+    duplicateAlertMessage: 'Este código ya ha sido escaneado.\n¿Desea agregarlo de nuevo?',
+    duplicateAlertAdd: 'Agregar',
+    duplicateAlertCancel: 'Cancelar',
+    duplicateSkipped: 'Código duplicado omitido',
   },
 
   // Configuración de guardado de fotos

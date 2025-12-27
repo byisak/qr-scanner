@@ -1033,6 +1033,12 @@ export default {
     actionSkip: '자동으로 건너뛰기',
     actionAllow: '모두 허용',
     infoMessage: '배치 스캔 모드가 활성화되면 스캔 화면에서 연속 스캔이 가능합니다. 스캔된 바코드는 기록에 저장됩니다.',
+    // 중복 알림 다이얼로그
+    duplicateAlertTitle: '중복 바코드',
+    duplicateAlertMessage: '이 바코드는 이미 스캔되었습니다.\n다시 추가하시겠습니까?',
+    duplicateAlertAdd: '추가',
+    duplicateAlertCancel: '취소',
+    duplicateSkipped: '중복 바코드 건너뜀',
   },
 
   // 사진 저장 설정

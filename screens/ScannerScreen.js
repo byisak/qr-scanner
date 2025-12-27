@@ -70,6 +70,9 @@ function ScannerScreen() {
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 사진 저장 활성화 여부 (기본값: 켬)
   const [batchScanEnabled, setBatchScanEnabled] = useState(false); // 배치 스캔 모드 활성화 여부
   const [batchScannedItems, setBatchScannedItems] = useState([]); // 배치로 스캔된 항목들
+  const [showScanCounter, setShowScanCounter] = useState(true); // 스캔 카운터 표시 여부
+  const [duplicateDetection, setDuplicateDetection] = useState(true); // 중복 감지 활성화 여부
+  const [duplicateAction, setDuplicateAction] = useState('alert'); // 중복 처리 방식: 'alert', 'skip', 'allow'
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
   const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
@@ -190,6 +193,8 @@ function ScannerScreen() {
   const photoSaveEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지 (기본값: 켬)
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
+  const duplicateDetectionRef = useRef(true); // 중복 감지 설정 ref
+  const duplicateActionRef = useRef('alert'); // 중복 처리 방식 ref
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
@@ -210,6 +215,16 @@ function ScannerScreen() {
     console.log('[ScannerScreen] Syncing scanSoundEnabled state to ref:', scanSoundEnabled);
     scanSoundEnabledRef.current = scanSoundEnabled;
   }, [scanSoundEnabled]);
+
+  // duplicateDetection 상태를 ref에 동기화
+  useEffect(() => {
+    duplicateDetectionRef.current = duplicateDetection;
+  }, [duplicateDetection]);
+
+  // duplicateAction 상태를 ref에 동기화
+  useEffect(() => {
+    duplicateActionRef.current = duplicateAction;
+  }, [duplicateAction]);
 
   // 스캔 소리 플레이어 초기화
   useEffect(() => {
@@ -265,6 +280,20 @@ function ScannerScreen() {
         const batchScan = await AsyncStorage.getItem('batchScanEnabled');
         if (batchScan !== null) {
           setBatchScanEnabled(batchScan === 'true');
+        }
+
+        // 배치 스캔 세부 설정 로드
+        const scanCounter = await AsyncStorage.getItem('batchShowScanCounter');
+        if (scanCounter !== null) {
+          setShowScanCounter(scanCounter === 'true');
+        }
+        const dupDetection = await AsyncStorage.getItem('batchDuplicateDetection');
+        if (dupDetection !== null) {
+          setDuplicateDetection(dupDetection === 'true');
+        }
+        const dupAction = await AsyncStorage.getItem('batchDuplicateAction');
+        if (dupAction !== null) {
+          setDuplicateAction(dupAction);
         }
 
         const camera = await AsyncStorage.getItem('selectedCamera');
@@ -415,6 +444,20 @@ function ScannerScreen() {
           const batchScan = await AsyncStorage.getItem('batchScanEnabled');
           if (batchScan !== null) {
             setBatchScanEnabled(batchScan === 'true');
+          }
+
+          // 배치 스캔 세부 설정 로드
+          const scanCounter = await AsyncStorage.getItem('batchShowScanCounter');
+          if (scanCounter !== null) {
+            setShowScanCounter(scanCounter === 'true');
+          }
+          const dupDetection = await AsyncStorage.getItem('batchDuplicateDetection');
+          if (dupDetection !== null) {
+            setDuplicateDetection(dupDetection === 'true');
+          }
+          const dupAction = await AsyncStorage.getItem('batchDuplicateAction');
+          if (dupAction !== null) {
+            setDuplicateAction(dupAction);
           }
 
           const camera = await AsyncStorage.getItem('selectedCamera');
@@ -880,6 +923,65 @@ function ScannerScreen() {
     }
   }, []);
 
+  // 배치 스캔 처리 헬퍼 함수 (중복 알림 후 추가 시 사용)
+  const processBatchScan = useCallback(async (data, normalizedType, errorCorrectionLevel) => {
+    // 햅틱 피드백
+    if (hapticEnabledRef.current) {
+      if (Platform.OS === 'android') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    }
+
+    // 스캔 소리
+    if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+      try {
+        beepSoundPlayerRef.current.seekTo(0);
+        beepSoundPlayerRef.current.play();
+      } catch (error) {
+        console.log('Scan sound playback error:', error);
+      }
+    }
+
+    // 사진 촬영 (활성화된 경우)
+    let photoUri = null;
+    if (photoSaveEnabledRef.current) {
+      try {
+        const photoResult = await capturePhoto();
+        photoUri = photoResult?.croppedUri || photoResult;
+      } catch (error) {
+        console.log('Photo capture error:', error);
+      }
+    }
+
+    // 실시간 서버전송
+    if (realtimeSyncEnabled && activeSessionId) {
+      websocketClient.sendScanData({
+        code: data,
+        timestamp: Date.now(),
+      }, activeSessionId);
+      setShowSendMessage(true);
+      setTimeout(() => setShowSendMessage(false), 1000);
+    }
+
+    // 배치에 추가
+    setBatchScannedItems(prev => [...prev, {
+      code: data,
+      timestamp: Date.now(),
+      photoUri: photoUri || null,
+      type: normalizedType,
+      errorCorrectionLevel: errorCorrectionLevel,
+    }]);
+
+    // 스캔 재활성화
+    setTimeout(() => {
+      isProcessingRef.current = false;
+      setCanScan(true);
+    }, 500);
+    startResetTimer(RESET_DELAY_NORMAL);
+  }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
+
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
@@ -939,16 +1041,50 @@ function ScannerScreen() {
       setCanScan(false);
 
       // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
-      if (batchScanEnabled) {
+      if (batchScanEnabled && duplicateDetectionRef.current) {
         const isDuplicate = batchScannedItems.some(item => item.code === data);
         if (isDuplicate) {
-          // 중복이면 아무 피드백 없이 스캔만 재활성화
-          setTimeout(() => {
-            isProcessingRef.current = false;
-            setCanScan(true);
-          }, 500);
-          startResetTimer(RESET_DELAY_NORMAL);
-          return;
+          const action = duplicateActionRef.current;
+
+          if (action === 'skip') {
+            // 자동으로 건너뛰기: 아무 피드백 없이 스캔만 재활성화
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 500);
+            startResetTimer(RESET_DELAY_NORMAL);
+            return;
+          } else if (action === 'alert') {
+            // 알림 후 추가: 사용자에게 물어봄
+            Alert.alert(
+              t('batchScan.duplicateAlertTitle'),
+              t('batchScan.duplicateAlertMessage'),
+              [
+                {
+                  text: t('batchScan.duplicateAlertCancel'),
+                  style: 'cancel',
+                  onPress: () => {
+                    // 취소: 스캔만 재활성화
+                    setTimeout(() => {
+                      isProcessingRef.current = false;
+                      setCanScan(true);
+                    }, 300);
+                    startResetTimer(RESET_DELAY_NORMAL);
+                  },
+                },
+                {
+                  text: t('batchScan.duplicateAlertAdd'),
+                  onPress: () => {
+                    // 추가: 중복이어도 배치에 추가
+                    processBatchScan(data, normalizedType, errorCorrectionLevel, bounds, cornerPoints);
+                  },
+                },
+              ],
+              { cancelable: false }
+            );
+            return;
+          }
+          // action === 'allow': 중복 허용, 아래로 계속 진행
         }
       }
 
@@ -1588,12 +1724,14 @@ function ScannerScreen() {
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
         <View style={[styles.batchControlPanel, { bottom: bottomOffset }]}>
-          <View style={styles.batchCountContainer}>
-            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-            <Text style={styles.batchCountText}>
-              {t('scanner.scannedCount').replace('{count}', batchScannedItems.length.toString())}
-            </Text>
-          </View>
+          {showScanCounter && (
+            <View style={styles.batchCountContainer}>
+              <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+              <Text style={styles.batchCountText}>
+                {t('scanner.scannedCount').replace('{count}', batchScannedItems.length.toString())}
+              </Text>
+            </View>
+          )}
           <View style={styles.batchButtons}>
             <TouchableOpacity
               style={[styles.batchButton, styles.batchButtonClear]}
