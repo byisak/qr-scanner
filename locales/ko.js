@@ -943,6 +943,7 @@ export default {
     description: '광고 없이 모든 기능을 이용하세요',
     upgrade: '업그레이드',
     watchAd: '광고 보기',
+    freeUnlock: '무료로 기능 잠금해제',
     watchAdDesc: '광고를 보고 Pro 기능을 사용하세요',
     adReward: '광고 시청 완료',
     adRewardDesc: '24시간 동안 Pro 기능을 사용할 수 있습니다',

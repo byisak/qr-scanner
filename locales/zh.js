@@ -939,6 +939,7 @@ export default {
     description: '无广告享受所有功能',
     upgrade: '升级',
     watchAd: '观看广告',
+    freeUnlock: '免费解锁功能',
     watchAdDesc: '观看广告以使用Pro功能',
     adReward: '广告观看完成',
     adRewardDesc: '可以使用24小时Pro功能',

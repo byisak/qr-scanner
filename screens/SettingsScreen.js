@@ -310,7 +310,10 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <Ionicons name="play-circle-outline" size={20} color={colors.primary} />
-            <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
+            <View style={s.watchAdTextContainer}>
+              <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
+              <Text style={[s.watchAdSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('proVersion.freeUnlock')}</Text>
+            </View>
           </TouchableOpacity>
         </TouchableOpacity>
 
@@ -843,10 +846,17 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    gap: 6,
+    gap: 8,
+  },
+  watchAdTextContainer: {
+    alignItems: 'flex-start',
   },
   watchAdText: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  watchAdSubText: {
+    fontSize: 12,
+    marginTop: 1,
   },
 });

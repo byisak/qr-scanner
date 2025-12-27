@@ -936,6 +936,7 @@ export default {
     description: 'Disfruta de todas las funciones sin anuncios',
     upgrade: 'Actualizar',
     watchAd: 'Ver anuncio',
+    freeUnlock: 'Desbloquear funciones gratis',
     watchAdDesc: 'Ver un anuncio para usar funciones Pro',
     adReward: 'Anuncio visto',
     adRewardDesc: 'Puedes usar funciones Pro por 24 horas',

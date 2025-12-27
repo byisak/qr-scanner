@@ -943,6 +943,7 @@ export default {
     description: 'Enjoy all features without ads',
     upgrade: 'Upgrade',
     watchAd: 'Watch Ad',
+    freeUnlock: 'Unlock features for free',
     watchAdDesc: 'Watch an ad to use Pro features',
     adReward: 'Ad Watched',
     adRewardDesc: 'You can use Pro features for 24 hours',

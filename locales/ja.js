@@ -939,6 +939,7 @@ export default {
     description: '広告なしですべての機能をお楽しみください',
     upgrade: 'アップグレード',
     watchAd: '広告を見る',
+    freeUnlock: '無料で機能をアンロック',
     watchAdDesc: '広告を見てPro機能を使用する',
     adReward: '広告視聴完了',
     adRewardDesc: '24時間Pro機能を使用できます',
