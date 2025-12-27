@@ -210,6 +210,12 @@ export default {
   // Pantalla de configuración
   settings: {
     title: 'Configuración',
+    // Títulos de sección
+    notification: 'Notificación',
+    scan: 'Escaneo',
+    urlIntegration: 'Integración URL',
+    data: 'Datos',
+    general: 'General',
     backupAndRestore: 'Copia de seguridad y restauración',
     productSearchSection: 'Búsqueda de productos',
     barcodeSettings: 'Configuración de códigos de barras',
@@ -922,6 +928,22 @@ export default {
     googleDriveDownloadError: 'No se pudo descargar el archivo de Google Drive.',
     invalidBackupFile: 'Archivo de copia no válido.',
     restoreError: 'Error al restaurar la copia de seguridad.',
+  },
+
+  // Versión Pro
+  proVersion: {
+    title: 'Versión Pro',
+    description: 'Disfruta de todas las funciones sin anuncios',
+    upgrade: 'Actualizar',
+    watchAd: 'Ver anuncio',
+    watchAdDesc: 'Ver un anuncio para usar funciones Pro',
+    adReward: 'Anuncio visto',
+    adRewardDesc: 'Puedes usar funciones Pro por 24 horas',
+    features: 'Funciones Pro',
+    noAds: 'Sin anuncios',
+    noAdsDesc: 'Todos los anuncios serán eliminados',
+    allFeatures: 'Todas las funciones',
+    allFeaturesDesc: 'Usa todas las funciones sin límites',
   },
 
   // Configuración de guardado de fotos

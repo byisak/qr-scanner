@@ -211,6 +211,12 @@ export default {
   // 설정 화면
   settings: {
     title: '설정',
+    // 섹션 타이틀
+    notification: '알림',
+    scan: '스캔',
+    urlIntegration: 'URL 연동',
+    data: '데이터',
+    general: '일반',
     backupAndRestore: '백업 및 복원',
     productSearchSection: '제품 검색',
     barcodeSettings: '바코드 설정',
@@ -929,6 +935,22 @@ export default {
     googleDriveDownloadError: 'Google Drive에서 파일을 다운로드하지 못했습니다.',
     invalidBackupFile: '유효한 백업 파일이 아닙니다.',
     restoreError: '백업 복원 중 오류가 발생했습니다.',
+  },
+
+  // Pro 버전
+  proVersion: {
+    title: 'Pro 버전',
+    description: '광고 없이 모든 기능을 이용하세요',
+    upgrade: '업그레이드',
+    watchAd: '광고 보기',
+    watchAdDesc: '광고를 보고 Pro 기능을 사용하세요',
+    adReward: '광고 시청 완료',
+    adRewardDesc: '24시간 동안 Pro 기능을 사용할 수 있습니다',
+    features: 'Pro 기능',
+    noAds: '광고 없음',
+    noAdsDesc: '모든 광고가 제거됩니다',
+    allFeatures: '모든 기능',
+    allFeaturesDesc: '제한 없이 모든 기능 사용',
   },
 
   // 사진 저장 설정

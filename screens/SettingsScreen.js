@@ -283,9 +283,40 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         )}
 
-        {/* 바코드 인식 설정 */}
+        {/* Pro 버전 */}
+        <TouchableOpacity
+          style={[s.proSection, { backgroundColor: colors.surface }]}
+          onPress={() => router.push('/pro-version')}
+          activeOpacity={0.7}
+        >
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={s.proBanner}
+          >
+            <View style={s.proBannerContent}>
+              <Ionicons name="diamond" size={24} color="#fff" />
+              <View style={s.proBannerText}>
+                <Text style={[s.proTitle, { fontFamily: fonts.bold }]}>{t('proVersion.title')}</Text>
+                <Text style={[s.proDesc, { fontFamily: fonts.regular }]}>{t('proVersion.description')}</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#fff" />
+          </LinearGradient>
+          <TouchableOpacity
+            style={s.watchAdButton}
+            onPress={() => Alert.alert(t('proVersion.watchAd'), t('proVersion.watchAdDesc'))}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="play-circle-outline" size={20} color={colors.primary} />
+            <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+
+        {/* 알림 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.barcodeSettings')}</Text>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.notification')}</Text>
 
           {/* 햅틱 피드백 */}
           <View style={s.row}>
@@ -316,8 +347,54 @@ export default function SettingsScreen() {
               accessibilityLabel={t('settings.scanSound')}
             />
           </View>
+        </View>
 
-          {/* 사진 저장 (하위 설정 페이지로 이동) */}
+        {/* 스캔 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.scan')}</Text>
+
+          {/* 배치 스캔 모드 */}
+          <View style={s.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
+            </View>
+            <Switch
+              value={batchScanEnabled}
+              onValueChange={setBatchScanEnabled}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.batchScanMode')}
+            />
+          </View>
+
+          {/* 바코드 선택 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/barcode-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.selectBarcodes')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 카메라 선택 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/camera-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.cameraSelection')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.cameraSelectionDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 사진 저장 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/photo-save-settings')}
@@ -336,113 +413,15 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
           </TouchableOpacity>
-
-          {/* 배치 스캔 모드 */}
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
-            </View>
-            <Switch
-              value={batchScanEnabled}
-              onValueChange={setBatchScanEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.batchScanMode')}
-            />
-          </View>
-
-          {/* 바코드 선택 (클릭하면 새 페이지로) */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/barcode-selection')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.selectBarcodes')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          {/* 기록 내보내기 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/export-history')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.exportHistory')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.exportHistoryDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          {/* 카메라 선택 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/camera-selection')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.cameraSelection')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.cameraSelectionDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          {/* 언어 선택 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/language-selection')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.languageSelection')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {languages.find(lang => lang.code === language)?.name || '한국어'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          {/* 화면 모드 선택 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/display-mode-selection')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.displayMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t(`displayModeSelection.${themeMode}`)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          {/* URL 열기 방식 선택 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/url-open-mode-selection')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('urlOpenMode.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t(`urlOpenMode.${urlOpenMode}`)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
         </View>
 
-        {/* URL 연동 설정 */}
-        <View style={[s.section, !t('settings.autoMove') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
-          {t('settings.autoMove') ? <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.autoMove')}</Text> : null}
+        {/* URL 연동 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.urlIntegration')}</Text>
 
+          {/* 스캔 연동 URL */}
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.autoMove') ? 10 : 0 }]}
+            style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push('/scan-url-settings')}
             activeOpacity={0.7}
           >
@@ -457,14 +436,25 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
           </TouchableOpacity>
-        </View>
 
-        {/* 실시간 서버전송 설정 */}
-        <View style={[s.section, !t('settings.realtimeSync') && s.sectionNoTitle, { backgroundColor: colors.surface }]}>
-          {t('settings.realtimeSync') ? <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.realtimeSync')}</Text> : null}
-
+          {/* URL 열기 방식 */}
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0, marginTop: t('settings.realtimeSync') ? 10 : 0 }]}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/url-open-mode-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('urlOpenMode.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t(`urlOpenMode.${urlOpenMode}`)}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 실시간 서버전송 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/realtime-sync-settings')}
             activeOpacity={0.7}
           >
@@ -481,13 +471,43 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 백업 및 복원 */}
+        {/* 제품 검색 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.backupAndRestore')}</Text>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.productSearchSection')}</Text>
+
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/product-search-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('productSearch.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* 데이터 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.data')}</Text>
+
+          {/* 기록 내보내기 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/export-history')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.exportHistory')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.exportHistoryDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
 
           {/* 백업 내보내기 */}
           <TouchableOpacity
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/backup-export')}
             activeOpacity={0.7}
           >
@@ -512,18 +532,36 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 제품 검색 */}
+        {/* 일반 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.productSearchSection')}</Text>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.general')}</Text>
 
+          {/* 언어 선택 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/product-search-settings')}
+            onPress={() => router.push('/language-selection')}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('productSearch.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.languageSelection')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {languages.find(lang => lang.code === language)?.name || '한국어'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 화면 모드 선택 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/display-mode-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.displayMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t(`displayModeSelection.${themeMode}`)}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
@@ -763,5 +801,52 @@ const s = StyleSheet.create({
   },
   settingsIconButton: {
     padding: 8,
+  },
+  // Pro 버전 섹션 스타일
+  proSection: {
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  proBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  proBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  proBannerText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  proTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  proDesc: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 2,
+  },
+  watchAdButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+  },
+  watchAdText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

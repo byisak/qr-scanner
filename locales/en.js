@@ -211,6 +211,12 @@ export default {
   // Settings screen
   settings: {
     title: 'Settings',
+    // Section titles
+    notification: 'Notification',
+    scan: 'Scan',
+    urlIntegration: 'URL Integration',
+    data: 'Data',
+    general: 'General',
     backupAndRestore: 'Backup & Restore',
     productSearchSection: 'Product Search',
     barcodeSettings: 'Barcode Settings',
@@ -929,6 +935,22 @@ export default {
     googleDriveDownloadError: 'Could not download file from Google Drive.',
     invalidBackupFile: 'Invalid backup file.',
     restoreError: 'Error restoring backup.',
+  },
+
+  // Pro Version
+  proVersion: {
+    title: 'Pro Version',
+    description: 'Enjoy all features without ads',
+    upgrade: 'Upgrade',
+    watchAd: 'Watch Ad',
+    watchAdDesc: 'Watch an ad to use Pro features',
+    adReward: 'Ad Watched',
+    adRewardDesc: 'You can use Pro features for 24 hours',
+    features: 'Pro Features',
+    noAds: 'No Ads',
+    noAdsDesc: 'All ads will be removed',
+    allFeatures: 'All Features',
+    allFeaturesDesc: 'Use all features without limits',
   },
 
   // Photo save settings

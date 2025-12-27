@@ -210,6 +210,12 @@ export default {
   // 設定画面
   settings: {
     title: '設定',
+    // セクションタイトル
+    notification: '通知',
+    scan: 'スキャン',
+    urlIntegration: 'URL連動',
+    data: 'データ',
+    general: '一般',
     backupAndRestore: 'バックアップと復元',
     productSearchSection: '商品検索',
     barcodeSettings: 'バーコード設定',
@@ -925,6 +931,22 @@ export default {
     googleDriveDownloadError: 'Google Driveからファイルをダウンロードできませんでした。',
     invalidBackupFile: '無効なバックアップファイルです。',
     restoreError: 'バックアップの復元中にエラーが発生しました。',
+  },
+
+  // Proバージョン
+  proVersion: {
+    title: 'Proバージョン',
+    description: '広告なしですべての機能をお楽しみください',
+    upgrade: 'アップグレード',
+    watchAd: '広告を見る',
+    watchAdDesc: '広告を見てPro機能を使用する',
+    adReward: '広告視聴完了',
+    adRewardDesc: '24時間Pro機能を使用できます',
+    features: 'Pro機能',
+    noAds: '広告なし',
+    noAdsDesc: 'すべての広告が削除されます',
+    allFeatures: 'すべての機能',
+    allFeaturesDesc: '制限なくすべての機能を使用',
   },
 
   // 写真保存設定

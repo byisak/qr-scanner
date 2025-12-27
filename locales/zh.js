@@ -210,6 +210,12 @@ export default {
   // 设置界面
   settings: {
     title: '设置',
+    // 分区标题
+    notification: '通知',
+    scan: '扫描',
+    urlIntegration: 'URL联动',
+    data: '数据',
+    general: '常规',
     backupAndRestore: '备份与恢复',
     productSearchSection: '商品搜索',
     barcodeSettings: '条形码设置',
@@ -925,6 +931,22 @@ export default {
     googleDriveDownloadError: '无法从Google Drive下载文件。',
     invalidBackupFile: '无效的备份文件。',
     restoreError: '恢复备份时出错。',
+  },
+
+  // Pro版本
+  proVersion: {
+    title: 'Pro版本',
+    description: '无广告享受所有功能',
+    upgrade: '升级',
+    watchAd: '观看广告',
+    watchAdDesc: '观看广告以使用Pro功能',
+    adReward: '广告观看完成',
+    adRewardDesc: '可以使用24小时Pro功能',
+    features: 'Pro功能',
+    noAds: '无广告',
+    noAdsDesc: '所有广告将被移除',
+    allFeatures: '所有功能',
+    allFeaturesDesc: '无限制使用所有功能',
   },
 
   // 照片保存设置
