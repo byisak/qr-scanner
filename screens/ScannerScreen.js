@@ -1468,7 +1468,7 @@ function ScannerScreen() {
         {/* 스캔 연동 URL 표시 */}
         {scanUrlEnabled && (
           <View style={[styles.scanUrlBadge, { top: batchScanEnabled ? batchBadgeTop + 40 : batchBadgeTop }]}>
-            <Ionicons name="link" size={14} color="#fff" />
+            <Ionicons name="link" size={16} color="#fff" />
             <Text style={styles.scanUrlBadgeText}>{t('settings.useScanUrl')}</Text>
           </View>
         )}
@@ -1843,10 +1843,10 @@ const styles = StyleSheet.create({
     // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(46, 125, 50, 0.9)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: 'rgba(52, 199, 89, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -1855,7 +1855,7 @@ const styles = StyleSheet.create({
   },
   scanUrlBadgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
   },
