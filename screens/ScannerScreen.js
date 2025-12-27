@@ -1466,10 +1466,10 @@ function ScannerScreen() {
         )}
 
         {/* 스캔 연동 URL 표시 */}
-        {scanUrlEnabled && activeScanUrl && (
+        {scanUrlEnabled && (
           <View style={[styles.scanUrlBadge, { top: batchScanEnabled ? batchBadgeTop + 40 : batchBadgeTop }]}>
             <Ionicons name="link" size={14} color="#fff" />
-            <Text style={styles.scanUrlBadgeText}>{activeScanUrl.name}</Text>
+            <Text style={styles.scanUrlBadgeText}>{t('settings.useScanUrl')}</Text>
           </View>
         )}
 
