@@ -49,6 +49,8 @@ export default function SettingsScreen() {
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   // 사진 압축률 상태
   const [photoQuality, setPhotoQuality] = useState('0.8');
+  // 제품 검색 자동 실행 상태
+  const [productAutoSearch, setProductAutoSearch] = useState(false);
 
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
@@ -164,6 +166,10 @@ export default function SettingsScreen() {
           // 배치 스캔 설정 로드
           const bs = await AsyncStorage.getItem('batchScanEnabled');
           setBatchScanEnabled(bs === 'true');
+
+          // 제품 검색 자동 실행 설정 로드
+          const pas = await AsyncStorage.getItem('productAutoSearch');
+          setProductAutoSearch(pas === 'true');
         } catch (error) {
           console.error('Load settings error:', error);
         }
@@ -492,7 +498,12 @@ export default function SettingsScreen() {
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('productSearch.title')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: productAutoSearch ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {productAutoSearch ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
           </TouchableOpacity>
         </View>
 
