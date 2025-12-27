@@ -738,9 +738,9 @@ export default function RealtimeSyncSettingsScreen() {
           style={styles.backButton}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.realtimeSync')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.realtimeSync')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -940,20 +940,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingTop: 60,
     paddingBottom: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
   backButton: {
-    padding: 4,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
   },
   headerRight: {
-    width: 36,
+    width: 40,
   },
   container: {
     flex: 1,

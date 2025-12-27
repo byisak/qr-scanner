@@ -92,15 +92,15 @@ export default function BatchScanSettingsScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={[s.header, { paddingTop: Platform.OS === 'ios' ? insets.top : insets.top + 10 }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={s.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
           {t('batchScan.title')}
         </Text>
         <View style={s.headerRight} />
@@ -308,17 +308,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 60,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   headerRight: {
     width: 40,
