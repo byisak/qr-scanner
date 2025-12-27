@@ -334,7 +334,11 @@ export default function QRStylePicker({
   };
 
   const handlePresetSelect = (preset) => {
-    setTempStyle(preset.style);
+    // 기존 설정과 병합 (프리셋 값이 기존 설정을 덮어씀)
+    setTempStyle((prev) => ({
+      ...prev,
+      ...preset.style,
+    }));
   };
 
   const updateStyle = (key, value) => {
