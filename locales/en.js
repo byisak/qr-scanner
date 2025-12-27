@@ -216,7 +216,7 @@ export default {
     scan: 'Scan',
     urlIntegration: 'URL Integration',
     advancedScanFeatures: 'Advanced Scan Features',
-    data: 'Data',
+    data: 'Data Management',
     general: 'General',
     backupAndRestore: 'Backup & Restore',
     productSearchSection: 'Product Search',

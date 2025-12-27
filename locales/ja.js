@@ -215,7 +215,7 @@ export default {
     scan: 'スキャン',
     urlIntegration: 'URL連動',
     advancedScanFeatures: '高度なスキャン機能',
-    data: 'データ',
+    data: 'データ管理',
     general: '一般',
     backupAndRestore: 'バックアップと復元',
     productSearchSection: '商品検索',

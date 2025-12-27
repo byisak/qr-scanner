@@ -215,7 +215,7 @@ export default {
     scan: '扫描',
     urlIntegration: 'URL联动',
     advancedScanFeatures: '高级扫描功能',
-    data: '数据',
+    data: '数据管理',
     general: '常规',
     backupAndRestore: '备份与恢复',
     productSearchSection: '商品搜索',

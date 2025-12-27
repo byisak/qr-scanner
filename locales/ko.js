@@ -216,7 +216,7 @@ export default {
     scan: '스캔',
     urlIntegration: 'URL 연동',
     advancedScanFeatures: '고급 스캔 기능',
-    data: '데이터',
+    data: '데이터 관리',
     general: '일반',
     backupAndRestore: '백업 및 복원',
     productSearchSection: '제품 검색',
