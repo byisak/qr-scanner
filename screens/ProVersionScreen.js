@@ -227,7 +227,7 @@ const s = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 70,
   },
 
   // 헤더 섹션
