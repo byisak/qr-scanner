@@ -51,6 +51,8 @@ export default function SettingsScreen() {
   const [photoQuality, setPhotoQuality] = useState('0.8');
   // 제품 검색 자동 실행 상태
   const [productAutoSearch, setProductAutoSearch] = useState(false);
+  // 스캔 연동 URL 목록
+  const [scanUrlList, setScanUrlList] = useState([]);
 
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
@@ -145,6 +147,12 @@ export default function SettingsScreen() {
         try {
           const e = await SecureStore.getItemAsync('scanLinkEnabled');
           setOn(e === 'true');
+
+          // 스캔 연동 URL 목록 로드
+          const savedUrlList = await SecureStore.getItemAsync('scanUrlList');
+          if (savedUrlList) {
+            setScanUrlList(JSON.parse(savedUrlList));
+          }
 
           const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
           setRealtimeSyncEnabled(realtimeSync === 'true');
@@ -465,6 +473,27 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
           </TouchableOpacity>
+
+          {/* 스캔 연동 URL 목록 - 활성화 시에만 표시 */}
+          {on && scanUrlList.length > 0 && (
+            <View style={[s.urlListContainer, { borderTopColor: colors.borderLight }]}>
+              {scanUrlList.map((item, index) => (
+                <View key={item.id} style={[s.urlListItem, index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight }]}>
+                  <View style={s.urlListItemLeft}>
+                    <View style={[s.urlStatusDot, { backgroundColor: item.enabled ? colors.success : colors.textTertiary }]} />
+                    <View style={s.urlListItemText}>
+                      <Text style={[s.urlListItemName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={[s.urlListItemUrl, { color: colors.textTertiary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                        {item.url}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* 실시간 서버전송 */}
           <TouchableOpacity
@@ -874,5 +903,40 @@ const s = StyleSheet.create({
   watchAdSubText: {
     fontSize: 12,
     marginTop: 1,
+  },
+  // URL 목록 스타일
+  urlListContainer: {
+    borderTopWidth: 1,
+    marginTop: 8,
+    paddingTop: 8,
+    marginLeft: 4,
+  },
+  urlListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  urlListItemLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  urlStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  urlListItemText: {
+    flex: 1,
+  },
+  urlListItemName: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  urlListItemUrl: {
+    fontSize: 12,
   },
 });
