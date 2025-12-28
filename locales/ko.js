@@ -120,6 +120,8 @@ export default {
     noSessionUrl: '전송 주소 없음',
     pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
     uploadImage: '코드 자동 분석',
+    scanned: '스캔 완료',
+    viewDetails: '자세히 보기',
   },
 
   // 이미지 분석 화면
@@ -513,6 +515,18 @@ export default {
     default: '기본 브라우저',
     defaultDesc: '시스템 기본 브라우저로 엽니다',
     selected: '선택됨',
+  },
+
+  // 스캔 결과 표시 방식
+  scanResultMode: {
+    title: '스캔 결과 표시',
+    description: '코드를 스캔했을 때 결과를 표시하는 방식을 선택하세요',
+    popup: '결과 화면으로 이동',
+    popupDesc: '스캔 후 상세 결과 화면으로 이동합니다',
+    toast: '연속 스캔 모드',
+    toastDesc: '하단에 결과를 표시하고 계속 스캔할 수 있습니다',
+    selected: '선택됨',
+    toastTip: '연속 스캔 모드에서는 결과를 터치하면 상세 화면으로 이동합니다. 여러 코드를 빠르게 스캔할 때 유용합니다.',
   },
 
   // QR 코드 생성 화면

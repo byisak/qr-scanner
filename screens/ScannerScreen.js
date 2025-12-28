@@ -106,6 +106,12 @@ function ScannerScreen() {
   const [activeScanUrl, setActiveScanUrl] = useState(null); // { id, name, url }
   const [showUrlSendMessage, setShowUrlSendMessage] = useState(false); // URL 전송 메시지 표시
 
+  // 스캔 결과 표시 모드 (popup: 결과 화면, toast: 하단 토스트)
+  const [scanResultMode, setScanResultMode] = useState('popup');
+  const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastTranslateY = useRef(new Animated.Value(50)).current;
+
   // 스캔 화면 로딩 애니메이션 상태
   const [scannerReady, setScannerReady] = useState(false);
   const qrIconOpacity = useRef(new Animated.Value(1)).current;
@@ -199,6 +205,8 @@ function ScannerScreen() {
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
+  const scanResultModeRef = useRef('popup'); // 스캔 결과 표시 모드 ref
+  const toastTimeoutRef = useRef(null); // 토스트 자동 숨김 타이머
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -225,6 +233,76 @@ function ScannerScreen() {
   useEffect(() => {
     duplicateActionRef.current = duplicateAction;
   }, [duplicateAction]);
+
+  // scanResultMode 상태를 ref에 동기화
+  useEffect(() => {
+    scanResultModeRef.current = scanResultMode;
+  }, [scanResultMode]);
+
+  // 토스트 표시 함수
+  const showToast = useCallback((data, type, historyId) => {
+    // 기존 토스트 타이머 클리어
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    // 토스트 데이터 설정
+    setToastData({ data, type, historyId, timestamp: Date.now() });
+
+    // 애니메이션 시작
+    toastOpacity.setValue(0);
+    toastTranslateY.setValue(50);
+
+    Animated.parallel([
+      Animated.timing(toastOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(toastTranslateY, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // 5초 후 자동 숨김
+    toastTimeoutRef.current = setTimeout(() => {
+      hideToast();
+    }, 5000);
+  }, [toastOpacity, toastTranslateY]);
+
+  // 토스트 숨기기 함수
+  const hideToast = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(toastOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(toastTranslateY, {
+        toValue: 50,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setToastData(null);
+    });
+  }, [toastOpacity, toastTranslateY]);
+
+  // 토스트 클릭 시 결과 화면으로 이동
+  const handleToastPress = useCallback(() => {
+    if (toastData) {
+      hideToast();
+      router.push({
+        pathname: '/result',
+        params: {
+          data: toastData.data,
+          type: toastData.type,
+        }
+      });
+    }
+  }, [toastData, hideToast, router]);
 
   // 스캔 소리 플레이어 초기화
   useEffect(() => {
@@ -463,6 +541,12 @@ function ScannerScreen() {
           const camera = await AsyncStorage.getItem('selectedCamera');
           if (camera) {
             setCameraFacing(camera);
+          }
+
+          // 스캔 결과 표시 모드 로드
+          const resultMode = await AsyncStorage.getItem('scanResultMode');
+          if (resultMode) {
+            setScanResultMode(resultMode);
           }
 
           // 현재 선택된 그룹 이름 로드
@@ -1299,19 +1383,30 @@ function ScannerScreen() {
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
 
-          // 즉시 네비게이션
-          router.push({
-            pathname: '/result',
-            params: {
-              code: data,
-              isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
-              scanCount: historyResult.count.toString(),
-              photoUri: photoUri || '',
-              type: normalizedType,
-              errorCorrectionLevel: detectedEcLevel || '',
-            }
-          });
-          startResetTimer(RESET_DELAY_NORMAL);
+          // 토스트 모드: 하단에 결과 표시하고 계속 스캔
+          if (scanResultModeRef.current === 'toast') {
+            showToast(data, normalizedType, historyResult.id);
+            // 스캔 재활성화
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 300);
+            startResetTimer(RESET_DELAY_NORMAL);
+          } else {
+            // 팝업 모드: 결과 화면으로 이동 (기존 동작)
+            router.push({
+              pathname: '/result',
+              params: {
+                code: data,
+                isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
+                scanCount: historyResult.count.toString(),
+                photoUri: photoUri || '',
+                type: normalizedType,
+                errorCorrectionLevel: detectedEcLevel || '',
+              }
+            });
+            startResetTimer(RESET_DELAY_NORMAL);
+          }
         } catch (error) {
           console.error('Navigation error:', error);
           await saveHistory(data, null, null, type, null);
@@ -1321,7 +1416,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -1923,6 +2018,56 @@ function ScannerScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 토스트 결과 표시 (연속 스캔 모드) */}
+      {toastData && (
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            {
+              bottom: bottomOffset + 20,
+              opacity: toastOpacity,
+              transform: [{ translateY: toastTranslateY }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[styles.toastContent, { backgroundColor: colors.surface }]}
+            onPress={handleToastPress}
+            activeOpacity={0.9}
+          >
+            <View style={styles.toastLeft}>
+              <View style={[styles.toastIconContainer, { backgroundColor: colors.success + '20' }]}>
+                <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+              </View>
+              <View style={styles.toastTextContainer}>
+                <Text style={[styles.toastTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                  {t('scanner.scanned')}
+                </Text>
+                <Text
+                  style={[styles.toastData, { color: colors.textSecondary, fontFamily: fonts.regular }]}
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
+                >
+                  {toastData.data}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.toastRight}>
+              <Text style={[styles.toastViewText, { color: colors.primary, fontFamily: fonts.medium }]}>
+                {t('scanner.viewDetails')}
+              </Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toastCloseButton, { backgroundColor: colors.textTertiary + '30' }]}
+            onPress={hideToast}
+          >
+            <Ionicons name="close" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -2367,6 +2512,72 @@ const styles = StyleSheet.create({
   galleryFooterLoading: {
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  // 토스트 스타일
+  toastContainer: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  toastContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  toastLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  toastIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  toastTextContainer: {
+    flex: 1,
+  },
+  toastTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  toastData: {
+    fontSize: 13,
+    maxWidth: '90%',
+  },
+  toastRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  toastViewText: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginRight: 2,
+  },
+  toastCloseButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
 });
 

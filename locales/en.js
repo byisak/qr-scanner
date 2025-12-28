@@ -120,6 +120,8 @@ export default {
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
     uploadImage: 'Auto Code Analysis',
+    scanned: 'Scanned',
+    viewDetails: 'View Details',
   },
 
   // Image analysis screen
@@ -513,6 +515,18 @@ export default {
     default: 'Default Browser',
     defaultDesc: 'Opens in system default browser',
     selected: 'Selected',
+  },
+
+  // Scan result display mode
+  scanResultMode: {
+    title: 'Scan Result Display',
+    description: 'Select how to display scan results',
+    popup: 'Navigate to Result Screen',
+    popupDesc: 'Navigate to detailed result screen after scan',
+    toast: 'Continuous Scan Mode',
+    toastDesc: 'Show result at bottom and continue scanning',
+    selected: 'Selected',
+    toastTip: 'In continuous scan mode, tap the result to see details. Useful for scanning multiple codes quickly.',
   },
 
   // QR code generator screen

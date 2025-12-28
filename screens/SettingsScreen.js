@@ -58,6 +58,8 @@ export default function SettingsScreen() {
   const [scanUrlList, setScanUrlList] = useState([]);
   // 실시간 서버전송 설명 페이지 확인 여부
   const [realtimeSyncExplained, setRealtimeSyncExplained] = useState(false);
+  // 스캔 결과 표시 방식 (popup: 결과 화면, toast: 하단 토스트)
+  const [scanResultMode, setScanResultMode] = useState('popup');
 
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
@@ -187,6 +189,12 @@ export default function SettingsScreen() {
           // 실시간 서버전송 설명 페이지 확인 여부 로드
           const explained = await AsyncStorage.getItem('realtimeSyncExplained');
           setRealtimeSyncExplained(explained === 'true');
+
+          // 스캔 결과 표시 방식 로드
+          const resultMode = await AsyncStorage.getItem('scanResultMode');
+          if (resultMode) {
+            setScanResultMode(resultMode);
+          }
         } catch (error) {
           console.error('Load settings error:', error);
         }
@@ -437,6 +445,21 @@ export default function SettingsScreen() {
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('urlOpenMode.title')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {t(`urlOpenMode.${urlOpenMode}`)}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 스캔 결과 표시 방식 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/scan-result-mode-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanResultMode.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t(`scanResultMode.${scanResultMode}`)}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
