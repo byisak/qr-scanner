@@ -297,8 +297,12 @@ function ScannerScreen() {
       router.push({
         pathname: '/result',
         params: {
-          data: toastData.data,
+          code: toastData.data,
           type: toastData.type,
+          isDuplicate: 'false',
+          scanCount: '1',
+          photoUri: '',
+          errorCorrectionLevel: '',
         }
       });
     }
