@@ -29,8 +29,8 @@ export default function RealtimeSyncExplanationScreen() {
   const handleToggle = async (value) => {
     setEnableToggle(value);
     if (value) {
-      // 플래그 저장 후 설정 페이지로 이동
-      await AsyncStorage.setItem('realtimeSyncExplained', 'true');
+      // TODO: 배포 시 아래 주석 해제 (개발 중에는 설명 페이지 계속 표시)
+      // await AsyncStorage.setItem('realtimeSyncExplained', 'true');
       router.replace('/realtime-sync-settings');
     }
   };
