@@ -12,6 +12,40 @@ const REFRESH_TOKEN_KEY = 'refresh_token';
 // API 기본 URL
 const API_URL = `${config.serverUrl}/api/auth`;
 
+// ============================================================
+// 🔧 개발 모드 설정 (배포 시 false로 변경)
+// ============================================================
+const DEV_MODE = true; // 배포 시 false로 변경하거나 이 블록 주석 처리
+
+// 개발용 테스트 계정 (DEV_MODE가 true일 때만 사용됨)
+const DEV_ACCOUNTS = [
+  {
+    email: 'test@test.com',
+    password: 'test1234',
+    user: {
+      id: 'dev-user-001',
+      email: 'test@test.com',
+      name: '테스트 사용자',
+      profileImage: null,
+      provider: 'email',
+      createdAt: new Date().toISOString(),
+    },
+  },
+  {
+    email: 'admin@admin.com',
+    password: 'admin1234',
+    user: {
+      id: 'dev-admin-001',
+      email: 'admin@admin.com',
+      name: '관리자',
+      profileImage: null,
+      provider: 'email',
+      createdAt: new Date().toISOString(),
+    },
+  },
+];
+// ============================================================
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -136,10 +170,32 @@ export const AuthProvider = ({ children }) => {
 
   // 이메일 로그인
   const loginWithEmail = async (email, password) => {
-    const requestUrl = `${API_URL}/login`;
     console.log('[Auth] ===== 이메일 로그인 요청 =====');
-    console.log('[Auth] URL:', requestUrl);
     console.log('[Auth] Email:', email);
+
+    // ============================================================
+    // 🔧 개발 모드: 하드코딩된 계정으로 로그인 (서버 인증 스킵)
+    // ============================================================
+    if (DEV_MODE) {
+      console.log('[Auth] 🔧 개발 모드 활성화 - 테스트 계정 확인 중...');
+      const devAccount = DEV_ACCOUNTS.find(
+        acc => acc.email === email && acc.password === password
+      );
+
+      if (devAccount) {
+        console.log('[Auth] ✅ 개발 모드 로그인 성공:', devAccount.user.email);
+        const mockToken = `dev-token-${Date.now()}`;
+        await login(devAccount.user, mockToken, null);
+        return { success: true, user: devAccount.user };
+      } else {
+        console.log('[Auth] ❌ 개발 모드: 일치하는 테스트 계정 없음, 서버 인증 시도...');
+        // 테스트 계정이 아니면 서버 인증으로 진행
+      }
+    }
+    // ============================================================
+
+    const requestUrl = `${API_URL}/login`;
+    console.log('[Auth] URL:', requestUrl);
 
     try {
       const response = await fetch(requestUrl, {
