@@ -1,6 +1,13 @@
 // config/lockedFeatures.js - 잠금 기능 설정
 // 새 기능 추가 시 여기에 설정만 추가하면 됨
 
+// ========================================
+// 개발 모드 설정
+// true: 모든 기능 잠금 해제 (개발용)
+// false: 정상 잠금 동작 (배포용)
+// ========================================
+export const DEV_MODE_UNLOCK_ALL = true;
+
 export const LOCKED_FEATURES = {
   // ===== Generator 화면 =====
   barcodeTab: {
@@ -59,6 +66,18 @@ export const LOCKED_FEATURES = {
     adCount: 1,
     type: 'settings',
     description: '실시간 서버 전송',
+  },
+  scanUrlIntegration: {
+    id: 'scanUrlIntegration',
+    adCount: 1,
+    type: 'settings',
+    description: '스캔 연동 URL',
+  },
+  productSearch: {
+    id: 'productSearch',
+    adCount: 1,
+    type: 'settings',
+    description: '제품 검색 설정',
   },
 
   // ===== 바코드 타입 (기본 6개 제외한 나머지) =====

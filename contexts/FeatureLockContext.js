@@ -2,7 +2,7 @@
 import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
+import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_STYLE_INDEX, DEV_MODE_UNLOCK_ALL } from '../config/lockedFeatures';
 import { useLanguage } from './LanguageContext';
 
 const FeatureLockContext = createContext();
@@ -34,18 +34,24 @@ export const FeatureLockProvider = ({ children }) => {
 
   // 기능이 잠겨있는지 확인
   const isLocked = useCallback((featureId) => {
+    // 개발 모드: 모든 기능 잠금 해제
+    if (DEV_MODE_UNLOCK_ALL) return false;
     if (!LOCKED_FEATURES[featureId]) return false;
     return !unlockedFeatures.includes(featureId);
   }, [unlockedFeatures]);
 
   // 바코드 타입이 잠겨있는지 확인
   const isBarcodeTypeLocked = useCallback((bcid) => {
+    // 개발 모드: 모든 기능 잠금 해제
+    if (DEV_MODE_UNLOCK_ALL) return false;
     if (FREE_BARCODE_TYPES.includes(bcid)) return false;
     return isLocked('advancedBarcodes');
   }, [isLocked]);
 
   // QR 스타일이 잠겨있는지 확인 (인덱스 기반)
   const isQrStyleLocked = useCallback((styleIndex) => {
+    // 개발 모드: 모든 기능 잠금 해제
+    if (DEV_MODE_UNLOCK_ALL) return false;
     if (styleIndex === FREE_QR_STYLE_INDEX) return false;
     // 각 스타일별 잠금 ID 매핑
     const styleKeys = [

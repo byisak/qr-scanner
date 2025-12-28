@@ -475,7 +475,13 @@ export default function SettingsScreen() {
           {/* 스캔 연동 URL */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/scan-url-settings')}
+            onPress={() => {
+              if (isLocked('scanUrlIntegration')) {
+                showUnlockAlert('scanUrlIntegration', () => router.push('/scan-url-settings'));
+              } else {
+                router.push('/scan-url-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -483,6 +489,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="scanUrlIntegration" size={14} color={colors.textTertiary} />
               <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {on ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -557,7 +564,13 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/product-search-settings')}
+            onPress={() => {
+              if (isLocked('productSearch')) {
+                showUnlockAlert('productSearch', () => router.push('/product-search-settings'));
+              } else {
+                router.push('/product-search-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -565,6 +578,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="productSearch" size={14} color={colors.textTertiary} />
               <Text style={[s.statusText, { color: productAutoSearch ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {productAutoSearch ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
