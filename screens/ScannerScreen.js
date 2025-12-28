@@ -240,14 +240,14 @@ function ScannerScreen() {
   }, [scanResultMode]);
 
   // 토스트 표시 함수
-  const showToast = useCallback((data, type, historyId) => {
+  const showToast = useCallback((toastInfo) => {
     // 기존 토스트 타이머 클리어
     if (toastTimeoutRef.current) {
       clearTimeout(toastTimeoutRef.current);
     }
 
     // 토스트 데이터 설정
-    setToastData({ data, type, historyId, timestamp: Date.now() });
+    setToastData({ ...toastInfo, timestamp: Date.now() });
 
     // 애니메이션 시작
     toastOpacity.setValue(0);
@@ -299,10 +299,10 @@ function ScannerScreen() {
         params: {
           code: toastData.data,
           type: toastData.type,
-          isDuplicate: 'false',
-          scanCount: '1',
+          isDuplicate: toastData.isDuplicate ? 'true' : 'false',
+          scanCount: (toastData.scanCount || 1).toString(),
           photoUri: '',
-          errorCorrectionLevel: '',
+          errorCorrectionLevel: toastData.errorCorrectionLevel || '',
         }
       });
     }
@@ -1131,10 +1131,24 @@ function ScannerScreen() {
 
         // 히스토리 저장 (비동기로 백그라운드에서 처리)
         saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
-          showToast(data, normalizedType, historyResult.id);
+          showToast({
+            data,
+            type: normalizedType,
+            historyId: historyResult.id,
+            isDuplicate: historyResult.isDuplicate,
+            scanCount: historyResult.count,
+            errorCorrectionLevel: detectedEcLevel,
+          });
         }).catch((error) => {
           console.error('Toast mode history save error:', error);
-          showToast(data, normalizedType, null);
+          showToast({
+            data,
+            type: normalizedType,
+            historyId: null,
+            isDuplicate: false,
+            scanCount: 1,
+            errorCorrectionLevel: detectedEcLevel,
+          });
         });
 
         // 스캔 계속 진행 (차단하지 않음)
