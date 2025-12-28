@@ -1120,7 +1120,24 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
-      // 스캔 즉시 차단 (중복 스캔 방지) - ref로 동기적 차단
+      // 토스트 모드: 연속 스캔 - 차단하지 않고 바로 처리
+      if (scanResultModeRef.current === 'toast') {
+        // EC Level 추출
+        let detectedEcLevel = errorCorrectionLevel || null;
+
+        // 히스토리 저장 (비동기로 백그라운드에서 처리)
+        saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+          showToast(data, normalizedType, historyResult.id);
+        }).catch((error) => {
+          console.error('Toast mode history save error:', error);
+          showToast(data, normalizedType, null);
+        });
+
+        // 스캔 계속 진행 (차단하지 않음)
+        return;
+      }
+
+      // 팝업 모드: 스캔 즉시 차단 (중복 스캔 방지) - ref로 동기적 차단
       isProcessingRef.current = true;
       setCanScan(false);
 
@@ -1383,30 +1400,19 @@ function ScannerScreen() {
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
 
-          // 토스트 모드: 하단에 결과 표시하고 계속 스캔
-          if (scanResultModeRef.current === 'toast') {
-            showToast(data, normalizedType, historyResult.id);
-            // 스캔 재활성화
-            setTimeout(() => {
-              isProcessingRef.current = false;
-              setCanScan(true);
-            }, 300);
-            startResetTimer(RESET_DELAY_NORMAL);
-          } else {
-            // 팝업 모드: 결과 화면으로 이동 (기존 동작)
-            router.push({
-              pathname: '/result',
-              params: {
-                code: data,
-                isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
-                scanCount: historyResult.count.toString(),
-                photoUri: photoUri || '',
-                type: normalizedType,
-                errorCorrectionLevel: detectedEcLevel || '',
-              }
-            });
-            startResetTimer(RESET_DELAY_NORMAL);
-          }
+          // 팝업 모드: 결과 화면으로 이동
+          router.push({
+            pathname: '/result',
+            params: {
+              code: data,
+              isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
+              scanCount: historyResult.count.toString(),
+              photoUri: photoUri || '',
+              type: normalizedType,
+              errorCorrectionLevel: detectedEcLevel || '',
+            }
+          });
+          startResetTimer(RESET_DELAY_NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
           await saveHistory(data, null, null, type, null);
