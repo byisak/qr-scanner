@@ -33,7 +33,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import LockIcon from '../components/LockIcon';
+import { FREE_BARCODE_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -67,6 +70,7 @@ const QR_TYPES = [
 export default function GeneratorScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, showBarcodeUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -1444,7 +1448,13 @@ export default function GeneratorScreen() {
               s.segmentButton,
               codeMode === 'barcode' && { backgroundColor: colors.primary },
             ]}
-            onPress={() => handleCodeModeChange('barcode')}
+            onPress={() => {
+              if (isLocked('barcodeTab')) {
+                showUnlockAlert('barcodeTab', () => handleCodeModeChange('barcode'));
+              } else {
+                handleCodeModeChange('barcode');
+              }
+            }}
             activeOpacity={0.8}
           >
             <Ionicons
@@ -1458,6 +1468,12 @@ export default function GeneratorScreen() {
             ]}>
               {t('generator.barcode') || '바코드'}
             </Text>
+            <LockIcon
+              featureId="barcodeTab"
+              size={14}
+              color={codeMode === 'barcode' ? '#fff' : colors.textTertiary}
+              style={{ marginLeft: 4 }}
+            />
           </TouchableOpacity>
         </View>
 
@@ -2210,6 +2226,7 @@ export default function GeneratorScreen() {
                           const isHiddenDefault = hiddenDefaults.includes(format.bcid);
                           const isChecked = (isDefault && !isHiddenDefault) || isFavorite;
                           const isSelected = selectedBarcodeFormat === format.bcid;
+                          const isBarcodeLocked = isBarcodeTypeLocked(format.bcid);
 
                           return (
                             <TouchableOpacity
@@ -2221,7 +2238,13 @@ export default function GeneratorScreen() {
                                   borderColor: isSelected ? colors.primary : isChecked ? '#22c55e' : colors.border,
                                 },
                               ]}
-                              onPress={() => handleSelectBarcodeFromModal(format.bcid)}
+                              onPress={() => {
+                                if (isBarcodeLocked) {
+                                  showBarcodeUnlockAlert(() => handleSelectBarcodeFromModal(format.bcid));
+                                } else {
+                                  handleSelectBarcodeFromModal(format.bcid);
+                                }
+                              }}
                               activeOpacity={0.7}
                             >
                               {/* 즐겨찾기 체크박스 */}
@@ -2229,20 +2252,32 @@ export default function GeneratorScreen() {
                                 style={s.favoriteButton}
                                 onPress={(e) => {
                                   e.stopPropagation();
-                                  toggleFavoriteBarcode(format.bcid);
+                                  if (isBarcodeLocked) {
+                                    showBarcodeUnlockAlert(() => toggleFavoriteBarcode(format.bcid));
+                                  } else {
+                                    toggleFavoriteBarcode(format.bcid);
+                                  }
                                 }}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                               >
-                                <Ionicons
-                                  name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
-                                  size={20}
-                                  color={isChecked ? '#22c55e' : colors.textTertiary}
-                                />
+                                {isBarcodeLocked ? (
+                                  <Ionicons
+                                    name="lock-closed"
+                                    size={18}
+                                    color={colors.textTertiary}
+                                  />
+                                ) : (
+                                  <Ionicons
+                                    name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
+                                    size={20}
+                                    color={isChecked ? '#22c55e' : colors.textTertiary}
+                                  />
+                                )}
                               </TouchableOpacity>
 
                               <LinearGradient
                                 colors={catInfo.gradient || ['#667eea', '#764ba2']}
-                                style={s.modalIconGradient}
+                                style={[s.modalIconGradient, isBarcodeLocked && { opacity: 0.5 }]}
                               >
                                 <Ionicons
                                   name={catInfo.icon || 'barcode-outline'}
@@ -2252,7 +2287,7 @@ export default function GeneratorScreen() {
                               </LinearGradient>
                               <Text style={[
                                 s.modalBarcodeTitle,
-                                { color: isSelected ? '#fff' : colors.text }
+                                { color: isSelected ? '#fff' : isBarcodeLocked ? colors.textTertiary : colors.text }
                               ]} numberOfLines={1}>
                                 {format.name}
                               </Text>

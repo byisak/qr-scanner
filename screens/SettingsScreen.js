@@ -20,8 +20,10 @@ import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,6 +32,7 @@ export default function SettingsScreen() {
   const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
   const { user, isLoggedIn } = useAuth();
+  const { isLocked, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
@@ -447,7 +450,13 @@ export default function SettingsScreen() {
           {/* 배치 스캔 모드 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/batch-scan-settings')}
+            onPress={() => {
+              if (isLocked('batchScan')) {
+                showUnlockAlert('batchScan', () => router.push('/batch-scan-settings'));
+              } else {
+                router.push('/batch-scan-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -455,6 +464,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="batchScan" size={14} color={colors.textTertiary} />
               <Text style={[s.statusText, { color: batchScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {batchScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -505,13 +515,25 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => {
-              // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
-              // if (realtimeSyncExplained) {
-              //   router.push('/realtime-sync-settings');
-              // } else {
-              //   router.push('/realtime-sync-explanation');
-              // }
-              router.push('/realtime-sync-explanation');
+              if (isLocked('realtimeSync')) {
+                showUnlockAlert('realtimeSync', () => {
+                  // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
+                  // if (realtimeSyncExplained) {
+                  //   router.push('/realtime-sync-settings');
+                  // } else {
+                  //   router.push('/realtime-sync-explanation');
+                  // }
+                  router.push('/realtime-sync-explanation');
+                });
+              } else {
+                // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
+                // if (realtimeSyncExplained) {
+                //   router.push('/realtime-sync-settings');
+                // } else {
+                //   router.push('/realtime-sync-explanation');
+                // }
+                router.push('/realtime-sync-explanation');
+              }
             }}
             activeOpacity={0.7}
           >
@@ -520,6 +542,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.realtimeSyncDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="realtimeSync" size={14} color={colors.textTertiary} />
               <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {realtimeSyncEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>

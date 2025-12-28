@@ -17,6 +17,15 @@ export default {
     success: 'Success',
   },
 
+  // Feature Lock
+  featureLock: {
+    lockedTitle: 'Locked Feature',
+    watchAdToUnlock: 'Watch an ad to unlock this feature',
+    watchAd: 'Watch Ad',
+    adComingSoon: 'Ad feature coming soon.\nUnlocked for free now!',
+    unlocked: 'Unlocked',
+  },
+
   // Auth
   auth: {
     // Login/Signup button

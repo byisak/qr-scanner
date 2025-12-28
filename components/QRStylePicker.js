@@ -17,7 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
 
@@ -312,6 +314,7 @@ export default function QRStylePicker({
 }) {
   const { t, language } = useLanguage();
   const { isDark } = useTheme();
+  const { isQrStyleLocked, showQrStyleUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [activeTab, setActiveTab] = useState('presets');
@@ -350,51 +353,66 @@ export default function QRStylePicker({
 
   const renderPresets = () => (
     <View style={styles.presetGrid}>
-      {QR_STYLE_PRESETS.map((preset) => (
-        <TouchableOpacity
-          key={preset.id}
-          style={[
-            styles.presetItem,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: JSON.stringify(tempStyle) === JSON.stringify(preset.style)
-                ? colors.primary
-                : colors.border,
-              borderWidth: JSON.stringify(tempStyle) === JSON.stringify(preset.style) ? 2 : 1,
-            },
-          ]}
-          onPress={() => handlePresetSelect(preset)}
-          activeOpacity={0.7}
-        >
-          <View
+      {QR_STYLE_PRESETS.map((preset, index) => {
+        const isStyleLocked = isQrStyleLocked(index);
+        return (
+          <TouchableOpacity
+            key={preset.id}
             style={[
-              styles.presetPreview,
-              { backgroundColor: preset.style.backgroundColor || '#fff' },
+              styles.presetItem,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: JSON.stringify(tempStyle) === JSON.stringify(preset.style)
+                  ? colors.primary
+                  : colors.border,
+                borderWidth: JSON.stringify(tempStyle) === JSON.stringify(preset.style) ? 2 : 1,
+              },
             ]}
+            onPress={() => {
+              if (isStyleLocked) {
+                showQrStyleUnlockAlert(() => handlePresetSelect(preset));
+              } else {
+                handlePresetSelect(preset);
+              }
+            }}
+            activeOpacity={0.7}
           >
-            <View style={styles.presetDots}>
-              {[...Array(9)].map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.presetDot,
-                    {
-                      backgroundColor: preset.style.dotGradient
-                        ? preset.style.dotGradient.colorStops[0].color
-                        : preset.style.dotColor,
-                      borderRadius: preset.style.dotType === 'dots' || preset.style.dotType === 'rounded'
-                        ? 3 : 0,
-                    },
-                  ]}
-                />
-              ))}
+            <View
+              style={[
+                styles.presetPreview,
+                { backgroundColor: preset.style.backgroundColor || '#fff' },
+                isStyleLocked && { opacity: 0.5 },
+              ]}
+            >
+              <View style={styles.presetDots}>
+                {[...Array(9)].map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.presetDot,
+                      {
+                        backgroundColor: preset.style.dotGradient
+                          ? preset.style.dotGradient.colorStops[0].color
+                          : preset.style.dotColor,
+                        borderRadius: preset.style.dotType === 'dots' || preset.style.dotType === 'rounded'
+                          ? 3 : 0,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+              {isStyleLocked && (
+                <View style={styles.lockOverlay}>
+                  <Ionicons name="lock-closed" size={20} color="#666" />
+                </View>
+              )}
             </View>
-          </View>
-          <Text style={[styles.presetName, { color: colors.text }]}>
-            {language === 'ko' ? preset.nameKo : preset.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Text style={[styles.presetName, { color: isStyleLocked ? colors.textTertiary : colors.text }]}>
+              {language === 'ko' ? preset.nameKo : preset.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 
@@ -1018,6 +1036,17 @@ const styles = StyleSheet.create({
   presetName: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  lockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 8,
   },
   optionSection: {
     gap: 16,

@@ -17,6 +17,15 @@ export default {
     success: '성공',
   },
 
+  // 기능 잠금
+  featureLock: {
+    lockedTitle: '잠긴 기능',
+    watchAdToUnlock: '광고를 시청하면 이 기능을 사용할 수 있습니다',
+    watchAd: '광고 보기',
+    adComingSoon: '광고 기능이 곧 추가됩니다.\n지금은 무료로 해제됩니다!',
+    unlocked: '잠금 해제됨',
+  },
+
   // 인증
   auth: {
     // 로그인/회원가입 버튼
