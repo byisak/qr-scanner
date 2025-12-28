@@ -733,52 +733,33 @@ export default function SettingsScreen() {
         </View>
 
         {/* 개발자 옵션 - TODO: 배포 시 제거 또는 숨김 처리 */}
-        <View style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}>
-          <Text style={[s.sectionTitle, { color: '#FF9500', fontFamily: fonts.bold }]}>{t('settings.developerOptions')}</Text>
-
-          {/* 개발 모드 토글 */}
-          <View style={[s.menuItem, { borderTopWidth: 0 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.devMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.devModeDesc')}</Text>
+        <TouchableOpacity
+          style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}
+          onPress={() => router.push('/developer-options')}
+          activeOpacity={0.7}
+        >
+          <View style={s.devOptionHeader}>
+            <View style={s.devOptionLeft}>
+              <Ionicons name="code-slash" size={24} color="#FF9500" />
+              <View style={s.devOptionText}>
+                <Text style={[s.sectionTitle, { color: '#FF9500', fontFamily: fonts.bold, marginBottom: 0 }]}>
+                  {t('settings.developerOptions')}
+                </Text>
+                <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                  {t('settings.devModeDesc')}
+                </Text>
+              </View>
             </View>
-            <Switch
-              value={devModeEnabled}
-              onValueChange={toggleDevMode}
-              trackColor={{ true: '#FF9500', false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-            />
+            <View style={s.devOptionRight}>
+              {devModeEnabled && (
+                <View style={[s.devModeBadge, { backgroundColor: '#FF9500' }]}>
+                  <Text style={[s.devModeBadgeText, { fontFamily: fonts.semiBold }]}>{t('settings.statusOn')}</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
           </View>
-
-          {/* 잠금 초기화 버튼 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => {
-              Alert.alert(
-                t('settings.resetLocks'),
-                t('settings.resetLocksConfirm'),
-                [
-                  { text: t('common.cancel'), style: 'cancel' },
-                  {
-                    text: t('common.confirm'),
-                    style: 'destructive',
-                    onPress: async () => {
-                      await resetAllLocks();
-                      Alert.alert(t('common.success'), t('settings.resetLocksSuccess'));
-                    }
-                  }
-                ]
-              );
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.resetLocks')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.resetLocksDesc')}</Text>
-            </View>
-            <Ionicons name="refresh-outline" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
         </ScrollView>
       </TouchableWithoutFeedback>
     </View>
@@ -1037,5 +1018,35 @@ const s = StyleSheet.create({
   },
   urlListItemUrl: {
     fontSize: 12,
+  },
+  // 개발자 옵션 스타일
+  devOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  devOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  devOptionText: {
+    flex: 1,
+  },
+  devOptionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  devModeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  devModeBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

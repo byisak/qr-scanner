@@ -358,6 +358,34 @@ export default {
     resetLocksSuccess: 'Locks have been reset',
   },
 
+  // Developer options screen
+  developerOptions: {
+    warning: 'These options are for development and testing only. Disable before deployment.',
+    devModeDesc: 'All features are automatically unlocked when dev mode is enabled',
+    quickActions: 'Quick Actions',
+    unlockAll: 'Unlock All Features',
+    allUnlocked: 'All features have been unlocked',
+    individualFeatures: 'Individual Feature Management',
+    settingsFeatures: 'Settings Features',
+    generatorFeatures: 'Generator Features',
+    qrStyleFeatures: 'QR Styles',
+    features: {
+      batchScan: 'Batch Scan Mode',
+      scanUrlIntegration: 'Scan URL Integration',
+      realtimeSync: 'Realtime Server Sync',
+      productSearch: 'Product Search Settings',
+      barcodeTab: 'Barcode Generator',
+      advancedBarcodes: 'Advanced Barcode Types',
+      qrStyleRounded: 'Rounded Style',
+      qrStyleDots: 'Dots Style',
+      qrStyleClassy: 'Classy Style',
+      qrStyleBlueGradient: 'Blue Gradient Style',
+      qrStyleSunset: 'Sunset Style',
+      qrStyleDarkMode: 'Dark Mode Style',
+      qrStyleNeon: 'Neon Style',
+    },
+  },
+
   // Realtime sync explanation screen
   realtimeSyncExplanation: {
     title: 'Realtime Server Transmission',

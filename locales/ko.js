@@ -358,6 +358,34 @@ export default {
     resetLocksSuccess: '잠금이 초기화되었습니다',
   },
 
+  // 개발자 옵션 화면
+  developerOptions: {
+    warning: '이 옵션은 개발 및 테스트 용도입니다. 배포 시 비활성화하세요.',
+    devModeDesc: '개발 모드 활성화 시 모든 기능이 자동으로 해제됩니다',
+    quickActions: '빠른 액션',
+    unlockAll: '모든 기능 해제',
+    allUnlocked: '모든 기능이 해제되었습니다',
+    individualFeatures: '개별 기능 관리',
+    settingsFeatures: '설정 기능',
+    generatorFeatures: '생성기 기능',
+    qrStyleFeatures: 'QR 스타일',
+    features: {
+      batchScan: '배치 스캔 모드',
+      scanUrlIntegration: '스캔 연동 URL',
+      realtimeSync: '실시간 서버 전송',
+      productSearch: '제품 검색 설정',
+      barcodeTab: '바코드 생성',
+      advancedBarcodes: '고급 바코드 타입',
+      qrStyleRounded: 'Rounded 스타일',
+      qrStyleDots: 'Dots 스타일',
+      qrStyleClassy: 'Classy 스타일',
+      qrStyleBlueGradient: 'Blue Gradient 스타일',
+      qrStyleSunset: 'Sunset 스타일',
+      qrStyleDarkMode: 'Dark Mode 스타일',
+      qrStyleNeon: 'Neon 스타일',
+    },
+  },
+
   // 실시간 서버전송 설명 페이지
   realtimeSyncExplanation: {
     title: '실시간 서버 전송',

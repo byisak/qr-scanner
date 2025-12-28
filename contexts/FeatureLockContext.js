@@ -125,6 +125,39 @@ export const FeatureLockProvider = ({ children }) => {
     }
   }, []);
 
+  // 개별 기능 잠금/해제 토글 (개발자 옵션용)
+  const toggleFeatureLock = useCallback(async (featureId, unlocked) => {
+    try {
+      let newUnlocked;
+      if (unlocked) {
+        // 해제
+        newUnlocked = [...new Set([...unlockedFeatures, featureId])];
+      } else {
+        // 잠금
+        newUnlocked = unlockedFeatures.filter(id => id !== featureId);
+      }
+      setUnlockedFeatures(newUnlocked);
+      await AsyncStorage.setItem(UNLOCKED_FEATURES_KEY, JSON.stringify(newUnlocked));
+      return true;
+    } catch (error) {
+      console.error('Toggle feature lock error:', error);
+      return false;
+    }
+  }, [unlockedFeatures]);
+
+  // 모든 기능 해제 (개발자 옵션용)
+  const unlockAllFeatures = useCallback(async () => {
+    try {
+      const allFeatureIds = Object.keys(LOCKED_FEATURES);
+      setUnlockedFeatures(allFeatureIds);
+      await AsyncStorage.setItem(UNLOCKED_FEATURES_KEY, JSON.stringify(allFeatureIds));
+      return true;
+    } catch (error) {
+      console.error('Unlock all features error:', error);
+      return false;
+    }
+  }, []);
+
   // 광고 시청 Alert 표시
   const showUnlockAlert = useCallback((featureId, onUnlock) => {
     const feature = LOCKED_FEATURES[featureId];
@@ -221,6 +254,8 @@ export const FeatureLockProvider = ({ children }) => {
     unlockedFeatures,
     devModeEnabled,
     toggleDevMode,
+    toggleFeatureLock,
+    unlockAllFeatures,
     isLoading,
   };
 
