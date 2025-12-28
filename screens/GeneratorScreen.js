@@ -1907,7 +1907,7 @@ export default function GeneratorScreen() {
                   ]}
                   collapsable={false}
                 >
-                  <View style={[s.qrBackground, { backgroundColor: qrStyle.backgroundColor || '#fff' }]}>
+                  <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
                     {useStyledQR ? (
                       <StyledQRCode
                         value={qrData}

@@ -14,6 +14,8 @@ import {
   FlatList,
   Image,
   ActivityIndicator,
+  Linking,
+  Animated,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -68,6 +70,9 @@ function ScannerScreen() {
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 사진 저장 활성화 여부 (기본값: 켬)
   const [batchScanEnabled, setBatchScanEnabled] = useState(false); // 배치 스캔 모드 활성화 여부
   const [batchScannedItems, setBatchScannedItems] = useState([]); // 배치로 스캔된 항목들
+  const [showScanCounter, setShowScanCounter] = useState(true); // 스캔 카운터 표시 여부
+  const [duplicateDetection, setDuplicateDetection] = useState(true); // 중복 감지 활성화 여부
+  const [duplicateAction, setDuplicateAction] = useState('alert'); // 중복 처리 방식: 'alert', 'skip', 'allow'
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
   const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
@@ -101,6 +106,85 @@ function ScannerScreen() {
   const [activeScanUrl, setActiveScanUrl] = useState(null); // { id, name, url }
   const [showUrlSendMessage, setShowUrlSendMessage] = useState(false); // URL 전송 메시지 표시
 
+  // 스캔 화면 로딩 애니메이션 상태
+  const [scannerReady, setScannerReady] = useState(false);
+  const qrIconOpacity = useRef(new Animated.Value(1)).current;
+  const guideTextOpacity = useRef(new Animated.Value(1)).current;
+  const cornerExpand = useRef(new Animated.Value(0)).current; // 0: 안쪽, 1: 바깥쪽
+  const cornerOpacity = useRef(new Animated.Value(1)).current;
+  const crosshairOpacity = useRef(new Animated.Value(0)).current;
+
+  // 코너 이동 거리 (안쪽에서 바깥쪽으로)
+  const CORNER_MOVE_DISTANCE = 50;
+
+  // 스캔 화면 로딩 애니메이션 시퀀스
+  useEffect(() => {
+    if (isActive && !scannerReady) {
+      // 애니메이션 값 초기화
+      qrIconOpacity.setValue(1);
+      guideTextOpacity.setValue(1);
+      cornerExpand.setValue(0); // 안쪽에서 시작
+      cornerOpacity.setValue(1);
+      crosshairOpacity.setValue(0);
+
+      // 초기 상태 0.5초 유지 후 애니메이션 시작
+      const startTimer = setTimeout(() => {
+        // QR 아이콘/안내 텍스트 페이드 아웃 + 코너 빠르게 바깥으로 확장
+        Animated.parallel([
+          Animated.timing(qrIconOpacity, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(guideTextOpacity, {
+            toValue: 0,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          // 빠르게 바깥으로 (오버슛)
+          Animated.timing(cornerExpand, {
+            toValue: 1.15,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          // 약간 안쪽으로 모임
+          Animated.timing(cornerExpand, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            // 페이드 인/아웃으로 사라짐
+            Animated.sequence([
+              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
+              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+              // 마지막 페이드 아웃 + 십자가 페이드 인
+              Animated.parallel([
+                Animated.timing(cornerOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+                Animated.timing(crosshairOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+              ]),
+            ]).start(() => {
+              setScannerReady(true);
+            });
+          });
+        });
+      }, 500);
+
+      return () => {
+        clearTimeout(startTimer);
+      };
+    }
+  }, [isActive, scannerReady]);
+
+  // 화면 비활성화 시 애니메이션 리셋
+  useEffect(() => {
+    if (!isActive) {
+      setScannerReady(false);
+    }
+  }, [isActive]);
+
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
   const resetTimerRef = useRef(null);
@@ -109,6 +193,8 @@ function ScannerScreen() {
   const photoSaveEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지 (기본값: 켬)
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
+  const duplicateDetectionRef = useRef(true); // 중복 감지 설정 ref
+  const duplicateActionRef = useRef('alert'); // 중복 처리 방식 ref
   const isCapturingPhotoRef = useRef(false); // ref로 동기적 추적 (카메라 마운트 유지용)
   const beepSoundPlayerRef = useRef(null); // 스캔 소리 플레이어 ref
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
@@ -129,6 +215,16 @@ function ScannerScreen() {
     console.log('[ScannerScreen] Syncing scanSoundEnabled state to ref:', scanSoundEnabled);
     scanSoundEnabledRef.current = scanSoundEnabled;
   }, [scanSoundEnabled]);
+
+  // duplicateDetection 상태를 ref에 동기화
+  useEffect(() => {
+    duplicateDetectionRef.current = duplicateDetection;
+  }, [duplicateDetection]);
+
+  // duplicateAction 상태를 ref에 동기화
+  useEffect(() => {
+    duplicateActionRef.current = duplicateAction;
+  }, [duplicateAction]);
 
   // 스캔 소리 플레이어 초기화
   useEffect(() => {
@@ -184,6 +280,20 @@ function ScannerScreen() {
         const batchScan = await AsyncStorage.getItem('batchScanEnabled');
         if (batchScan !== null) {
           setBatchScanEnabled(batchScan === 'true');
+        }
+
+        // 배치 스캔 세부 설정 로드
+        const scanCounter = await AsyncStorage.getItem('batchShowScanCounter');
+        if (scanCounter !== null) {
+          setShowScanCounter(scanCounter === 'true');
+        }
+        const dupDetection = await AsyncStorage.getItem('batchDuplicateDetection');
+        if (dupDetection !== null) {
+          setDuplicateDetection(dupDetection === 'true');
+        }
+        const dupAction = await AsyncStorage.getItem('batchDuplicateAction');
+        if (dupAction !== null) {
+          setDuplicateAction(dupAction);
         }
 
         const camera = await AsyncStorage.getItem('selectedCamera');
@@ -334,6 +444,20 @@ function ScannerScreen() {
           const batchScan = await AsyncStorage.getItem('batchScanEnabled');
           if (batchScan !== null) {
             setBatchScanEnabled(batchScan === 'true');
+          }
+
+          // 배치 스캔 세부 설정 로드
+          const scanCounter = await AsyncStorage.getItem('batchShowScanCounter');
+          if (scanCounter !== null) {
+            setShowScanCounter(scanCounter === 'true');
+          }
+          const dupDetection = await AsyncStorage.getItem('batchDuplicateDetection');
+          if (dupDetection !== null) {
+            setDuplicateDetection(dupDetection === 'true');
+          }
+          const dupAction = await AsyncStorage.getItem('batchDuplicateAction');
+          if (dupAction !== null) {
+            setDuplicateAction(dupAction);
           }
 
           const camera = await AsyncStorage.getItem('selectedCamera');
@@ -799,6 +923,65 @@ function ScannerScreen() {
     }
   }, []);
 
+  // 배치 스캔 처리 헬퍼 함수 (중복 알림 후 추가 시 사용)
+  const processBatchScan = useCallback(async (data, normalizedType, errorCorrectionLevel) => {
+    // 햅틱 피드백
+    if (hapticEnabledRef.current) {
+      if (Platform.OS === 'android') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    }
+
+    // 스캔 소리
+    if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+      try {
+        beepSoundPlayerRef.current.seekTo(0);
+        beepSoundPlayerRef.current.play();
+      } catch (error) {
+        console.log('Scan sound playback error:', error);
+      }
+    }
+
+    // 사진 촬영 (활성화된 경우)
+    let photoUri = null;
+    if (photoSaveEnabledRef.current) {
+      try {
+        const photoResult = await capturePhoto();
+        photoUri = photoResult?.croppedUri || photoResult;
+      } catch (error) {
+        console.log('Photo capture error:', error);
+      }
+    }
+
+    // 실시간 서버전송
+    if (realtimeSyncEnabled && activeSessionId) {
+      websocketClient.sendScanData({
+        code: data,
+        timestamp: Date.now(),
+      }, activeSessionId);
+      setShowSendMessage(true);
+      setTimeout(() => setShowSendMessage(false), 1000);
+    }
+
+    // 배치에 추가
+    setBatchScannedItems(prev => [...prev, {
+      code: data,
+      timestamp: Date.now(),
+      photoUri: photoUri || null,
+      type: normalizedType,
+      errorCorrectionLevel: errorCorrectionLevel,
+    }]);
+
+    // 스캔 재활성화
+    setTimeout(() => {
+      isProcessingRef.current = false;
+      setCanScan(true);
+    }, 500);
+    startResetTimer(RESET_DELAY_NORMAL);
+  }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
+
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
@@ -858,16 +1041,50 @@ function ScannerScreen() {
       setCanScan(false);
 
       // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
-      if (batchScanEnabled) {
+      if (batchScanEnabled && duplicateDetectionRef.current) {
         const isDuplicate = batchScannedItems.some(item => item.code === data);
         if (isDuplicate) {
-          // 중복이면 아무 피드백 없이 스캔만 재활성화
-          setTimeout(() => {
-            isProcessingRef.current = false;
-            setCanScan(true);
-          }, 500);
-          startResetTimer(RESET_DELAY_NORMAL);
-          return;
+          const action = duplicateActionRef.current;
+
+          if (action === 'skip') {
+            // 자동으로 건너뛰기: 아무 피드백 없이 스캔만 재활성화
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 500);
+            startResetTimer(RESET_DELAY_NORMAL);
+            return;
+          } else if (action === 'alert') {
+            // 알림 후 추가: 사용자에게 물어봄
+            Alert.alert(
+              t('batchScan.duplicateAlertTitle'),
+              t('batchScan.duplicateAlertMessage'),
+              [
+                {
+                  text: t('batchScan.duplicateAlertCancel'),
+                  style: 'cancel',
+                  onPress: () => {
+                    // 취소: 스캔만 재활성화
+                    setTimeout(() => {
+                      isProcessingRef.current = false;
+                      setCanScan(true);
+                    }, 300);
+                    startResetTimer(RESET_DELAY_NORMAL);
+                  },
+                },
+                {
+                  text: t('batchScan.duplicateAlertAdd'),
+                  onPress: () => {
+                    // 추가: 중복이어도 배치에 추가
+                    processBatchScan(data, normalizedType, errorCorrectionLevel, bounds, cornerPoints);
+                  },
+                },
+              ],
+              { cancelable: false }
+            );
+            return;
+          }
+          // action === 'allow': 중복 허용, 아래로 계속 진행
         }
       }
 
@@ -1032,6 +1249,53 @@ function ScannerScreen() {
             }
           }
 
+          // 제품 검색 자동 실행 (상품 바코드인 경우)
+          const productBarcodeTypes = ['ean13', 'ean8', 'upca', 'upce', 'itf14'];
+          const isProductBarcode = productBarcodeTypes.includes(normalizedType);
+
+          if (isProductBarcode) {
+            const productAutoSearch = await AsyncStorage.getItem('productAutoSearch');
+
+            if (productAutoSearch === 'true') {
+              const savedSitesJson = await AsyncStorage.getItem('productSearchSites');
+
+              if (savedSitesJson) {
+                const searchSites = JSON.parse(savedSitesJson);
+                // 활성화된 사이트 중 첫 번째 사이트로 검색
+                const enabledSite = searchSites.find(site => site.enabled);
+
+                if (enabledSite) {
+                  const searchUrl = enabledSite.url.replace('{code}', data);
+
+                  // 히스토리 저장
+                  saveHistory(data, searchUrl, photoUri, normalizedType, detectedEcLevel).catch(console.error);
+
+                  // openMode에 따라 웹뷰 또는 외부 브라우저로 열기
+                  if (enabledSite.openMode === 'inApp') {
+                    router.push({ pathname: '/webview', params: { url: searchUrl } });
+                  } else {
+                    // 외부 브라우저로 열기
+                    Linking.openURL(searchUrl).catch(console.error);
+                    // 결과 화면으로 이동
+                    router.push({
+                      pathname: '/result',
+                      params: {
+                        code: data,
+                        isDuplicate: 'false',
+                        scanCount: '1',
+                        photoUri: photoUri || '',
+                        type: normalizedType,
+                        errorCorrectionLevel: detectedEcLevel || '',
+                      }
+                    });
+                  }
+                  startResetTimer(RESET_DELAY_LINK);
+                  return;
+                }
+              }
+            }
+          }
+
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
 
@@ -1166,13 +1430,17 @@ function ScannerScreen() {
   const [galleryModalVisible, setGalleryModalVisible] = useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(false);
+  const [galleryEndCursor, setGalleryEndCursor] = useState(null);
+  const [galleryHasMore, setGalleryHasMore] = useState(true);
+  const [galleryLoadingMore, setGalleryLoadingMore] = useState(false);
 
   // 갤러리 열기
   const handlePickImage = useCallback(async () => {
     try {
       // 미디어 라이브러리 권한 요청
       const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
+      // iOS 14+에서는 'limited' 권한도 허용
+      if (status !== 'granted' && status !== 'limited') {
         Alert.alert(
           t('result.permissionDenied'),
           t('result.permissionDeniedMessage')
@@ -1182,15 +1450,20 @@ function ScannerScreen() {
 
       setGalleryLoading(true);
       setGalleryModalVisible(true);
+      setGalleryPhotos([]);
+      setGalleryEndCursor(null);
+      setGalleryHasMore(true);
 
-      // 최근 사진 50개 가져오기
+      // 최근 사진 100개씩 가져오기 (무한 스크롤)
       const assets = await MediaLibrary.getAssetsAsync({
         mediaType: 'photo',
-        first: 50,
+        first: 100,
         sortBy: [MediaLibrary.SortBy.creationTime],
       });
 
       setGalleryPhotos(assets.assets);
+      setGalleryEndCursor(assets.endCursor);
+      setGalleryHasMore(assets.hasNextPage);
       setGalleryLoading(false);
     } catch (error) {
       console.error('Gallery error:', error);
@@ -1198,6 +1471,30 @@ function ScannerScreen() {
       Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
     }
   }, [t]);
+
+  // 갤러리 더 불러오기 (무한 스크롤)
+  const handleLoadMorePhotos = useCallback(async () => {
+    if (galleryLoadingMore || !galleryHasMore || !galleryEndCursor) return;
+
+    try {
+      setGalleryLoadingMore(true);
+
+      const assets = await MediaLibrary.getAssetsAsync({
+        mediaType: 'photo',
+        first: 100,
+        after: galleryEndCursor,
+        sortBy: [MediaLibrary.SortBy.creationTime],
+      });
+
+      setGalleryPhotos(prev => [...prev, ...assets.assets]);
+      setGalleryEndCursor(assets.endCursor);
+      setGalleryHasMore(assets.hasNextPage);
+      setGalleryLoadingMore(false);
+    } catch (error) {
+      console.error('Load more photos error:', error);
+      setGalleryLoadingMore(false);
+    }
+  }, [galleryLoadingMore, galleryHasMore, galleryEndCursor]);
 
   // 사진 선택 시
   const handleSelectPhoto = useCallback(async (asset) => {
@@ -1305,10 +1602,10 @@ function ScannerScreen() {
         )}
 
         {/* 스캔 연동 URL 표시 */}
-        {scanUrlEnabled && activeScanUrl && (
+        {scanUrlEnabled && (
           <View style={[styles.scanUrlBadge, { top: batchScanEnabled ? batchBadgeTop + 40 : batchBadgeTop }]}>
-            <Ionicons name="link" size={14} color="#fff" />
-            <Text style={styles.scanUrlBadgeText}>{activeScanUrl.name}</Text>
+            <Ionicons name="link" size={16} color="#fff" />
+            <Text style={styles.scanUrlBadgeText}>{t('settings.useScanUrl')}</Text>
           </View>
         )}
 
@@ -1328,26 +1625,113 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 중앙 십자가 타겟 (항상 표시) */}
-        <View style={styles.centerTarget} pointerEvents="none">
-          {/* 수평선 */}
-          <View style={styles.targetLineHorizontal} />
-          {/* 수직선 */}
-          <View style={styles.targetLineVertical} />
-          {/* 중심 원 */}
-          <View style={styles.targetCenter} />
+        {/* 스캔 로딩 애니메이션 오버레이 */}
+        <View style={styles.scanAnimationContainer} pointerEvents="none">
+          {/* Step 1: QR 아이콘 */}
+          <Animated.View style={[styles.qrIconContainer, { opacity: qrIconOpacity }]}>
+            <Ionicons name="qr-code" size={80} color="rgba(255, 255, 255, 0.9)" />
+          </Animated.View>
+
+          {/* Step 1-2: 코너 사각형 (위치 이동 애니메이션) */}
+          <View style={styles.cornerContainer}>
+            {/* 좌상단 코너 ⌜ - 안쪽에서 바깥쪽으로 이동 */}
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerTopLeft,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
+                  ],
+                },
+              ]}
+            >
+              <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, left: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, left: 0 }]} />
+            </Animated.View>
+            {/* 우상단 코너 ⌝ */}
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerTopRight,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
+                  ],
+                },
+              ]}
+            >
+              <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, right: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, right: 0 }]} />
+            </Animated.View>
+            {/* 좌하단 코너 ⌞ */}
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerBottomLeft,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
+                  ],
+                },
+              ]}
+            >
+              <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, left: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, left: 0 }]} />
+            </Animated.View>
+            {/* 우하단 코너 ⌟ */}
+            <Animated.View
+              style={[
+                styles.corner,
+                styles.cornerBottomRight,
+                {
+                  opacity: cornerOpacity,
+                  transform: [
+                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
+                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
+                  ],
+                },
+              ]}
+            >
+              <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, right: 0 }]} />
+              <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, right: 0 }]} />
+            </Animated.View>
+          </View>
+
+          {/* Step 1: 안내 텍스트 */}
+          <Animated.View style={[styles.guideTextContainer, { opacity: guideTextOpacity }]}>
+            <Text style={styles.guideText}>{t('scanner.guideText')}</Text>
+          </Animated.View>
+
+          {/* Step 3: 중앙 십자가 (최종 상태) */}
+          <Animated.View style={[styles.centerTarget, { opacity: crosshairOpacity }]}>
+            {/* 수평선 */}
+            <View style={styles.targetLineHorizontal} />
+            {/* 수직선 */}
+            <View style={styles.targetLineVertical} />
+            {/* 중심 원 */}
+            <View style={styles.targetCenter} />
+          </Animated.View>
         </View>
       </View>
 
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
         <View style={[styles.batchControlPanel, { bottom: bottomOffset }]}>
-          <View style={styles.batchCountContainer}>
-            <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-            <Text style={styles.batchCountText}>
-              {t('scanner.scannedCount').replace('{count}', batchScannedItems.length.toString())}
-            </Text>
-          </View>
+          {showScanCounter && (
+            <View style={styles.batchCountContainer}>
+              <Ionicons name="checkmark-circle" size={20} color="#34C759" />
+              <Text style={styles.batchCountText}>
+                {t('scanner.scannedCount').replace('{count}', batchScannedItems.length.toString())}
+              </Text>
+            </View>
+          )}
           <View style={styles.batchButtons}>
             <TouchableOpacity
               style={[styles.batchButton, styles.batchButtonClear]}
@@ -1504,7 +1888,7 @@ function ScannerScreen() {
             ) : (
               <FlatList
                 data={galleryPhotos}
-                numColumns={3}
+                numColumns={5}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.galleryGrid}
                 renderItem={({ item }) => (
@@ -1519,6 +1903,15 @@ function ScannerScreen() {
                     />
                   </TouchableOpacity>
                 )}
+                onEndReached={handleLoadMorePhotos}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  galleryLoadingMore ? (
+                    <View style={styles.galleryFooterLoading}>
+                      <ActivityIndicator size="small" color="#fff" />
+                    </View>
+                  ) : null
+                }
                 ListEmptyComponent={
                   <View style={styles.galleryEmpty}>
                     <Ionicons name="images-outline" size={48} color="#666" />
@@ -1588,10 +1981,10 @@ const styles = StyleSheet.create({
     // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(46, 125, 50, 0.9)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: 'rgba(52, 199, 89, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -1600,7 +1993,7 @@ const styles = StyleSheet.create({
   },
   scanUrlBadgeText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
   },
@@ -1744,6 +2137,66 @@ const styles = StyleSheet.create({
     color: '#fff',
     padding: 20,
   },
+  // 스캔 애니메이션 컨테이너
+  scanAnimationContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrIconContainer: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cornerContainer: {
+    position: 'absolute',
+    width: 250,
+    height: 250,
+  },
+  corner: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+  },
+  cornerTopLeft: {
+    top: 0,
+    left: 0,
+  },
+  cornerTopRight: {
+    top: 0,
+    right: 0,
+  },
+  cornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+  },
+  cornerBottomRight: {
+    bottom: 0,
+    right: 0,
+  },
+  cornerLine: {
+    position: 'absolute',
+    backgroundColor: '#FFD60A',
+    borderRadius: 2,
+  },
+  guideTextContainer: {
+    position: 'absolute',
+    bottom: '30%',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 20,
+  },
+  guideText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   centerTarget: {
     position: 'absolute',
     top: '50%',
@@ -1757,10 +2210,10 @@ const styles = StyleSheet.create({
   },
   targetLineHorizontal: {
     position: 'absolute',
-    width: 40,
-    height: 3,
+    width: 30,
+    height: 1.5,
     backgroundColor: '#FFD60A',
-    borderRadius: 2,
+    borderRadius: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
@@ -1768,19 +2221,19 @@ const styles = StyleSheet.create({
   },
   targetLineVertical: {
     position: 'absolute',
-    width: 3,
-    height: 40,
+    width: 1.5,
+    height: 30,
     backgroundColor: '#FFD60A',
-    borderRadius: 2,
+    borderRadius: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 4,
   },
   targetCenter: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: '#FFD60A',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 0 },
@@ -1894,7 +2347,7 @@ const styles = StyleSheet.create({
   galleryPhotoItem: {
     flex: 1,
     aspectRatio: 1,
-    margin: 2,
+    margin: 1,
   },
   galleryPhotoImage: {
     flex: 1,
@@ -1910,6 +2363,10 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
     marginTop: 12,
+  },
+  galleryFooterLoading: {
+    paddingVertical: 20,
+    alignItems: 'center',
   },
 });
 
