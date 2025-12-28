@@ -1,7 +1,7 @@
 // components/NativeQRScanner/index.js
 // @mgcrea/vision-camera-barcode-scanner 기반 네이티브 QR 스캐너 컴포넌트
 
-import React, { useCallback, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import {
   Camera,
@@ -10,27 +10,82 @@ import {
 } from 'react-native-vision-camera';
 import { useBarcodeScanner } from '@mgcrea/vision-camera-barcode-scanner';
 import { Worklets } from 'react-native-worklets-core';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
 
-// 커스텀 하이라이트 컴포넌트 (테두리 + 반투명 배경)
-const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.2)' }) => {
-  if (!highlights || highlights.length === 0) return null;
+// 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
+const AnimatedHighlight = ({ highlight, borderColor, fillColor }) => {
+  const x = useSharedValue(highlight.origin.x);
+  const y = useSharedValue(highlight.origin.y);
+  const width = useSharedValue(highlight.size.width);
+  const height = useSharedValue(highlight.size.height);
+  const opacity = useSharedValue(1);
+
+  useEffect(() => {
+    // 부드러운 스프링 애니메이션으로 위치 업데이트
+    x.value = withSpring(highlight.origin.x, { damping: 15, stiffness: 150 });
+    y.value = withSpring(highlight.origin.y, { damping: 15, stiffness: 150 });
+    width.value = withSpring(highlight.size.width, { damping: 15, stiffness: 150 });
+    height.value = withSpring(highlight.size.height, { damping: 15, stiffness: 150 });
+    opacity.value = withTiming(1, { duration: 100 });
+  }, [highlight.origin.x, highlight.origin.y, highlight.size.width, highlight.size.height]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: x.value,
+    top: y.value,
+    width: width.value,
+    height: height.value,
+    borderWidth: 3,
+    borderColor: borderColor,
+    backgroundColor: fillColor,
+    borderRadius: 8,
+    opacity: opacity.value,
+  }));
+
+  return <Animated.View style={animatedStyle} />;
+};
+
+// 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
+const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)' }) => {
+  const [trackedHighlights, setTrackedHighlights] = useState([]);
+  const lastUpdateRef = useRef(0);
+
+  useEffect(() => {
+    if (!highlights || highlights.length === 0) {
+      // 하이라이트가 없으면 페이드아웃
+      const timeout = setTimeout(() => {
+        setTrackedHighlights([]);
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+
+    // 너무 빠른 업데이트 방지 (60fps = 약 16ms)
+    const now = Date.now();
+    if (now - lastUpdateRef.current < 16) return;
+    lastUpdateRef.current = now;
+
+    setTrackedHighlights(highlights.map((h, i) => ({
+      ...h,
+      key: `highlight-${i}`,
+    })));
+  }, [highlights]);
+
+  if (trackedHighlights.length === 0) return null;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {highlights.map((highlight, index) => (
-        <View
-          key={highlight.key || index}
-          style={{
-            position: 'absolute',
-            left: highlight.origin.x,
-            top: highlight.origin.y,
-            width: highlight.size.width,
-            height: highlight.size.height,
-            borderWidth: 2,
-            borderColor: borderColor,
-            backgroundColor: fillColor,
-            borderRadius: 4,
-          }}
+      {trackedHighlights.map((highlight) => (
+        <AnimatedHighlight
+          key={highlight.key}
+          highlight={highlight}
+          borderColor={borderColor}
+          fillColor={fillColor}
         />
       ))}
     </View>
