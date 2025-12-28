@@ -505,11 +505,13 @@ export default function SettingsScreen() {
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => {
-              if (realtimeSyncExplained) {
-                router.push('/realtime-sync-settings');
-              } else {
-                router.push('/realtime-sync-explanation');
-              }
+              // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
+              // if (realtimeSyncExplained) {
+              //   router.push('/realtime-sync-settings');
+              // } else {
+              //   router.push('/realtime-sync-explanation');
+              // }
+              router.push('/realtime-sync-explanation');
             }}
             activeOpacity={0.7}
           >
