@@ -348,6 +348,14 @@ export default {
     privacyPolicyDesc: '개인정보 처리방침 보기',
     versionInfo: '버전정보',
     currentVersion: '현재 버전',
+    // 개발자 옵션
+    developerOptions: '개발자 옵션',
+    devMode: '개발 모드',
+    devModeDesc: '모든 잠금 기능 해제 (테스트용)',
+    resetLocks: '잠금 초기화',
+    resetLocksDesc: '모든 기능을 다시 잠금 상태로',
+    resetLocksConfirm: '모든 기능 잠금을 초기화하시겠습니까?',
+    resetLocksSuccess: '잠금이 초기화되었습니다',
   },
 
   // 실시간 서버전송 설명 페이지

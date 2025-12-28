@@ -348,6 +348,14 @@ export default {
     currentVersion: 'Current Version',
     scanSound: 'Scan Sound',
     scanSoundDesc: 'Play sound on scan',
+    // Developer options
+    developerOptions: 'Developer Options',
+    devMode: 'Developer Mode',
+    devModeDesc: 'Unlock all locked features (for testing)',
+    resetLocks: 'Reset Locks',
+    resetLocksDesc: 'Lock all features again',
+    resetLocksConfirm: 'Reset all feature locks?',
+    resetLocksSuccess: 'Locks have been reset',
   },
 
   // Realtime sync explanation screen

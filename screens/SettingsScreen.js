@@ -32,7 +32,7 @@ export default function SettingsScreen() {
   const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
   const { user, isLoggedIn } = useAuth();
-  const { isLocked, showUnlockAlert } = useFeatureLock();
+  const { isLocked, showUnlockAlert, devModeEnabled, toggleDevMode, resetAllLocks } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
@@ -730,6 +730,54 @@ export default function SettingsScreen() {
             </View>
             <Text style={[s.versionText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>0.1.0</Text>
           </View>
+        </View>
+
+        {/* 개발자 옵션 - TODO: 배포 시 제거 또는 숨김 처리 */}
+        <View style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}>
+          <Text style={[s.sectionTitle, { color: '#FF9500', fontFamily: fonts.bold }]}>{t('settings.developerOptions')}</Text>
+
+          {/* 개발 모드 토글 */}
+          <View style={[s.menuItem, { borderTopWidth: 0 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.devMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.devModeDesc')}</Text>
+            </View>
+            <Switch
+              value={devModeEnabled}
+              onValueChange={toggleDevMode}
+              trackColor={{ true: '#FF9500', false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          {/* 잠금 초기화 버튼 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => {
+              Alert.alert(
+                t('settings.resetLocks'),
+                t('settings.resetLocksConfirm'),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  {
+                    text: t('common.confirm'),
+                    style: 'destructive',
+                    onPress: async () => {
+                      await resetAllLocks();
+                      Alert.alert(t('common.success'), t('settings.resetLocksSuccess'));
+                    }
+                  }
+                ]
+              );
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.resetLocks')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.resetLocksDesc')}</Text>
+            </View>
+            <Ionicons name="refresh-outline" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
         </View>
         </ScrollView>
       </TouchableWithoutFeedback>
