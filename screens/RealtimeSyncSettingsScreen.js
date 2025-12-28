@@ -859,6 +859,132 @@ export default function RealtimeSyncSettingsScreen() {
               </>
             )}
           </View>
+
+          {/* 구독 플랜 안내 */}
+          <View style={[styles.section, { backgroundColor: colors.surface, marginTop: 16 }]}>
+            <View style={styles.planHeader}>
+              <Ionicons name="diamond-outline" size={24} color={colors.primary} />
+              <Text style={[styles.planTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+                {t('settings.subscriptionPlans')}
+              </Text>
+            </View>
+            <Text style={[styles.planDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('settings.subscriptionPlansDesc')}
+            </Text>
+
+            {/* 무료 플랜 안내 박스 */}
+            <View style={[styles.freePlanBox, { backgroundColor: colors.success + '15' }]}>
+              <Ionicons name="gift-outline" size={20} color={colors.success} />
+              <Text style={[styles.freePlanText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                {t('settings.freePlanNotice')}
+              </Text>
+            </View>
+
+            {/* 플랜 비교 테이블 */}
+            <View style={styles.planTableContainer}>
+              {/* 테이블 헤더 */}
+              <View style={[styles.planTableRow, styles.planTableHeader, { borderBottomColor: colors.borderLight }]}>
+                <View style={[styles.planTableCell, styles.planTableLabelCell]}>
+                  <Text style={[styles.planTableHeaderText, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
+                    {' '}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableHeaderText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                    {t('settings.planFree')}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableHeaderText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                    {t('settings.planPro')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* 세션 수 */}
+              <View style={[styles.planTableRow, { borderBottomColor: colors.borderLight }]}>
+                <View style={[styles.planTableCell, styles.planTableLabelCell]}>
+                  <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t('settings.planFeatureSessions')}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableValue, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('settings.planFreeSessionLimit')}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableValue, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                    {t('settings.planProSessionLimit')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* 일일 전송 */}
+              <View style={[styles.planTableRow, { borderBottomColor: colors.borderLight }]}>
+                <View style={[styles.planTableCell, styles.planTableLabelCell]}>
+                  <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t('settings.planFeatureTransmissions')}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableValue, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('settings.planFreeTransmitLimit')}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableValue, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                    {t('settings.planProTransmitLimit')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* 데이터 보관 */}
+              <View style={[styles.planTableRow, { borderBottomColor: colors.borderLight }]}>
+                <View style={[styles.planTableCell, styles.planTableLabelCell]}>
+                  <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t('settings.planFeatureRetention')}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableValue, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('settings.planFreeRetentionLimit')}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <Text style={[styles.planTableValue, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                    {t('settings.planProRetentionLimit')}
+                  </Text>
+                </View>
+              </View>
+
+              {/* 가격 */}
+              <View style={[styles.planTableRow, styles.planTableFooter]}>
+                <View style={[styles.planTableCell, styles.planTableLabelCell]}>
+                  <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {' '}
+                  </Text>
+                </View>
+                <View style={styles.planTableCell}>
+                  <View style={[styles.priceTag, { backgroundColor: colors.textTertiary + '20' }]}>
+                    <Text style={[styles.priceText, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+                      {t('settings.planPriceFree')}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.planTableCell}>
+                  <TouchableOpacity
+                    style={[styles.priceTag, { backgroundColor: colors.primary }]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.priceText, { color: '#fff', fontFamily: fonts.bold }]}>
+                      {t('settings.upgradeToPro')}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
         </ScrollView>
       </TouchableWithoutFeedback>
 
@@ -1150,5 +1276,83 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  // 구독 플랜 스타일
+  planHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  planTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  planDescription: {
+    fontSize: 14,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  freePlanBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 14,
+    borderRadius: 12,
+    gap: 10,
+    marginBottom: 20,
+  },
+  freePlanText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  planTableContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  planTableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+  },
+  planTableHeader: {
+    paddingVertical: 12,
+  },
+  planTableFooter: {
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  planTableCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+  },
+  planTableLabelCell: {
+    flex: 1.2,
+    alignItems: 'flex-start',
+    paddingLeft: 4,
+  },
+  planTableHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  planTableLabel: {
+    fontSize: 13,
+  },
+  planTableValue: {
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  priceTag: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  priceText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
