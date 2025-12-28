@@ -53,6 +53,8 @@ export default function SettingsScreen() {
   const [productAutoSearch, setProductAutoSearch] = useState(false);
   // 스캔 연동 URL 목록
   const [scanUrlList, setScanUrlList] = useState([]);
+  // 실시간 서버전송 설명 페이지 확인 여부
+  const [realtimeSyncExplained, setRealtimeSyncExplained] = useState(false);
 
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
@@ -178,6 +180,10 @@ export default function SettingsScreen() {
           // 제품 검색 자동 실행 설정 로드
           const pas = await AsyncStorage.getItem('productAutoSearch');
           setProductAutoSearch(pas === 'true');
+
+          // 실시간 서버전송 설명 페이지 확인 여부 로드
+          const explained = await AsyncStorage.getItem('realtimeSyncExplained');
+          setRealtimeSyncExplained(explained === 'true');
         } catch (error) {
           console.error('Load settings error:', error);
         }
@@ -498,7 +504,13 @@ export default function SettingsScreen() {
           {/* 실시간 서버전송 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/realtime-sync-settings')}
+            onPress={() => {
+              if (realtimeSyncExplained) {
+                router.push('/realtime-sync-settings');
+              } else {
+                router.push('/realtime-sync-explanation');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>

@@ -341,6 +341,22 @@ export default {
     currentVersion: '현재 버전',
   },
 
+  // 실시간 서버전송 설명 페이지
+  realtimeSyncExplanation: {
+    title: '실시간 서버 전송',
+    description: 'QR 코드나 바코드를 스캔하면 즉시 서버로 데이터가 전송됩니다.\nPC나 다른 기기에서 실시간으로 스캔 데이터를 확인할 수 있습니다.',
+    feature1Title: '실시간 데이터 전송',
+    feature1Desc: '스캔하는 즉시 서버로 데이터가 전송됩니다',
+    feature2Title: '빠른 동기화',
+    feature2Desc: 'PC나 다른 기기에서 실시간으로 데이터 확인',
+    feature3Title: 'PC 화면에서 확인',
+    feature3Desc: '웹 브라우저에서 생성된 URL로 접속하면 스캔 데이터가 실시간으로 표시됩니다',
+    feature4Title: '비밀번호 보호',
+    feature4Desc: '세션에 비밀번호를 설정하여 데이터를 안전하게 보호할 수 있습니다',
+    tryIt: '사용해보기',
+    tryItDesc: '토글을 켜면 실시간 서버 전송 설정으로 이동합니다',
+  },
+
   // 바코드 선택 화면
   barcodeSelection: {
     title: '바코드 선택',

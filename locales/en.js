@@ -341,6 +341,22 @@ export default {
     scanSoundDesc: 'Play sound on scan',
   },
 
+  // Realtime sync explanation screen
+  realtimeSyncExplanation: {
+    title: 'Realtime Server Transmission',
+    description: 'When you scan a QR code or barcode, data is instantly transmitted to the server.\nYou can view scan data in real-time from your PC or other devices.',
+    feature1Title: 'Real-time Data Transmission',
+    feature1Desc: 'Data is sent to the server immediately upon scanning',
+    feature2Title: 'Fast Synchronization',
+    feature2Desc: 'View data in real-time from PC or other devices',
+    feature3Title: 'View on PC Screen',
+    feature3Desc: 'Access the generated URL in a web browser to see scan data in real-time',
+    feature4Title: 'Password Protection',
+    feature4Desc: 'Set a password on sessions to keep your data secure',
+    tryIt: 'Try It',
+    tryItDesc: 'Toggle on to go to realtime sync settings',
+  },
+
   // Barcode selection screen
   barcodeSelection: {
     title: 'Select Barcodes',
