@@ -95,10 +95,54 @@ export default function RealtimeSyncSettingsScreen() {
     [sessionUrls]
   );
 
+  // 로컬 세션들에 대한 그룹 생성 보장 함수
+  const ensureGroupsForSessions = async (sessions) => {
+    if (!sessions || sessions.length === 0) return;
+
+    try {
+      const groupsJson = await AsyncStorage.getItem('scanGroups');
+      let groups = groupsJson ? JSON.parse(groupsJson) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
+      const groupIds = new Set(groups.map(g => g.id));
+      let hasNewGroups = false;
+
+      for (const session of sessions) {
+        if (!groupIds.has(session.id)) {
+          groups.push({
+            id: session.id,
+            name: session.name || `세션 ${session.id.substring(0, 4)}`,
+            createdAt: session.createdAt || Date.now(),
+            isCloudSync: true,
+            isDeleted: session.status === 'DELETED',
+          });
+          groupIds.add(session.id);
+          hasNewGroups = true;
+        }
+      }
+
+      if (hasNewGroups) {
+        await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+
+        // scanHistoryByGroup에도 그룹 초기화
+        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+        const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+        for (const session of sessions) {
+          if (!historyByGroup[session.id]) {
+            historyByGroup[session.id] = [];
+          }
+        }
+        await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      }
+    } catch (error) {
+      console.error('ensureGroupsForSessions error:', error);
+    }
+  };
+
   // 서버에서 세션 목록을 가져와 로컬과 동기화하는 함수
   const syncSessionsFromServer = useCallback(async (localSessions) => {
     const serverSessions = await fetchSessionsFromServer();
     if (!serverSessions || !Array.isArray(serverSessions)) {
+      // 서버 연결 실패해도 로컬 세션에 대한 그룹은 생성
+      await ensureGroupsForSessions(localSessions);
       return localSessions;
     }
 
@@ -181,28 +225,28 @@ export default function RealtimeSyncSettingsScreen() {
         return g;
       });
 
-      // 새 세션에 대한 그룹 추가
-      for (const newSession of newSessions) {
-        if (!groupIds.has(newSession.id)) {
+      // 모든 세션에 대한 그룹 추가 (로컬 + 서버 모두)
+      for (const session of allSessions) {
+        if (!groupIds.has(session.id)) {
           groups.push({
-            id: newSession.id,
-            // 서버에서 받은 이름 사용, 없으면 기본값
-            name: newSession.name || `세션 ${newSession.id.substring(0, 4)}`,
-            createdAt: newSession.createdAt,
+            id: session.id,
+            name: session.name || `세션 ${session.id.substring(0, 4)}`,
+            createdAt: session.createdAt,
             isCloudSync: true,
-            isDeleted: newSession.status === 'DELETED',
+            isDeleted: session.status === 'DELETED',
           });
+          groupIds.add(session.id);
         }
       }
 
       await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
 
-      // scanHistoryByGroup에도 새 세션 그룹 초기화
+      // scanHistoryByGroup에도 모든 세션 그룹 초기화
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
       const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
-      for (const newSession of newSessions) {
-        if (!historyByGroup[newSession.id]) {
-          historyByGroup[newSession.id] = [];
+      for (const session of allSessions) {
+        if (!historyByGroup[session.id]) {
+          historyByGroup[session.id] = [];
         }
       }
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
