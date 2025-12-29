@@ -207,6 +207,7 @@ function ScannerScreen() {
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
   const scanResultModeRef = useRef('popup'); // 스캔 결과 표시 모드 ref
   const toastTimeoutRef = useRef(null); // 토스트 자동 숨김 타이머
+  const cleanupTimeoutRef = useRef(null); // cleanup 타이머 ref (경쟁 상태 방지)
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -489,6 +490,12 @@ function ScannerScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // 이전 cleanup 타이머 취소 (경쟁 상태 방지)
+      if (cleanupTimeoutRef.current) {
+        clearTimeout(cleanupTimeoutRef.current);
+        cleanupTimeoutRef.current = null;
+      }
+
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
@@ -661,10 +668,12 @@ function ScannerScreen() {
 
         // 카메라 비활성화를 지연시켜 탭 전환 애니메이션이 먼저 실행되도록 함
         // setTimeout을 사용하여 다음 프레임에서 카메라 중지
+        // ref에 저장하여 빠른 탭 전환 시 취소할 수 있도록 함
         console.log('[ScannerScreen] Scheduling camera deactivation...');
-        setTimeout(() => {
+        cleanupTimeoutRef.current = setTimeout(() => {
           console.log('[ScannerScreen] Deactivating camera NOW');
           setIsActive(false);
+          cleanupTimeoutRef.current = null;
           console.log('[ScannerScreen] Camera deactivated');
         }, 50);
 
