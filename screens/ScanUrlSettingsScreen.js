@@ -84,6 +84,19 @@ export default function ScanUrlSettingsScreen() {
     SecureStore.setItemAsync('scanLinkEnabled', enabled.toString());
   }, [enabled]);
 
+  // 기능 활성화 시 모든 URL에 대해 그룹 생성
+  useEffect(() => {
+    if (enabled && urlList.length > 0) {
+      // 모든 URL에 대해 그룹 생성/확인
+      const createAllGroups = async () => {
+        for (const urlItem of urlList) {
+          await ensureScanUrlGroup(urlItem);
+        }
+      };
+      createAllGroups();
+    }
+  }, [enabled, urlList.length]);
+
   // URL 리스트 변경 시 저장
   useEffect(() => {
     if (urlList.length > 0) {
@@ -100,7 +113,7 @@ export default function ScanUrlSettingsScreen() {
   }, [urlList]);
 
   // URL 추가
-  const handleAddUrl = () => {
+  const handleAddUrl = async () => {
     const trimmedName = inputName.trim();
     const trimmedUrl = inputUrl.trim();
 
@@ -132,6 +145,9 @@ export default function ScanUrlSettingsScreen() {
     setInputName('');
     setInputUrl('');
     Keyboard.dismiss();
+
+    // URL 추가 시 그룹도 자동 생성
+    await ensureScanUrlGroup(newItem);
   };
 
   // URL 삭제
