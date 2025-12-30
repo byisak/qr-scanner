@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -60,6 +61,96 @@ export default function SettingsScreen() {
   const [realtimeSyncExplained, setRealtimeSyncExplained] = useState(false);
   // 스캔 결과 표시 방식 (popup: 결과 화면, toast: 하단 토스트)
   const [scanResultMode, setScanResultMode] = useState('popup');
+  // 캐시 크기
+  const [cacheSize, setCacheSize] = useState(0);
+  const [isCalculatingCache, setIsCalculatingCache] = useState(false);
+
+  // 캐시 크기 계산
+  const calculateCacheSize = useCallback(async () => {
+    setIsCalculatingCache(true);
+    try {
+      const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
+      const dirInfo = await FileSystem.getInfoAsync(photoDir);
+
+      if (!dirInfo.exists) {
+        setCacheSize(0);
+        return;
+      }
+
+      const files = await FileSystem.readDirectoryAsync(photoDir);
+      let totalSize = 0;
+
+      for (const file of files) {
+        const fileInfo = await FileSystem.getInfoAsync(`${photoDir}${file}`);
+        if (fileInfo.exists && fileInfo.size) {
+          totalSize += fileInfo.size;
+        }
+      }
+
+      setCacheSize(totalSize);
+    } catch (error) {
+      console.error('Calculate cache size error:', error);
+      setCacheSize(0);
+    } finally {
+      setIsCalculatingCache(false);
+    }
+  }, []);
+
+  // 캐시 크기 포맷팅
+  const formatCacheSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  // 캐시 삭제
+  const handleClearCache = () => {
+    if (cacheSize === 0) {
+      Alert.alert(
+        t('settings.cache') || '캐시',
+        t('settings.noCacheToDelete') || '삭제할 캐시가 없습니다.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      t('settings.clearCache') || '캐시 삭제',
+      t('settings.clearCacheConfirm') || `저장된 사진 ${formatCacheSize(cacheSize)}를 삭제하시겠습니까?\n\n삭제된 사진은 복구할 수 없습니다.`,
+      [
+        { text: t('common.cancel') || '취소', style: 'cancel' },
+        {
+          text: t('common.delete') || '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
+              const dirInfo = await FileSystem.getInfoAsync(photoDir);
+
+              if (dirInfo.exists) {
+                await FileSystem.deleteAsync(photoDir, { idempotent: true });
+                // 폴더 재생성
+                await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
+              }
+
+              setCacheSize(0);
+              Alert.alert(
+                t('settings.success') || '성공',
+                t('settings.cacheCleared') || '캐시가 삭제되었습니다.'
+              );
+            } catch (error) {
+              console.error('Clear cache error:', error);
+              Alert.alert(
+                t('settings.error') || '오류',
+                t('settings.clearCacheError') || '캐시 삭제 중 오류가 발생했습니다.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
@@ -195,11 +286,14 @@ export default function SettingsScreen() {
           if (resultMode) {
             setScanResultMode(resultMode);
           }
+
+          // 캐시 크기 계산
+          calculateCacheSize();
         } catch (error) {
           console.error('Load settings error:', error);
         }
       })();
-    }, [])
+    }, [calculateCacheSize])
   );
 
   useEffect(() => {
@@ -753,6 +847,24 @@ export default function SettingsScreen() {
             </View>
             <Text style={[s.versionText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>0.1.0</Text>
           </View>
+
+          {/* 캐시 삭제 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={handleClearCache}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.clearCache') || '캐시 삭제'}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.clearCacheDesc') || '저장된 스캔 사진을 삭제합니다'}</Text>
+            </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.cacheSize, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                {isCalculatingCache ? '...' : formatCacheSize(cacheSize)}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* 개발자 옵션 - TODO: 배포 시 제거 또는 숨김 처리 */}
@@ -859,6 +971,10 @@ const s = StyleSheet.create({
   statusText: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  cacheSize: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   label: {
     fontSize: 17,

@@ -352,6 +352,14 @@ export default {
     privacyPolicyDesc: '개인정보 처리방침 보기',
     versionInfo: '버전정보',
     currentVersion: '현재 버전',
+    // 캐시
+    cache: '캐시',
+    clearCache: '캐시 삭제',
+    clearCacheDesc: '저장된 스캔 사진을 삭제합니다',
+    clearCacheConfirm: '저장된 모든 스캔 사진을 삭제하시겠습니까?\n\n삭제된 사진은 복구할 수 없습니다.',
+    noCacheToDelete: '삭제할 캐시가 없습니다.',
+    cacheCleared: '캐시가 삭제되었습니다.',
+    clearCacheError: '캐시 삭제 중 오류가 발생했습니다.',
     // 개발자 옵션
     developerOptions: '개발자 옵션',
     devMode: '개발 모드',

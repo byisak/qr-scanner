@@ -350,6 +350,14 @@ export default {
     privacyPolicyDesc: 'View privacy policy',
     versionInfo: 'Version Info',
     currentVersion: 'Current Version',
+    // Cache
+    cache: 'Cache',
+    clearCache: 'Clear Cache',
+    clearCacheDesc: 'Delete saved scan photos',
+    clearCacheConfirm: 'Delete all saved scan photos?\n\nDeleted photos cannot be recovered.',
+    noCacheToDelete: 'No cache to delete.',
+    cacheCleared: 'Cache has been cleared.',
+    clearCacheError: 'Error occurred while clearing cache.',
     scanSound: 'Scan Sound',
     scanSoundDesc: 'Play sound on scan',
     // Developer options
