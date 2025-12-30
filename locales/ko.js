@@ -115,6 +115,7 @@ export default {
     clearBatch: '초기화',
     viewBatchList: '목록 보기',
     sending: '전송',
+    realtimeSync: '실시간 서버 전송',
     urlSending: 'URL 전송 중',
     guideText: 'QR 코드 또는 바코드를 스캔하세요',
     noSessionUrl: '전송 주소 없음',

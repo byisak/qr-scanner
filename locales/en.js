@@ -115,6 +115,7 @@ export default {
     clearBatch: 'Clear',
     viewBatchList: 'View List',
     sending: 'Sending',
+    realtimeSync: 'Realtime Server Sync',
     urlSending: 'Sending to URL',
     guideText: 'Scan a QR code or barcode',
     noSessionUrl: 'No Session URL',
