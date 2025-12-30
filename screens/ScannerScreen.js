@@ -308,18 +308,10 @@ function ScannerScreen() {
             if (selectedGroup && selectedGroup.isCloudSync) {
               setActiveSessionId(selectedGroupId);
 
-              // WebSocket 서버에 연결
-              const sessionUrls = await AsyncStorage.getItem('sessionUrls');
-              if (sessionUrls) {
-                const urls = JSON.parse(sessionUrls);
-                const session = urls.find(s => s.id === selectedGroupId);
-                if (session) {
-                  const serverUrl = session.url.substring(0, session.url.lastIndexOf('/'));
-                  websocketClient.connect(serverUrl);
-                  websocketClient.setSessionId(selectedGroupId);
-                  console.log('WebSocket connected for session group:', selectedGroupId);
-                }
-              }
+              // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
+              websocketClient.connect(config.serverUrl);
+              websocketClient.setSessionId(selectedGroupId);
+              console.log('WebSocket connected for session group:', selectedGroupId);
             }
           }
         }
@@ -486,18 +478,10 @@ function ScannerScreen() {
               if (selectedGroup && selectedGroup.isCloudSync) {
                 setActiveSessionId(selectedGroupId);
 
-                // WebSocket 서버에 연결
-                const sessionUrls = await AsyncStorage.getItem('sessionUrls');
-                if (sessionUrls) {
-                  const urls = JSON.parse(sessionUrls);
-                  const session = urls.find(s => s.id === selectedGroupId);
-                  if (session) {
-                    const serverUrl = session.url.substring(0, session.url.lastIndexOf('/'));
-                    websocketClient.connect(serverUrl);
-                    websocketClient.setSessionId(selectedGroupId);
-                    console.log('WebSocket connected for session group:', selectedGroupId);
-                  }
-                }
+                // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
+                websocketClient.connect(config.serverUrl);
+                websocketClient.setSessionId(selectedGroupId);
+                console.log('WebSocket connected for session group:', selectedGroupId);
               } else {
                 setActiveSessionId('');
               }
@@ -1404,18 +1388,10 @@ function ScannerScreen() {
       if (isCloudSync && realtimeSyncEnabled) {
         setActiveSessionId(groupId);
 
-        // WebSocket 연결
-        const sessionUrls = await AsyncStorage.getItem('sessionUrls');
-        if (sessionUrls) {
-          const urls = JSON.parse(sessionUrls);
-          const session = urls.find(s => s.id === groupId);
-          if (session) {
-            const serverUrl = session.url.substring(0, session.url.lastIndexOf('/'));
-            websocketClient.connect(serverUrl);
-            websocketClient.setSessionId(groupId);
-            console.log('WebSocket connected for session group:', groupId);
-          }
-        }
+        // WebSocket 연결 (항상 config.serverUrl 사용)
+        websocketClient.connect(config.serverUrl);
+        websocketClient.setSessionId(groupId);
+        console.log('WebSocket connected for session group:', groupId);
       } else {
         // 일반 그룹 선택 시 WebSocket 연결 해제
         setActiveSessionId('');
