@@ -10,12 +10,10 @@ import {
   Alert,
   Modal,
   ScrollView,
-  InteractionManager,
   FlatList,
   Image,
   ActivityIndicator,
   Linking,
-  Animated,
 } from 'react-native';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
@@ -26,25 +24,27 @@ import { createAudioPlayer } from 'expo-audio';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
+import {
+  DEBOUNCE_DELAYS,
+  RESET_DELAYS,
+  TIMEOUT_VALUES,
+  ONE_D_BARCODE_TYPES,
+  PRODUCT_BARCODE_TYPES,
+} from '../constants/Timing';
 import websocketClient from '../utils/websocket';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 
-const DEBOUNCE_DELAY = 500;
-const DEBOUNCE_DELAY_NO_BOUNDS = 1000; // bounds 없는 바코드 디바운스 (1초로 단축)
-const DEBOUNCE_DELAY_1D_BARCODE = 800; // 1D 바코드 (code39 등) 전용 디바운스
-
-// 1D 바코드 타입 목록 (Code 39 포함)
-const ONE_D_BARCODE_TYPES = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar'];
-const RESET_DELAY_LINK = 1200;
-const RESET_DELAY_NORMAL = 800;
+// 분리된 컴포넌트
+import ScanAnimation from '../components/ScanAnimation';
+import BatchScanControls from '../components/BatchScanControls';
+import ScanToast from '../components/ScanToast';
 
 function ScannerScreen() {
   const router = useRouter();
@@ -109,87 +109,6 @@ function ScannerScreen() {
   // 스캔 결과 표시 모드 (popup: 결과 화면, toast: 하단 토스트)
   const [scanResultMode, setScanResultMode] = useState('popup');
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
-  const toastOpacity = useRef(new Animated.Value(0)).current;
-  const toastTranslateY = useRef(new Animated.Value(50)).current;
-
-  // 스캔 화면 로딩 애니메이션 상태
-  const [scannerReady, setScannerReady] = useState(false);
-  const qrIconOpacity = useRef(new Animated.Value(1)).current;
-  const guideTextOpacity = useRef(new Animated.Value(1)).current;
-  const cornerExpand = useRef(new Animated.Value(0)).current; // 0: 안쪽, 1: 바깥쪽
-  const cornerOpacity = useRef(new Animated.Value(1)).current;
-  const crosshairOpacity = useRef(new Animated.Value(0)).current;
-
-  // 코너 이동 거리 (안쪽에서 바깥쪽으로)
-  const CORNER_MOVE_DISTANCE = 50;
-
-  // 스캔 화면 로딩 애니메이션 시퀀스
-  useEffect(() => {
-    if (isActive && !scannerReady) {
-      // 애니메이션 값 초기화
-      qrIconOpacity.setValue(1);
-      guideTextOpacity.setValue(1);
-      cornerExpand.setValue(0); // 안쪽에서 시작
-      cornerOpacity.setValue(1);
-      crosshairOpacity.setValue(0);
-
-      // 초기 상태 0.5초 유지 후 애니메이션 시작
-      const startTimer = setTimeout(() => {
-        // QR 아이콘/안내 텍스트 페이드 아웃 + 코너 빠르게 바깥으로 확장
-        Animated.parallel([
-          Animated.timing(qrIconOpacity, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(guideTextOpacity, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          // 빠르게 바깥으로 (오버슛)
-          Animated.timing(cornerExpand, {
-            toValue: 1.15,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          // 약간 안쪽으로 모임
-          Animated.timing(cornerExpand, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }).start(() => {
-            // 페이드 인/아웃으로 사라짐
-            Animated.sequence([
-              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
-              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-              Animated.timing(cornerOpacity, { toValue: 0.3, duration: 300, useNativeDriver: true }),
-              Animated.timing(cornerOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-              // 마지막 페이드 아웃 + 십자가 페이드 인
-              Animated.parallel([
-                Animated.timing(cornerOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-                Animated.timing(crosshairOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
-              ]),
-            ]).start(() => {
-              setScannerReady(true);
-            });
-          });
-        });
-      }, 500);
-
-      return () => {
-        clearTimeout(startTimer);
-      };
-    }
-  }, [isActive, scannerReady]);
-
-  // 화면 비활성화 시 애니메이션 리셋
-  useEffect(() => {
-    if (!isActive) {
-      setScannerReady(false);
-    }
-  }, [isActive]);
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -206,7 +125,6 @@ function ScannerScreen() {
   const isNavigatingRef = useRef(false); // 네비게이션 진행 중 플래그 (크래시 방지)
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
   const scanResultModeRef = useRef('popup'); // 스캔 결과 표시 모드 ref
-  const toastTimeoutRef = useRef(null); // 토스트 자동 숨김 타이머
   const cleanupTimeoutRef = useRef(null); // cleanup 타이머 ref (경쟁 상태 방지)
 
   // photoSaveEnabled 상태를 ref에 동기화
@@ -240,61 +158,14 @@ function ScannerScreen() {
     scanResultModeRef.current = scanResultMode;
   }, [scanResultMode]);
 
-  // 토스트 표시 함수
+  // 토스트 표시 함수 (ScanToast 컴포넌트가 애니메이션 처리)
   const showToast = useCallback((toastInfo) => {
-    // 기존 토스트 타이머 클리어
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-
-    // 토스트 데이터 설정
     setToastData({ ...toastInfo, timestamp: Date.now() });
-
-    // 애니메이션 시작
-    toastOpacity.setValue(0);
-    toastTranslateY.setValue(50);
-
-    Animated.parallel([
-      Animated.timing(toastOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(toastTranslateY, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // 5초 후 자동 숨김
-    toastTimeoutRef.current = setTimeout(() => {
-      hideToast();
-    }, 5000);
-  }, [toastOpacity, toastTranslateY]);
-
-  // 토스트 숨기기 함수
-  const hideToast = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(toastOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(toastTranslateY, {
-        toValue: 50,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setToastData(null);
-    });
-  }, [toastOpacity, toastTranslateY]);
+  }, []);
 
   // 토스트 클릭 시 결과 화면으로 이동
   const handleToastPress = useCallback(() => {
     if (toastData) {
-      hideToast();
       router.push({
         pathname: '/result',
         params: {
@@ -307,7 +178,12 @@ function ScannerScreen() {
         }
       });
     }
-  }, [toastData, hideToast, router]);
+  }, [toastData, router]);
+
+  // 토스트 닫기
+  const handleToastClose = useCallback(() => {
+    setToastData(null);
+  }, []);
 
   // 스캔 소리 플레이어 초기화
   useEffect(() => {
@@ -1076,7 +952,7 @@ function ScannerScreen() {
       isProcessingRef.current = false;
       setCanScan(true);
     }, 500);
-    startResetTimer(RESET_DELAY_NORMAL);
+    startResetTimer(RESET_DELAYS.NORMAL);
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
   const handleBarCodeScanned = useCallback(
@@ -1114,10 +990,10 @@ function ScannerScreen() {
       let debounceDelay;
       if (is1DBarcode) {
         // 1D 바코드 (Code 39 등): bounds 유무와 관계없이 최적화된 딜레이 적용
-        debounceDelay = bounds ? DEBOUNCE_DELAY_1D_BARCODE : DEBOUNCE_DELAY_NO_BOUNDS;
+        debounceDelay = bounds ? DEBOUNCE_DELAYS.ONE_D_BARCODE : DEBOUNCE_DELAYS.NO_BOUNDS;
       } else {
         // 2D 바코드 (QR 등): 기존 로직 유지
-        debounceDelay = bounds ? DEBOUNCE_DELAY : DEBOUNCE_DELAY_NO_BOUNDS;
+        debounceDelay = bounds ? DEBOUNCE_DELAYS.DEFAULT : DEBOUNCE_DELAYS.NO_BOUNDS;
       }
       if (lastScannedData.current === data && now - lastScannedTime.current < debounceDelay) {
         return;
@@ -1180,7 +1056,7 @@ function ScannerScreen() {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 500);
-            startResetTimer(RESET_DELAY_NORMAL);
+            startResetTimer(RESET_DELAYS.NORMAL);
             return;
           } else if (action === 'alert') {
             // 알림 후 추가: 사용자에게 물어봄
@@ -1197,7 +1073,7 @@ function ScannerScreen() {
                       isProcessingRef.current = false;
                       setCanScan(true);
                     }, 300);
-                    startResetTimer(RESET_DELAY_NORMAL);
+                    startResetTimer(RESET_DELAYS.NORMAL);
                   },
                 },
                 {
@@ -1344,7 +1220,7 @@ function ScannerScreen() {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 500);
-            startResetTimer(RESET_DELAY_NORMAL);
+            startResetTimer(RESET_DELAYS.NORMAL);
             return;
           }
 
@@ -1372,14 +1248,13 @@ function ScannerScreen() {
               // 히스토리 저장은 해당 URL 그룹에 저장
               saveHistory(data, url, photoUri, normalizedType, detectedEcLevel, scanUrlGroupId).catch(console.error);
               router.push({ pathname: '/webview', params: { url } });
-              startResetTimer(RESET_DELAY_LINK);
+              startResetTimer(RESET_DELAYS.LINK);
               return;
             }
           }
 
           // 제품 검색 자동 실행 (상품 바코드인 경우)
-          const productBarcodeTypes = ['ean13', 'ean8', 'upca', 'upce', 'itf14'];
-          const isProductBarcode = productBarcodeTypes.includes(normalizedType);
+          const isProductBarcode = PRODUCT_BARCODE_TYPES.includes(normalizedType);
 
           if (isProductBarcode) {
             const productAutoSearch = await AsyncStorage.getItem('productAutoSearch');
@@ -1417,7 +1292,7 @@ function ScannerScreen() {
                       }
                     });
                   }
-                  startResetTimer(RESET_DELAY_LINK);
+                  startResetTimer(RESET_DELAYS.LINK);
                   return;
                 }
               }
@@ -1439,11 +1314,11 @@ function ScannerScreen() {
               errorCorrectionLevel: detectedEcLevel || '',
             }
           });
-          startResetTimer(RESET_DELAY_NORMAL);
+          startResetTimer(RESET_DELAYS.NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
           await saveHistory(data, null, null, type, null);
-          startResetTimer(RESET_DELAY_NORMAL);
+          startResetTimer(RESET_DELAYS.NORMAL);
         } finally {
           navigationTimerRef.current = null;
         }
@@ -1753,134 +1628,19 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 스캔 로딩 애니메이션 오버레이 */}
-        <View style={styles.scanAnimationContainer} pointerEvents="none">
-          {/* Step 1: QR 아이콘 */}
-          <Animated.View style={[styles.qrIconContainer, { opacity: qrIconOpacity }]}>
-            <Ionicons name="qr-code" size={80} color="rgba(255, 255, 255, 0.9)" />
-          </Animated.View>
-
-          {/* Step 1-2: 코너 사각형 (위치 이동 애니메이션) */}
-          <View style={styles.cornerContainer}>
-            {/* 좌상단 코너 ⌜ - 안쪽에서 바깥쪽으로 이동 */}
-            <Animated.View
-              style={[
-                styles.corner,
-                styles.cornerTopLeft,
-                {
-                  opacity: cornerOpacity,
-                  transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
-                  ],
-                },
-              ]}
-            >
-              <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, left: 0 }]} />
-              <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, left: 0 }]} />
-            </Animated.View>
-            {/* 우상단 코너 ⌝ */}
-            <Animated.View
-              style={[
-                styles.corner,
-                styles.cornerTopRight,
-                {
-                  opacity: cornerOpacity,
-                  transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
-                  ],
-                },
-              ]}
-            >
-              <View style={[styles.cornerLine, { width: 40, height: 4, top: 0, right: 0 }]} />
-              <View style={[styles.cornerLine, { width: 4, height: 40, top: 0, right: 0 }]} />
-            </Animated.View>
-            {/* 좌하단 코너 ⌞ */}
-            <Animated.View
-              style={[
-                styles.corner,
-                styles.cornerBottomLeft,
-                {
-                  opacity: cornerOpacity,
-                  transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [CORNER_MOVE_DISTANCE, 0, -CORNER_MOVE_DISTANCE * 0.15] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
-                  ],
-                },
-              ]}
-            >
-              <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, left: 0 }]} />
-              <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, left: 0 }]} />
-            </Animated.View>
-            {/* 우하단 코너 ⌟ */}
-            <Animated.View
-              style={[
-                styles.corner,
-                styles.cornerBottomRight,
-                {
-                  opacity: cornerOpacity,
-                  transform: [
-                    { translateX: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
-                    { translateY: cornerExpand.interpolate({ inputRange: [0, 1, 1.15], outputRange: [-CORNER_MOVE_DISTANCE, 0, CORNER_MOVE_DISTANCE * 0.15] }) },
-                  ],
-                },
-              ]}
-            >
-              <View style={[styles.cornerLine, { width: 40, height: 4, bottom: 0, right: 0 }]} />
-              <View style={[styles.cornerLine, { width: 4, height: 40, bottom: 0, right: 0 }]} />
-            </Animated.View>
-          </View>
-
-          {/* Step 1: 안내 텍스트 */}
-          <Animated.View style={[styles.guideTextContainer, { opacity: guideTextOpacity }]}>
-            <Text style={styles.guideText}>{t('scanner.guideText')}</Text>
-          </Animated.View>
-
-          {/* Step 3: 중앙 십자가 (최종 상태) */}
-          <Animated.View style={[styles.centerTarget, { opacity: crosshairOpacity }]}>
-            {/* 수평선 */}
-            <View style={styles.targetLineHorizontal} />
-            {/* 수직선 */}
-            <View style={styles.targetLineVertical} />
-            {/* 중심 원 */}
-            <View style={styles.targetCenter} />
-          </Animated.View>
-        </View>
+        {/* 스캔 로딩 애니메이션 */}
+        <ScanAnimation isActive={isActive} />
       </View>
 
       {/* 배치 스캔 컨트롤 패널 */}
       {batchScanEnabled && batchScannedItems.length > 0 && (
-        <View style={[styles.batchControlPanel, { bottom: bottomOffset }]}>
-          {showScanCounter && (
-            <View style={styles.batchCountContainer}>
-              <Ionicons name="checkmark-circle" size={20} color="#34C759" />
-              <Text style={styles.batchCountText}>
-                {t('scanner.scannedCount').replace('{count}', batchScannedItems.length.toString())}
-              </Text>
-            </View>
-          )}
-          <View style={styles.batchButtons}>
-            <TouchableOpacity
-              style={[styles.batchButton, styles.batchButtonClear]}
-              onPress={handleClearBatch}
-              activeOpacity={0.8}
-              accessibilityLabel={t('scanner.clearBatch')}
-            >
-              <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-              <Text style={styles.batchButtonTextClear}>{t('scanner.clearBatch')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.batchButton, styles.batchButtonFinish]}
-              onPress={handleFinishBatch}
-              activeOpacity={0.8}
-              accessibilityLabel={t('scanner.finishBatch')}
-            >
-              <Ionicons name="checkmark-done" size={18} color="#fff" />
-              <Text style={styles.batchButtonTextFinish}>{t('scanner.finishBatch')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <BatchScanControls
+          scannedCount={batchScannedItems.length}
+          showScanCounter={showScanCounter}
+          onClear={handleClearBatch}
+          onFinish={handleFinishBatch}
+          style={{ bottom: bottomOffset }}
+        />
       )}
 
       <TouchableOpacity
@@ -2053,54 +1813,13 @@ function ScannerScreen() {
       </Modal>
 
       {/* 토스트 결과 표시 (연속 스캔 모드) */}
-      {toastData && (
-        <Animated.View
-          style={[
-            styles.toastContainer,
-            {
-              bottom: bottomOffset + 20,
-              opacity: toastOpacity,
-              transform: [{ translateY: toastTranslateY }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[styles.toastContent, { backgroundColor: colors.surface }]}
-            onPress={handleToastPress}
-            activeOpacity={0.9}
-          >
-            <View style={styles.toastLeft}>
-              <View style={[styles.toastIconContainer, { backgroundColor: colors.success + '20' }]}>
-                <Ionicons name="checkmark-circle" size={24} color={colors.success} />
-              </View>
-              <View style={styles.toastTextContainer}>
-                <Text style={[styles.toastTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  {t('scanner.scanned')}
-                </Text>
-                <Text
-                  style={[styles.toastData, { color: colors.textSecondary, fontFamily: fonts.regular }]}
-                  numberOfLines={1}
-                  ellipsizeMode="middle"
-                >
-                  {toastData.data}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.toastRight}>
-              <Text style={[styles.toastViewText, { color: colors.primary, fontFamily: fonts.medium }]}>
-                {t('scanner.viewDetails')}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toastCloseButton, { backgroundColor: colors.textTertiary + '30' }]}
-            onPress={hideToast}
-          >
-            <Ionicons name="close" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </Animated.View>
-      )}
+      <ScanToast
+        visible={!!toastData}
+        data={toastData}
+        onPress={handleToastPress}
+        onClose={handleToastClose}
+        bottomOffset={bottomOffset}
+      />
     </View>
   );
 }
@@ -2197,66 +1916,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginLeft: 8,
   },
-  batchControlPanel: {
-    position: 'absolute',
-    // bottom은 인라인 스타일로 동적 설정
-    alignSelf: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    minWidth: 300,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  batchCountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  batchCountText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  batchButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  batchButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 12,
-    gap: 6,
-  },
-  batchButtonClear: {
-    backgroundColor: 'rgba(255, 59, 48, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 59, 48, 0.3)',
-  },
-  batchButtonFinish: {
-    backgroundColor: 'rgba(52, 199, 89, 0.9)',
-  },
-  batchButtonTextClear: {
-    color: '#FF3B30',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  batchButtonTextFinish: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   title: {
     color: '#fff',
     fontSize: 19,
@@ -2314,109 +1973,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     color: '#fff',
     padding: 20,
-  },
-  // 스캔 애니메이션 컨테이너
-  scanAnimationContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  qrIconContainer: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cornerContainer: {
-    position: 'absolute',
-    width: 250,
-    height: 250,
-  },
-  corner: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-  },
-  cornerTopLeft: {
-    top: 0,
-    left: 0,
-  },
-  cornerTopRight: {
-    top: 0,
-    right: 0,
-  },
-  cornerBottomLeft: {
-    bottom: 0,
-    left: 0,
-  },
-  cornerBottomRight: {
-    bottom: 0,
-    right: 0,
-  },
-  cornerLine: {
-    position: 'absolute',
-    backgroundColor: '#FFD60A',
-    borderRadius: 2,
-  },
-  guideTextContainer: {
-    position: 'absolute',
-    bottom: '30%',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 20,
-  },
-  guideText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  centerTarget: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: 100,
-    height: 100,
-    marginLeft: -50,
-    marginTop: -50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  targetLineHorizontal: {
-    position: 'absolute',
-    width: 30,
-    height: 1.5,
-    backgroundColor: '#FFD60A',
-    borderRadius: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-  },
-  targetLineVertical: {
-    position: 'absolute',
-    width: 1.5,
-    height: 30,
-    backgroundColor: '#FFD60A',
-    borderRadius: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
-  },
-  targetCenter: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#FFD60A',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 4,
   },
   modalOverlay: {
     flex: 1,
@@ -2545,72 +2101,6 @@ const styles = StyleSheet.create({
   galleryFooterLoading: {
     paddingVertical: 20,
     alignItems: 'center',
-  },
-  // 토스트 스타일
-  toastContainer: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  toastContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  toastLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  toastIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  toastTextContainer: {
-    flex: 1,
-  },
-  toastTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  toastData: {
-    fontSize: 13,
-    maxWidth: '90%',
-  },
-  toastRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  toastViewText: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginRight: 2,
-  },
-  toastCloseButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
   },
 });
 
