@@ -106,6 +106,8 @@ export default {
     clearBatch: 'クリア',
     viewBatchList: 'リストを表示',
     sending: '送信中',
+    realtimeSync: 'リアルタイムサーバー送信',
+    realtimeSyncGuide: 'リアルタイムサーバー送信が有効です。\n上部でサーバー送信グループを選択してください。',
     urlSending: 'URLに送信中',
     guideText: 'QRコードまたはバーコードをスキャン',
     noSessionUrl: '送信URLがありません',

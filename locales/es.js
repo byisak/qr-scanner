@@ -106,6 +106,8 @@ export default {
     clearBatch: 'Limpiar',
     viewBatchList: 'Ver lista',
     sending: 'Enviando',
+    realtimeSync: 'Sincronización en tiempo real',
+    realtimeSyncGuide: 'La sincronización en tiempo real está activada.\nPor favor, selecciona un grupo de sincronización arriba.',
     urlSending: 'Enviando a URL',
     guideText: 'Escanea un código QR o de barras',
     noSessionUrl: 'Sin URL de sesión',

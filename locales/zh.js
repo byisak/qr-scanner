@@ -106,6 +106,8 @@ export default {
     clearBatch: '清空',
     viewBatchList: '查看列表',
     sending: '发送中',
+    realtimeSync: '实时服务器传输',
+    realtimeSyncGuide: '实时服务器传输已开启。\n请在上方选择服务器传输分组。',
     urlSending: '正在发送到URL',
     guideText: '请扫描二维码或条形码',
     noSessionUrl: '没有传输地址',
