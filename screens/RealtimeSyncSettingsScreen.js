@@ -13,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,6 +76,8 @@ export default function RealtimeSyncSettingsScreen() {
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [sessionUrls, setSessionUrls] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // 탭 상태: 'active' | 'deleted'
   const [activeTab, setActiveTab] = useState('active');
@@ -261,6 +264,7 @@ export default function RealtimeSyncSettingsScreen() {
   // 초기 로드
   useEffect(() => {
     (async () => {
+      setIsLoading(true);
       try {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
         const isEnabled = realtimeSync === 'true';
@@ -281,17 +285,21 @@ export default function RealtimeSyncSettingsScreen() {
 
         // 실시간 동기화가 활성화된 경우 서버에서 세션 목록 동기화
         if (isEnabled) {
+          setIsSyncing(true);
           const synced = await syncSessionsFromServer(localSessions);
           setSessionUrls(synced);
-          console.log('앱 시작: 서버에서 세션 목록 동기화 완료');
+          setIsSyncing(false);
         } else {
           setSessionUrls(localSessions);
         }
       } catch (error) {
         console.error('Load realtime sync settings error:', error);
+        Alert.alert(t('settings.error'), t('settings.loadError') || '설정을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
       }
     })();
-  }, [syncSessionsFromServer]);
+  }, [syncSessionsFromServer, t]);
 
   // 화면 포커스 시 데이터 다시 로드 (서버 동기화 포함)
   useFocusEffect(
@@ -788,8 +796,23 @@ export default function RealtimeSyncSettingsScreen() {
         <View style={styles.headerRight} />
       </View>
 
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          {/* 동기화 중 인디케이터 */}
+          {isSyncing && (
+            <View style={[styles.syncingBanner, { backgroundColor: colors.primary + '20' }]}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.syncingText, { color: colors.primary }]}>
+                {t('settings.syncing') || '서버와 동기화 중...'}
+              </Text>
+            </View>
+          )}
+
           {/* 토글 설정 */}
           <View style={[styles.section, { backgroundColor: colors.surface }]}>
             <View style={styles.row}>
@@ -1031,6 +1054,7 @@ export default function RealtimeSyncSettingsScreen() {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+      )}
 
       {/* 비밀번호 입력 모달 */}
       <Modal
@@ -1127,6 +1151,24 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  syncingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginBottom: 16,
+    borderRadius: 10,
+    gap: 8,
+  },
+  syncingText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   container: {
     flex: 1,
