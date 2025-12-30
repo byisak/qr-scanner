@@ -670,6 +670,11 @@ export default function RealtimeSyncSettingsScreen() {
     Alert.alert(t('settings.success'), t('settings.urlCopied'));
   };
 
+  // 세션 URL 동적 생성 (항상 최신 서버 주소 사용)
+  const getSessionUrl = useCallback((sessionId) => {
+    return `${config.serverUrl}/${sessionId}`;
+  }, []);
+
   // 활성 세션 아이템 렌더링
   const renderActiveSessionItem = (session) => (
     <View
@@ -690,7 +695,7 @@ export default function RealtimeSyncSettingsScreen() {
             color={colors.primary}
           />
           <Text style={[styles.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
-            {session.url}
+            {getSessionUrl(session.id)}
           </Text>
         </View>
         <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
@@ -708,7 +713,7 @@ export default function RealtimeSyncSettingsScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.iconButton, { backgroundColor: colors.primary }]}
-          onPress={() => handleCopyUrl(session.url)}
+          onPress={() => handleCopyUrl(getSessionUrl(session.id))}
           activeOpacity={0.7}
         >
           <Ionicons name="copy-outline" size={18} color="#fff" />
@@ -748,7 +753,7 @@ export default function RealtimeSyncSettingsScreen() {
               color={colors.textTertiary}
             />
             <Text style={[styles.sessionUrl, { color: colors.textTertiary, flex: 1 }]} numberOfLines={1}>
-              {session.url}
+              {getSessionUrl(session.id)}
             </Text>
           </View>
           <View style={styles.deletedInfoRow}>
