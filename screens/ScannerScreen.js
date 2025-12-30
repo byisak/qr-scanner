@@ -1677,6 +1677,17 @@ function ScannerScreen() {
         )}
       </TouchableOpacity>
 
+      {/* 실시간 서버 전송 안내 메시지 */}
+      {realtimeSyncEnabled && !activeSessionId && (
+        <View style={[styles.realtimeSyncGuide, { bottom: bottomOffset + 20 }]}>
+          <View style={styles.realtimeSyncGuideContent}>
+            <Ionicons name="information-circle" size={20} color="#fff" />
+            <Text style={styles.realtimeSyncGuideText}>
+              {t('scanner.realtimeSyncGuide') || '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.'}
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* 그룹 선택 모달 */}
       <Modal
@@ -1882,6 +1893,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  realtimeSyncGuide: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    // bottom은 인라인 스타일로 동적 설정
+  },
+  realtimeSyncGuideContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.95)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  realtimeSyncGuideText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 10,
+    flex: 1,
+    lineHeight: 20,
   },
   scanUrlBadge: {
     position: 'absolute',

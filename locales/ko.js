@@ -116,6 +116,7 @@ export default {
     viewBatchList: '목록 보기',
     sending: '전송',
     realtimeSync: '실시간 서버 전송',
+    realtimeSyncGuide: '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.',
     urlSending: 'URL 전송 중',
     guideText: 'QR 코드 또는 바코드를 스캔하세요',
     noSessionUrl: '전송 주소 없음',

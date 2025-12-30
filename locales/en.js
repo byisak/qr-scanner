@@ -116,6 +116,7 @@ export default {
     viewBatchList: 'View List',
     sending: 'Sending',
     realtimeSync: 'Realtime Server Sync',
+    realtimeSyncGuide: 'Realtime server sync is enabled.\nPlease select a server sync group from the top.',
     urlSending: 'Sending to URL',
     guideText: 'Scan a QR code or barcode',
     noSessionUrl: 'No Session URL',
