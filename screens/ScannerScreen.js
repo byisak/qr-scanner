@@ -37,6 +37,7 @@ import {
   PRODUCT_BARCODE_TYPES,
 } from '../constants/Timing';
 import websocketClient from '../utils/websocket';
+import config from '../config/config';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
@@ -1580,9 +1581,21 @@ function ScannerScreen() {
           </View>
         )}
 
+        {/* 실시간 서버 전송 표시 */}
+        {realtimeSyncEnabled && activeSessionId && (
+          <View style={[styles.realtimeSyncBadge, { top: batchScanEnabled ? batchBadgeTop + 40 : batchBadgeTop }]}>
+            <Ionicons name="cloud-upload" size={16} color="#fff" />
+            <Text style={styles.realtimeSyncBadgeText}>{t('scanner.realtimeSync') || '실시간 서버 전송'}</Text>
+          </View>
+        )}
+
         {/* 스캔 연동 URL 표시 */}
         {scanUrlEnabled && (
-          <View style={[styles.scanUrlBadge, { top: batchScanEnabled ? batchBadgeTop + 40 : batchBadgeTop }]}>
+          <View style={[styles.scanUrlBadge, {
+            top: batchScanEnabled
+              ? (realtimeSyncEnabled && activeSessionId ? batchBadgeTop + 80 : batchBadgeTop + 40)
+              : (realtimeSyncEnabled && activeSessionId ? batchBadgeTop + 40 : batchBadgeTop)
+          }]}>
             <Ionicons name="link" size={16} color="#fff" />
             <Text style={styles.scanUrlBadgeText}>{t('settings.useScanUrl')}</Text>
           </View>
@@ -1844,6 +1857,27 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   batchModeBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  realtimeSyncBadge: {
+    position: 'absolute',
+    // top은 인라인 스타일로 동적 설정
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  realtimeSyncBadgeText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
