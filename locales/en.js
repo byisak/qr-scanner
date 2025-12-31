@@ -109,7 +109,7 @@ export default {
     permissionDenied: 'Please allow camera permission',
     torchOn: 'Turn off flashlight',
     torchOff: 'Turn on flashlight',
-    batchModeActive: 'Batch Mode Active',
+    batchModeActive: 'Continuous Scan Mode',
     scannedCount: 'Scanned: {count} items',
     finishBatch: 'Finish',
     clearBatch: 'Clear',

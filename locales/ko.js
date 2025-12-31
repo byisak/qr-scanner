@@ -109,7 +109,7 @@ export default {
     permissionDenied: '카메라 권한을 허용해 주세요',
     torchOn: '손전등 끄기',
     torchOff: '손전등 켜기',
-    batchModeActive: '배치 모드 활성',
+    batchModeActive: '연속 스캔 모드',
     scannedCount: '스캔된 항목: {count}개',
     finishBatch: '스캔 완료',
     clearBatch: '초기화',

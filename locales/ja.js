@@ -100,7 +100,7 @@ export default {
     permissionDenied: 'カメラ権限を許可してください',
     torchOn: 'フラッシュオフ',
     torchOff: 'フラッシュオン',
-    batchModeActive: 'バッチモード有効',
+    batchModeActive: '連続スキャンモード',
     scannedCount: 'スキャン済み: {count}個',
     finishBatch: 'スキャン完了',
     clearBatch: 'クリア',

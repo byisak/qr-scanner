@@ -100,7 +100,7 @@ export default {
     permissionDenied: 'Por favor, permite el acceso a la cámara',
     torchOn: 'Apagar linterna',
     torchOff: 'Encender linterna',
-    batchModeActive: 'Modo por lotes activo',
+    batchModeActive: 'Modo escaneo continuo',
     scannedCount: 'Escaneados: {count} elementos',
     finishBatch: 'Finalizar',
     clearBatch: 'Limpiar',

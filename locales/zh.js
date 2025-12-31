@@ -100,7 +100,7 @@ export default {
     permissionDenied: '请允许使用相机权限',
     torchOn: '关闭闪光灯',
     torchOff: '打开闪光灯',
-    batchModeActive: '批量模式已启用',
+    batchModeActive: '连续扫描模式',
     scannedCount: '已扫描: {count}项',
     finishBatch: '完成扫描',
     clearBatch: '清空',
