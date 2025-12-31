@@ -360,7 +360,7 @@ export default function GroupEditScreen() {
         />
 
         {/* 그룹 추가 버튼 */}
-        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 40 }]}>
+        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 10 }]}>
         <TouchableOpacity
           style={[s.addButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowAddModal(true)}
