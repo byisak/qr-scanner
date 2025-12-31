@@ -2,20 +2,25 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 
+// 임시: 광고 비활성화 (크래시 디버깅용)
+const AD_ENABLED = false;
+
 // 네이티브 모듈 동적 로드 (Expo Go 호환성)
 let BannerAd = null;
 let BannerAdSize = null;
 let TestIds = null;
 let isAdModuleAvailable = false;
 
-try {
-  const AdModule = require('react-native-google-mobile-ads');
-  BannerAd = AdModule.BannerAd;
-  BannerAdSize = AdModule.BannerAdSize;
-  TestIds = AdModule.TestIds;
-  isAdModuleAvailable = true;
-} catch (error) {
-  console.log('Google Mobile Ads module not available (Expo Go)');
+if (AD_ENABLED) {
+  try {
+    const AdModule = require('react-native-google-mobile-ads');
+    BannerAd = AdModule.BannerAd;
+    BannerAdSize = AdModule.BannerAdSize;
+    TestIds = AdModule.TestIds;
+    isAdModuleAvailable = true;
+  } catch (error) {
+    console.log('Google Mobile Ads module not available (Expo Go)');
+  }
 }
 
 // 테스트 광고 ID (프로덕션 배포 전 실제 ID로 교체 필요)
