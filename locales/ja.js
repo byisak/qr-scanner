@@ -166,6 +166,7 @@ export default {
     duplicateCount: '回目',
     scanHistory: 'スキャン履歴:',
     copy: 'コピー',
+    save: '保存',
     share: '共有',
     open: '開く',
     scanAgain: '再スキャン',

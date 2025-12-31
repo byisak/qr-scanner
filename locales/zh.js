@@ -166,6 +166,7 @@ export default {
     duplicateCount: '次',
     scanHistory: '扫描历史:',
     copy: '复制',
+    save: '保存',
     share: '分享',
     open: '打开',
     scanAgain: '重新扫描',

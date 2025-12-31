@@ -166,6 +166,7 @@ export default {
     duplicateCount: 'vez',
     scanHistory: 'Historial de escaneo:',
     copy: 'Copiar',
+    save: 'Guardar',
     share: 'Compartir',
     open: 'Abrir',
     scanAgain: 'Escanear de nuevo',
