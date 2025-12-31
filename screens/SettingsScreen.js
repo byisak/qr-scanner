@@ -269,8 +269,20 @@ export default function SettingsScreen() {
             setPhotoQuality(q);
           }
 
-          // 연속 스캔 설정 로드
-          const cs = await AsyncStorage.getItem('continuousScanEnabled');
+          // 연속 스캔 설정 로드 (두 키를 동기화하여 로드)
+          let cs = await AsyncStorage.getItem('continuousScanEnabled');
+          const bs = await AsyncStorage.getItem('batchScanEnabled');
+
+          // 두 키가 일치하지 않으면 동기화
+          if (cs === null && bs !== null) {
+            // continuousScanEnabled가 없으면 batchScanEnabled 값 사용
+            cs = bs;
+            await AsyncStorage.setItem('continuousScanEnabled', bs);
+          } else if (cs !== null && bs !== cs) {
+            // 두 값이 다르면 continuousScanEnabled 기준으로 동기화
+            await AsyncStorage.setItem('batchScanEnabled', cs);
+          }
+
           setContinuousScanEnabled(cs === 'true');
 
           // 제품 검색 자동 실행 설정 로드
@@ -329,7 +341,9 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
+        // 두 키를 동기화하여 저장
         await AsyncStorage.setItem('continuousScanEnabled', continuousScanEnabled.toString());
+        await AsyncStorage.setItem('batchScanEnabled', continuousScanEnabled.toString());
       } catch (error) {
         console.error('Save continuous scan settings error:', error);
       }

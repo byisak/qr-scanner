@@ -237,7 +237,20 @@ function ScannerScreen() {
         // null이면 기본값 true 유지, 저장된 값이 있으면 해당 값 사용
         setPhotoSaveEnabled(photoSave === null ? true : photoSave === 'true');
 
-        const batchScan = await AsyncStorage.getItem('batchScanEnabled');
+        // 연속 스캔 설정 로드 (두 키를 동기화하여 로드)
+        let batchScan = await AsyncStorage.getItem('batchScanEnabled');
+        const continuousScan = await AsyncStorage.getItem('continuousScanEnabled');
+
+        // 두 키가 일치하지 않으면 동기화
+        if (batchScan === null && continuousScan !== null) {
+          batchScan = continuousScan;
+          await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+        } else if (continuousScan !== null && batchScan !== continuousScan) {
+          // continuousScanEnabled 기준으로 동기화 (설정 화면의 값을 우선)
+          batchScan = continuousScan;
+          await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+        }
+
         if (batchScan !== null) {
           setBatchScanEnabled(batchScan === 'true');
         }
@@ -399,7 +412,20 @@ function ScannerScreen() {
           const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
           setPhotoSaveEnabled(photoSave === null ? true : photoSave === 'true');
 
-          const batchScan = await AsyncStorage.getItem('batchScanEnabled');
+          // 연속 스캔 설정 로드 (두 키를 동기화하여 로드)
+          let batchScan = await AsyncStorage.getItem('batchScanEnabled');
+          const continuousScan = await AsyncStorage.getItem('continuousScanEnabled');
+
+          // 두 키가 일치하지 않으면 동기화
+          if (batchScan === null && continuousScan !== null) {
+            batchScan = continuousScan;
+            await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+          } else if (continuousScan !== null && batchScan !== continuousScan) {
+            // continuousScanEnabled 기준으로 동기화 (설정 화면의 값을 우선)
+            batchScan = continuousScan;
+            await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+          }
+
           if (batchScan !== null) {
             setBatchScanEnabled(batchScan === 'true');
           }
