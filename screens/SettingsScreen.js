@@ -338,17 +338,8 @@ export default function SettingsScreen() {
     })();
   }, [photoSaveEnabled]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        // 두 키를 동기화하여 저장
-        await AsyncStorage.setItem('continuousScanEnabled', continuousScanEnabled.toString());
-        await AsyncStorage.setItem('batchScanEnabled', continuousScanEnabled.toString());
-      } catch (error) {
-        console.error('Save continuous scan settings error:', error);
-      }
-    })();
-  }, [continuousScanEnabled]);
+  // 참고: continuousScanEnabled 저장은 ContinuousScanSettingsScreen에서만 처리
+  // SettingsScreen에서는 읽기만 하고, 로드 시 동기화만 수행
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
