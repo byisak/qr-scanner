@@ -594,15 +594,6 @@ export default function ResultScreen() {
             )}
           </View>
 
-          {/* 배너 광고 */}
-          <AdBanner
-            containerStyle={{
-              marginVertical: 12,
-              borderRadius: 8,
-              overflow: 'hidden',
-            }}
-          />
-
           {/* 액션 버튼들 */}
           {!isEditing ? (
             <View style={styles.actionRow}>
@@ -656,6 +647,14 @@ export default function ResultScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* 배너 광고 - 액션 버튼과 중복 스캔 사이 */}
+          <AdBanner
+            wrapperStyle={{
+              marginTop: 16,
+              paddingHorizontal: 0,
+            }}
+          />
         </View>
 
         {/* 중복 스캔 알림 */}

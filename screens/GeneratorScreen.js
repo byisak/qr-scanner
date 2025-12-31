@@ -43,6 +43,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
+import AdBanner from '../components/AdBanner';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -1520,6 +1521,14 @@ export default function GeneratorScreen() {
               ))}
             </ScrollView>
 
+            {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
+            <AdBanner
+              wrapperStyle={{
+                marginTop: 8,
+                marginBottom: 8,
+              }}
+            />
+
             {/* Form Section */}
             <View style={[s.formSection, { backgroundColor: colors.surface }]}>
               <View style={s.formHeader}>
@@ -1614,6 +1623,14 @@ export default function GeneratorScreen() {
                 </Text>
               </TouchableOpacity>
             </ScrollView>
+
+            {/* 배너 광고 - 바코드 선택과 입력 폼 사이 */}
+            <AdBanner
+              wrapperStyle={{
+                marginTop: 8,
+                marginBottom: 8,
+              }}
+            />
 
             {/* 바코드 입력 폼 */}
             <View style={[s.formSection, { backgroundColor: colors.surface }]}>
