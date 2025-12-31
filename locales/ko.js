@@ -136,6 +136,7 @@ export default {
     loadingImage: '이미지 로드 중...',
     analyzing: '바코드/QR코드 분석 중...',
     analysisError: '이미지 분석 중 오류가 발생했습니다.',
+    fileNotFound: '이미지 파일을 찾을 수 없습니다.\n캐시가 삭제되었을 수 있습니다.',
     pickerError: '이미지를 선택하는 중 오류가 발생했습니다.',
     results: '인식된 코드',
     noResults: '바코드를 찾을 수 없습니다',

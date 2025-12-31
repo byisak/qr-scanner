@@ -125,6 +125,7 @@ export default {
     loadingImage: '画像を読み込み中...',
     analyzing: 'バーコード/QRコードを分析中...',
     analysisError: '画像分析中にエラーが発生しました。',
+    fileNotFound: '画像ファイルが見つかりません。\nキャッシュが削除された可能性があります。',
     pickerError: '画像の選択中にエラーが発生しました。',
     results: '検出されたコード',
     noResults: 'バーコードが見つかりません',

@@ -125,6 +125,7 @@ export default {
     loadingImage: 'Cargando imagen...',
     analyzing: 'Analizando códigos de barras/QR...',
     analysisError: 'Ocurrió un error durante el análisis de la imagen.',
+    fileNotFound: 'No se encontró el archivo de imagen.\nEs posible que se haya eliminado la caché.',
     pickerError: 'Ocurrió un error al seleccionar la imagen.',
     results: 'Códigos detectados',
     noResults: 'No se encontraron códigos',

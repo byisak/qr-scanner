@@ -125,6 +125,7 @@ export default {
     loadingImage: '正在加载图片...',
     analyzing: '正在分析条码/二维码...',
     analysisError: '图片分析时发生错误。',
+    fileNotFound: '找不到图片文件。\n缓存可能已被清除。',
     pickerError: '选择图片时发生错误。',
     results: '识别的代码',
     noResults: '未找到条码',

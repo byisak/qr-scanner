@@ -136,6 +136,7 @@ export default {
     loadingImage: 'Loading image...',
     analyzing: 'Analyzing barcodes/QR codes...',
     analysisError: 'An error occurred during image analysis.',
+    fileNotFound: 'Image file not found.\nThe cache may have been cleared.',
     pickerError: 'An error occurred while selecting the image.',
     results: 'Detected Codes',
     noResults: 'No barcodes found',
