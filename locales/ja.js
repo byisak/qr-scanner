@@ -1067,7 +1067,26 @@ export default {
     },
   },
 
-  // バッチスキャン設定
+  // 連続スキャン設定
+  continuousScan: {
+    title: '連続スキャンモード',
+    description: '複数のQR/バーコードを連続で素早くスキャンします',
+    enable: '連続スキャンモード',
+    enableDesc: '結果画面に移動せずに連続でスキャンします',
+    displayOptions: '表示オプション',
+    showCounter: 'スキャンカウンター表示',
+    showCounterDesc: 'スキャンしたバーコードの数をリアルタイムで表示します',
+    duplicateSection: '重複検出',
+    duplicateDetection: '重複バーコード検出',
+    duplicateDetectionDesc: '既にスキャンしたバーコードを再スキャンした時に検出します',
+    duplicateAction: '重複時の処理方法',
+    actionAlert: '通知して追加',
+    actionSkip: '自動的にスキップ',
+    actionAllow: 'すべて許可',
+    infoMessage: '連続スキャンモードが有効になると、スキャン画面で複数のコードを素早くスキャンできます。結果は下部にトーストで表示され、タップすると詳細画面に移動します。',
+  },
+
+  // バッチスキャン設定（レガシー互換）
   batchScan: {
     title: 'バッチスキャン設定',
     enable: 'バッチスキャンモード',

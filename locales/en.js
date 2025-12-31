@@ -1133,7 +1133,26 @@ export default {
     },
   },
 
-  // Batch scan settings
+  // Continuous scan settings
+  continuousScan: {
+    title: 'Continuous Scan Mode',
+    description: 'Quickly scan multiple QR/barcodes in succession',
+    enable: 'Continuous Scan Mode',
+    enableDesc: 'Scan continuously without navigating to result screen',
+    displayOptions: 'Display Options',
+    showCounter: 'Show Scan Counter',
+    showCounterDesc: 'Display the number of scanned barcodes in real-time',
+    duplicateSection: 'Duplicate Detection',
+    duplicateDetection: 'Detect Duplicate Barcodes',
+    duplicateDetectionDesc: 'Detect when scanning a barcode that was already scanned',
+    duplicateAction: 'Duplicate Handling',
+    actionAlert: 'Alert and Add',
+    actionSkip: 'Skip Automatically',
+    actionAllow: 'Allow All',
+    infoMessage: 'When continuous scan mode is enabled, you can quickly scan multiple codes on the scan screen. Results are shown as toast at the bottom, tap to see details.',
+  },
+
+  // Batch scan settings (legacy compatibility)
   batchScan: {
     title: 'Batch Scan Settings',
     enable: 'Batch Scan Mode',

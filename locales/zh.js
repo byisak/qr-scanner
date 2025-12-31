@@ -1067,7 +1067,26 @@ export default {
     },
   },
 
-  // 批量扫描设置
+  // 连续扫描设置
+  continuousScan: {
+    title: '连续扫描模式',
+    description: '快速连续扫描多个QR/条形码',
+    enable: '连续扫描模式',
+    enableDesc: '不跳转到结果页面，连续扫描',
+    displayOptions: '显示选项',
+    showCounter: '显示扫描计数器',
+    showCounterDesc: '实时显示已扫描条形码的数量',
+    duplicateSection: '重复检测',
+    duplicateDetection: '检测重复条形码',
+    duplicateDetectionDesc: '检测已扫描过的条形码再次被扫描',
+    duplicateAction: '重复条形码处理方式',
+    actionAlert: '提醒后添加',
+    actionSkip: '自动跳过',
+    actionAllow: '全部允许',
+    infoMessage: '启用连续扫描模式后，可以在扫描页面快速扫描多个代码。结果将在底部以提示形式显示，点击可查看详情。',
+  },
+
+  // 批量扫描设置（旧版兼容）
   batchScan: {
     title: '批量扫描设置',
     enable: '批量扫描模式',

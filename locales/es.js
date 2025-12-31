@@ -1064,7 +1064,26 @@ export default {
     },
   },
 
-  // Configuración de escaneo por lotes
+  // Configuración de escaneo continuo
+  continuousScan: {
+    title: 'Modo de escaneo continuo',
+    description: 'Escanea múltiples códigos QR/barras rápidamente en sucesión',
+    enable: 'Modo de escaneo continuo',
+    enableDesc: 'Escanea continuamente sin navegar a la pantalla de resultados',
+    displayOptions: 'Opciones de visualización',
+    showCounter: 'Mostrar contador de escaneos',
+    showCounterDesc: 'Muestra el número de códigos de barras escaneados en tiempo real',
+    duplicateSection: 'Detección de duplicados',
+    duplicateDetection: 'Detectar códigos duplicados',
+    duplicateDetectionDesc: 'Detecta cuando se escanea un código que ya fue escaneado',
+    duplicateAction: 'Manejo de duplicados',
+    actionAlert: 'Alertar y agregar',
+    actionSkip: 'Omitir automáticamente',
+    actionAllow: 'Permitir todos',
+    infoMessage: 'Cuando el modo de escaneo continuo está habilitado, puedes escanear múltiples códigos rápidamente en la pantalla de escaneo. Los resultados se muestran como toast en la parte inferior, toca para ver detalles.',
+  },
+
+  // Configuración de escaneo por lotes (compatibilidad)
   batchScan: {
     title: 'Configuración de escaneo por lotes',
     enable: 'Modo de escaneo por lotes',

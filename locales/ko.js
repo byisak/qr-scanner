@@ -1133,7 +1133,26 @@ export default {
     },
   },
 
-  // 배치 스캔 설정
+  // 연속 스캔 설정
+  continuousScan: {
+    title: '연속 스캔 모드',
+    description: '여러 QR/바코드를 연속으로 빠르게 스캔합니다',
+    enable: '연속 스캔 모드',
+    enableDesc: '결과 화면으로 이동하지 않고 연속으로 스캔합니다',
+    displayOptions: '표시 옵션',
+    showCounter: '스캔 카운터 표시',
+    showCounterDesc: '스캔한 바코드 개수를 화면에 실시간으로 표시합니다',
+    duplicateSection: '중복 감지',
+    duplicateDetection: '중복 바코드 감지',
+    duplicateDetectionDesc: '이미 스캔한 바코드를 다시 스캔할 때 감지합니다',
+    duplicateAction: '중복 바코드 처리 방식',
+    actionAlert: '알림 후 추가',
+    actionSkip: '자동으로 건너뛰기',
+    actionAllow: '모두 허용',
+    infoMessage: '연속 스캔 모드가 활성화되면 스캔 화면에서 여러 코드를 빠르게 스캔할 수 있습니다. 결과는 하단에 토스트로 표시되고, 터치하면 상세 화면으로 이동합니다.',
+  },
+
+  // 배치 스캔 설정 (레거시 호환)
   batchScan: {
     title: '배치 스캔 설정',
     enable: '배치 스캔 모드',

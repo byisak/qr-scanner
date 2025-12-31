@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
-  const [batchScanEnabled, setBatchScanEnabled] = useState(false);
+  const [continuousScanEnabled, setContinuousScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
@@ -171,7 +171,7 @@ export default function SettingsScreen() {
         const h = await AsyncStorage.getItem('hapticEnabled');
         const ss = await AsyncStorage.getItem('scanSoundEnabled');
         const p = await AsyncStorage.getItem('photoSaveEnabled');
-        const bs = await AsyncStorage.getItem('batchScanEnabled');
+        const cs = await AsyncStorage.getItem('continuousScanEnabled');
         const b = await AsyncStorage.getItem('selectedBarcodes');
 
         if (e === 'true') {
@@ -189,8 +189,8 @@ export default function SettingsScreen() {
         // null이면 기본값 true 유지
         setPhotoSaveEnabled(p === null ? true : p === 'true');
 
-        if (bs !== null) {
-          setBatchScanEnabled(bs === 'true');
+        if (cs !== null) {
+          setContinuousScanEnabled(cs === 'true');
         }
 
         if (b) {
@@ -269,9 +269,9 @@ export default function SettingsScreen() {
             setPhotoQuality(q);
           }
 
-          // 배치 스캔 설정 로드
-          const bs = await AsyncStorage.getItem('batchScanEnabled');
-          setBatchScanEnabled(bs === 'true');
+          // 연속 스캔 설정 로드
+          const cs = await AsyncStorage.getItem('continuousScanEnabled');
+          setContinuousScanEnabled(cs === 'true');
 
           // 제품 검색 자동 실행 설정 로드
           const pas = await AsyncStorage.getItem('productAutoSearch');
@@ -329,12 +329,12 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        await AsyncStorage.setItem('batchScanEnabled', batchScanEnabled.toString());
+        await AsyncStorage.setItem('continuousScanEnabled', continuousScanEnabled.toString());
       } catch (error) {
-        console.error('Save batch scan settings error:', error);
+        console.error('Save continuous scan settings error:', error);
       }
     })();
-  }, [batchScanEnabled]);
+  }, [continuousScanEnabled]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -544,46 +544,32 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
-          {/* 스캔 결과 표시 방식 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/scan-result-mode-selection')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanResultMode.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t(`scanResultMode.${scanResultMode}`)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
         </View>
 
         {/* 고급 스캔 기능 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.advancedScanFeatures')}</Text>
 
-          {/* 배치 스캔 모드 */}
+          {/* 연속 스캔 모드 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => {
               if (isLocked('batchScan')) {
-                showUnlockAlert('batchScan', () => router.push('/batch-scan-settings'));
+                showUnlockAlert('batchScan', () => router.push('/continuous-scan-settings'));
               } else {
-                router.push('/batch-scan-settings');
+                router.push('/continuous-scan-settings');
               }
             }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('continuousScan.title') || t('settings.batchScanMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('continuousScan.description') || t('settings.batchScanModeDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
               <LockIcon featureId="batchScan" size={14} color={colors.textTertiary} />
-              <Text style={[s.statusText, { color: batchScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {batchScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              <Text style={[s.statusText, { color: continuousScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {continuousScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
