@@ -203,6 +203,7 @@ export default {
     savePhotoSuccessMessage: '사진이 앨범에 저장되었습니다.',
     errorNoPhoto: '저장할 사진이 없습니다.',
     errorSavePhoto: '사진 저장 중 문제가 발생했습니다.',
+    imageNotFound: '이미지를 찾을 수 없습니다',
     permissionDenied: '권한 거부됨',
     permissionDeniedMessage: '사진을 저장하려면 사진 라이브러리 권한이 필요합니다.',
     // QR 코드 오류 검증 레벨

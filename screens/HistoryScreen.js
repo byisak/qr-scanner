@@ -42,6 +42,7 @@ export default function HistoryScreen() {
   const [query, setQuery] = useState('');
   const [filteredList, setFilteredList] = useState([]);
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
+  const [imageErrors, setImageErrors] = useState({});
 
   // 그룹 데이터 로드
   const loadGroups = async () => {
@@ -314,20 +315,29 @@ export default function HistoryScreen() {
                   {/* 사진 썸네일 - 클릭시 이미지 분석 */}
                   {hasPhoto && (
                     <TouchableOpacity
-                      onPress={() => router.push({
+                      onPress={() => !imageErrors[item.timestamp] && router.push({
                         pathname: '/image-analysis',
                         params: { imageUri: item.photos[0] }
                       })}
-                      activeOpacity={0.7}
+                      activeOpacity={imageErrors[item.timestamp] ? 1 : 0.7}
                     >
-                      <Image
-                        source={{ uri: item.photos[0] }}
-                        style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                        resizeMode="cover"
-                      />
-                      <View style={[s.analyzeIconOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                        <Ionicons name="scan" size={16} color="#fff" />
-                      </View>
+                      {imageErrors[item.timestamp] ? (
+                        <View style={[s.photoThumbnail, s.photoPlaceholder, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                          <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
+                        </View>
+                      ) : (
+                        <>
+                          <Image
+                            source={{ uri: item.photos[0] }}
+                            style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                            resizeMode="cover"
+                            onError={() => setImageErrors(prev => ({ ...prev, [item.timestamp]: true }))}
+                          />
+                          <View style={[s.analyzeIconOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                            <Ionicons name="scan" size={16} color="#fff" />
+                          </View>
+                        </>
+                      )}
                     </TouchableOpacity>
                   )}
                   <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
@@ -526,6 +536,10 @@ const s = StyleSheet.create({
     height: 60,
     borderRadius: 8,
     borderWidth: 1,
+  },
+  photoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   analyzeIconOverlay: {
     position: 'absolute',

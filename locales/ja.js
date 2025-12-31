@@ -191,6 +191,7 @@ export default {
     savePhotoSuccessMessage: '写真がアルバムに保存されました。',
     errorNoPhoto: '保存する写真がありません。',
     errorSavePhoto: '写真の保存中に問題が発生しました。',
+    imageNotFound: '画像が見つかりません',
     permissionDenied: '権限が拒否されました',
     permissionDeniedMessage: '写真を保存するにはフォトライブラリの権限が必要です。',
     // QRコード誤り訂正レベル

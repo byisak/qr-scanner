@@ -203,6 +203,7 @@ export default {
     savePhotoSuccessMessage: 'Photo has been saved to album.',
     errorNoPhoto: 'No photo to save.',
     errorSavePhoto: 'An error occurred while saving photo.',
+    imageNotFound: 'Image not found',
     permissionDenied: 'Permission Denied',
     permissionDeniedMessage: 'Photo library permission is required to save photos.',
     // QR Code Error Correction Level

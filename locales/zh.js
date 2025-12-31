@@ -191,6 +191,7 @@ export default {
     savePhotoSuccessMessage: '照片已保存到相册。',
     errorNoPhoto: '没有要保存的照片。',
     errorSavePhoto: '保存照片时出现问题。',
+    imageNotFound: '找不到图片',
     permissionDenied: '权限被拒绝',
     permissionDeniedMessage: '保存照片需要相册权限。',
     // 二维码纠错等级

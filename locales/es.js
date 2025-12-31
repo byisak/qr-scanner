@@ -191,6 +191,7 @@ export default {
     savePhotoSuccessMessage: 'La foto se ha guardado en el álbum.',
     errorNoPhoto: 'No hay foto para guardar.',
     errorSavePhoto: 'Ocurrió un error al guardar la foto.',
+    imageNotFound: 'Imagen no encontrada',
     permissionDenied: 'Permiso denegado',
     permissionDeniedMessage: 'Se requiere permiso de la biblioteca de fotos para guardar fotos.',
     // Nivel de corrección de errores del código QR
