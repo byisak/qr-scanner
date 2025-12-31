@@ -381,6 +381,7 @@ export default function GroupEditScreen() {
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={s.modalOverlay}
+          keyboardVerticalOffset={0}
         >
           <TouchableOpacity
             style={s.modalBackdrop}
@@ -390,7 +391,7 @@ export default function GroupEditScreen() {
               setNewGroupName('');
             }}
           />
-          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: 20 }]}>
+          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
             <View style={s.bottomSheetHandle} />
             <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
             <TextInput
@@ -436,6 +437,7 @@ export default function GroupEditScreen() {
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={s.modalOverlay}
+          keyboardVerticalOffset={0}
         >
           <TouchableOpacity
             style={s.modalBackdrop}
@@ -446,7 +448,7 @@ export default function GroupEditScreen() {
               setEditingGroup(null);
             }}
           />
-          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: 20 }]}>
+          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
             <View style={s.bottomSheetHandle} />
             <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
             <TextInput
