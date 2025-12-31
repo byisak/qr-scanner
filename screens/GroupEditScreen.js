@@ -391,8 +391,7 @@ export default function GroupEditScreen() {
             style={s.bottomSheetWrapper}
           >
             <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 20 }]}>
-                <View style={s.bottomSheetHandle} />
+              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
                 <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
                 <TextInput
                   style={[s.modalInput, {
@@ -450,8 +449,7 @@ export default function GroupEditScreen() {
             style={s.bottomSheetWrapper}
           >
             <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 20 }]}>
-                <View style={s.bottomSheetHandle} />
+              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
                 <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
                 <TextInput
                   style={[s.modalInput, {
@@ -603,16 +601,17 @@ const s = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 120,
+    paddingHorizontal: 20,
   },
   bottomSheetWrapper: {
     width: '100%',
   },
   bottomSheetContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderRadius: 20,
     padding: 24,
-    paddingTop: 12,
+    paddingTop: 20,
   },
   bottomSheetHandle: {
     width: 40,
