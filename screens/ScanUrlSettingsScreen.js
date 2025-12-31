@@ -81,7 +81,14 @@ export default function ScanUrlSettingsScreen() {
 
   // 기능 활성화 상태 저장
   useEffect(() => {
-    SecureStore.setItemAsync('scanLinkEnabled', enabled.toString());
+    (async () => {
+      await SecureStore.setItemAsync('scanLinkEnabled', enabled.toString());
+
+      // 스캔 연동 URL이 켜지면 실시간 서버 전송 끄기 (상호 배타적)
+      if (enabled) {
+        await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
+      }
+    })();
   }, [enabled]);
 
   // 기능 활성화 시 모든 URL에 대해 그룹 생성

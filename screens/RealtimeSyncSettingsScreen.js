@@ -18,6 +18,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -341,6 +342,8 @@ export default function RealtimeSyncSettingsScreen() {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
         if (realtimeSyncEnabled) {
+          // 실시간 서버 전송이 켜지면 스캔 연동 URL 끄기 (상호 배타적)
+          await SecureStore.setItemAsync('scanLinkEnabled', 'false');
           // 토글 활성화 시 서버에서 세션 목록 동기화
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
           let localSessions = [];
