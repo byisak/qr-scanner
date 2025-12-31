@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -374,11 +375,23 @@ export default function GroupEditScreen() {
       <Modal
         visible={showAddModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowAddModal(false)}
       >
-        <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={s.modalOverlay}
+        >
+          <TouchableOpacity
+            style={s.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => {
+              setShowAddModal(false);
+              setNewGroupName('');
+            }}
+          />
+          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 20 }]}>
+            <View style={s.bottomSheetHandle} />
             <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
             <TextInput
               style={[s.modalInput, {
@@ -410,18 +423,31 @@ export default function GroupEditScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* 그룹 이름 변경 모달 */}
       <Modal
         visible={showEditModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={s.modalOverlay}
+        >
+          <TouchableOpacity
+            style={s.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => {
+              setShowEditModal(false);
+              setNewGroupName('');
+              setEditingGroup(null);
+            }}
+          />
+          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 20 }]}>
+            <View style={s.bottomSheetHandle} />
             <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
             <TextInput
               style={[s.modalInput, {
@@ -454,7 +480,7 @@ export default function GroupEditScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       </View>
     </GestureHandlerRootView>
@@ -571,9 +597,24 @@ const s = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    paddingTop: 120,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
+  },
+  bottomSheetContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingTop: 12,
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   modalContent: {
     borderRadius: 16,
