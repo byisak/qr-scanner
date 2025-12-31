@@ -464,6 +464,18 @@ export default {
     selected: 'Seleccionado',
   },
 
+  // Modo de visualización de resultados del escaneo
+  scanResultMode: {
+    title: 'Visualización de resultados',
+    description: 'Selecciona cómo mostrar los resultados al escanear un código',
+    popup: 'Ir a pantalla de resultados',
+    popupDesc: 'Navega a la pantalla de resultados detallados después del escaneo',
+    toast: 'Modo de escaneo continuo',
+    toastDesc: 'Muestra el resultado en la parte inferior y permite seguir escaneando',
+    selected: 'Seleccionado',
+    toastTip: 'En el modo de escaneo continuo, toca el resultado para ver los detalles. Útil para escanear múltiples códigos rápidamente.',
+  },
+
   // Pantalla de generador de código QR
   generator: {
     title: 'Generar',

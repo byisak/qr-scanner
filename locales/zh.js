@@ -464,6 +464,18 @@ export default {
     selected: '已选择',
   },
 
+  // 扫描结果显示模式
+  scanResultMode: {
+    title: '扫描结果显示',
+    description: '选择扫描代码时的结果显示方式',
+    popup: '跳转到结果页面',
+    popupDesc: '扫描后跳转到详细结果页面',
+    toast: '连续扫描模式',
+    toastDesc: '在底部显示结果并可以继续扫描',
+    selected: '已选择',
+    toastTip: '在连续扫描模式下,点击结果可跳转到详细页面。适合快速扫描多个代码。',
+  },
+
   // 二维码生成界面
   generator: {
     title: '代码生成',
