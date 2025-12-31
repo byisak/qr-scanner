@@ -95,6 +95,13 @@
         {
           "photosPermission": "QR 코드에 로고를 추가하기 위해 사진 접근이 필요합니다."
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
       ]
     ],
     "experiments": {

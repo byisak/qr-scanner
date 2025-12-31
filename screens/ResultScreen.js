@@ -10,6 +10,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
+import AdBanner from '../components/AdBanner';
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -592,6 +593,15 @@ export default function ResultScreen() {
               </ScrollView>
             )}
           </View>
+
+          {/* 배너 광고 */}
+          <AdBanner
+            containerStyle={{
+              marginVertical: 12,
+              borderRadius: 8,
+              overflow: 'hidden',
+            }}
+          />
 
           {/* 액션 버튼들 */}
           {!isEditing ? (

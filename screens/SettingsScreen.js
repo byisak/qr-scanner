@@ -27,6 +27,7 @@ import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AdBanner from '../components/AdBanner';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -416,6 +417,11 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={24} color="#E67E22" />
           </TouchableOpacity>
         )}
+
+        {/* 배너 광고 */}
+        <View style={[s.adSection, { backgroundColor: colors.surface }]}>
+          <AdBanner />
+        </View>
 
         {/* Pro 버전 */}
         <TouchableOpacity
@@ -1059,6 +1065,15 @@ const s = StyleSheet.create({
   },
   settingsIconButton: {
     padding: 8,
+  },
+  // 광고 섹션 스타일
+  adSection: {
+    borderRadius: 16,
+    marginBottom: 20,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 70,
   },
   // Pro 버전 섹션 스타일
   proSection: {

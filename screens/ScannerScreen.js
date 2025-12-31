@@ -46,6 +46,7 @@ import * as MediaLibrary from 'expo-media-library';
 import ScanAnimation from '../components/ScanAnimation';
 import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
+import AdBanner from '../components/AdBanner';
 
 function ScannerScreen() {
   const router = useRouter();
@@ -1844,7 +1845,17 @@ function ScannerScreen() {
         data={toastData}
         onPress={handleToastPress}
         onClose={handleToastClose}
-        bottomOffset={bottomOffset}
+        bottomOffset={bottomOffset + 50}
+      />
+
+      {/* 하단 배너 광고 */}
+      <AdBanner
+        containerStyle={{
+          position: 'absolute',
+          bottom: bottomOffset - 50,
+          left: 0,
+          right: 0,
+        }}
       />
     </View>
   );
