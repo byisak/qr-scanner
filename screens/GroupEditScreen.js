@@ -355,6 +355,7 @@ export default function GroupEditScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           onDragEnd={handleDragEnd}
+          style={{ flex: 1 }}
           contentContainerStyle={s.listContent}
           activationDistance={10}
         />
@@ -492,7 +493,7 @@ const s = StyleSheet.create({
   },
   listContent: {
     padding: 15,
-    paddingBottom: 200,
+    paddingBottom: 150,
   },
   groupItem: {
     flexDirection: 'row',
