@@ -2,14 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 
-// 임시: 광고 비활성화 (크래시 디버깅용)
-const AD_ENABLED = false;
+// 광고 활성화 플래그
+const AD_ENABLED = true;
 
 // 네이티브 모듈 동적 로드 (Expo Go 호환성)
 let BannerAd = null;
 let BannerAdSize = null;
 let TestIds = null;
+let mobileAds = null;
 let isAdModuleAvailable = false;
+let isInitialized = false;
 
 if (AD_ENABLED) {
   try {
@@ -17,9 +19,23 @@ if (AD_ENABLED) {
     BannerAd = AdModule.BannerAd;
     BannerAdSize = AdModule.BannerAdSize;
     TestIds = AdModule.TestIds;
+    mobileAds = AdModule.default;
     isAdModuleAvailable = true;
+
+    // SDK 초기화
+    if (mobileAds && !isInitialized) {
+      mobileAds()
+        .initialize()
+        .then((adapterStatuses) => {
+          isInitialized = true;
+          console.log('Mobile Ads SDK initialized');
+        })
+        .catch((error) => {
+          console.log('Mobile Ads SDK initialization failed:', error);
+        });
+    }
   } catch (error) {
-    console.log('Google Mobile Ads module not available (Expo Go)');
+    console.log('Google Mobile Ads module not available:', error.message);
   }
 }
 
@@ -69,6 +85,7 @@ export default function AdBanner({ style, containerStyle }) {
           requestNonPersonalizedAdsOnly: true,
         }}
         onAdLoaded={() => {
+          console.log('Ad loaded successfully');
           setAdLoaded(true);
         }}
         onAdFailedToLoad={(error) => {
