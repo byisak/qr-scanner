@@ -375,7 +375,7 @@ export default function GroupEditScreen() {
       <Modal
         visible={showAddModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowAddModal(false)}
       >
         <KeyboardAvoidingView
@@ -430,7 +430,7 @@ export default function GroupEditScreen() {
       <Modal
         visible={showEditModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowEditModal(false)}
       >
         <KeyboardAvoidingView
