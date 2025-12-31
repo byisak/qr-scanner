@@ -492,7 +492,7 @@ const s = StyleSheet.create({
   },
   listContent: {
     padding: 15,
-    paddingBottom: 120,
+    paddingBottom: 180,
   },
   groupItem: {
     flexDirection: 'row',
