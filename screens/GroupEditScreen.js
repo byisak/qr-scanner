@@ -390,7 +390,7 @@ export default function GroupEditScreen() {
               setNewGroupName('');
             }}
           />
-          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 20 }]}>
+          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: 20 }]}>
             <View style={s.bottomSheetHandle} />
             <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
             <TextInput
@@ -446,7 +446,7 @@ export default function GroupEditScreen() {
               setEditingGroup(null);
             }}
           />
-          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 20 }]}>
+          <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, paddingBottom: 20 }]}>
             <View style={s.bottomSheetHandle} />
             <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
             <TextInput
