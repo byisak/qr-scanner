@@ -17,6 +17,15 @@ export default {
     success: 'Success',
   },
 
+  // Feature Lock
+  featureLock: {
+    lockedTitle: 'Locked Feature',
+    watchAdToUnlock: 'Watch an ad to unlock this feature',
+    watchAd: 'Watch Ad',
+    adComingSoon: 'Ad feature coming soon.\nUnlocked for free now!',
+    unlocked: 'Unlocked',
+  },
+
   // Auth
   auth: {
     // Login/Signup button
@@ -100,17 +109,21 @@ export default {
     permissionDenied: 'Please allow camera permission',
     torchOn: 'Turn off flashlight',
     torchOff: 'Turn on flashlight',
-    batchModeActive: 'Batch Mode Active',
+    batchModeActive: 'Continuous Scan Mode',
     scannedCount: 'Scanned: {count} items',
     finishBatch: 'Finish',
     clearBatch: 'Clear',
     viewBatchList: 'View List',
     sending: 'Sending',
+    realtimeSync: 'Realtime Server Sync',
+    realtimeSyncGuide: 'Realtime server sync is enabled.\nPlease select a server sync group from the top.',
     urlSending: 'Sending to URL',
     guideText: 'Scan a QR code or barcode',
     noSessionUrl: 'No Session URL',
     pleaseGenerateUrl: 'Please generate a URL in settings to use realtime server sync.',
     uploadImage: 'Auto Code Analysis',
+    scanned: 'Scanned',
+    viewDetails: 'View Details',
   },
 
   // Image analysis screen
@@ -123,6 +136,7 @@ export default {
     loadingImage: 'Loading image...',
     analyzing: 'Analyzing barcodes/QR codes...',
     analysisError: 'An error occurred during image analysis.',
+    fileNotFound: 'Image file not found.\nThe cache may have been cleared.',
     pickerError: 'An error occurred while selecting the image.',
     results: 'Detected Codes',
     noResults: 'No barcodes found',
@@ -189,6 +203,7 @@ export default {
     savePhotoSuccessMessage: 'Photo has been saved to album.',
     errorNoPhoto: 'No photo to save.',
     errorSavePhoto: 'An error occurred while saving photo.',
+    imageNotFound: 'Image not found',
     permissionDenied: 'Permission Denied',
     permissionDeniedMessage: 'Photo library permission is required to save photos.',
     // QR Code Error Correction Level
@@ -337,8 +352,68 @@ export default {
     privacyPolicyDesc: 'View privacy policy',
     versionInfo: 'Version Info',
     currentVersion: 'Current Version',
+    // Cache
+    cache: 'Cache',
+    clearCache: 'Clear Cache',
+    clearCacheDesc: 'Delete saved scan photos',
+    clearCacheConfirm: 'Delete all saved scan photos?\n\nDeleted photos cannot be recovered.',
+    noCacheToDelete: 'No cache to delete.',
+    cacheCleared: 'Cache has been cleared.',
+    clearCacheError: 'Error occurred while clearing cache.',
     scanSound: 'Scan Sound',
     scanSoundDesc: 'Play sound on scan',
+    // Developer options
+    developerOptions: 'Developer Options',
+    devMode: 'Developer Mode',
+    devModeDesc: 'Unlock all locked features (for testing)',
+    resetLocks: 'Reset Locks',
+    resetLocksDesc: 'Lock all features again',
+    resetLocksConfirm: 'Reset all feature locks?',
+    resetLocksSuccess: 'Locks have been reset',
+  },
+
+  // Developer options screen
+  developerOptions: {
+    warning: 'These options are for development and testing only. Disable before deployment.',
+    devModeDesc: 'All features are automatically unlocked when dev mode is enabled',
+    quickActions: 'Quick Actions',
+    unlockAll: 'Unlock All Features',
+    allUnlocked: 'All features have been unlocked',
+    individualFeatures: 'Individual Feature Management',
+    settingsFeatures: 'Settings Features',
+    generatorFeatures: 'Generator Features',
+    qrStyleFeatures: 'QR Styles',
+    features: {
+      batchScan: 'Batch Scan Mode',
+      scanUrlIntegration: 'Scan URL Integration',
+      realtimeSync: 'Realtime Server Sync',
+      productSearch: 'Product Search Settings',
+      barcodeTab: 'Barcode Generator',
+      advancedBarcodes: 'Advanced Barcode Types',
+      qrStyleRounded: 'Rounded Style',
+      qrStyleDots: 'Dots Style',
+      qrStyleClassy: 'Classy Style',
+      qrStyleBlueGradient: 'Blue Gradient Style',
+      qrStyleSunset: 'Sunset Style',
+      qrStyleDarkMode: 'Dark Mode Style',
+      qrStyleNeon: 'Neon Style',
+    },
+  },
+
+  // Realtime sync explanation screen
+  realtimeSyncExplanation: {
+    title: 'Realtime Server Transmission',
+    description: 'When you scan a QR code or barcode, data is instantly transmitted to the server.\nYou can view scan data in real-time from your PC or other devices.',
+    feature1Title: 'Real-time Data Transmission',
+    feature1Desc: 'Data is sent to the server immediately upon scanning',
+    feature2Title: 'Fast Synchronization',
+    feature2Desc: 'View data in real-time from PC or other devices',
+    feature3Title: 'View on PC Screen',
+    feature3Desc: 'Access the generated URL in a web browser to see scan data in real-time',
+    feature4Title: 'Password Protection',
+    feature4Desc: 'Set a password on sessions to keep your data secure',
+    tryIt: 'Try It',
+    tryItDesc: 'Toggle on to go to realtime sync settings',
   },
 
   // Barcode selection screen
@@ -452,6 +527,18 @@ export default {
     default: 'Default Browser',
     defaultDesc: 'Opens in system default browser',
     selected: 'Selected',
+  },
+
+  // Scan result display mode
+  scanResultMode: {
+    title: 'Scan Result Display',
+    description: 'Select how to display scan results',
+    popup: 'Navigate to Result Screen',
+    popupDesc: 'Navigate to detailed result screen after scan',
+    toast: 'Continuous Scan Mode',
+    toastDesc: 'Show result at bottom and continue scanning',
+    selected: 'Selected',
+    toastTip: 'In continuous scan mode, tap the result to see details. Useful for scanning multiple codes quickly.',
   },
 
   // QR code generator screen
@@ -1046,7 +1133,26 @@ export default {
     },
   },
 
-  // Batch scan settings
+  // Continuous scan settings
+  continuousScan: {
+    title: 'Continuous Scan Mode',
+    description: 'Quickly scan multiple QR/barcodes in succession',
+    enable: 'Continuous Scan Mode',
+    enableDesc: 'Scan continuously without navigating to result screen',
+    displayOptions: 'Display Options',
+    showCounter: 'Show Scan Counter',
+    showCounterDesc: 'Display the number of scanned barcodes in real-time',
+    duplicateSection: 'Duplicate Detection',
+    duplicateDetection: 'Detect Duplicate Barcodes',
+    duplicateDetectionDesc: 'Detect when scanning a barcode that was already scanned',
+    duplicateAction: 'Duplicate Handling',
+    actionAlert: 'Alert and Add',
+    actionSkip: 'Skip Automatically',
+    actionAllow: 'Allow All',
+    infoMessage: 'When continuous scan mode is enabled, you can quickly scan multiple codes on the scan screen. Results are shown as toast at the bottom, tap to see details.',
+  },
+
+  // Batch scan settings (legacy compatibility)
   batchScan: {
     title: 'Batch Scan Settings',
     enable: 'Batch Scan Mode',

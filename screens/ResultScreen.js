@@ -55,6 +55,7 @@ export default function ResultScreen() {
   const [editedText, setEditedText] = useState(displayText);
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
 
   // URL 열기 방식 설정 로드
   useEffect(() => {
@@ -689,21 +690,33 @@ export default function ResultScreen() {
               </View>
             </View>
             <TouchableOpacity
-              onPress={() => router.push({
+              onPress={() => !photoError && router.push({
                 pathname: '/image-analysis',
                 params: { imageUri: photoUri }
               })}
-              activeOpacity={0.8}
+              activeOpacity={photoError ? 1 : 0.8}
             >
-              <Image
-                source={{ uri: photoUri }}
-                style={[styles.scanPhoto, { backgroundColor: colors.inputBackground }]}
-                resizeMode="contain"
-              />
-              <View style={[styles.analyzeOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-                <Ionicons name="scan" size={24} color="#fff" />
-                <Text style={styles.analyzeOverlayText}>{t('imageAnalysis.title')}</Text>
-              </View>
+              {photoError ? (
+                <View style={[styles.scanPhoto, styles.photoPlaceholder, { backgroundColor: colors.inputBackground }]}>
+                  <Ionicons name="image-outline" size={48} color={colors.textSecondary} />
+                  <Text style={[styles.photoPlaceholderText, { color: colors.textSecondary }]}>
+                    {t('result.imageNotFound') || '이미지를 찾을 수 없습니다'}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Image
+                    source={{ uri: photoUri }}
+                    style={[styles.scanPhoto, { backgroundColor: colors.inputBackground }]}
+                    resizeMode="contain"
+                    onError={() => setPhotoError(true)}
+                  />
+                  <View style={[styles.analyzeOverlay, { backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                    <Ionicons name="scan" size={24} color="#fff" />
+                    <Text style={styles.analyzeOverlayText}>{t('imageAnalysis.title')}</Text>
+                  </View>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         )}
@@ -957,6 +970,15 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: 12,
+  },
+  photoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  photoPlaceholderText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
   analyzeOverlay: {
     position: 'absolute',

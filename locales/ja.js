@@ -100,12 +100,14 @@ export default {
     permissionDenied: 'カメラ権限を許可してください',
     torchOn: 'フラッシュオフ',
     torchOff: 'フラッシュオン',
-    batchModeActive: 'バッチモード有効',
+    batchModeActive: '連続スキャンモード',
     scannedCount: 'スキャン済み: {count}個',
     finishBatch: 'スキャン完了',
     clearBatch: 'クリア',
     viewBatchList: 'リストを表示',
     sending: '送信中',
+    realtimeSync: 'リアルタイムサーバー送信',
+    realtimeSyncGuide: 'リアルタイムサーバー送信が有効です。\n上部でサーバー送信グループを選択してください。',
     urlSending: 'URLに送信中',
     guideText: 'QRコードまたはバーコードをスキャン',
     noSessionUrl: '送信URLがありません',
@@ -123,6 +125,7 @@ export default {
     loadingImage: '画像を読み込み中...',
     analyzing: 'バーコード/QRコードを分析中...',
     analysisError: '画像分析中にエラーが発生しました。',
+    fileNotFound: '画像ファイルが見つかりません。\nキャッシュが削除された可能性があります。',
     pickerError: '画像の選択中にエラーが発生しました。',
     results: '検出されたコード',
     noResults: 'バーコードが見つかりません',
@@ -163,6 +166,7 @@ export default {
     duplicateCount: '回目',
     scanHistory: 'スキャン履歴:',
     copy: 'コピー',
+    save: '保存',
     share: '共有',
     open: '開く',
     scanAgain: '再スキャン',
@@ -188,6 +192,7 @@ export default {
     savePhotoSuccessMessage: '写真がアルバムに保存されました。',
     errorNoPhoto: '保存する写真がありません。',
     errorSavePhoto: '写真の保存中に問題が発生しました。',
+    imageNotFound: '画像が見つかりません',
     permissionDenied: '権限が拒否されました',
     permissionDeniedMessage: '写真を保存するにはフォトライブラリの権限が必要です。',
     // QRコード誤り訂正レベル
@@ -336,6 +341,14 @@ export default {
     privacyPolicyDesc: 'プライバシーポリシーを見る',
     versionInfo: 'バージョン情報',
     currentVersion: '現在のバージョン',
+    // キャッシュ
+    cache: 'キャッシュ',
+    clearCache: 'キャッシュ削除',
+    clearCacheDesc: '保存したスキャン写真を削除します',
+    clearCacheConfirm: '保存したすべてのスキャン写真を削除しますか？\n\n削除した写真は復元できません。',
+    noCacheToDelete: '削除するキャッシュがありません。',
+    cacheCleared: 'キャッシュが削除されました。',
+    clearCacheError: 'キャッシュの削除中にエラーが発生しました。',
     scanSound: 'スキャン音',
     scanSoundDesc: 'スキャン時に音で通知',
   },
@@ -451,6 +464,18 @@ export default {
     default: 'デフォルトブラウザ',
     defaultDesc: 'システムのデフォルトブラウザで開きます',
     selected: '選択済み',
+  },
+
+  // スキャン結果表示モード
+  scanResultMode: {
+    title: 'スキャン結果の表示',
+    description: 'コードをスキャンしたときの結果表示方法を選択してください',
+    popup: '結果画面に移動',
+    popupDesc: 'スキャン後、詳細結果画面に移動します',
+    toast: '連続スキャンモード',
+    toastDesc: '下部に結果を表示し、続けてスキャンできます',
+    selected: '選択中',
+    toastTip: '連続スキャンモードでは、結果をタップすると詳細画面に移動します。複数のコードを素早くスキャンするときに便利です。',
   },
 
   // QRコード生成画面
@@ -1042,7 +1067,26 @@ export default {
     },
   },
 
-  // バッチスキャン設定
+  // 連続スキャン設定
+  continuousScan: {
+    title: '連続スキャンモード',
+    description: '複数のQR/バーコードを連続で素早くスキャンします',
+    enable: '連続スキャンモード',
+    enableDesc: '結果画面に移動せずに連続でスキャンします',
+    displayOptions: '表示オプション',
+    showCounter: 'スキャンカウンター表示',
+    showCounterDesc: 'スキャンしたバーコードの数をリアルタイムで表示します',
+    duplicateSection: '重複検出',
+    duplicateDetection: '重複バーコード検出',
+    duplicateDetectionDesc: '既にスキャンしたバーコードを再スキャンした時に検出します',
+    duplicateAction: '重複時の処理方法',
+    actionAlert: '通知して追加',
+    actionSkip: '自動的にスキップ',
+    actionAllow: 'すべて許可',
+    infoMessage: '連続スキャンモードが有効になると、スキャン画面で複数のコードを素早くスキャンできます。結果は下部にトーストで表示され、タップすると詳細画面に移動します。',
+  },
+
+  // バッチスキャン設定（レガシー互換）
   batchScan: {
     title: 'バッチスキャン設定',
     enable: 'バッチスキャンモード',

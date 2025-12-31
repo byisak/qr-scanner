@@ -17,6 +17,15 @@ export default {
     success: '성공',
   },
 
+  // 기능 잠금
+  featureLock: {
+    lockedTitle: '잠긴 기능',
+    watchAdToUnlock: '광고를 시청하면 이 기능을 사용할 수 있습니다',
+    watchAd: '광고 보기',
+    adComingSoon: '광고 기능이 곧 추가됩니다.\n지금은 무료로 해제됩니다!',
+    unlocked: '잠금 해제됨',
+  },
+
   // 인증
   auth: {
     // 로그인/회원가입 버튼
@@ -100,17 +109,21 @@ export default {
     permissionDenied: '카메라 권한을 허용해 주세요',
     torchOn: '손전등 끄기',
     torchOff: '손전등 켜기',
-    batchModeActive: '배치 모드 활성',
+    batchModeActive: '연속 스캔 모드',
     scannedCount: '스캔된 항목: {count}개',
     finishBatch: '스캔 완료',
     clearBatch: '초기화',
     viewBatchList: '목록 보기',
     sending: '전송',
+    realtimeSync: '실시간 서버 전송',
+    realtimeSyncGuide: '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.',
     urlSending: 'URL 전송 중',
     guideText: 'QR 코드 또는 바코드를 스캔하세요',
     noSessionUrl: '전송 주소 없음',
     pleaseGenerateUrl: '실시간 서버 전송을 사용하려면 설정에서 주소를 먼저 생성해주세요.',
     uploadImage: '코드 자동 분석',
+    scanned: '스캔 완료',
+    viewDetails: '자세히 보기',
   },
 
   // 이미지 분석 화면
@@ -123,6 +136,7 @@ export default {
     loadingImage: '이미지 로드 중...',
     analyzing: '바코드/QR코드 분석 중...',
     analysisError: '이미지 분석 중 오류가 발생했습니다.',
+    fileNotFound: '이미지 파일을 찾을 수 없습니다.\n캐시가 삭제되었을 수 있습니다.',
     pickerError: '이미지를 선택하는 중 오류가 발생했습니다.',
     results: '인식된 코드',
     noResults: '바코드를 찾을 수 없습니다',
@@ -189,6 +203,7 @@ export default {
     savePhotoSuccessMessage: '사진이 앨범에 저장되었습니다.',
     errorNoPhoto: '저장할 사진이 없습니다.',
     errorSavePhoto: '사진 저장 중 문제가 발생했습니다.',
+    imageNotFound: '이미지를 찾을 수 없습니다',
     permissionDenied: '권한 거부됨',
     permissionDeniedMessage: '사진을 저장하려면 사진 라이브러리 권한이 필요합니다.',
     // QR 코드 오류 검증 레벨
@@ -339,6 +354,66 @@ export default {
     privacyPolicyDesc: '개인정보 처리방침 보기',
     versionInfo: '버전정보',
     currentVersion: '현재 버전',
+    // 캐시
+    cache: '캐시',
+    clearCache: '캐시 삭제',
+    clearCacheDesc: '저장된 스캔 사진을 삭제합니다',
+    clearCacheConfirm: '저장된 모든 스캔 사진을 삭제하시겠습니까?\n\n삭제된 사진은 복구할 수 없습니다.',
+    noCacheToDelete: '삭제할 캐시가 없습니다.',
+    cacheCleared: '캐시가 삭제되었습니다.',
+    clearCacheError: '캐시 삭제 중 오류가 발생했습니다.',
+    // 개발자 옵션
+    developerOptions: '개발자 옵션',
+    devMode: '개발 모드',
+    devModeDesc: '모든 잠금 기능 해제 (테스트용)',
+    resetLocks: '잠금 초기화',
+    resetLocksDesc: '모든 기능을 다시 잠금 상태로',
+    resetLocksConfirm: '모든 기능 잠금을 초기화하시겠습니까?',
+    resetLocksSuccess: '잠금이 초기화되었습니다',
+  },
+
+  // 개발자 옵션 화면
+  developerOptions: {
+    warning: '이 옵션은 개발 및 테스트 용도입니다. 배포 시 비활성화하세요.',
+    devModeDesc: '개발 모드 활성화 시 모든 기능이 자동으로 해제됩니다',
+    quickActions: '빠른 액션',
+    unlockAll: '모든 기능 해제',
+    allUnlocked: '모든 기능이 해제되었습니다',
+    individualFeatures: '개별 기능 관리',
+    settingsFeatures: '설정 기능',
+    generatorFeatures: '생성기 기능',
+    qrStyleFeatures: 'QR 스타일',
+    features: {
+      batchScan: '배치 스캔 모드',
+      scanUrlIntegration: '스캔 연동 URL',
+      realtimeSync: '실시간 서버 전송',
+      productSearch: '제품 검색 설정',
+      barcodeTab: '바코드 생성',
+      advancedBarcodes: '고급 바코드 타입',
+      qrStyleRounded: 'Rounded 스타일',
+      qrStyleDots: 'Dots 스타일',
+      qrStyleClassy: 'Classy 스타일',
+      qrStyleBlueGradient: 'Blue Gradient 스타일',
+      qrStyleSunset: 'Sunset 스타일',
+      qrStyleDarkMode: 'Dark Mode 스타일',
+      qrStyleNeon: 'Neon 스타일',
+    },
+  },
+
+  // 실시간 서버전송 설명 페이지
+  realtimeSyncExplanation: {
+    title: '실시간 서버 전송',
+    description: 'QR 코드나 바코드를 스캔하면 즉시 서버로 데이터가 전송됩니다.\nPC나 다른 기기에서 실시간으로 스캔 데이터를 확인할 수 있습니다.',
+    feature1Title: '실시간 데이터 전송',
+    feature1Desc: '스캔하는 즉시 서버로 데이터가 전송됩니다',
+    feature2Title: '빠른 동기화',
+    feature2Desc: 'PC나 다른 기기에서 실시간으로 데이터 확인',
+    feature3Title: 'PC 화면에서 확인',
+    feature3Desc: '웹 브라우저에서 생성된 URL로 접속하면 스캔 데이터가 실시간으로 표시됩니다',
+    feature4Title: '비밀번호 보호',
+    feature4Desc: '세션에 비밀번호를 설정하여 데이터를 안전하게 보호할 수 있습니다',
+    tryIt: '사용해보기',
+    tryItDesc: '토글을 켜면 실시간 서버 전송 설정으로 이동합니다',
   },
 
   // 바코드 선택 화면
@@ -452,6 +527,18 @@ export default {
     default: '기본 브라우저',
     defaultDesc: '시스템 기본 브라우저로 엽니다',
     selected: '선택됨',
+  },
+
+  // 스캔 결과 표시 방식
+  scanResultMode: {
+    title: '스캔 결과 표시',
+    description: '코드를 스캔했을 때 결과를 표시하는 방식을 선택하세요',
+    popup: '결과 화면으로 이동',
+    popupDesc: '스캔 후 상세 결과 화면으로 이동합니다',
+    toast: '연속 스캔 모드',
+    toastDesc: '하단에 결과를 표시하고 계속 스캔할 수 있습니다',
+    selected: '선택됨',
+    toastTip: '연속 스캔 모드에서는 결과를 터치하면 상세 화면으로 이동합니다. 여러 코드를 빠르게 스캔할 때 유용합니다.',
   },
 
   // QR 코드 생성 화면
@@ -1046,7 +1133,26 @@ export default {
     },
   },
 
-  // 배치 스캔 설정
+  // 연속 스캔 설정
+  continuousScan: {
+    title: '연속 스캔 모드',
+    description: '여러 QR/바코드를 연속으로 빠르게 스캔합니다',
+    enable: '연속 스캔 모드',
+    enableDesc: '결과 화면으로 이동하지 않고 연속으로 스캔합니다',
+    displayOptions: '표시 옵션',
+    showCounter: '스캔 카운터 표시',
+    showCounterDesc: '스캔한 바코드 개수를 화면에 실시간으로 표시합니다',
+    duplicateSection: '중복 감지',
+    duplicateDetection: '중복 바코드 감지',
+    duplicateDetectionDesc: '이미 스캔한 바코드를 다시 스캔할 때 감지합니다',
+    duplicateAction: '중복 바코드 처리 방식',
+    actionAlert: '알림 후 추가',
+    actionSkip: '자동으로 건너뛰기',
+    actionAllow: '모두 허용',
+    infoMessage: '연속 스캔 모드가 활성화되면 스캔 화면에서 여러 코드를 빠르게 스캔할 수 있습니다. 결과는 하단에 토스트로 표시되고, 터치하면 상세 화면으로 이동합니다.',
+  },
+
+  // 배치 스캔 설정 (레거시 호환)
   batchScan: {
     title: '배치 스캔 설정',
     enable: '배치 스캔 모드',

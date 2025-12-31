@@ -100,12 +100,14 @@ export default {
     permissionDenied: 'Por favor, permite el acceso a la cámara',
     torchOn: 'Apagar linterna',
     torchOff: 'Encender linterna',
-    batchModeActive: 'Modo por lotes activo',
+    batchModeActive: 'Modo escaneo continuo',
     scannedCount: 'Escaneados: {count} elementos',
     finishBatch: 'Finalizar',
     clearBatch: 'Limpiar',
     viewBatchList: 'Ver lista',
     sending: 'Enviando',
+    realtimeSync: 'Sincronización en tiempo real',
+    realtimeSyncGuide: 'La sincronización en tiempo real está activada.\nPor favor, selecciona un grupo de sincronización arriba.',
     urlSending: 'Enviando a URL',
     guideText: 'Escanea un código QR o de barras',
     noSessionUrl: 'Sin URL de sesión',
@@ -123,6 +125,7 @@ export default {
     loadingImage: 'Cargando imagen...',
     analyzing: 'Analizando códigos de barras/QR...',
     analysisError: 'Ocurrió un error durante el análisis de la imagen.',
+    fileNotFound: 'No se encontró el archivo de imagen.\nEs posible que se haya eliminado la caché.',
     pickerError: 'Ocurrió un error al seleccionar la imagen.',
     results: 'Códigos detectados',
     noResults: 'No se encontraron códigos',
@@ -163,6 +166,7 @@ export default {
     duplicateCount: 'vez',
     scanHistory: 'Historial de escaneo:',
     copy: 'Copiar',
+    save: 'Guardar',
     share: 'Compartir',
     open: 'Abrir',
     scanAgain: 'Escanear de nuevo',
@@ -188,6 +192,7 @@ export default {
     savePhotoSuccessMessage: 'La foto se ha guardado en el álbum.',
     errorNoPhoto: 'No hay foto para guardar.',
     errorSavePhoto: 'Ocurrió un error al guardar la foto.',
+    imageNotFound: 'Imagen no encontrada',
     permissionDenied: 'Permiso denegado',
     permissionDeniedMessage: 'Se requiere permiso de la biblioteca de fotos para guardar fotos.',
     // Nivel de corrección de errores del código QR
@@ -336,6 +341,14 @@ export default {
     privacyPolicyDesc: 'Ver política de privacidad',
     versionInfo: 'Información de versión',
     currentVersion: 'Versión actual',
+    // Caché
+    cache: 'Caché',
+    clearCache: 'Borrar caché',
+    clearCacheDesc: 'Eliminar fotos de escaneo guardadas',
+    clearCacheConfirm: '¿Eliminar todas las fotos de escaneo guardadas?\n\nLas fotos eliminadas no se pueden recuperar.',
+    noCacheToDelete: 'No hay caché para eliminar.',
+    cacheCleared: 'Caché borrada.',
+    clearCacheError: 'Error al borrar la caché.',
     scanSound: 'Sonido de escaneo',
     scanSoundDesc: 'Reproducir sonido al escanear',
   },
@@ -451,6 +464,18 @@ export default {
     default: 'Navegador predeterminado',
     defaultDesc: 'Abre en el navegador predeterminado del sistema',
     selected: 'Seleccionado',
+  },
+
+  // Modo de visualización de resultados del escaneo
+  scanResultMode: {
+    title: 'Visualización de resultados',
+    description: 'Selecciona cómo mostrar los resultados al escanear un código',
+    popup: 'Ir a pantalla de resultados',
+    popupDesc: 'Navega a la pantalla de resultados detallados después del escaneo',
+    toast: 'Modo de escaneo continuo',
+    toastDesc: 'Muestra el resultado en la parte inferior y permite seguir escaneando',
+    selected: 'Seleccionado',
+    toastTip: 'En el modo de escaneo continuo, toca el resultado para ver los detalles. Útil para escanear múltiples códigos rápidamente.',
   },
 
   // Pantalla de generador de código QR
@@ -1039,7 +1064,26 @@ export default {
     },
   },
 
-  // Configuración de escaneo por lotes
+  // Configuración de escaneo continuo
+  continuousScan: {
+    title: 'Modo de escaneo continuo',
+    description: 'Escanea múltiples códigos QR/barras rápidamente en sucesión',
+    enable: 'Modo de escaneo continuo',
+    enableDesc: 'Escanea continuamente sin navegar a la pantalla de resultados',
+    displayOptions: 'Opciones de visualización',
+    showCounter: 'Mostrar contador de escaneos',
+    showCounterDesc: 'Muestra el número de códigos de barras escaneados en tiempo real',
+    duplicateSection: 'Detección de duplicados',
+    duplicateDetection: 'Detectar códigos duplicados',
+    duplicateDetectionDesc: 'Detecta cuando se escanea un código que ya fue escaneado',
+    duplicateAction: 'Manejo de duplicados',
+    actionAlert: 'Alertar y agregar',
+    actionSkip: 'Omitir automáticamente',
+    actionAllow: 'Permitir todos',
+    infoMessage: 'Cuando el modo de escaneo continuo está habilitado, puedes escanear múltiples códigos rápidamente en la pantalla de escaneo. Los resultados se muestran como toast en la parte inferior, toca para ver detalles.',
+  },
+
+  // Configuración de escaneo por lotes (compatibilidad)
   batchScan: {
     title: 'Configuración de escaneo por lotes',
     enable: 'Modo de escaneo por lotes',

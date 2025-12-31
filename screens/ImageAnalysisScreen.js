@@ -261,6 +261,14 @@ function ImageAnalysisScreen() {
       try {
         setLoadingMessage(t('imageAnalysis.loadingImage'));
 
+        // 파일 존재 여부 확인
+        const fileInfo = await FileSystem.getInfoAsync(imageUri);
+        if (!fileInfo.exists) {
+          setError(t('imageAnalysis.fileNotFound') || '이미지 파일을 찾을 수 없습니다.\n캐시가 삭제되었을 수 있습니다.');
+          setIsLoading(false);
+          return;
+        }
+
         // EXIF 회전 정규화 - 빈 actions로 manipulateAsync 호출하면 EXIF orientation이 적용됨
         console.log('Normalizing image orientation...');
         const manipulatedImage = await ImageManipulator.manipulateAsync(

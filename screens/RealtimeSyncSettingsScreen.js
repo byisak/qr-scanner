@@ -13,10 +13,12 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -75,6 +77,8 @@ export default function RealtimeSyncSettingsScreen() {
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [sessionUrls, setSessionUrls] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // 탭 상태: 'active' | 'deleted'
   const [activeTab, setActiveTab] = useState('active');
@@ -95,10 +99,54 @@ export default function RealtimeSyncSettingsScreen() {
     [sessionUrls]
   );
 
+  // 로컬 세션들에 대한 그룹 생성 보장 함수
+  const ensureGroupsForSessions = async (sessions) => {
+    if (!sessions || sessions.length === 0) return;
+
+    try {
+      const groupsJson = await AsyncStorage.getItem('scanGroups');
+      let groups = groupsJson ? JSON.parse(groupsJson) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
+      const groupIds = new Set(groups.map(g => g.id));
+      let hasNewGroups = false;
+
+      for (const session of sessions) {
+        if (!groupIds.has(session.id)) {
+          groups.push({
+            id: session.id,
+            name: session.name || `세션 ${session.id.substring(0, 4)}`,
+            createdAt: session.createdAt || Date.now(),
+            isCloudSync: true,
+            isDeleted: session.status === 'DELETED',
+          });
+          groupIds.add(session.id);
+          hasNewGroups = true;
+        }
+      }
+
+      if (hasNewGroups) {
+        await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+
+        // scanHistoryByGroup에도 그룹 초기화
+        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+        const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+        for (const session of sessions) {
+          if (!historyByGroup[session.id]) {
+            historyByGroup[session.id] = [];
+          }
+        }
+        await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      }
+    } catch (error) {
+      console.error('ensureGroupsForSessions error:', error);
+    }
+  };
+
   // 서버에서 세션 목록을 가져와 로컬과 동기화하는 함수
   const syncSessionsFromServer = useCallback(async (localSessions) => {
     const serverSessions = await fetchSessionsFromServer();
     if (!serverSessions || !Array.isArray(serverSessions)) {
+      // 서버 연결 실패해도 로컬 세션에 대한 그룹은 생성
+      await ensureGroupsForSessions(localSessions);
       return localSessions;
     }
 
@@ -181,28 +229,28 @@ export default function RealtimeSyncSettingsScreen() {
         return g;
       });
 
-      // 새 세션에 대한 그룹 추가
-      for (const newSession of newSessions) {
-        if (!groupIds.has(newSession.id)) {
+      // 모든 세션에 대한 그룹 추가 (로컬 + 서버 모두)
+      for (const session of allSessions) {
+        if (!groupIds.has(session.id)) {
           groups.push({
-            id: newSession.id,
-            // 서버에서 받은 이름 사용, 없으면 기본값
-            name: newSession.name || `세션 ${newSession.id.substring(0, 4)}`,
-            createdAt: newSession.createdAt,
+            id: session.id,
+            name: session.name || `세션 ${session.id.substring(0, 4)}`,
+            createdAt: session.createdAt,
             isCloudSync: true,
-            isDeleted: newSession.status === 'DELETED',
+            isDeleted: session.status === 'DELETED',
           });
+          groupIds.add(session.id);
         }
       }
 
       await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
 
-      // scanHistoryByGroup에도 새 세션 그룹 초기화
+      // scanHistoryByGroup에도 모든 세션 그룹 초기화
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
       const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
-      for (const newSession of newSessions) {
-        if (!historyByGroup[newSession.id]) {
-          historyByGroup[newSession.id] = [];
+      for (const session of allSessions) {
+        if (!historyByGroup[session.id]) {
+          historyByGroup[session.id] = [];
         }
       }
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
@@ -217,6 +265,7 @@ export default function RealtimeSyncSettingsScreen() {
   // 초기 로드
   useEffect(() => {
     (async () => {
+      setIsLoading(true);
       try {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
         const isEnabled = realtimeSync === 'true';
@@ -237,17 +286,21 @@ export default function RealtimeSyncSettingsScreen() {
 
         // 실시간 동기화가 활성화된 경우 서버에서 세션 목록 동기화
         if (isEnabled) {
+          setIsSyncing(true);
           const synced = await syncSessionsFromServer(localSessions);
           setSessionUrls(synced);
-          console.log('앱 시작: 서버에서 세션 목록 동기화 완료');
+          setIsSyncing(false);
         } else {
           setSessionUrls(localSessions);
         }
       } catch (error) {
         console.error('Load realtime sync settings error:', error);
+        Alert.alert(t('settings.error'), t('settings.loadError') || '설정을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
       }
     })();
-  }, [syncSessionsFromServer]);
+  }, [syncSessionsFromServer, t]);
 
   // 화면 포커스 시 데이터 다시 로드 (서버 동기화 포함)
   useFocusEffect(
@@ -289,6 +342,8 @@ export default function RealtimeSyncSettingsScreen() {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
         if (realtimeSyncEnabled) {
+          // 실시간 서버 전송이 켜지면 스캔 연동 URL 끄기 (상호 배타적)
+          await SecureStore.setItemAsync('scanLinkEnabled', 'false');
           // 토글 활성화 시 서버에서 세션 목록 동기화
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
           let localSessions = [];
@@ -618,6 +673,11 @@ export default function RealtimeSyncSettingsScreen() {
     Alert.alert(t('settings.success'), t('settings.urlCopied'));
   };
 
+  // 세션 URL 동적 생성 (항상 최신 서버 주소 사용)
+  const getSessionUrl = useCallback((sessionId) => {
+    return `${config.serverUrl}/${sessionId}`;
+  }, []);
+
   // 활성 세션 아이템 렌더링
   const renderActiveSessionItem = (session) => (
     <View
@@ -638,7 +698,7 @@ export default function RealtimeSyncSettingsScreen() {
             color={colors.primary}
           />
           <Text style={[styles.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
-            {session.url}
+            {getSessionUrl(session.id)}
           </Text>
         </View>
         <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
@@ -656,7 +716,7 @@ export default function RealtimeSyncSettingsScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.iconButton, { backgroundColor: colors.primary }]}
-          onPress={() => handleCopyUrl(session.url)}
+          onPress={() => handleCopyUrl(getSessionUrl(session.id))}
           activeOpacity={0.7}
         >
           <Ionicons name="copy-outline" size={18} color="#fff" />
@@ -696,7 +756,7 @@ export default function RealtimeSyncSettingsScreen() {
               color={colors.textTertiary}
             />
             <Text style={[styles.sessionUrl, { color: colors.textTertiary, flex: 1 }]} numberOfLines={1}>
-              {session.url}
+              {getSessionUrl(session.id)}
             </Text>
           </View>
           <View style={styles.deletedInfoRow}>
@@ -744,8 +804,23 @@ export default function RealtimeSyncSettingsScreen() {
         <View style={styles.headerRight} />
       </View>
 
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          {/* 동기화 중 인디케이터 */}
+          {isSyncing && (
+            <View style={[styles.syncingBanner, { backgroundColor: colors.primary + '20' }]}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={[styles.syncingText, { color: colors.primary }]}>
+                {t('settings.syncing') || '서버와 동기화 중...'}
+              </Text>
+            </View>
+          )}
+
           {/* 토글 설정 */}
           <View style={[styles.section, { backgroundColor: colors.surface }]}>
             <View style={styles.row}>
@@ -987,6 +1062,7 @@ export default function RealtimeSyncSettingsScreen() {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+      )}
 
       {/* 비밀번호 입력 모달 */}
       <Modal
@@ -1083,6 +1159,24 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     width: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  syncingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginBottom: 16,
+    borderRadius: 10,
+    gap: 8,
+  },
+  syncingText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   container: {
     flex: 1,

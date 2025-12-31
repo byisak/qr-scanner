@@ -13,6 +13,7 @@ import {
   Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -20,8 +21,10 @@ import { useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -30,6 +33,7 @@ export default function SettingsScreen() {
   const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
   const { user, isLoggedIn } = useAuth();
+  const { isLocked, showUnlockAlert, devModeEnabled, toggleDevMode, resetAllLocks } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
@@ -40,7 +44,7 @@ export default function SettingsScreen() {
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
-  const [batchScanEnabled, setBatchScanEnabled] = useState(false);
+  const [continuousScanEnabled, setContinuousScanEnabled] = useState(false);
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
@@ -53,6 +57,100 @@ export default function SettingsScreen() {
   const [productAutoSearch, setProductAutoSearch] = useState(false);
   // 스캔 연동 URL 목록
   const [scanUrlList, setScanUrlList] = useState([]);
+  // 실시간 서버전송 설명 페이지 확인 여부
+  const [realtimeSyncExplained, setRealtimeSyncExplained] = useState(false);
+  // 스캔 결과 표시 방식 (popup: 결과 화면, toast: 하단 토스트)
+  const [scanResultMode, setScanResultMode] = useState('popup');
+  // 캐시 크기
+  const [cacheSize, setCacheSize] = useState(0);
+  const [isCalculatingCache, setIsCalculatingCache] = useState(false);
+
+  // 캐시 크기 계산
+  const calculateCacheSize = useCallback(async () => {
+    setIsCalculatingCache(true);
+    try {
+      const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
+      const dirInfo = await FileSystem.getInfoAsync(photoDir);
+
+      if (!dirInfo.exists) {
+        setCacheSize(0);
+        return;
+      }
+
+      const files = await FileSystem.readDirectoryAsync(photoDir);
+      let totalSize = 0;
+
+      for (const file of files) {
+        const fileInfo = await FileSystem.getInfoAsync(`${photoDir}${file}`);
+        if (fileInfo.exists && fileInfo.size) {
+          totalSize += fileInfo.size;
+        }
+      }
+
+      setCacheSize(totalSize);
+    } catch (error) {
+      console.error('Calculate cache size error:', error);
+      setCacheSize(0);
+    } finally {
+      setIsCalculatingCache(false);
+    }
+  }, []);
+
+  // 캐시 크기 포맷팅
+  const formatCacheSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  // 캐시 삭제
+  const handleClearCache = () => {
+    if (cacheSize === 0) {
+      Alert.alert(
+        t('settings.cache') || '캐시',
+        t('settings.noCacheToDelete') || '삭제할 캐시가 없습니다.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      t('settings.clearCache') || '캐시 삭제',
+      t('settings.clearCacheConfirm') || `저장된 사진 ${formatCacheSize(cacheSize)}를 삭제하시겠습니까?\n\n삭제된 사진은 복구할 수 없습니다.`,
+      [
+        { text: t('common.cancel') || '취소', style: 'cancel' },
+        {
+          text: t('common.delete') || '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
+              const dirInfo = await FileSystem.getInfoAsync(photoDir);
+
+              if (dirInfo.exists) {
+                await FileSystem.deleteAsync(photoDir, { idempotent: true });
+                // 폴더 재생성
+                await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
+              }
+
+              setCacheSize(0);
+              Alert.alert(
+                t('settings.success') || '성공',
+                t('settings.cacheCleared') || '캐시가 삭제되었습니다.'
+              );
+            } catch (error) {
+              console.error('Clear cache error:', error);
+              Alert.alert(
+                t('settings.error') || '오류',
+                t('settings.clearCacheError') || '캐시 삭제 중 오류가 발생했습니다.'
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
@@ -73,7 +171,7 @@ export default function SettingsScreen() {
         const h = await AsyncStorage.getItem('hapticEnabled');
         const ss = await AsyncStorage.getItem('scanSoundEnabled');
         const p = await AsyncStorage.getItem('photoSaveEnabled');
-        const bs = await AsyncStorage.getItem('batchScanEnabled');
+        const cs = await AsyncStorage.getItem('continuousScanEnabled');
         const b = await AsyncStorage.getItem('selectedBarcodes');
 
         if (e === 'true') {
@@ -91,8 +189,8 @@ export default function SettingsScreen() {
         // null이면 기본값 true 유지
         setPhotoSaveEnabled(p === null ? true : p === 'true');
 
-        if (bs !== null) {
-          setBatchScanEnabled(bs === 'true');
+        if (cs !== null) {
+          setContinuousScanEnabled(cs === 'true');
         }
 
         if (b) {
@@ -171,18 +269,31 @@ export default function SettingsScreen() {
             setPhotoQuality(q);
           }
 
-          // 배치 스캔 설정 로드
-          const bs = await AsyncStorage.getItem('batchScanEnabled');
-          setBatchScanEnabled(bs === 'true');
+          // 연속 스캔 설정 로드
+          const cs = await AsyncStorage.getItem('continuousScanEnabled');
+          setContinuousScanEnabled(cs === 'true');
 
           // 제품 검색 자동 실행 설정 로드
           const pas = await AsyncStorage.getItem('productAutoSearch');
           setProductAutoSearch(pas === 'true');
+
+          // 실시간 서버전송 설명 페이지 확인 여부 로드
+          const explained = await AsyncStorage.getItem('realtimeSyncExplained');
+          setRealtimeSyncExplained(explained === 'true');
+
+          // 스캔 결과 표시 방식 로드
+          const resultMode = await AsyncStorage.getItem('scanResultMode');
+          if (resultMode) {
+            setScanResultMode(resultMode);
+          }
+
+          // 캐시 크기 계산
+          calculateCacheSize();
         } catch (error) {
           console.error('Load settings error:', error);
         }
       })();
-    }, [])
+    }, [calculateCacheSize])
   );
 
   useEffect(() => {
@@ -218,12 +329,12 @@ export default function SettingsScreen() {
   useEffect(() => {
     (async () => {
       try {
-        await AsyncStorage.setItem('batchScanEnabled', batchScanEnabled.toString());
+        await AsyncStorage.setItem('continuousScanEnabled', continuousScanEnabled.toString());
       } catch (error) {
-        console.error('Save batch scan settings error:', error);
+        console.error('Save continuous scan settings error:', error);
       }
     })();
-  }, [batchScanEnabled]);
+  }, [continuousScanEnabled]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -432,25 +543,33 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+
         </View>
 
         {/* 고급 스캔 기능 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.advancedScanFeatures')}</Text>
 
-          {/* 배치 스캔 모드 */}
+          {/* 연속 스캔 모드 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/batch-scan-settings')}
+            onPress={() => {
+              if (isLocked('batchScan')) {
+                showUnlockAlert('batchScan', () => router.push('/continuous-scan-settings'));
+              } else {
+                router.push('/continuous-scan-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.batchScanMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.batchScanModeDesc')}</Text>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('continuousScan.title') || t('settings.batchScanMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('continuousScan.description') || t('settings.batchScanModeDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: batchScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {batchScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              <LockIcon featureId="batchScan" size={14} color={colors.textTertiary} />
+              <Text style={[s.statusText, { color: continuousScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {continuousScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
@@ -459,7 +578,13 @@ export default function SettingsScreen() {
           {/* 스캔 연동 URL */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/scan-url-settings')}
+            onPress={() => {
+              if (isLocked('scanUrlIntegration')) {
+                showUnlockAlert('scanUrlIntegration', () => router.push('/scan-url-settings'));
+              } else {
+                router.push('/scan-url-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -467,6 +592,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="scanUrlIntegration" size={14} color={colors.textTertiary} />
               <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {on ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -498,7 +624,27 @@ export default function SettingsScreen() {
           {/* 실시간 서버전송 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/realtime-sync-settings')}
+            onPress={() => {
+              if (isLocked('realtimeSync')) {
+                showUnlockAlert('realtimeSync', () => {
+                  // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
+                  // if (realtimeSyncExplained) {
+                  //   router.push('/realtime-sync-settings');
+                  // } else {
+                  //   router.push('/realtime-sync-explanation');
+                  // }
+                  router.push('/realtime-sync-explanation');
+                });
+              } else {
+                // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
+                // if (realtimeSyncExplained) {
+                //   router.push('/realtime-sync-settings');
+                // } else {
+                //   router.push('/realtime-sync-explanation');
+                // }
+                router.push('/realtime-sync-explanation');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -506,6 +652,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.realtimeSyncDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="realtimeSync" size={14} color={colors.textTertiary} />
               <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {realtimeSyncEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -520,7 +667,13 @@ export default function SettingsScreen() {
 
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/product-search-settings')}
+            onPress={() => {
+              if (isLocked('productSearch')) {
+                showUnlockAlert('productSearch', () => router.push('/product-search-settings'));
+              } else {
+                router.push('/product-search-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -528,6 +681,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="productSearch" size={14} color={colors.textTertiary} />
               <Text style={[s.statusText, { color: productAutoSearch ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {productAutoSearch ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -679,7 +833,54 @@ export default function SettingsScreen() {
             </View>
             <Text style={[s.versionText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>0.1.0</Text>
           </View>
+
+          {/* 캐시 삭제 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={handleClearCache}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.clearCache') || '캐시 삭제'}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.clearCacheDesc') || '저장된 스캔 사진을 삭제합니다'}</Text>
+            </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.cacheSize, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                {isCalculatingCache ? '...' : formatCacheSize(cacheSize)}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
         </View>
+
+        {/* 개발자 옵션 - TODO: 배포 시 제거 또는 숨김 처리 */}
+        <TouchableOpacity
+          style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}
+          onPress={() => router.push('/developer-options')}
+          activeOpacity={0.7}
+        >
+          <View style={s.devOptionHeader}>
+            <View style={s.devOptionLeft}>
+              <Ionicons name="code-slash" size={24} color="#FF9500" />
+              <View style={s.devOptionText}>
+                <Text style={[s.sectionTitle, { color: '#FF9500', fontFamily: fonts.bold, marginBottom: 0 }]}>
+                  {t('settings.developerOptions')}
+                </Text>
+                <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                  {t('settings.devModeDesc')}
+                </Text>
+              </View>
+            </View>
+            <View style={s.devOptionRight}>
+              {devModeEnabled && (
+                <View style={[s.devModeBadge, { backgroundColor: '#FF9500' }]}>
+                  <Text style={[s.devModeBadgeText, { fontFamily: fonts.semiBold }]}>{t('settings.statusOn')}</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </View>
+        </TouchableOpacity>
         </ScrollView>
       </TouchableWithoutFeedback>
     </View>
@@ -700,7 +901,7 @@ const s = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   header: {
     paddingTop: 50,
@@ -756,6 +957,10 @@ const s = StyleSheet.create({
   statusText: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  cacheSize: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   label: {
     fontSize: 17,
@@ -938,5 +1143,35 @@ const s = StyleSheet.create({
   },
   urlListItemUrl: {
     fontSize: 12,
+  },
+  // 개발자 옵션 스타일
+  devOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  devOptionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  devOptionText: {
+    flex: 1,
+  },
+  devOptionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  devModeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  devModeBadgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

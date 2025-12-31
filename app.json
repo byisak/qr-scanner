@@ -101,7 +101,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "serverUrl": "https://tiny-llamas-repair.loca.lt",
+      "serverUrl": "http://158.247.248.140:3000",
       "kakao": {
         "nativeAppKey": "YOUR_KAKAO_NATIVE_APP_KEY"
       },

@@ -7,6 +7,7 @@ import { LanguageProvider } from '../contexts/LanguageContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { SyncProvider } from '../contexts/SyncContext';
+import { FeatureLockProvider } from '../contexts/FeatureLockContext';
 import { FontAssets } from '../constants/Fonts';
 
 // Keep the splash screen visible while we fetch resources
@@ -28,10 +29,11 @@ export default function RootLayout() {
 
   return (
     <LanguageProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <SyncProvider>
-            <StatusBar style="auto" />
+      <FeatureLockProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <SyncProvider>
+              <StatusBar style="auto" />
             <Stack
             screenOptions={{
               headerShown: false,
@@ -85,9 +87,10 @@ export default function RootLayout() {
               }}
             />
             </Stack>
-          </SyncProvider>
-        </AuthProvider>
-      </ThemeProvider>
+            </SyncProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </FeatureLockProvider>
     </LanguageProvider>
   );
 }

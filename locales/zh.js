@@ -100,12 +100,14 @@ export default {
     permissionDenied: '请允许使用相机权限',
     torchOn: '关闭闪光灯',
     torchOff: '打开闪光灯',
-    batchModeActive: '批量模式已启用',
+    batchModeActive: '连续扫描模式',
     scannedCount: '已扫描: {count}项',
     finishBatch: '完成扫描',
     clearBatch: '清空',
     viewBatchList: '查看列表',
     sending: '发送中',
+    realtimeSync: '实时服务器传输',
+    realtimeSyncGuide: '实时服务器传输已开启。\n请在上方选择服务器传输分组。',
     urlSending: '正在发送到URL',
     guideText: '请扫描二维码或条形码',
     noSessionUrl: '没有传输地址',
@@ -123,6 +125,7 @@ export default {
     loadingImage: '正在加载图片...',
     analyzing: '正在分析条码/二维码...',
     analysisError: '图片分析时发生错误。',
+    fileNotFound: '找不到图片文件。\n缓存可能已被清除。',
     pickerError: '选择图片时发生错误。',
     results: '识别的代码',
     noResults: '未找到条码',
@@ -163,6 +166,7 @@ export default {
     duplicateCount: '次',
     scanHistory: '扫描历史:',
     copy: '复制',
+    save: '保存',
     share: '分享',
     open: '打开',
     scanAgain: '重新扫描',
@@ -188,6 +192,7 @@ export default {
     savePhotoSuccessMessage: '照片已保存到相册。',
     errorNoPhoto: '没有要保存的照片。',
     errorSavePhoto: '保存照片时出现问题。',
+    imageNotFound: '找不到图片',
     permissionDenied: '权限被拒绝',
     permissionDeniedMessage: '保存照片需要相册权限。',
     // 二维码纠错等级
@@ -336,6 +341,14 @@ export default {
     privacyPolicyDesc: '查看隐私政策',
     versionInfo: '版本信息',
     currentVersion: '当前版本',
+    // 缓存
+    cache: '缓存',
+    clearCache: '清除缓存',
+    clearCacheDesc: '删除保存的扫描照片',
+    clearCacheConfirm: '删除所有保存的扫描照片吗？\n\n删除的照片无法恢复。',
+    noCacheToDelete: '没有可删除的缓存。',
+    cacheCleared: '缓存已清除。',
+    clearCacheError: '清除缓存时发生错误。',
     scanSound: '扫描声音',
     scanSoundDesc: '扫描时通过声音提示',
   },
@@ -451,6 +464,18 @@ export default {
     default: '默认浏览器',
     defaultDesc: '使用系统默认浏览器打开',
     selected: '已选择',
+  },
+
+  // 扫描结果显示模式
+  scanResultMode: {
+    title: '扫描结果显示',
+    description: '选择扫描代码时的结果显示方式',
+    popup: '跳转到结果页面',
+    popupDesc: '扫描后跳转到详细结果页面',
+    toast: '连续扫描模式',
+    toastDesc: '在底部显示结果并可以继续扫描',
+    selected: '已选择',
+    toastTip: '在连续扫描模式下,点击结果可跳转到详细页面。适合快速扫描多个代码。',
   },
 
   // 二维码生成界面
@@ -1042,7 +1067,26 @@ export default {
     },
   },
 
-  // 批量扫描设置
+  // 连续扫描设置
+  continuousScan: {
+    title: '连续扫描模式',
+    description: '快速连续扫描多个QR/条形码',
+    enable: '连续扫描模式',
+    enableDesc: '不跳转到结果页面，连续扫描',
+    displayOptions: '显示选项',
+    showCounter: '显示扫描计数器',
+    showCounterDesc: '实时显示已扫描条形码的数量',
+    duplicateSection: '重复检测',
+    duplicateDetection: '检测重复条形码',
+    duplicateDetectionDesc: '检测已扫描过的条形码再次被扫描',
+    duplicateAction: '重复条形码处理方式',
+    actionAlert: '提醒后添加',
+    actionSkip: '自动跳过',
+    actionAllow: '全部允许',
+    infoMessage: '启用连续扫描模式后，可以在扫描页面快速扫描多个代码。结果将在底部以提示形式显示，点击可查看详情。',
+  },
+
+  // 批量扫描设置（旧版兼容）
   batchScan: {
     title: '批量扫描设置',
     enable: '批量扫描模式',

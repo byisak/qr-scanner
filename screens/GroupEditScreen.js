@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -360,7 +361,7 @@ export default function GroupEditScreen() {
         />
 
         {/* 그룹 추가 버튼 */}
-        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 20 }]}>
+        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom }]}>
         <TouchableOpacity
           style={[s.addButton, { backgroundColor: colors.primary }]}
           onPress={() => setShowAddModal(true)}
@@ -377,40 +378,54 @@ export default function GroupEditScreen() {
         animationType="fade"
         onRequestClose={() => setShowAddModal(false)}
       >
-        <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
-            <TextInput
-              style={[s.modalInput, {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              placeholder={t('groupEdit.groupNamePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={newGroupName}
-              onChangeText={setNewGroupName}
-              autoFocus
-            />
-            <View style={s.modalButtons}>
-              <TouchableOpacity
-                style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
-                onPress={() => {
-                  setShowAddModal(false);
-                  setNewGroupName('');
-                }}
-              >
-                <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
-                onPress={addGroup}
-              >
-                <Text style={s.modalButtonTextConfirm}>{t('groupEdit.create')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowAddModal(false);
+            setNewGroupName('');
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'position' : 'height'}
+            style={s.bottomSheetWrapper}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
+                <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
+                <TextInput
+                  style={[s.modalInput, {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }]}
+                  placeholder={t('groupEdit.groupNamePlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={newGroupName}
+                  onChangeText={setNewGroupName}
+                  autoFocus
+                />
+                <View style={s.modalButtons}>
+                  <TouchableOpacity
+                    style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
+                    onPress={() => {
+                      setShowAddModal(false);
+                      setNewGroupName('');
+                    }}
+                  >
+                    <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
+                    onPress={addGroup}
+                  >
+                    <Text style={s.modalButtonTextConfirm}>{t('groupEdit.create')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
       </Modal>
 
       {/* 그룹 이름 변경 모달 */}
@@ -420,41 +435,56 @@ export default function GroupEditScreen() {
         animationType="fade"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
-            <TextInput
-              style={[s.modalInput, {
-                backgroundColor: colors.inputBackground,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              placeholder={t('groupEdit.groupNamePlaceholder')}
-              placeholderTextColor={colors.textTertiary}
-              value={newGroupName}
-              onChangeText={setNewGroupName}
-              autoFocus
-            />
-            <View style={s.modalButtons}>
-              <TouchableOpacity
-                style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
-                onPress={() => {
-                  setShowEditModal(false);
-                  setNewGroupName('');
-                  setEditingGroup(null);
-                }}
-              >
-                <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
-                onPress={editGroupName}
-              >
-                <Text style={s.modalButtonTextConfirm}>{t('common.save')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowEditModal(false);
+            setNewGroupName('');
+            setEditingGroup(null);
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'position' : 'height'}
+            style={s.bottomSheetWrapper}
+          >
+            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
+                <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
+                <TextInput
+                  style={[s.modalInput, {
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }]}
+                  placeholder={t('groupEdit.groupNamePlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  value={newGroupName}
+                  onChangeText={setNewGroupName}
+                  autoFocus
+                />
+                <View style={s.modalButtons}>
+                  <TouchableOpacity
+                    style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
+                    onPress={() => {
+                      setShowEditModal(false);
+                      setNewGroupName('');
+                      setEditingGroup(null);
+                    }}
+                  >
+                    <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
+                    onPress={editGroupName}
+                  >
+                    <Text style={s.modalButtonTextConfirm}>{t('common.save')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
       </Modal>
       </View>
     </GestureHandlerRootView>
@@ -492,7 +522,7 @@ const s = StyleSheet.create({
   },
   listContent: {
     padding: 15,
-    paddingBottom: 200,
+    paddingBottom: 250,
   },
   groupItem: {
     flexDirection: 'row',
@@ -572,8 +602,24 @@ const s = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-start',
-    alignItems: 'center',
     paddingTop: 120,
+    paddingHorizontal: 20,
+  },
+  bottomSheetWrapper: {
+    width: '100%',
+  },
+  bottomSheetContent: {
+    borderRadius: 20,
+    padding: 24,
+    paddingTop: 20,
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   modalContent: {
     borderRadius: 16,
