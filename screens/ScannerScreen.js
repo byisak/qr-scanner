@@ -1848,11 +1848,11 @@ function ScannerScreen() {
         bottomOffset={bottomOffset + 50}
       />
 
-      {/* 하단 배너 광고 */}
+      {/* 하단 배너 광고 - 탭바 바로 위 */}
       <AdBanner
-        containerStyle={{
+        wrapperStyle={{
           position: 'absolute',
-          bottom: bottomOffset - 50,
+          bottom: Platform.OS === 'ios' ? 83 : insets.bottom + 49,
           left: 0,
           right: 0,
         }}

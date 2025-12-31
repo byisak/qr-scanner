@@ -51,7 +51,7 @@ const getBannerAdUnitId = () => {
       });
 };
 
-export default function AdBanner({ style, containerStyle }) {
+export default function AdBanner({ style, containerStyle, wrapperStyle }) {
   const [adLoaded, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState(false);
 
@@ -60,8 +60,10 @@ export default function AdBanner({ style, containerStyle }) {
     // 개발 모드에서만 플레이스홀더 표시
     if (__DEV__) {
       return (
-        <View style={[styles.container, styles.placeholder, containerStyle]}>
-          <Text style={styles.placeholderText}>광고 영역 (Development Build 필요)</Text>
+        <View style={[styles.wrapper, wrapperStyle]}>
+          <View style={[styles.container, styles.placeholder, containerStyle]}>
+            <Text style={styles.placeholderText}>광고 영역 (Development Build 필요)</Text>
+          </View>
         </View>
       );
     }
@@ -77,32 +79,52 @@ export default function AdBanner({ style, containerStyle }) {
   }
 
   return (
-    <View style={[styles.container, containerStyle, !adLoaded && styles.hidden]}>
-      <BannerAd
-        unitId={adUnitId}
-        size={BannerAdSize.BANNER}
-        requestOptions={{
-          requestNonPersonalizedAdsOnly: true,
-        }}
-        onAdLoaded={() => {
-          console.log('Ad loaded successfully');
-          setAdLoaded(true);
-        }}
-        onAdFailedToLoad={(error) => {
-          console.log('Ad failed to load:', error);
-          setAdError(true);
-        }}
-      />
+    <View style={[styles.wrapper, wrapperStyle, !adLoaded && styles.hidden]}>
+      <View style={[styles.container, containerStyle]}>
+        <BannerAd
+          unitId={adUnitId}
+          size={BannerAdSize.BANNER}
+          requestOptions={{
+            requestNonPersonalizedAdsOnly: true,
+          }}
+          onAdLoaded={() => {
+            console.log('Ad loaded successfully');
+            setAdLoaded(true);
+          }}
+          onAdFailedToLoad={(error) => {
+            console.log('Ad failed to load:', error);
+            setAdError(true);
+          }}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    width: '100%',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    overflow: 'hidden',
     minHeight: 50,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
   },
   hidden: {
     opacity: 0,
@@ -110,11 +132,8 @@ const styles = StyleSheet.create({
     minHeight: 0,
   },
   placeholder: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderStyle: 'dashed',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 15,
   },
   placeholderText: {
     color: '#999',
