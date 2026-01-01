@@ -676,6 +676,19 @@ function ScannerScreen() {
   const handleConfirmAdd = useCallback(() => {
     if (confirmToastData) {
       const { data, type, errorCorrectionLevel } = confirmToastData;
+
+      // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
+      if (realtimeSyncEnabled && activeSessionId) {
+        const success = websocketClient.sendScanData({
+          code: data,
+          timestamp: Date.now(),
+        }, activeSessionId);
+        if (success) {
+          setShowSendMessage(true);
+          setTimeout(() => setShowSendMessage(false), 1000);
+        }
+      }
+
       saveHistory(data, null, null, type, errorCorrectionLevel).then((historyResult) => {
         showToast({
           data,
@@ -689,7 +702,7 @@ function ScannerScreen() {
     }
     setConfirmToastData(null);
     setCanScan(true);
-  }, [confirmToastData, saveHistory, showToast]);
+  }, [confirmToastData, saveHistory, showToast, realtimeSyncEnabled, activeSessionId]);
 
   // 중복 확인 토스트 - 건너뛰기 버튼
   const handleConfirmSkip = useCallback(() => {
@@ -1086,6 +1099,22 @@ function ScannerScreen() {
         // 연속 스캔 카운터 증가
         setContinuousScanCount(prev => prev + 1);
 
+        // 실시간 서버 전송 헬퍼 함수
+        const sendToRealtimeServer = () => {
+          if (realtimeSyncEnabled && activeSessionId) {
+            const success = websocketClient.sendScanData({
+              code: data,
+              timestamp: Date.now(),
+            }, activeSessionId);
+            if (success) {
+              setShowSendMessage(true);
+              setTimeout(() => setShowSendMessage(false), 1000);
+            } else {
+              console.warn('Failed to send scan data to server in continuous mode');
+            }
+          }
+        };
+
         // EC Level 추출
         let detectedEcLevel = errorCorrectionLevel || null;
 
@@ -1096,7 +1125,7 @@ function ScannerScreen() {
               const action = duplicateActionRef.current;
 
               if (action === 'skip') {
-                // 자동 건너뛰기: 토스트로 건너뛰었다고 알림
+                // 자동 건너뛰기: 서버 전송 없이 토스트로 건너뛰었다고 알림
                 showToast({
                   data,
                   type: normalizedType,
@@ -1108,7 +1137,7 @@ function ScannerScreen() {
                 });
                 return;
               } else if (action === 'alert') {
-                // 알림 후 추가: 확인 토스트로 물어봄 (스캔 일시 정지)
+                // 알림 후 추가: 확인 토스트로 물어봄 (스캔 일시 정지, 서버 전송은 확인 후)
                 setCanScan(false);
                 setConfirmToastData({
                   data,
@@ -1118,10 +1147,11 @@ function ScannerScreen() {
                 });
                 return;
               }
-              // action === 'allow': 아래에서 정상 저장
+              // action === 'allow': 아래에서 정상 저장 및 서버 전송
             }
 
-            // 중복이 아니거나 allow인 경우: 정상 저장
+            // 중복이 아니거나 allow인 경우: 서버 전송 및 정상 저장
+            sendToRealtimeServer();
             saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
               showToast({
                 data,
@@ -1134,7 +1164,8 @@ function ScannerScreen() {
             });
           });
         } else {
-          // 중복 감지 비활성화: 바로 저장
+          // 중복 감지 비활성화: 서버 전송 및 바로 저장
+          sendToRealtimeServer();
           saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
             showToast({
               data,
