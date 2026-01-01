@@ -111,6 +111,8 @@ export default {
     torchOff: '손전등 켜기',
     batchModeActive: '연속 스캔 모드',
     scannedCount: '스캔된 항목: {count}개',
+    duplicate: '중복',
+    skipped: '건너뜀',
     finishBatch: '스캔 완료',
     clearBatch: '초기화',
     viewBatchList: '목록 보기',

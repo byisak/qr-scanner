@@ -27,6 +27,7 @@ import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AdBanner from '../components/AdBanner';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -269,8 +270,20 @@ export default function SettingsScreen() {
             setPhotoQuality(q);
           }
 
-          // 연속 스캔 설정 로드
-          const cs = await AsyncStorage.getItem('continuousScanEnabled');
+          // 연속 스캔 설정 로드 (두 키를 동기화하여 로드)
+          let cs = await AsyncStorage.getItem('continuousScanEnabled');
+          const bs = await AsyncStorage.getItem('batchScanEnabled');
+
+          // 두 키가 일치하지 않으면 동기화
+          if (cs === null && bs !== null) {
+            // continuousScanEnabled가 없으면 batchScanEnabled 값 사용
+            cs = bs;
+            await AsyncStorage.setItem('continuousScanEnabled', bs);
+          } else if (cs !== null && bs !== cs) {
+            // 두 값이 다르면 continuousScanEnabled 기준으로 동기화
+            await AsyncStorage.setItem('batchScanEnabled', cs);
+          }
+
           setContinuousScanEnabled(cs === 'true');
 
           // 제품 검색 자동 실행 설정 로드
@@ -326,15 +339,8 @@ export default function SettingsScreen() {
     })();
   }, [photoSaveEnabled]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        await AsyncStorage.setItem('continuousScanEnabled', continuousScanEnabled.toString());
-      } catch (error) {
-        console.error('Save continuous scan settings error:', error);
-      }
-    })();
-  }, [continuousScanEnabled]);
+  // 참고: continuousScanEnabled 저장은 ContinuousScanSettingsScreen에서만 처리
+  // SettingsScreen에서는 읽기만 하고, 로드 시 동기화만 수행
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -411,6 +417,11 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={24} color="#E67E22" />
           </TouchableOpacity>
         )}
+
+        {/* 배너 광고 */}
+        <View style={[s.adSection, { backgroundColor: colors.surface }]}>
+          <AdBanner />
+        </View>
 
         {/* Pro 버전 */}
         <TouchableOpacity
@@ -1054,6 +1065,15 @@ const s = StyleSheet.create({
   },
   settingsIconButton: {
     padding: 8,
+  },
+  // 광고 섹션 스타일
+  adSection: {
+    borderRadius: 16,
+    marginBottom: 20,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 70,
   },
   // Pro 버전 섹션 스타일
   proSection: {

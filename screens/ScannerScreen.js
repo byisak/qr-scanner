@@ -46,6 +46,8 @@ import * as MediaLibrary from 'expo-media-library';
 import ScanAnimation from '../components/ScanAnimation';
 import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
+import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
+import AdBanner from '../components/AdBanner';
 
 function ScannerScreen() {
   const router = useRouter();
@@ -110,6 +112,8 @@ function ScannerScreen() {
   // 스캔 결과 표시 모드 (popup: 결과 화면, toast: 하단 토스트)
   const [scanResultMode, setScanResultMode] = useState('popup');
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
+  const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
+  const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -237,7 +241,20 @@ function ScannerScreen() {
         // null이면 기본값 true 유지, 저장된 값이 있으면 해당 값 사용
         setPhotoSaveEnabled(photoSave === null ? true : photoSave === 'true');
 
-        const batchScan = await AsyncStorage.getItem('batchScanEnabled');
+        // 연속 스캔 설정 로드 (두 키를 동기화하여 로드)
+        let batchScan = await AsyncStorage.getItem('batchScanEnabled');
+        const continuousScan = await AsyncStorage.getItem('continuousScanEnabled');
+
+        // 두 키가 일치하지 않으면 동기화
+        if (batchScan === null && continuousScan !== null) {
+          batchScan = continuousScan;
+          await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+        } else if (continuousScan !== null && batchScan !== continuousScan) {
+          // continuousScanEnabled 기준으로 동기화 (설정 화면의 값을 우선)
+          batchScan = continuousScan;
+          await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+        }
+
         if (batchScan !== null) {
           setBatchScanEnabled(batchScan === 'true');
         }
@@ -369,6 +386,7 @@ function ScannerScreen() {
       setCanScan(true); // 화면 복귀 시 스캔 허용
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
+      setContinuousScanCount(0); // 연속 스캔 카운터 리셋
       resetAll();
 
       (async () => {
@@ -399,7 +417,20 @@ function ScannerScreen() {
           const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
           setPhotoSaveEnabled(photoSave === null ? true : photoSave === 'true');
 
-          const batchScan = await AsyncStorage.getItem('batchScanEnabled');
+          // 연속 스캔 설정 로드 (두 키를 동기화하여 로드)
+          let batchScan = await AsyncStorage.getItem('batchScanEnabled');
+          const continuousScan = await AsyncStorage.getItem('continuousScanEnabled');
+
+          // 두 키가 일치하지 않으면 동기화
+          if (batchScan === null && continuousScan !== null) {
+            batchScan = continuousScan;
+            await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+          } else if (continuousScan !== null && batchScan !== continuousScan) {
+            // continuousScanEnabled 기준으로 동기화 (설정 화면의 값을 우선)
+            batchScan = continuousScan;
+            await AsyncStorage.setItem('batchScanEnabled', continuousScan);
+          }
+
           if (batchScan !== null) {
             setBatchScanEnabled(batchScan === 'true');
           }
@@ -543,6 +574,25 @@ function ScannerScreen() {
     }, [resetAll, clearAllTimers]),
   );
 
+  // 히스토리에서 중복 여부만 확인 (저장하지 않음)
+  const checkDuplicateInHistory = useCallback(async (code) => {
+    try {
+      const selectedGroupId = currentGroupId || 'default';
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      const currentHistory = historyByGroup[selectedGroupId] || [];
+
+      const existingItem = currentHistory.find(item => item.code === code);
+      return {
+        isDuplicate: !!existingItem,
+        existingCount: existingItem?.count || 0,
+      };
+    } catch (e) {
+      console.error('Check duplicate error:', e);
+      return { isDuplicate: false, existingCount: 0 };
+    }
+  }, [currentGroupId]);
+
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null) => {
     try {
       // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
@@ -621,6 +671,56 @@ function ScannerScreen() {
       return { isDuplicate: false, count: 1, errorCorrectionLevel: null };
     }
   }, [currentGroupId]);
+
+  // 중복 확인 토스트 - 추가 버튼
+  const handleConfirmAdd = useCallback(() => {
+    if (confirmToastData) {
+      const { data, type, errorCorrectionLevel } = confirmToastData;
+
+      // 실시간 서버전송이 활성화되어 있으면 웹소켓으로 데이터 전송
+      if (realtimeSyncEnabled && activeSessionId) {
+        const success = websocketClient.sendScanData({
+          code: data,
+          timestamp: Date.now(),
+        }, activeSessionId);
+        if (success) {
+          setShowSendMessage(true);
+          setTimeout(() => setShowSendMessage(false), 1000);
+        }
+      }
+
+      saveHistory(data, null, null, type, errorCorrectionLevel).then((historyResult) => {
+        showToast({
+          data,
+          type,
+          historyId: historyResult.id,
+          isDuplicate: true,
+          scanCount: historyResult.count,
+          errorCorrectionLevel,
+        });
+      });
+    }
+    setConfirmToastData(null);
+    setCanScan(true);
+  }, [confirmToastData, saveHistory, showToast, realtimeSyncEnabled, activeSessionId]);
+
+  // 중복 확인 토스트 - 건너뛰기 버튼
+  const handleConfirmSkip = useCallback(() => {
+    if (confirmToastData) {
+      const { data, type, scanCount, errorCorrectionLevel } = confirmToastData;
+      showToast({
+        data,
+        type,
+        historyId: null,
+        isDuplicate: true,
+        scanCount,
+        errorCorrectionLevel,
+        skipped: true,
+      });
+    }
+    setConfirmToastData(null);
+    setCanScan(true);
+  }, [confirmToastData, showToast]);
 
   // 히스토리에 사진 추가 (백그라운드에서 사진 캡처 완료 후 호출)
   const updateHistoryWithPhoto = useCallback(async (code, photoUri) => {
@@ -994,32 +1094,99 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
-      // 토스트 모드: 연속 스캔 - 차단하지 않고 바로 처리
+      // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
+        // 연속 스캔 카운터 증가
+        setContinuousScanCount(prev => prev + 1);
+
+        // 실시간 서버 전송 헬퍼 함수
+        const sendToRealtimeServer = () => {
+          if (realtimeSyncEnabled && activeSessionId) {
+            const success = websocketClient.sendScanData({
+              code: data,
+              timestamp: Date.now(),
+            }, activeSessionId);
+            if (success) {
+              setShowSendMessage(true);
+              setTimeout(() => setShowSendMessage(false), 1000);
+            } else {
+              console.warn('Failed to send scan data to server in continuous mode');
+            }
+          }
+        };
+
         // EC Level 추출
         let detectedEcLevel = errorCorrectionLevel || null;
 
-        // 히스토리 저장 (비동기로 백그라운드에서 처리)
-        saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
-          showToast({
-            data,
-            type: normalizedType,
-            historyId: historyResult.id,
-            isDuplicate: historyResult.isDuplicate,
-            scanCount: historyResult.count,
-            errorCorrectionLevel: detectedEcLevel,
+        // 중복 감지가 활성화된 경우 먼저 중복 여부 확인
+        if (duplicateDetectionRef.current) {
+          checkDuplicateInHistory(data).then(({ isDuplicate, existingCount }) => {
+            if (isDuplicate) {
+              const action = duplicateActionRef.current;
+
+              if (action === 'skip') {
+                // 자동 건너뛰기: 서버 전송 없이 토스트로 건너뛰었다고 알림
+                showToast({
+                  data,
+                  type: normalizedType,
+                  historyId: null,
+                  isDuplicate: true,
+                  scanCount: existingCount,
+                  errorCorrectionLevel: detectedEcLevel,
+                  skipped: true,
+                });
+                return;
+              } else if (action === 'alert') {
+                // 알림 후 추가: 확인 토스트로 물어봄 (스캔 일시 정지, 서버 전송은 확인 후)
+                setCanScan(false);
+                setConfirmToastData({
+                  data,
+                  type: normalizedType,
+                  scanCount: existingCount,
+                  errorCorrectionLevel: detectedEcLevel,
+                });
+                return;
+              }
+              // action === 'allow': 아래에서 정상 저장 및 서버 전송
+            }
+
+            // 중복이 아니거나 allow인 경우: 서버 전송 및 정상 저장
+            sendToRealtimeServer();
+            saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+              showToast({
+                data,
+                type: normalizedType,
+                historyId: historyResult.id,
+                isDuplicate: historyResult.isDuplicate,
+                scanCount: historyResult.count,
+                errorCorrectionLevel: detectedEcLevel,
+              });
+            });
           });
-        }).catch((error) => {
-          console.error('Toast mode history save error:', error);
-          showToast({
-            data,
-            type: normalizedType,
-            historyId: null,
-            isDuplicate: false,
-            scanCount: 1,
-            errorCorrectionLevel: detectedEcLevel,
+        } else {
+          // 중복 감지 비활성화: 서버 전송 및 바로 저장
+          sendToRealtimeServer();
+          saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+            showToast({
+              data,
+              type: normalizedType,
+              historyId: historyResult.id,
+              isDuplicate: historyResult.isDuplicate,
+              scanCount: historyResult.count,
+              errorCorrectionLevel: detectedEcLevel,
+            });
+          }).catch((error) => {
+            console.error('Toast mode history save error:', error);
+            showToast({
+              data,
+              type: normalizedType,
+              historyId: null,
+              isDuplicate: false,
+              scanCount: 1,
+              errorCorrectionLevel: detectedEcLevel,
+            });
           });
-        });
+        }
 
         // 스캔 계속 진행 (차단하지 않음)
         return;
@@ -1632,6 +1799,16 @@ function ScannerScreen() {
         />
       )}
 
+      {/* 연속 스캔 카운터 배지 */}
+      {scanResultMode === 'toast' && showScanCounter && continuousScanCount > 0 && (
+        <View style={[styles.continuousCounterBadge, { top: batchBadgeTop }]}>
+          <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+          <Text style={styles.continuousCounterText}>
+            {t('scanner.scannedCount').replace('{count}', continuousScanCount.toString())}
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
         onPress={toggleTorch}
         activeOpacity={0.8}
@@ -1818,7 +1995,27 @@ function ScannerScreen() {
         data={toastData}
         onPress={handleToastPress}
         onClose={handleToastClose}
-        bottomOffset={bottomOffset}
+        bottomOffset={bottomOffset + 50}
+        showScanCounter={showScanCounter}
+      />
+
+      {/* 중복 확인 토스트 (연속 스캔 모드 - 알림 후 추가) */}
+      <DuplicateConfirmToast
+        visible={!!confirmToastData}
+        data={confirmToastData}
+        onAdd={handleConfirmAdd}
+        onSkip={handleConfirmSkip}
+        bottomOffset={bottomOffset + 50}
+      />
+
+      {/* 하단 배너 광고 - 탭바 바로 위 */}
+      <AdBanner
+        wrapperStyle={{
+          position: 'absolute',
+          bottom: Platform.OS === 'ios' ? 83 : insets.bottom + 49,
+          left: 0,
+          right: 0,
+        }}
       />
     </View>
   );
@@ -1868,6 +2065,27 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   batchModeBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  continuousCounterBadge: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  continuousCounterText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',

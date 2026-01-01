@@ -10,6 +10,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
+import AdBanner from '../components/AdBanner';
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -646,6 +647,14 @@ export default function ResultScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* 배너 광고 - 액션 버튼과 중복 스캔 사이 */}
+          <AdBanner
+            wrapperStyle={{
+              marginTop: 16,
+              paddingHorizontal: 0,
+            }}
+          />
         </View>
 
         {/* 중복 스캔 알림 */}

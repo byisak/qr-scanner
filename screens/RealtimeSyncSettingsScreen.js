@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Crypto from 'expo-crypto';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -27,12 +28,13 @@ import { Colors } from '../constants/Colors';
 import websocketClient from '../utils/websocket';
 import config from '../config/config';
 
-// 랜덤 세션 ID 생성 함수 (8자리)
-const generateSessionId = () => {
+// 암호학적으로 안전한 세션 ID 생성 함수 (16자리)
+const generateSessionId = async () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const randomBytes = await Crypto.getRandomBytesAsync(16);
   let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(randomBytes[i] % chars.length);
   }
   return result;
 };
@@ -51,10 +53,19 @@ const getDaysRemaining = (deletedAt) => {
   return Math.max(0, diffDays);
 };
 
-// 서버에서 세션 목록 가져오기
-const fetchSessionsFromServer = async () => {
+// 서버에서 세션 목록 가져오기 (인증된 사용자의 세션만)
+const fetchSessionsFromServer = async (token) => {
   try {
-    const response = await fetch(`${config.serverUrl}/api/sessions`);
+    const headers = {};
+    let url = `${config.serverUrl}/api/sessions?status=ALL`;
+
+    // 토큰이 있으면 내 세션만 조회
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      url += '&mine=true';
+    }
+
+    const response = await fetch(url, { headers });
     if (!response.ok) {
       console.warn('Failed to fetch sessions from server:', response.status);
       return null;
@@ -71,7 +82,7 @@ export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, getToken } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
   // 실시간 서버전송 관련 상태
@@ -143,7 +154,9 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 서버에서 세션 목록을 가져와 로컬과 동기화하는 함수
   const syncSessionsFromServer = useCallback(async (localSessions) => {
-    const serverSessions = await fetchSessionsFromServer();
+    // 인증 토큰 가져오기
+    const token = await getToken();
+    const serverSessions = await fetchSessionsFromServer(token);
     if (!serverSessions || !Array.isArray(serverSessions)) {
       // 서버 연결 실패해도 로컬 세션에 대한 그룹은 생성
       await ensureGroupsForSessions(localSessions);
@@ -192,7 +205,7 @@ export default function RealtimeSyncSettingsScreen() {
       if (!localSessionIds.has(sessionId)) {
         newSessions.push({
           id: sessionId,
-          url: `${config.serverUrl}/${sessionId}`,
+          url: `${config.serverUrl}/session/${sessionId}`,
           createdAt: serverData.createdAt ? new Date(serverData.createdAt).getTime() : Date.now(),
           status: serverData.status,
           deletedAt: serverData.deletedAt ? new Date(serverData.deletedAt).getTime() : null,
@@ -260,7 +273,7 @@ export default function RealtimeSyncSettingsScreen() {
 
     console.log(`서버 동기화 완료: 기존 ${localSessions.length}개, 새로 추가 ${newSessions.length}개`);
     return allSessions;
-  }, []);
+  }, [getToken]);
 
   // 초기 로드
   useEffect(() => {
@@ -390,10 +403,10 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 새 세션 URL 생성
   const handleGenerateSessionUrl = async () => {
-    const newSessionId = generateSessionId();
+    const newSessionId = await generateSessionId();
     const newSessionUrl = {
       id: newSessionId,
-      url: `${config.serverUrl}/${newSessionId}`,
+      url: `${config.serverUrl}/session/${newSessionId}`,
       createdAt: Date.now(),
       status: 'ACTIVE',
       deletedAt: null,
@@ -675,7 +688,7 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 URL 동적 생성 (항상 최신 서버 주소 사용)
   const getSessionUrl = useCallback((sessionId) => {
-    return `${config.serverUrl}/${sessionId}`;
+    return `${config.serverUrl}/session/${sessionId}`;
   }, []);
 
   // 활성 세션 아이템 렌더링
