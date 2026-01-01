@@ -113,6 +113,7 @@ function ScannerScreen() {
   const [scanResultMode, setScanResultMode] = useState('popup');
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
   const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
+  const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -385,6 +386,7 @@ function ScannerScreen() {
       setCanScan(true); // 화면 복귀 시 스캔 허용
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
+      setContinuousScanCount(0); // 연속 스캔 카운터 리셋
       resetAll();
 
       (async () => {
@@ -1081,6 +1083,9 @@ function ScannerScreen() {
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
+        // 연속 스캔 카운터 증가
+        setContinuousScanCount(prev => prev + 1);
+
         // EC Level 추출
         let detectedEcLevel = errorCorrectionLevel || null;
 
@@ -1763,6 +1768,16 @@ function ScannerScreen() {
         />
       )}
 
+      {/* 연속 스캔 카운터 배지 */}
+      {scanResultMode === 'toast' && showScanCounter && continuousScanCount > 0 && (
+        <View style={[styles.continuousCounterBadge, { top: batchBadgeTop }]}>
+          <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+          <Text style={styles.continuousCounterText}>
+            {t('scanner.scannedCount').replace('{count}', continuousScanCount.toString())}
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
         onPress={toggleTorch}
         activeOpacity={0.8}
@@ -2019,6 +2034,27 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   batchModeBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  continuousCounterBadge: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  continuousCounterText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
