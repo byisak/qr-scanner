@@ -331,8 +331,10 @@ function ScannerScreen() {
               // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
               websocketClient.connect(config.serverUrl);
               websocketClient.setSessionId(selectedGroupId);
-              websocketClient.setUserId(user?.id || null);
-              console.log('WebSocket connected for session group:', selectedGroupId);
+              // 개발 모드 user_id는 전송하지 않음 (dev- prefix 제외)
+              const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+              websocketClient.setUserId(validUserId);
+              console.log('WebSocket connected for session group:', selectedGroupId, 'userId:', validUserId);
             }
           }
         }
@@ -516,8 +518,10 @@ function ScannerScreen() {
                 // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
                 websocketClient.connect(config.serverUrl);
                 websocketClient.setSessionId(selectedGroupId);
-                websocketClient.setUserId(user?.id || null);
-                console.log('WebSocket connected for session group:', selectedGroupId);
+                // 개발 모드 user_id는 전송하지 않음 (dev- prefix 제외)
+                const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+                websocketClient.setUserId(validUserId);
+                console.log('WebSocket connected for session group:', selectedGroupId, 'userId:', validUserId);
               } else {
                 setActiveSessionId('');
               }
@@ -1563,8 +1567,10 @@ function ScannerScreen() {
         // WebSocket 연결 (항상 config.serverUrl 사용)
         websocketClient.connect(config.serverUrl);
         websocketClient.setSessionId(groupId);
-        websocketClient.setUserId(user?.id || null);
-        console.log('WebSocket connected for session group:', groupId);
+        // 개발 모드 user_id는 전송하지 않음 (dev- prefix 제외)
+        const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+        websocketClient.setUserId(validUserId);
+        console.log('WebSocket connected for session group:', groupId, 'userId:', validUserId);
       } else {
         // 일반 그룹 선택 시 WebSocket 연결 해제
         setActiveSessionId('');
