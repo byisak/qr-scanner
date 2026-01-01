@@ -112,6 +112,7 @@ export default {
     batchModeActive: 'Continuous Scan Mode',
     scannedCount: 'Scanned: {count} items',
     duplicate: 'Duplicate',
+    skipped: 'Skipped',
     finishBatch: 'Finish',
     clearBatch: 'Clear',
     viewBatchList: 'View List',

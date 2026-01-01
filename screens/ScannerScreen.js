@@ -570,6 +570,25 @@ function ScannerScreen() {
     }, [resetAll, clearAllTimers]),
   );
 
+  // 히스토리에서 중복 여부만 확인 (저장하지 않음)
+  const checkDuplicateInHistory = useCallback(async (code) => {
+    try {
+      const selectedGroupId = currentGroupId || 'default';
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      const currentHistory = historyByGroup[selectedGroupId] || [];
+
+      const existingItem = currentHistory.find(item => item.code === code);
+      return {
+        isDuplicate: !!existingItem,
+        existingCount: existingItem?.count || 0,
+      };
+    } catch (e) {
+      console.error('Check duplicate error:', e);
+      return { isDuplicate: false, existingCount: 0 };
+    }
+  }, [currentGroupId]);
+
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null) => {
     try {
       // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
@@ -1021,32 +1040,110 @@ function ScannerScreen() {
       lastScannedData.current = data;
       lastScannedTime.current = now;
 
-      // 토스트 모드: 연속 스캔 - 차단하지 않고 바로 처리
+      // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
         // EC Level 추출
         let detectedEcLevel = errorCorrectionLevel || null;
 
-        // 히스토리 저장 (비동기로 백그라운드에서 처리)
-        saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
-          showToast({
-            data,
-            type: normalizedType,
-            historyId: historyResult.id,
-            isDuplicate: historyResult.isDuplicate,
-            scanCount: historyResult.count,
-            errorCorrectionLevel: detectedEcLevel,
+        // 중복 감지가 활성화된 경우 먼저 중복 여부 확인
+        if (duplicateDetectionRef.current) {
+          checkDuplicateInHistory(data).then(({ isDuplicate, existingCount }) => {
+            if (isDuplicate) {
+              const action = duplicateActionRef.current;
+
+              if (action === 'skip') {
+                // 자동 건너뛰기: 토스트로 건너뛰었다고 알림
+                showToast({
+                  data,
+                  type: normalizedType,
+                  historyId: null,
+                  isDuplicate: true,
+                  scanCount: existingCount,
+                  errorCorrectionLevel: detectedEcLevel,
+                  skipped: true,
+                });
+                return;
+              } else if (action === 'alert') {
+                // 알림 후 추가: Alert으로 물어봄
+                Alert.alert(
+                  t('batchScan.duplicateAlertTitle'),
+                  t('batchScan.duplicateAlertMessage'),
+                  [
+                    {
+                      text: t('batchScan.duplicateAlertCancel'),
+                      style: 'cancel',
+                      onPress: () => {
+                        // 취소: 저장하지 않고 토스트만 표시
+                        showToast({
+                          data,
+                          type: normalizedType,
+                          historyId: null,
+                          isDuplicate: true,
+                          scanCount: existingCount,
+                          errorCorrectionLevel: detectedEcLevel,
+                          skipped: true,
+                        });
+                      },
+                    },
+                    {
+                      text: t('batchScan.duplicateAlertAdd'),
+                      onPress: () => {
+                        // 추가: 저장하고 토스트 표시
+                        saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+                          showToast({
+                            data,
+                            type: normalizedType,
+                            historyId: historyResult.id,
+                            isDuplicate: true,
+                            scanCount: historyResult.count,
+                            errorCorrectionLevel: detectedEcLevel,
+                          });
+                        });
+                      },
+                    },
+                  ],
+                  { cancelable: false }
+                );
+                return;
+              }
+              // action === 'allow': 아래에서 정상 저장
+            }
+
+            // 중복이 아니거나 allow인 경우: 정상 저장
+            saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+              showToast({
+                data,
+                type: normalizedType,
+                historyId: historyResult.id,
+                isDuplicate: historyResult.isDuplicate,
+                scanCount: historyResult.count,
+                errorCorrectionLevel: detectedEcLevel,
+              });
+            });
           });
-        }).catch((error) => {
-          console.error('Toast mode history save error:', error);
-          showToast({
-            data,
-            type: normalizedType,
-            historyId: null,
-            isDuplicate: false,
-            scanCount: 1,
-            errorCorrectionLevel: detectedEcLevel,
+        } else {
+          // 중복 감지 비활성화: 바로 저장
+          saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+            showToast({
+              data,
+              type: normalizedType,
+              historyId: historyResult.id,
+              isDuplicate: historyResult.isDuplicate,
+              scanCount: historyResult.count,
+              errorCorrectionLevel: detectedEcLevel,
+            });
+          }).catch((error) => {
+            console.error('Toast mode history save error:', error);
+            showToast({
+              data,
+              type: normalizedType,
+              historyId: null,
+              isDuplicate: false,
+              scanCount: 1,
+              errorCorrectionLevel: detectedEcLevel,
+            });
           });
-        });
+        }
 
         // 스캔 계속 진행 (차단하지 않음)
         return;

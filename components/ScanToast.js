@@ -102,6 +102,16 @@ export default function ScanToast({
 
   const isDuplicate = data.isDuplicate;
   const scanCount = data.scanCount || 1;
+  const isSkipped = data.skipped;
+
+  // 상태에 따른 색상 결정
+  const getIconColor = () => {
+    if (isSkipped) return '#8E8E93'; // 건너뜀: 회색
+    if (isDuplicate) return '#FF9500'; // 중복: 주황
+    return colors.success; // 정상: 초록
+  };
+
+  const iconColor = getIconColor();
 
   return (
     <Animated.View
@@ -114,7 +124,7 @@ export default function ScanToast({
         },
       ]}
       accessibilityRole="alert"
-      accessibilityLabel={`${t('scanner.scanned')}: ${data.data}${isDuplicate ? ` (${t('scanner.duplicate') || '중복'})` : ''}`}
+      accessibilityLabel={`${isSkipped ? t('scanner.skipped') || '건너뜀' : t('scanner.scanned')}: ${data.data}${isDuplicate ? ` (${t('scanner.duplicate') || '중복'})` : ''}`}
     >
       <TouchableOpacity
         style={[styles.content, { backgroundColor: colors.surface }]}
@@ -126,12 +136,12 @@ export default function ScanToast({
         <View style={styles.left}>
           <View style={[
             styles.iconContainer,
-            { backgroundColor: isDuplicate ? '#FF9500' + '20' : colors.success + '20' }
+            { backgroundColor: iconColor + '20' }
           ]}>
             <Ionicons
-              name={isDuplicate ? "copy" : "checkmark-circle"}
+              name={isSkipped ? "close-circle" : (isDuplicate ? "copy" : "checkmark-circle")}
               size={24}
-              color={isDuplicate ? '#FF9500' : colors.success}
+              color={iconColor}
             />
             {/* 스캔 카운트 배지 */}
             {showScanCounter && scanCount > 1 && (
@@ -145,9 +155,15 @@ export default function ScanToast({
           <View style={styles.textContainer}>
             <View style={styles.titleRow}>
               <Text style={[styles.title, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                {t('scanner.scanned')}
+                {isSkipped ? (t('scanner.skipped') || '건너뜀') : t('scanner.scanned')}
               </Text>
-              {isDuplicate && (
+              {isSkipped ? (
+                <View style={[styles.duplicateBadge, styles.skippedBadge]}>
+                  <Text style={styles.duplicateBadgeText}>
+                    {t('scanner.duplicate') || '중복'}
+                  </Text>
+                </View>
+              ) : isDuplicate && (
                 <View style={styles.duplicateBadge}>
                   <Text style={styles.duplicateBadgeText}>
                     {t('scanner.duplicate') || '중복'}
@@ -237,6 +253,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+  },
+  skippedBadge: {
+    backgroundColor: '#8E8E93',
   },
   duplicateBadgeText: {
     color: '#fff',
