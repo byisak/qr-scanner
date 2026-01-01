@@ -1846,6 +1846,7 @@ function ScannerScreen() {
         onPress={handleToastPress}
         onClose={handleToastClose}
         bottomOffset={bottomOffset + 50}
+        showScanCounter={showScanCounter}
       />
 
       {/* 하단 배너 광고 - 탭바 바로 위 */}

@@ -13,6 +13,7 @@ export default function ScanToast({
   onPress,
   onClose,
   bottomOffset = 0,
+  showScanCounter = true,
 }) {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
@@ -99,6 +100,9 @@ export default function ScanToast({
     return null;
   }
 
+  const isDuplicate = data.isDuplicate;
+  const scanCount = data.scanCount || 1;
+
   return (
     <Animated.View
       style={[
@@ -110,7 +114,7 @@ export default function ScanToast({
         },
       ]}
       accessibilityRole="alert"
-      accessibilityLabel={`${t('scanner.scanned')}: ${data.data}`}
+      accessibilityLabel={`${t('scanner.scanned')}: ${data.data}${isDuplicate ? ` (${t('scanner.duplicate') || '중복'})` : ''}`}
     >
       <TouchableOpacity
         style={[styles.content, { backgroundColor: colors.surface }]}
@@ -120,13 +124,37 @@ export default function ScanToast({
         accessibilityHint={t('scanner.viewDetailsHint') || '결과 상세 화면으로 이동합니다'}
       >
         <View style={styles.left}>
-          <View style={[styles.iconContainer, { backgroundColor: colors.success + '20' }]}>
-            <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+          <View style={[
+            styles.iconContainer,
+            { backgroundColor: isDuplicate ? '#FF9500' + '20' : colors.success + '20' }
+          ]}>
+            <Ionicons
+              name={isDuplicate ? "copy" : "checkmark-circle"}
+              size={24}
+              color={isDuplicate ? '#FF9500' : colors.success}
+            />
+            {/* 스캔 카운트 배지 */}
+            {showScanCounter && scanCount > 1 && (
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>
+                  {scanCount > 99 ? '99+' : scanCount}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={styles.textContainer}>
-            <Text style={[styles.title, { color: colors.text, fontFamily: fonts.semiBold }]}>
-              {t('scanner.scanned')}
-            </Text>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                {t('scanner.scanned')}
+              </Text>
+              {isDuplicate && (
+                <View style={styles.duplicateBadge}>
+                  <Text style={styles.duplicateBadgeText}>
+                    {t('scanner.duplicate') || '중복'}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text
               style={[styles.data, { color: colors.textSecondary, fontFamily: fonts.regular }]}
               numberOfLines={1}
@@ -194,10 +222,43 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 2,
+  },
+  duplicateBadge: {
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  duplicateBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  countBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FF3B30',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  countBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   data: {
     fontSize: 13,

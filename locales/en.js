@@ -111,6 +111,7 @@ export default {
     torchOff: 'Turn on flashlight',
     batchModeActive: 'Continuous Scan Mode',
     scannedCount: 'Scanned: {count} items',
+    duplicate: 'Duplicate',
     finishBatch: 'Finish',
     clearBatch: 'Clear',
     viewBatchList: 'View List',
