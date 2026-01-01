@@ -46,6 +46,7 @@ import * as MediaLibrary from 'expo-media-library';
 import ScanAnimation from '../components/ScanAnimation';
 import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
+import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
 import AdBanner from '../components/AdBanner';
 
 function ScannerScreen() {
@@ -111,6 +112,7 @@ function ScannerScreen() {
   // 스캔 결과 표시 모드 (popup: 결과 화면, toast: 하단 토스트)
   const [scanResultMode, setScanResultMode] = useState('popup');
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
+  const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -668,6 +670,43 @@ function ScannerScreen() {
     }
   }, [currentGroupId]);
 
+  // 중복 확인 토스트 - 추가 버튼
+  const handleConfirmAdd = useCallback(() => {
+    if (confirmToastData) {
+      const { data, type, errorCorrectionLevel } = confirmToastData;
+      saveHistory(data, null, null, type, errorCorrectionLevel).then((historyResult) => {
+        showToast({
+          data,
+          type,
+          historyId: historyResult.id,
+          isDuplicate: true,
+          scanCount: historyResult.count,
+          errorCorrectionLevel,
+        });
+      });
+    }
+    setConfirmToastData(null);
+    setCanScan(true);
+  }, [confirmToastData, saveHistory, showToast]);
+
+  // 중복 확인 토스트 - 건너뛰기 버튼
+  const handleConfirmSkip = useCallback(() => {
+    if (confirmToastData) {
+      const { data, type, scanCount, errorCorrectionLevel } = confirmToastData;
+      showToast({
+        data,
+        type,
+        historyId: null,
+        isDuplicate: true,
+        scanCount,
+        errorCorrectionLevel,
+        skipped: true,
+      });
+    }
+    setConfirmToastData(null);
+    setCanScan(true);
+  }, [confirmToastData, showToast]);
+
   // 히스토리에 사진 추가 (백그라운드에서 사진 캡처 완료 후 호출)
   const updateHistoryWithPhoto = useCallback(async (code, photoUri) => {
     if (!photoUri) return;
@@ -1064,46 +1103,14 @@ function ScannerScreen() {
                 });
                 return;
               } else if (action === 'alert') {
-                // 알림 후 추가: Alert으로 물어봄
-                Alert.alert(
-                  t('batchScan.duplicateAlertTitle'),
-                  t('batchScan.duplicateAlertMessage'),
-                  [
-                    {
-                      text: t('batchScan.duplicateAlertCancel'),
-                      style: 'cancel',
-                      onPress: () => {
-                        // 취소: 저장하지 않고 토스트만 표시
-                        showToast({
-                          data,
-                          type: normalizedType,
-                          historyId: null,
-                          isDuplicate: true,
-                          scanCount: existingCount,
-                          errorCorrectionLevel: detectedEcLevel,
-                          skipped: true,
-                        });
-                      },
-                    },
-                    {
-                      text: t('batchScan.duplicateAlertAdd'),
-                      onPress: () => {
-                        // 추가: 저장하고 토스트 표시
-                        saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
-                          showToast({
-                            data,
-                            type: normalizedType,
-                            historyId: historyResult.id,
-                            isDuplicate: true,
-                            scanCount: historyResult.count,
-                            errorCorrectionLevel: detectedEcLevel,
-                          });
-                        });
-                      },
-                    },
-                  ],
-                  { cancelable: false }
-                );
+                // 알림 후 추가: 확인 토스트로 물어봄 (스캔 일시 정지)
+                setCanScan(false);
+                setConfirmToastData({
+                  data,
+                  type: normalizedType,
+                  scanCount: existingCount,
+                  errorCorrectionLevel: detectedEcLevel,
+                });
                 return;
               }
               // action === 'allow': 아래에서 정상 저장
@@ -1944,6 +1951,15 @@ function ScannerScreen() {
         onClose={handleToastClose}
         bottomOffset={bottomOffset + 50}
         showScanCounter={showScanCounter}
+      />
+
+      {/* 중복 확인 토스트 (연속 스캔 모드 - 알림 후 추가) */}
+      <DuplicateConfirmToast
+        visible={!!confirmToastData}
+        data={confirmToastData}
+        onAdd={handleConfirmAdd}
+        onSkip={handleConfirmSkip}
+        bottomOffset={bottomOffset + 50}
       />
 
       {/* 하단 배너 광고 - 탭바 바로 위 */}
