@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
 import {
   DEBOUNCE_DELAYS,
@@ -54,6 +55,7 @@ function ScannerScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const { triggerSync } = useSync();
+  const { user } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -329,6 +331,7 @@ function ScannerScreen() {
               // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
               websocketClient.connect(config.serverUrl);
               websocketClient.setSessionId(selectedGroupId);
+              websocketClient.setUserId(user?.id || null);
               console.log('WebSocket connected for session group:', selectedGroupId);
             }
           }
@@ -513,6 +516,7 @@ function ScannerScreen() {
                 // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
                 websocketClient.connect(config.serverUrl);
                 websocketClient.setSessionId(selectedGroupId);
+                websocketClient.setUserId(user?.id || null);
                 console.log('WebSocket connected for session group:', selectedGroupId);
               } else {
                 setActiveSessionId('');
@@ -1559,6 +1563,7 @@ function ScannerScreen() {
         // WebSocket 연결 (항상 config.serverUrl 사용)
         websocketClient.connect(config.serverUrl);
         websocketClient.setSessionId(groupId);
+        websocketClient.setUserId(user?.id || null);
         console.log('WebSocket connected for session group:', groupId);
       } else {
         // 일반 그룹 선택 시 WebSocket 연결 해제
@@ -1571,7 +1576,7 @@ function ScannerScreen() {
     } catch (error) {
       console.error('Failed to select group:', error);
     }
-  }, [realtimeSyncEnabled]);
+  }, [realtimeSyncEnabled, user]);
 
   // 갤러리 사진 목록 상태
   const [galleryModalVisible, setGalleryModalVisible] = useState(false);

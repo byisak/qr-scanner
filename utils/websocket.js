@@ -6,6 +6,7 @@ class WebSocketClient {
     this.socket = null;
     this.serverUrl = null;
     this.sessionId = null;
+    this.userId = null;
     this.isConnected = false;
     this.listeners = {
       connect: [],
@@ -118,6 +119,7 @@ class WebSocketClient {
       sessionId: sessionId || this.sessionId,
       code: data.code,
       timestamp: data.timestamp || Date.now(),
+      userId: this.userId,
     };
 
     try {
@@ -169,6 +171,16 @@ class WebSocketClient {
   // 세션 ID 설정 (저장된 세션 ID로 복원할 때)
   setSessionId(sessionId) {
     this.sessionId = sessionId;
+  }
+
+  // 사용자 ID 설정
+  setUserId(userId) {
+    this.userId = userId;
+  }
+
+  // 사용자 ID 확인
+  getUserId() {
+    return this.userId;
   }
 }
 
