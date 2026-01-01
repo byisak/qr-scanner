@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Crypto from 'expo-crypto';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -27,12 +28,13 @@ import { Colors } from '../constants/Colors';
 import websocketClient from '../utils/websocket';
 import config from '../config/config';
 
-// 랜덤 세션 ID 생성 함수 (8자리)
-const generateSessionId = () => {
+// 암호학적으로 안전한 세션 ID 생성 함수 (16자리)
+const generateSessionId = async () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const randomBytes = await Crypto.getRandomBytesAsync(16);
   let result = '';
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(randomBytes[i] % chars.length);
   }
   return result;
 };
@@ -401,7 +403,7 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 새 세션 URL 생성
   const handleGenerateSessionUrl = async () => {
-    const newSessionId = generateSessionId();
+    const newSessionId = await generateSessionId();
     const newSessionUrl = {
       id: newSessionId,
       url: `${config.serverUrl}/session/${newSessionId}`,
