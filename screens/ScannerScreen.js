@@ -165,6 +165,15 @@ function ScannerScreen() {
     scanResultModeRef.current = scanResultMode;
   }, [scanResultMode]);
 
+  // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
+  useEffect(() => {
+    if (realtimeSyncEnabled && activeSessionId) {
+      const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+      websocketClient.setUserId(validUserId);
+      console.log('[WebSocket] User changed, updated userId:', validUserId);
+    }
+  }, [user, realtimeSyncEnabled, activeSessionId]);
+
   // 토스트 표시 함수 (ScanToast 컴포넌트가 애니메이션 처리)
   const showToast = useCallback((toastInfo) => {
     setToastData({ ...toastInfo, timestamp: Date.now() });
