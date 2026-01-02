@@ -8,8 +8,8 @@ import {
   TextInput,
   Alert,
   Modal,
-  Platform,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -19,7 +19,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import config from '../config/config';
 
 const DEFAULT_GROUP_ID = 'default';
@@ -29,7 +28,6 @@ export default function GroupEditScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
-  const insets = useSafeAreaInsets();
 
   const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -337,51 +335,58 @@ export default function GroupEditScreen() {
     setShowEditModal(true);
   };
 
-  const headerPaddingTop = Platform.OS === 'ios' ? 60 : insets.top + 10;
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={[s.container, { backgroundColor: colors.background }]}>
-        {/* 헤더 */}
-        <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: headerPaddingTop }]}>
-          <TouchableOpacity
-            style={s.backButton}
-            onPress={() => router.back()}
-            accessibilityLabel={t('common.back')}
-          >
-            <Ionicons name="arrow-back" size={28} color={colors.primary} />
-          </TouchableOpacity>
-          <Text style={[s.headerTitle, { color: colors.text }]}>{t('groupEdit.title')}</Text>
-          <View style={{ width: 28 }} />
-        </View>
-
-        {/* 서브타이틀 - 드래그 안내 */}
-        <View style={s.subtitleContainer}>
-          <Text style={[s.subtitle, { color: colors.textSecondary }]}>
-            {t('groupEdit.dragToReorder') || '≡ 아이콘을 길게 눌러 순서를 변경하세요'}
-          </Text>
-        </View>
-
-        {/* 그룹 목록 (드래그 가능) */}
-        <DraggableFlatList
-          data={groups}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          onDragEnd={handleDragEnd}
-          contentContainerStyle={s.listContent}
-          activationDistance={10}
+      <View style={s.overlayContainer}>
+        {/* 반투명 배경 */}
+        <TouchableOpacity
+          style={s.overlayBackground}
+          activeOpacity={1}
+          onPress={() => router.back()}
         />
 
-        {/* 그룹 추가 버튼 */}
-        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom }]}>
-        <TouchableOpacity
-          style={[s.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Ionicons name="add-circle" size={24} color="#fff" />
-          <Text style={s.addButtonText}>{t('groupEdit.addGroup')}</Text>
-        </TouchableOpacity>
-      </View>
+        {/* 팝업 컨텐츠 */}
+        <View style={[s.popupContainer, { backgroundColor: colors.surface }]}>
+          {/* 모달 헤더 */}
+          <View style={s.popupHeader}>
+            <View>
+              <Text style={[s.popupTitle, { color: colors.text }]}>
+                {t('groupEdit.title')}
+              </Text>
+              <Text style={[s.popupSubtitle, { color: colors.textSecondary }]}>
+                {t('groupEdit.dragToReorder') || '드래그하여 순서를 변경하세요'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[s.closeButton, { backgroundColor: colors.background }]}
+              onPress={() => router.back()}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* 그룹 목록 (드래그 가능) */}
+          <DraggableFlatList
+            data={groups}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            onDragEnd={handleDragEnd}
+            contentContainerStyle={s.listContent}
+            activationDistance={10}
+          />
+
+          {/* 그룹 추가 버튼 */}
+          <View style={s.addButtonContainer}>
+            <TouchableOpacity
+              style={[s.addButton, { backgroundColor: colors.primary }]}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Ionicons name="add-circle" size={22} color="#fff" />
+              <Text style={s.addButtonText}>{t('groupEdit.addGroup')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
       {/* 그룹 추가 모달 */}
       <Modal
@@ -504,34 +509,47 @@ export default function GroupEditScreen() {
 }
 
 const s = StyleSheet.create({
-  container: {
+  overlayContainer: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  overlayBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  popupContainer: {
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  popupHeader: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    alignItems: 'flex-start',
+    padding: 20,
     paddingBottom: 16,
-    borderBottomWidth: 1,
   },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
+  popupTitle: {
     fontSize: 20,
     fontWeight: 'bold',
   },
-  subtitleContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  subtitle: {
+  popupSubtitle: {
     fontSize: 14,
+    marginTop: 4,
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   listContent: {
-    paddingVertical: 8,
-    paddingBottom: 200,
+    paddingVertical: 4,
+    paddingBottom: 8,
   },
   reorderItem: {
     flexDirection: 'row',
@@ -578,30 +596,20 @@ const s = StyleSheet.create({
     opacity: 0.4,
   },
   addButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    paddingTop: 10,
+    padding: 16,
+    paddingTop: 8,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   addButtonText: {
     color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     marginLeft: 8,
   },
   modalOverlay: {
