@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.cubion.qrscanner",
       "usesIcloudStorage": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
         "NSPhotoLibraryUsageDescription": "QR 코드에 로고를 추가하기 위해 사진 접근이 필요합니다.",
