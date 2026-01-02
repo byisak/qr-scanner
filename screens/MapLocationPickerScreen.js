@@ -12,7 +12,6 @@ import {
   Keyboard,
   ScrollView,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +20,19 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+
+// react-native-maps는 development build에서만 동작
+let MapView = null;
+let Marker = null;
+let PROVIDER_GOOGLE = null;
+try {
+  const Maps = require('react-native-maps');
+  MapView = Maps.default;
+  Marker = Maps.Marker;
+  PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+} catch (e) {
+  console.log('react-native-maps not available - requires development build');
+}
 
 const SELECTED_LOCATION_KEY = '@selected_map_location';
 
@@ -368,44 +380,74 @@ export default function MapLocationPickerScreen() {
 
       {/* Map */}
       <View style={styles.mapContainer}>
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          provider={PROVIDER_GOOGLE}
-          initialRegion={region}
-          onPress={handleMapPress}
-          showsUserLocation={true}
-          showsMyLocationButton={false}
-          showsCompass={true}
-          userInterfaceStyle={isDark ? 'dark' : 'light'}
-        >
-          <Marker
-            coordinate={markerPosition}
-            draggable
-            onDragEnd={handleMarkerDragEnd}
-            pinColor={colors.primary}
-          />
-        </MapView>
+        {MapView ? (
+          <>
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              provider={PROVIDER_GOOGLE}
+              initialRegion={region}
+              onPress={handleMapPress}
+              showsUserLocation={true}
+              showsMyLocationButton={false}
+              showsCompass={true}
+              userInterfaceStyle={isDark ? 'dark' : 'light'}
+            >
+              <Marker
+                coordinate={markerPosition}
+                draggable
+                onDragEnd={handleMarkerDragEnd}
+                pinColor={colors.primary}
+              />
+            </MapView>
 
-        {/* Current Location Button */}
-        <TouchableOpacity
-          style={[styles.currentLocationButton, { backgroundColor: colors.surface }]}
-          onPress={getCurrentLocation}
-          activeOpacity={0.8}
-          disabled={isLoadingLocation}
-        >
-          {isLoadingLocation ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Ionicons name="locate" size={24} color={colors.primary} />
-          )}
-        </TouchableOpacity>
+            {/* Current Location Button */}
+            <TouchableOpacity
+              style={[styles.currentLocationButton, { backgroundColor: colors.surface }]}
+              onPress={getCurrentLocation}
+              activeOpacity={0.8}
+              disabled={isLoadingLocation}
+            >
+              {isLoadingLocation ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Ionicons name="locate" size={24} color={colors.primary} />
+              )}
+            </TouchableOpacity>
 
-        {/* Crosshair */}
-        <View style={styles.crosshairContainer} pointerEvents="none">
-          <View style={[styles.crosshairLine, styles.crosshairHorizontal, { backgroundColor: colors.primary }]} />
-          <View style={[styles.crosshairLine, styles.crosshairVertical, { backgroundColor: colors.primary }]} />
-        </View>
+            {/* Crosshair */}
+            <View style={styles.crosshairContainer} pointerEvents="none">
+              <View style={[styles.crosshairLine, styles.crosshairHorizontal, { backgroundColor: colors.primary }]} />
+              <View style={[styles.crosshairLine, styles.crosshairVertical, { backgroundColor: colors.primary }]} />
+            </View>
+          </>
+        ) : (
+          /* Fallback when react-native-maps is not available */
+          <View style={[styles.mapFallback, { backgroundColor: colors.surface }]}>
+            <Ionicons name="map-outline" size={64} color={colors.textSecondary} />
+            <Text style={[styles.mapFallbackTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              {t('map.requiresBuild') || 'Development Build 필요'}
+            </Text>
+            <Text style={[styles.mapFallbackText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('map.requiresBuildDesc') || '지도 기능을 사용하려면 Development Build가 필요합니다.\nExpo Go에서는 지원되지 않습니다.'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.currentLocationButton, { backgroundColor: colors.primary, position: 'relative', marginTop: 20 }]}
+              onPress={getCurrentLocation}
+              activeOpacity={0.8}
+              disabled={isLoadingLocation}
+            >
+              {isLoadingLocation ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="locate" size={24} color="#fff" />
+              )}
+            </TouchableOpacity>
+            <Text style={[styles.mapFallbackHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('map.useCurrentLocation') || '현재 위치 사용'}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Coordinates Display */}
@@ -609,5 +651,26 @@ const styles = StyleSheet.create({
   coordValue: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  mapFallback: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  mapFallbackTitle: {
+    fontSize: 18,
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  mapFallbackText: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  mapFallbackHint: {
+    fontSize: 12,
+    marginTop: 8,
   },
 });

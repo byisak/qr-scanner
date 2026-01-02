@@ -1207,6 +1207,9 @@ export default {
     longitude: '경도',
     noResults: '검색 결과 없음',
     noResultsDesc: '해당 주소를 찾을 수 없습니다. 다른 검색어를 시도해주세요.',
+    requiresBuild: 'Development Build 필요',
+    requiresBuildDesc: '지도 기능을 사용하려면 Development Build가 필요합니다.\nExpo Go에서는 지원되지 않습니다.',
+    useCurrentLocation: '현재 위치 사용',
   },
 
   // 위치

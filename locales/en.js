@@ -1207,6 +1207,9 @@ export default {
     longitude: 'Longitude',
     noResults: 'No Results',
     noResultsDesc: 'Could not find the address. Please try a different search term.',
+    requiresBuild: 'Development Build Required',
+    requiresBuildDesc: 'Map feature requires a Development Build.\nNot supported in Expo Go.',
+    useCurrentLocation: 'Use Current Location',
   },
 
   // Location
