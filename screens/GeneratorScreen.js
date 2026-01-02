@@ -1861,22 +1861,24 @@ export default function GeneratorScreen() {
                         {t('generator.barcodeWidth') || '너비'}
                       </Text>
                     </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[1, 2, 3, 4, 5].map((val) => (
-                        <TouchableOpacity
-                          key={`scale-${val}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.scale === val && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.scale === val ? '#fff' : colors.text }]}>
-                            {val}x
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.barcodeOptionScroll}>
+                      <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
+                          <TouchableOpacity
+                            key={`scale-${val}`}
+                            style={[
+                              s.barcodeOptionBtn,
+                              barcodeSettings.scale === val && { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
+                          >
+                            <Text style={[s.barcodeOptionText, { color: barcodeSettings.scale === val ? '#fff' : colors.text }]}>
+                              {val}x
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
                   </View>
 
                   <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
@@ -2759,6 +2761,9 @@ const s = StyleSheet.create({
     height: 1,
     marginVertical: 14,
     opacity: 0.5,
+  },
+  barcodeOptionScroll: {
+    flexGrow: 0,
   },
   barcodeOptionControl: {
     flexDirection: 'row',
