@@ -15,6 +15,7 @@ export default {
     apply: '적용',
     notice: '알림',
     success: '성공',
+    copied: '복사됨',
   },
 
   // 기능 잠금
@@ -1196,5 +1197,20 @@ export default {
     qualityMinimum: '최소',
     qualityMinimumDesc: '최저 용량, 화질 저하',
     note: '압축률 변경은 새로 저장되는 사진에만 적용됩니다',
+  },
+
+  // 지도
+  map: {
+    searchPlaceholder: '주소 검색...',
+    selectedLocation: '선택된 위치',
+    latitude: '위도',
+    longitude: '경도',
+    copyCoordinates: '좌표 복사',
+  },
+
+  // 위치
+  location: {
+    permissionDenied: '위치 권한이 필요합니다.',
+    fetchError: '현재 위치를 가져올 수 없습니다.',
   },
 };

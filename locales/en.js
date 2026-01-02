@@ -15,6 +15,7 @@ export default {
     apply: 'Apply',
     notice: 'Notice',
     success: 'Success',
+    copied: 'Copied',
   },
 
   // Feature Lock
@@ -1196,5 +1197,20 @@ export default {
     qualityMinimum: 'Minimum',
     qualityMinimumDesc: 'Smallest size, noticeable quality loss',
     note: 'Compression changes only apply to newly saved photos',
+  },
+
+  // Map
+  map: {
+    searchPlaceholder: 'Search address...',
+    selectedLocation: 'Selected Location',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+    copyCoordinates: 'Copy Coordinates',
+  },
+
+  // Location
+  location: {
+    permissionDenied: 'Location permission is required.',
+    fetchError: 'Unable to get current location.',
   },
 };
