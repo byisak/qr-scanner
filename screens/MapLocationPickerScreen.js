@@ -46,7 +46,18 @@ const DEFAULT_LOCATION = {
 };
 
 export default function MapLocationPickerScreen() {
-  const { t, fonts } = useLanguage();
+  const { t, fonts, language } = useLanguage();
+
+  // 언어 코드를 Google API 파라미터로 변환
+  const getGoogleApiParams = () => {
+    const langMap = {
+      ko: { language: 'ko', region: 'kr' },
+      en: { language: 'en', region: '' },
+      ja: { language: 'ja', region: 'jp' },
+      zh: { language: 'zh-CN', region: 'cn' },
+    };
+    return langMap[language] || { language: 'en', region: '' };
+  };
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
@@ -136,10 +147,12 @@ export default function MapLocationPickerScreen() {
     setIsSearching(true);
     try {
       const searchQuery = query.trim();
+      const apiParams = getGoogleApiParams();
+      const regionParam = apiParams.region ? `&region=${apiParams.region}` : '';
 
       // Google Places API (Text Search) 사용
-      const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&language=ko&region=kr&key=${GOOGLE_MAPS_API_KEY}`;
-      console.log('[MAP DEBUG] Google Places API 호출');
+      const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&language=${apiParams.language}${regionParam}&key=${GOOGLE_MAPS_API_KEY}`;
+      console.log('[MAP DEBUG] Google Places API 호출, 언어:', apiParams.language, '지역:', apiParams.region);
 
       const response = await fetch(placesUrl);
       const data = await response.json();
@@ -158,7 +171,7 @@ export default function MapLocationPickerScreen() {
       } else {
         // Places API 실패 시 Geocoding API로 폴백
         console.log('[MAP DEBUG] Places 실패, Geocoding API 시도');
-        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&language=ko&region=kr&key=${GOOGLE_MAPS_API_KEY}`;
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&language=${apiParams.language}${regionParam}&key=${GOOGLE_MAPS_API_KEY}`;
 
         const geoResponse = await fetch(geocodeUrl);
         const geoData = await geoResponse.json();
