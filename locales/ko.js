@@ -847,6 +847,8 @@ export default {
     saveErrorMessage: 'QR 코드 저장에 실패했습니다.',
     clipboardPasted: '클립보드 내용을 가져왔습니다',
     clipboardEmpty: '클립보드가 비어있습니다',
+    selectLocation: '위치 선택',
+    selectFromMap: '지도에서 선택',
     // QR 스타일
     qrStyle: {
       title: 'QR 스타일',

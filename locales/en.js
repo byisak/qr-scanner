@@ -847,6 +847,8 @@ export default {
     saveErrorMessage: 'Failed to save QR code.',
     clipboardPasted: 'Clipboard content pasted',
     clipboardEmpty: 'Clipboard is empty',
+    selectLocation: 'Select Location',
+    selectFromMap: 'Select from Map',
     // QR Style
     qrStyle: {
       title: 'QR Style',
