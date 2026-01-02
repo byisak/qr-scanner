@@ -46,6 +46,7 @@ import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, format
 import AdBanner from '../components/AdBanner';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Slider from '@react-native-community/slider';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -1855,35 +1856,26 @@ export default function GeneratorScreen() {
                 <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
                   {/* 바코드 너비 */}
                   <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="resize-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeWidth') || '너비'}
-                      </Text>
-                    </View>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      style={s.barcodeOptionScrollFull}
-                      contentContainerStyle={s.barcodeOptionScrollContent}
-                    >
-                      <View style={[s.barcodeOptionControlCompact, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
-                          <TouchableOpacity
-                            key={`scale-${val}`}
-                            style={[
-                              s.barcodeOptionBtnCompact,
-                              barcodeSettings.scale === val && { backgroundColor: colors.primary },
-                            ]}
-                            onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
-                          >
-                            <Text style={[s.barcodeOptionText, { color: barcodeSettings.scale === val ? '#fff' : colors.text }]}>
-                              {val}x
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
+                    <View style={s.settingLabelRowSpaced}>
+                      <View style={s.settingLabelRow}>
+                        <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                        <Text style={[s.settingLabel, { color: colors.text }]}>
+                          {t('generator.barcodeWidth') || '너비'}
+                        </Text>
                       </View>
-                    </ScrollView>
+                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.scale}x</Text>
+                    </View>
+                    <Slider
+                      style={s.slider}
+                      minimumValue={1}
+                      maximumValue={9}
+                      step={1}
+                      value={barcodeSettings.scale}
+                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.border}
+                      thumbTintColor={colors.primary}
+                    />
                   </View>
 
                   <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
@@ -2762,6 +2754,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     flex: 1,
+  },
+  settingLabelRowSpaced: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderValue: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   settingLabel: {
     fontSize: 14,
