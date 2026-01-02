@@ -37,7 +37,7 @@ import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
 import { FREE_BARCODE_TYPES } from '../config/lockedFeatures';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
@@ -390,44 +390,34 @@ export default function GeneratorScreen() {
     }
   }, [params.initialMode, params.initialType, params.initialData, params.initialBarcodeFormat, params.initialBarcodeValue]);
 
-  // Load selected location from map picker
-  useEffect(() => {
-    const loadSelectedLocation = async () => {
-      try {
-        const locationData = await AsyncStorage.getItem('@selected_map_location');
-        if (locationData) {
-          const { latitude, longitude, timestamp } = JSON.parse(locationData);
-          // Only use location data if it's recent (within 30 seconds)
-          if (timestamp && Date.now() - timestamp < 30000) {
-            setFormData((prev) => ({
-              ...prev,
-              location: { latitude, longitude },
-            }));
+  // Load selected location from map picker when screen gets focus
+  useFocusEffect(
+    useCallback(() => {
+      const loadSelectedLocation = async () => {
+        try {
+          const locationData = await AsyncStorage.getItem('@selected_map_location');
+          console.log('[LOCATION DEBUG] 저장된 위치 데이터:', locationData);
+          if (locationData) {
+            const { latitude, longitude, timestamp } = JSON.parse(locationData);
+            // Only use location data if it's recent (within 60 seconds)
+            if (timestamp && Date.now() - timestamp < 60000) {
+              console.log('[LOCATION DEBUG] 위치 업데이트:', { latitude, longitude });
+              setFormData((prev) => ({
+                ...prev,
+                location: { latitude, longitude },
+              }));
+            }
+            // Clear the stored location
+            await AsyncStorage.removeItem('@selected_map_location');
           }
-          // Clear the stored location
-          await AsyncStorage.removeItem('@selected_map_location');
+        } catch (error) {
+          console.error('Error loading selected location:', error);
         }
-      } catch (error) {
-        console.error('Error loading selected location:', error);
-      }
-    };
+      };
 
-    // Check for location immediately
-    loadSelectedLocation();
-
-    // Set up interval to check periodically (for when returning from map)
-    const intervalId = setInterval(loadSelectedLocation, 500);
-
-    // Clear interval after 3 seconds (enough time to return from map)
-    const timeoutId = setTimeout(() => {
-      clearInterval(intervalId);
-    }, 3000);
-
-    return () => {
-      clearInterval(intervalId);
-      clearTimeout(timeoutId);
-    };
-  }, [selectedType]);
+      loadSelectedLocation();
+    }, [])
+  );
 
   const generateQRData = () => {
     const data = formData[selectedType];
