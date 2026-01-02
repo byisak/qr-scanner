@@ -849,6 +849,8 @@ export default {
     clipboardEmpty: 'Clipboard is empty',
     selectLocation: 'Select Location',
     selectFromMap: 'Select from Map',
+    reorderTypes: 'Reorder QR Types',
+    reorderTypesDesc: 'Drag to reorder',
     // QR Style
     qrStyle: {
       title: 'QR Style',

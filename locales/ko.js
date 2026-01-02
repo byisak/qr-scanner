@@ -849,6 +849,8 @@ export default {
     clipboardEmpty: '클립보드가 비어있습니다',
     selectLocation: '위치 선택',
     selectFromMap: '지도에서 선택',
+    reorderTypes: 'QR 타입 순서 변경',
+    reorderTypesDesc: '드래그하여 순서를 변경하세요',
     // QR 스타일
     qrStyle: {
       title: 'QR 스타일',
