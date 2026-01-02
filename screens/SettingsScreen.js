@@ -370,27 +370,18 @@ export default function SettingsScreen() {
             onPress={() => router.push('/profile-settings')}
             activeOpacity={0.7}
           >
-            <View style={s.profileLeft}>
-              <View style={[s.profileAvatar, { backgroundColor: isDark ? '#333' : '#f0f0f0' }]}>
-                {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage }} style={s.avatarImage} />
-                ) : (
-                  <Ionicons name="person" size={32} color={colors.textTertiary} />
-                )}
-              </View>
-              <View style={s.profileInfo}>
-                <View style={s.profileNameRow}>
-                  <Text style={[s.profileName, { color: colors.text, fontFamily: fonts.bold }]}>
-                    {user?.name || 'User'}
-                  </Text>
-                  <Text style={[s.profileNameSuffix, { color: colors.text, fontFamily: fonts.regular }]}>
-                    {' '}{language === 'ko' ? '님' : ''}
-                  </Text>
-                </View>
-                <Text style={[s.profileEmail, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {user?.email || ''}
+            <View style={s.profileInfo}>
+              <View style={s.profileNameRow}>
+                <Text style={[s.profileName, { color: colors.text, fontFamily: fonts.bold }]}>
+                  {user?.name || 'User'}
+                </Text>
+                <Text style={[s.profileNameSuffix, { color: colors.text, fontFamily: fonts.regular }]}>
+                  {' '}{language === 'ko' ? '님' : ''}
                 </Text>
               </View>
+              <Text style={[s.profileEmail, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {user?.email || ''}
+              </Text>
             </View>
             <TouchableOpacity
               style={s.settingsIconButton}
