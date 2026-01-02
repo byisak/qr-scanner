@@ -264,8 +264,11 @@ export default function GroupEditScreen() {
           disabled={isActive}
           style={[
             s.reorderItem,
-            { backgroundColor: isActive ? colors.primary + '20' : colors.background },
-            isActive && { shadowOpacity: 0.3, elevation: 8 }
+            {
+              backgroundColor: isActive ? colors.primary + '20' : colors.surface,
+              borderColor: colors.border,
+            },
+            isActive && { shadowOpacity: 0.3, elevation: 8, borderColor: colors.primary }
           ]}
         >
           {/* 드래그 핸들 */}
@@ -541,6 +544,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 4,
     borderRadius: 12,
+    borderWidth: 1,
   },
   reorderItemIcon: {
     width: 36,
