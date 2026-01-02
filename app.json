@@ -68,6 +68,12 @@
     "plugins": [
       "expo-router",
       [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
+        }
+      ],
+      [
         "react-native-cloud-store",
         {
           "iCloudContainerEnvironment": "Production"
