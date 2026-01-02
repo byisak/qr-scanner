@@ -1022,11 +1022,17 @@ function ScannerScreen() {
     // 사진 촬영 (활성화된 경우)
     let photoUri = null;
     if (photoSaveEnabledRef.current) {
-      try {
-        const photoResult = await capturePhoto();
-        photoUri = photoResult?.croppedUri || photoResult;
-      } catch (error) {
-        console.log('Photo capture error:', error);
+      // 배치에 이미 같은 코드가 있으면 사진 저장 스킵 (저장 공간 절약)
+      const isDuplicateInBatch = batchScannedItems.some(item => item.code === data);
+      if (!isDuplicateInBatch) {
+        try {
+          const photoResult = await capturePhoto();
+          photoUri = photoResult?.croppedUri || photoResult;
+        } catch (error) {
+          console.log('Photo capture error:', error);
+        }
+      } else {
+        console.log('[processBatchScan] Skipping photo for duplicate code:', data);
       }
     }
 
@@ -1299,19 +1305,25 @@ function ScannerScreen() {
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
-      // 사진 저장이 활성화되어 있으면 촬영
+      // 사진 저장이 활성화되어 있으면 촬영 (중복 코드는 사진 저장 스킵)
       let photoPromise = null;
       const photoStartTime = Date.now();
       console.log('[ScannerScreen] Photo save enabled:', photoSaveEnabledRef.current);
       if (photoSaveEnabledRef.current) {
-        console.log('[ScannerScreen] Starting photo capture at:', photoStartTime);
-        photoPromise = capturePhoto().then(result => {
-          console.log('[ScannerScreen] Photo capture completed in:', Date.now() - photoStartTime, 'ms');
-          return result;
-        }).catch(err => {
-          console.log('Background photo capture error:', err);
-          return null;
-        });
+        // 히스토리에서 중복 여부 확인 - 중복이면 사진 저장 스킵 (저장 공간 절약)
+        const duplicateCheck = await checkDuplicateInHistory(data);
+        if (!duplicateCheck.isDuplicate) {
+          console.log('[ScannerScreen] Starting photo capture at:', photoStartTime);
+          photoPromise = capturePhoto().then(result => {
+            console.log('[ScannerScreen] Photo capture completed in:', Date.now() - photoStartTime, 'ms');
+            return result;
+          }).catch(err => {
+            console.log('Background photo capture error:', err);
+            return null;
+          });
+        } else {
+          console.log('[ScannerScreen] Skipping photo for duplicate code (already in history):', data);
+        }
       }
 
       if (navigationTimerRef.current) {
