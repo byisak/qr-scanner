@@ -2200,7 +2200,7 @@ export default function GeneratorScreen() {
                       fontSize={barcodeSettings.fontSize}
                       background="#ffffff"
                       lineColor="#000000"
-                      margin={16}
+                      margin={4}
                       maxWidth={280}
                       rotate={barcodeSettings.rotate}
                       alttext={barcodeSettings.customText}
@@ -2675,10 +2675,9 @@ const s = StyleSheet.create({
     minHeight: 160,
   },
   barcodePreviewContainer: {
-    minHeight: 120,
-    maxHeight: 250,
+    minHeight: 80,
     overflow: 'hidden',
-    padding: 16,
+    padding: 8,
   },
   barcodePreviewWrapper: {
     alignItems: 'center',
@@ -2686,8 +2685,8 @@ const s = StyleSheet.create({
     width: '100%',
   },
   barcodeBackground: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
