@@ -421,22 +421,19 @@ export default function MapLocationPickerScreen() {
               style={styles.map}
               provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
               initialRegion={region}
-              region={region}
               onPress={handleMapPress}
               onMapReady={() => console.log('[MAP DEBUG] 지도 렌더링 완료!')}
-              onRegionChangeComplete={(r) => console.log('[MAP DEBUG] 지도 영역 변경:', r)}
+              onRegionChangeComplete={(r) => {
+                console.log('[MAP DEBUG] 지도 영역 변경:', r);
+                // 지도 드래그 시 중앙 좌표로 업데이트
+                setMarkerPosition({ latitude: r.latitude, longitude: r.longitude });
+                reverseGeocode(r.latitude, r.longitude);
+              }}
               showsUserLocation={true}
               showsMyLocationButton={false}
               showsCompass={true}
               mapType="standard"
-            >
-              <Marker
-                coordinate={markerPosition}
-                draggable
-                onDragEnd={handleMarkerDragEnd}
-                pinColor={colors.primary}
-              />
-            </MapView>
+            />
 
             {/* Current Location Button */}
             <TouchableOpacity
@@ -452,10 +449,9 @@ export default function MapLocationPickerScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Crosshair */}
-            <View style={styles.crosshairContainer} pointerEvents="none">
-              <View style={[styles.crosshairLine, styles.crosshairHorizontal, { backgroundColor: colors.primary }]} />
-              <View style={[styles.crosshairLine, styles.crosshairVertical, { backgroundColor: colors.primary }]} />
+            {/* Center Pin */}
+            <View style={styles.centerPinContainer} pointerEvents="none">
+              <Ionicons name="location" size={40} color={colors.primary} />
             </View>
           </>
         ) : (
@@ -633,28 +629,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  crosshairContainer: {
+  centerPinContainer: {
     position: 'absolute',
     top: '50%',
     left: '50%',
-    width: 30,
-    height: 30,
-    marginLeft: -15,
-    marginTop: -15,
+    marginLeft: -20,
+    marginTop: -40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  crosshairLine: {
-    position: 'absolute',
-    opacity: 0.5,
-  },
-  crosshairHorizontal: {
-    width: 30,
-    height: 2,
-  },
-  crosshairVertical: {
-    width: 2,
-    height: 30,
   },
   coordsContainer: {
     padding: 16,
