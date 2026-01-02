@@ -121,15 +121,10 @@ export default function MapLocationPickerScreen() {
     }
   };
 
-  // 잘못된 기본 좌표인지 확인 (expo-location이 검색 실패 시 반환하는 좌표)
-  const isDefaultFallbackLocation = (lat, lng) => {
-    // 한국 중심부 기본 좌표 (검색 실패 시 반환됨)
-    const defaultLat = 36.4583508;
-    const defaultLng = 127.8558413;
-    return Math.abs(lat - defaultLat) < 0.0001 && Math.abs(lng - defaultLng) < 0.0001;
-  };
+  // Google Maps API Key
+  const GOOGLE_MAPS_API_KEY = 'AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ';
 
-  // 지오코딩 (주소 → 좌표) 검색
+  // Google Maps Geocoding API를 사용한 주소 검색
   const searchAddress = async (query) => {
     console.log('[MAP DEBUG] 주소 검색 시작:', query);
     if (!query || query.trim().length < 2) {
@@ -140,71 +135,52 @@ export default function MapLocationPickerScreen() {
 
     setIsSearching(true);
     try {
-      // 한국 주소인 경우 "대한민국" 또는 "Korea"를 추가하여 검색 정확도 향상
       const searchQuery = query.trim();
-      console.log('[MAP DEBUG] geocodeAsync 호출:', searchQuery);
-      let results = await Location.geocodeAsync(searchQuery);
-      console.log('[MAP DEBUG] geocodeAsync 결과:', JSON.stringify(results, null, 2));
 
-      // 잘못된 기본 좌표 필터링
-      if (results && results.length > 0) {
-        results = results.filter(r => !isDefaultFallbackLocation(r.latitude, r.longitude));
-        console.log('[MAP DEBUG] 필터링 후 결과:', results.length);
-      }
+      // Google Places API (Text Search) 사용
+      const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&language=ko&region=kr&key=${GOOGLE_MAPS_API_KEY}`;
+      console.log('[MAP DEBUG] Google Places API 호출');
 
-      // 결과가 없으면 "South Korea"를 추가하여 다시 검색
-      if (!results || results.length === 0) {
-        const koreanQuery = `${searchQuery}, South Korea`;
-        console.log('[MAP DEBUG] 한국 검색어로 재시도:', koreanQuery);
-        results = await Location.geocodeAsync(koreanQuery);
-        console.log('[MAP DEBUG] 한국 검색 결과:', JSON.stringify(results, null, 2));
+      const response = await fetch(placesUrl);
+      const data = await response.json();
+      console.log('[MAP DEBUG] Google Places 결과:', JSON.stringify(data.status), data.results?.length);
 
-        // 다시 필터링
-        if (results && results.length > 0) {
-          results = results.filter(r => !isDefaultFallbackLocation(r.latitude, r.longitude));
-        }
-      }
-
-      if (results && results.length > 0) {
-        // 각 결과에 대해 역지오코딩으로 주소 가져오기
-        const resultsWithAddress = await Promise.all(
-          results.slice(0, 5).map(async (result) => {
-            try {
-              const reverseResults = await Location.reverseGeocodeAsync({
-                latitude: result.latitude,
-                longitude: result.longitude,
-              });
-              const addressInfo = reverseResults?.[0];
-              const addressParts = [];
-              if (addressInfo?.country) addressParts.push(addressInfo.country);
-              if (addressInfo?.region) addressParts.push(addressInfo.region);
-              if (addressInfo?.city) addressParts.push(addressInfo.city);
-              if (addressInfo?.district) addressParts.push(addressInfo.district);
-              if (addressInfo?.street) addressParts.push(addressInfo.street);
-
-              return {
-                ...result,
-                displayAddress: addressParts.join(' ') || searchQuery,
-              };
-            } catch (reverseError) {
-              // 역지오코딩 실패 시 좌표만 표시
-              return {
-                ...result,
-                displayAddress: searchQuery,
-              };
-            }
-          })
-        );
-        setSearchResults(resultsWithAddress);
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const results = data.results.slice(0, 5).map((place) => ({
+          latitude: place.geometry.location.lat,
+          longitude: place.geometry.location.lng,
+          displayAddress: place.formatted_address || place.name,
+          name: place.name,
+        }));
+        console.log('[MAP DEBUG] 변환된 결과:', results.length);
+        setSearchResults(results);
         setShowResults(true);
       } else {
-        setSearchResults([]);
-        setShowResults(false);
-        // 결과가 없을 때 사용자에게 알림
-        Alert.alert(
-          t('map.noResults') || '검색 결과 없음',
-          t('map.noResultsDesc') || '해당 주소를 찾을 수 없습니다. 다른 검색어를 시도해주세요.'
-        );
+        // Places API 실패 시 Geocoding API로 폴백
+        console.log('[MAP DEBUG] Places 실패, Geocoding API 시도');
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&language=ko&region=kr&key=${GOOGLE_MAPS_API_KEY}`;
+
+        const geoResponse = await fetch(geocodeUrl);
+        const geoData = await geoResponse.json();
+        console.log('[MAP DEBUG] Geocoding 결과:', geoData.status, geoData.results?.length);
+
+        if (geoData.status === 'OK' && geoData.results && geoData.results.length > 0) {
+          const results = geoData.results.slice(0, 5).map((result) => ({
+            latitude: result.geometry.location.lat,
+            longitude: result.geometry.location.lng,
+            displayAddress: result.formatted_address,
+            name: result.formatted_address,
+          }));
+          setSearchResults(results);
+          setShowResults(true);
+        } else {
+          setSearchResults([]);
+          setShowResults(false);
+          Alert.alert(
+            t('map.noResults') || '검색 결과 없음',
+            t('map.noResultsDesc') || '해당 주소를 찾을 수 없습니다. 다른 검색어를 시도해주세요.'
+          );
+        }
       }
     } catch (error) {
       console.log('Geocode search error:', error);
@@ -405,11 +381,13 @@ export default function MapLocationPickerScreen() {
               >
                 <Ionicons name="location" size={20} color={colors.primary} />
                 <View style={styles.searchResultText}>
-                  <Text style={[styles.searchResultAddress, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
+                  {result.name && result.name !== result.displayAddress && (
+                    <Text style={[styles.searchResultName, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+                      {result.name}
+                    </Text>
+                  )}
+                  <Text style={[styles.searchResultAddress, { color: result.name ? colors.textSecondary : colors.text, fontFamily: fonts.regular }]} numberOfLines={2}>
                     {result.displayAddress}
-                  </Text>
-                  <Text style={[styles.searchResultCoords, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                    {result.latitude.toFixed(6)}, {result.longitude.toFixed(6)}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -603,9 +581,15 @@ const styles = StyleSheet.create({
   searchResultText: {
     flex: 1,
   },
+  searchResultName: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
   searchResultAddress: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '400',
+    lineHeight: 18,
   },
   searchResultCoords: {
     fontSize: 12,
