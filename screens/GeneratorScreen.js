@@ -1854,20 +1854,25 @@ export default function GeneratorScreen() {
                 {/* 크기 설정 그룹 */}
                 <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
                   {/* 바코드 너비 */}
-                  <View style={s.settingItem}>
+                  <View style={s.settingItemVertical}>
                     <View style={s.settingLabelRow}>
                       <Ionicons name="resize-outline" size={18} color={colors.primary} />
                       <Text style={[s.settingLabel, { color: colors.text }]}>
                         {t('generator.barcodeWidth') || '너비'}
                       </Text>
                     </View>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.barcodeOptionScroll}>
-                      <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={s.barcodeOptionScrollFull}
+                      contentContainerStyle={s.barcodeOptionScrollContent}
+                    >
+                      <View style={[s.barcodeOptionControlCompact, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((val) => (
                           <TouchableOpacity
                             key={`scale-${val}`}
                             style={[
-                              s.barcodeOptionBtn,
+                              s.barcodeOptionBtnCompact,
                               barcodeSettings.scale === val && { backgroundColor: colors.primary },
                             ]}
                             onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
@@ -2747,6 +2752,11 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  settingItemVertical: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
   settingLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2765,7 +2775,20 @@ const s = StyleSheet.create({
   barcodeOptionScroll: {
     flexGrow: 0,
   },
+  barcodeOptionScrollFull: {
+    marginHorizontal: -4,
+  },
+  barcodeOptionScrollContent: {
+    paddingHorizontal: 4,
+  },
   barcodeOptionControl: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 3,
+    gap: 2,
+  },
+  barcodeOptionControlCompact: {
     flexDirection: 'row',
     borderRadius: 10,
     borderWidth: 1,
@@ -2779,6 +2802,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 40,
+  },
+  barcodeOptionBtnCompact: {
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 36,
   },
   barcodeOptionText: {
     fontSize: 13,
