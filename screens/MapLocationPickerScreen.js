@@ -121,6 +121,14 @@ export default function MapLocationPickerScreen() {
     }
   };
 
+  // 잘못된 기본 좌표인지 확인 (expo-location이 검색 실패 시 반환하는 좌표)
+  const isDefaultFallbackLocation = (lat, lng) => {
+    // 한국 중심부 기본 좌표 (검색 실패 시 반환됨)
+    const defaultLat = 36.4583508;
+    const defaultLng = 127.8558413;
+    return Math.abs(lat - defaultLat) < 0.0001 && Math.abs(lng - defaultLng) < 0.0001;
+  };
+
   // 지오코딩 (주소 → 좌표) 검색
   const searchAddress = async (query) => {
     console.log('[MAP DEBUG] 주소 검색 시작:', query);
@@ -138,12 +146,23 @@ export default function MapLocationPickerScreen() {
       let results = await Location.geocodeAsync(searchQuery);
       console.log('[MAP DEBUG] geocodeAsync 결과:', JSON.stringify(results, null, 2));
 
+      // 잘못된 기본 좌표 필터링
+      if (results && results.length > 0) {
+        results = results.filter(r => !isDefaultFallbackLocation(r.latitude, r.longitude));
+        console.log('[MAP DEBUG] 필터링 후 결과:', results.length);
+      }
+
       // 결과가 없으면 "South Korea"를 추가하여 다시 검색
       if (!results || results.length === 0) {
         const koreanQuery = `${searchQuery}, South Korea`;
         console.log('[MAP DEBUG] 한국 검색어로 재시도:', koreanQuery);
         results = await Location.geocodeAsync(koreanQuery);
         console.log('[MAP DEBUG] 한국 검색 결과:', JSON.stringify(results, null, 2));
+
+        // 다시 필터링
+        if (results && results.length > 0) {
+          results = results.filter(r => !isDefaultFallbackLocation(r.latitude, r.longitude));
+        }
       }
 
       if (results && results.length > 0) {
@@ -406,13 +425,16 @@ export default function MapLocationPickerScreen() {
             <MapView
               ref={mapRef}
               style={styles.map}
-              provider={PROVIDER_GOOGLE}
+              provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
               initialRegion={region}
+              region={region}
               onPress={handleMapPress}
+              onMapReady={() => console.log('[MAP DEBUG] 지도 렌더링 완료!')}
+              onRegionChangeComplete={(r) => console.log('[MAP DEBUG] 지도 영역 변경:', r)}
               showsUserLocation={true}
               showsMyLocationButton={false}
               showsCompass={true}
-              userInterfaceStyle={isDark ? 'dark' : 'light'}
+              mapType="standard"
             >
               <Marker
                 coordinate={markerPosition}
