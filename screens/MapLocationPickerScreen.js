@@ -30,8 +30,9 @@ try {
   MapView = Maps.default;
   Marker = Maps.Marker;
   PROVIDER_GOOGLE = Maps.PROVIDER_GOOGLE;
+  console.log('[MAP DEBUG] react-native-maps 로드 성공:', { MapView: !!MapView, Marker: !!Marker, PROVIDER_GOOGLE });
 } catch (e) {
-  console.log('react-native-maps not available - requires development build');
+  console.log('[MAP DEBUG] react-native-maps 로드 실패:', e.message);
 }
 
 const SELECTED_LOCATION_KEY = '@selected_map_location';
@@ -69,9 +70,14 @@ export default function MapLocationPickerScreen() {
 
   // 초기 위치 설정 (파라미터로 전달된 경우)
   useEffect(() => {
+    console.log('[MAP DEBUG] 컴포넌트 마운트됨');
+    console.log('[MAP DEBUG] MapView 사용 가능:', !!MapView);
+    console.log('[MAP DEBUG] params:', JSON.stringify(params));
+
     if (params.latitude && params.longitude) {
       const lat = parseFloat(params.latitude);
       const lng = parseFloat(params.longitude);
+      console.log('[MAP DEBUG] 파라미터에서 위치 파싱:', { lat, lng });
       if (!isNaN(lat) && !isNaN(lng)) {
         const newRegion = {
           latitude: lat,
@@ -85,14 +91,17 @@ export default function MapLocationPickerScreen() {
       }
     } else {
       // 현재 위치로 초기화
+      console.log('[MAP DEBUG] 파라미터 없음, 현재 위치 가져오기');
       getCurrentLocation();
     }
   }, []);
 
   // 역지오코딩 (좌표 → 주소)
   const reverseGeocode = async (latitude, longitude) => {
+    console.log('[MAP DEBUG] 역지오코딩 시작:', { latitude, longitude });
     try {
       const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+      console.log('[MAP DEBUG] 역지오코딩 결과:', JSON.stringify(results, null, 2));
       if (results && results.length > 0) {
         const result = results[0];
         const addressParts = [];
@@ -104,15 +113,17 @@ export default function MapLocationPickerScreen() {
         if (result.streetNumber) addressParts.push(result.streetNumber);
 
         const formattedAddress = addressParts.join(' ') || result.name || '';
+        console.log('[MAP DEBUG] 포맷된 주소:', formattedAddress);
         setAddress(formattedAddress);
       }
     } catch (error) {
-      console.log('Reverse geocode error:', error);
+      console.log('[MAP DEBUG] 역지오코딩 에러:', error.message, error);
     }
   };
 
   // 지오코딩 (주소 → 좌표) 검색
   const searchAddress = async (query) => {
+    console.log('[MAP DEBUG] 주소 검색 시작:', query);
     if (!query || query.trim().length < 2) {
       setSearchResults([]);
       setShowResults(false);
@@ -123,12 +134,16 @@ export default function MapLocationPickerScreen() {
     try {
       // 한국 주소인 경우 "대한민국" 또는 "Korea"를 추가하여 검색 정확도 향상
       const searchQuery = query.trim();
+      console.log('[MAP DEBUG] geocodeAsync 호출:', searchQuery);
       let results = await Location.geocodeAsync(searchQuery);
+      console.log('[MAP DEBUG] geocodeAsync 결과:', JSON.stringify(results, null, 2));
 
       // 결과가 없으면 "South Korea"를 추가하여 다시 검색
       if (!results || results.length === 0) {
         const koreanQuery = `${searchQuery}, South Korea`;
+        console.log('[MAP DEBUG] 한국 검색어로 재시도:', koreanQuery);
         results = await Location.geocodeAsync(koreanQuery);
+        console.log('[MAP DEBUG] 한국 검색 결과:', JSON.stringify(results, null, 2));
       }
 
       if (results && results.length > 0) {
@@ -221,9 +236,12 @@ export default function MapLocationPickerScreen() {
 
   // 현재 위치 가져오기
   const getCurrentLocation = async () => {
+    console.log('[MAP DEBUG] 현재 위치 가져오기 시작');
     setIsLoadingLocation(true);
     try {
+      console.log('[MAP DEBUG] 위치 권한 요청 중...');
       const { status } = await Location.requestForegroundPermissionsAsync();
+      console.log('[MAP DEBUG] 위치 권한 상태:', status);
       if (status !== 'granted') {
         Alert.alert(
           t('common.error') || '오류',
@@ -232,9 +250,11 @@ export default function MapLocationPickerScreen() {
         return;
       }
 
+      console.log('[MAP DEBUG] 현재 위치 조회 중...');
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      console.log('[MAP DEBUG] 현재 위치:', JSON.stringify(location.coords, null, 2));
 
       const newRegion = {
         latitude: location.coords.latitude,
@@ -250,6 +270,7 @@ export default function MapLocationPickerScreen() {
       });
 
       // 지도 이동
+      console.log('[MAP DEBUG] 지도 이동, mapRef:', !!mapRef.current);
       mapRef.current?.animateToRegion(newRegion, 500);
 
       // 역지오코딩
@@ -258,7 +279,7 @@ export default function MapLocationPickerScreen() {
       // 햅틱 피드백
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
-      console.log('Get location error:', error);
+      console.log('[MAP DEBUG] 현재 위치 에러:', error.message, error);
       Alert.alert(
         t('common.error') || '오류',
         t('location.fetchError') || '현재 위치를 가져올 수 없습니다.'
