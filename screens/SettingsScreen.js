@@ -28,6 +28,7 @@ import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner from '../components/AdBanner';
+import { getAnalyticsConsent, setAnalyticsConsent } from '../utils/analytics';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -65,6 +66,8 @@ export default function SettingsScreen() {
   // 캐시 크기
   const [cacheSize, setCacheSize] = useState(0);
   const [isCalculatingCache, setIsCalculatingCache] = useState(false);
+  // 분석 동의 상태
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
 
   // 캐시 크기 계산
   const calculateCacheSize = useCallback(async () => {
@@ -153,6 +156,12 @@ export default function SettingsScreen() {
     );
   };
 
+  // 분석 동의 토글
+  const handleAnalyticsToggle = async (value) => {
+    setAnalyticsEnabled(value);
+    await setAnalyticsConsent(value);
+  };
+
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
     const labels = {
@@ -216,6 +225,10 @@ export default function SettingsScreen() {
         if (q !== null) {
           setPhotoQuality(q);
         }
+
+        // 분석 동의 상태 로드
+        const analyticsConsent = await getAnalyticsConsent();
+        setAnalyticsEnabled(analyticsConsent);
       } catch (error) {
         console.error('Load settings error:', error);
       }
@@ -828,6 +841,24 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+
+          {/* 사용 분석 동의 */}
+          <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                {t('settings.analyticsConsent') || '사용 분석 동의'}
+              </Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t('settings.analyticsConsentDesc') || '앱 개선을 위한 익명 사용 데이터 수집'}
+              </Text>
+            </View>
+            <Switch
+              value={analyticsEnabled}
+              onValueChange={handleAnalyticsToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
 
           {/* 버전정보 */}
           <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>

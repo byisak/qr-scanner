@@ -113,7 +113,9 @@
           "delayAppMeasurementInit": true,
           "userTrackingUsageDescription": "맞춤형 광고를 제공하기 위해 사용됩니다."
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/analytics"
     ],
     "experiments": {
       "typedRoutes": true

@@ -47,6 +47,7 @@ import AdBanner from '../components/AdBanner';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Slider from '@react-native-community/slider';
+import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved, trackQRShared } from '../utils/analytics';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -393,6 +394,9 @@ export default function GeneratorScreen() {
   // Load selected location from map picker when screen gets focus
   useFocusEffect(
     useCallback(() => {
+      // 화면 조회 추적
+      trackScreenView('Generator', 'GeneratorScreen');
+
       const loadSelectedLocation = async () => {
         try {
           const locationData = await AsyncStorage.getItem('@selected_map_location');

@@ -21,6 +21,7 @@ import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -100,6 +101,8 @@ export default function HistoryScreen() {
 
   useFocusEffect(
     React.useCallback(() => {
+      // 화면 조회 추적
+      trackScreenView('History', 'HistoryScreen');
       loadGroups();
     }, [t])
   );

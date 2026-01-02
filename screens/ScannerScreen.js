@@ -39,6 +39,7 @@ import {
 } from '../constants/Timing';
 import websocketClient from '../utils/websocket';
 import config from '../config/config';
+import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/analytics';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
@@ -390,6 +391,9 @@ function ScannerScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // 화면 조회 추적
+      trackScreenView('Scanner', 'ScannerScreen');
+
       // 이전 cleanup 타이머 취소 (경쟁 상태 방지)
       if (cleanupTimeoutRef.current) {
         clearTimeout(cleanupTimeoutRef.current);
@@ -1116,6 +1120,13 @@ function ScannerScreen() {
 
       lastScannedData.current = data;
       lastScannedTime.current = now;
+
+      // 스캔 이벤트 추적
+      if (normalizedType === 'qr' || normalizedType === 'qrcode') {
+        trackQRScanned(normalizedType, data.startsWith('http') ? 'url' : 'text');
+      } else {
+        trackBarcodeScanned(normalizedType);
+      }
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
