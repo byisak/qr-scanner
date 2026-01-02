@@ -143,7 +143,7 @@ export default function MapLocationPickerScreen() {
 
       const response = await fetch(placesUrl);
       const data = await response.json();
-      console.log('[MAP DEBUG] Google Places 결과:', JSON.stringify(data.status), data.results?.length);
+      console.log('[MAP DEBUG] Google Places 전체 응답:', JSON.stringify(data, null, 2));
 
       if (data.status === 'OK' && data.results && data.results.length > 0) {
         const results = data.results.slice(0, 5).map((place) => ({
@@ -162,7 +162,7 @@ export default function MapLocationPickerScreen() {
 
         const geoResponse = await fetch(geocodeUrl);
         const geoData = await geoResponse.json();
-        console.log('[MAP DEBUG] Geocoding 결과:', geoData.status, geoData.results?.length);
+        console.log('[MAP DEBUG] Geocoding 전체 응답:', JSON.stringify(geoData, null, 2));
 
         if (geoData.status === 'OK' && geoData.results && geoData.results.length > 0) {
           const results = geoData.results.slice(0, 5).map((result) => ({
@@ -183,7 +183,8 @@ export default function MapLocationPickerScreen() {
         }
       }
     } catch (error) {
-      console.log('Geocode search error:', error);
+      console.log('[MAP DEBUG] 검색 에러:', error.message, error);
+      Alert.alert('API 오류', `검색 중 오류가 발생했습니다: ${error.message}`);
       setSearchResults([]);
       setShowResults(false);
     } finally {
