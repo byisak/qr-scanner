@@ -349,7 +349,7 @@ export default function GroupEditScreen() {
         <View style={[s.popupContainer, { backgroundColor: colors.surface }]}>
           {/* 모달 헤더 */}
           <View style={s.popupHeader}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[s.popupTitle, { color: colors.text }]}>
                 {t('groupEdit.title')}
               </Text>
@@ -367,17 +367,19 @@ export default function GroupEditScreen() {
           </View>
 
           {/* 그룹 목록 (드래그 가능) */}
-          <DraggableFlatList
-            data={groups}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            onDragEnd={handleDragEnd}
-            contentContainerStyle={s.listContent}
-            activationDistance={10}
-          />
+          <View style={s.listContainer}>
+            <DraggableFlatList
+              data={groups}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              onDragEnd={handleDragEnd}
+              contentContainerStyle={s.listContent}
+              activationDistance={10}
+            />
+          </View>
 
           {/* 그룹 추가 버튼 */}
-          <View style={s.addButtonContainer}>
+          <View style={[s.addButtonContainer, { borderTopWidth: 1, borderTopColor: colors.border }]}>
             <TouchableOpacity
               style={[s.addButton, { backgroundColor: colors.primary }]}
               onPress={() => setShowAddModal(true)}
@@ -521,9 +523,14 @@ const s = StyleSheet.create({
   popupContainer: {
     width: '90%',
     maxWidth: 400,
-    maxHeight: '80%',
+    maxHeight: '70%',
     borderRadius: 20,
     overflow: 'hidden',
+  },
+  listContainer: {
+    flex: 1,
+    minHeight: 100,
+    maxHeight: 400,
   },
   popupHeader: {
     flexDirection: 'row',
