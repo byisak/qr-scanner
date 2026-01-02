@@ -534,7 +534,7 @@ const s = StyleSheet.create({
   },
   listContent: {
     paddingVertical: 8,
-    paddingBottom: 230,
+    paddingBottom: 280,
   },
   reorderItem: {
     flexDirection: 'row',
