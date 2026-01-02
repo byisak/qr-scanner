@@ -851,6 +851,8 @@ export default {
     selectFromMap: '지도에서 선택',
     reorderTypes: 'QR 타입 순서 변경',
     reorderTypesDesc: '드래그하여 순서를 변경하세요',
+    reorder: '순서',
+    reorderBarcodeTypes: '바코드 타입 순서 변경',
     // QR 스타일
     qrStyle: {
       title: 'QR 스타일',

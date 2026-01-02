@@ -851,6 +851,8 @@ export default {
     selectFromMap: 'Select from Map',
     reorderTypes: 'Reorder QR Types',
     reorderTypesDesc: 'Drag to reorder',
+    reorder: 'Order',
+    reorderBarcodeTypes: 'Reorder Barcode Types',
     // QR Style
     qrStyle: {
       title: 'QR Style',

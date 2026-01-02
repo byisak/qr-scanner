@@ -112,6 +112,10 @@ export default function GeneratorScreen() {
   const [qrTypeOrder, setQrTypeOrder] = useState(QR_TYPES.map(t => t.id));
   const [qrTypeReorderVisible, setQrTypeReorderVisible] = useState(false);
 
+  // 바코드 타입 순서 관리
+  const [barcodeTypeOrder, setBarcodeTypeOrder] = useState([]);
+  const [barcodeReorderVisible, setBarcodeReorderVisible] = useState(false);
+
   // 즐겨찾기 및 숨긴 기본 바코드 로드
   useEffect(() => {
     const loadFavorites = async () => {
@@ -174,12 +178,43 @@ export default function GeneratorScreen() {
     await saveQrTypeOrder(newOrder);
   };
 
+  // 바코드 타입 순서 로드
+  useEffect(() => {
+    const loadBarcodeOrder = async () => {
+      try {
+        const savedOrder = await AsyncStorage.getItem('barcodeTypeOrder');
+        if (savedOrder) {
+          setBarcodeTypeOrder(JSON.parse(savedOrder));
+        }
+      } catch (error) {
+        console.error('Error loading barcode type order:', error);
+      }
+    };
+    loadBarcodeOrder();
+  }, []);
+
+  // 바코드 타입 순서 저장
+  const saveBarcodeTypeOrder = async (newOrder) => {
+    try {
+      await AsyncStorage.setItem('barcodeTypeOrder', JSON.stringify(newOrder));
+    } catch (error) {
+      console.error('Error saving barcode type order:', error);
+    }
+  };
+
+  // 바코드 타입 순서 변경 핸들러
+  const handleBarcodeTypeReorder = async ({ data }) => {
+    const newOrder = data.map(item => item.bcid);
+    setBarcodeTypeOrder(newOrder);
+    await saveBarcodeTypeOrder(newOrder);
+  };
+
   // 현재 선택된 바코드 정보 조회
   const selectedBarcodeInfo = useMemo(() => {
     return ALL_BWIP_BARCODES.find(b => b.bcid === selectedBarcodeFormat) || ALL_BWIP_BARCODES[0];
   }, [selectedBarcodeFormat]);
 
-  // 표시할 바코드 타입 목록 계산 (숨기지 않은 기본 + 즐겨찾기)
+  // 표시할 바코드 타입 목록 계산 (숨기지 않은 기본 + 즐겨찾기, 저장된 순서 반영)
   const displayedBarcodeTypes = useMemo(() => {
     const defaultTypes = ALL_BWIP_BARCODES.filter(
       b => DEFAULT_BARCODE_BCIDS.includes(b.bcid) && !hiddenDefaults.includes(b.bcid)
@@ -187,8 +222,27 @@ export default function GeneratorScreen() {
     const favoriteTypes = ALL_BWIP_BARCODES.filter(
       b => favoriteBarcodes.includes(b.bcid) && !DEFAULT_BARCODE_BCIDS.includes(b.bcid)
     );
-    return [...defaultTypes, ...favoriteTypes];
-  }, [favoriteBarcodes, hiddenDefaults]);
+    const allTypes = [...defaultTypes, ...favoriteTypes];
+
+    // 저장된 순서가 있으면 적용
+    if (barcodeTypeOrder.length > 0) {
+      const ordered = [];
+      // 저장된 순서대로 먼저 추가
+      barcodeTypeOrder.forEach(bcid => {
+        const type = allTypes.find(t => t.bcid === bcid);
+        if (type) ordered.push(type);
+      });
+      // 저장된 순서에 없는 타입들은 뒤에 추가
+      allTypes.forEach(type => {
+        if (!barcodeTypeOrder.includes(type.bcid)) {
+          ordered.push(type);
+        }
+      });
+      return ordered;
+    }
+
+    return allTypes;
+  }, [favoriteBarcodes, hiddenDefaults, barcodeTypeOrder]);
 
   // 모달에서 검색 필터링된 바코드 목록
   const filteredBarcodes = useMemo(() => {
@@ -1537,54 +1591,60 @@ export default function GeneratorScreen() {
         {codeMode === 'qr' && (
           <>
             {/* Type Selector */}
-            <View style={s.typeSelectorRow}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.typesContainer}
-                style={s.typesScroll}
-              >
-                {orderedQrTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type.id}
-                    style={[
-                      s.typeButton,
-                      {
-                        backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
-                        borderColor: selectedType === type.id ? colors.primary : colors.border,
-                      },
-                    ]}
-                    onPress={() => handleTypeSelect(type.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[
-                      s.typeIconContainer,
-                      { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
-                    ]}>
-                      <Ionicons
-                        name={type.icon}
-                        size={22}
-                        color={selectedType === type.id ? '#fff' : colors.text}
-                      />
-                    </View>
-                    <Text style={[
-                      s.typeText,
-                      { color: selectedType === type.id ? '#fff' : colors.text }
-                    ]}>
-                      {t(`generator.types.${type.id}`)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.typesContainer}
+              style={s.typesScroll}
+            >
+              {orderedQrTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    s.typeButton,
+                    {
+                      backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
+                      borderColor: selectedType === type.id ? colors.primary : colors.border,
+                    },
+                  ]}
+                  onPress={() => handleTypeSelect(type.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[
+                    s.typeIconContainer,
+                    { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
+                  ]}>
+                    <Ionicons
+                      name={type.icon}
+                      size={22}
+                      color={selectedType === type.id ? '#fff' : colors.text}
+                    />
+                  </View>
+                  <Text style={[
+                    s.typeText,
+                    { color: selectedType === type.id ? '#fff' : colors.text }
+                  ]}>
+                    {t(`generator.types.${type.id}`)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
               {/* 순서 변경 버튼 */}
               <TouchableOpacity
-                style={[s.reorderButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[
+                  s.typeButton,
+                  { backgroundColor: colors.surface, borderColor: colors.border }
+                ]}
                 onPress={() => setQrTypeReorderVisible(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="reorder-three" size={24} color={colors.textSecondary} />
+                <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
+                  <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
+                </View>
+                <Text style={[s.typeText, { color: colors.textSecondary }]}>
+                  {t('generator.reorder') || '순서'}
+                </Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
 
             {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
             <AdBanner
@@ -1685,6 +1745,23 @@ export default function GeneratorScreen() {
                 </View>
                 <Text style={[s.typeText, { color: colors.primary }]}>
                   {t('generator.addBarcode') || '더보기'}
+                </Text>
+              </TouchableOpacity>
+
+              {/* 바코드 순서 변경 버튼 */}
+              <TouchableOpacity
+                style={[
+                  s.typeButton,
+                  { backgroundColor: colors.surface, borderColor: colors.border }
+                ]}
+                onPress={() => setBarcodeReorderVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
+                  <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
+                </View>
+                <Text style={[s.typeText, { color: colors.textSecondary }]}>
+                  {t('generator.reorder') || '순서'}
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -2269,6 +2346,81 @@ export default function GeneratorScreen() {
         </View>
       </Modal>
 
+      {/* 바코드 타입 순서 변경 모달 */}
+      <Modal
+        visible={barcodeReorderVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setBarcodeReorderVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%' }]}>
+            {/* 모달 헤더 */}
+            <View style={s.modalHeader}>
+              <View>
+                <Text style={[s.modalTitle, { color: colors.text }]}>
+                  {t('generator.reorderBarcodeTypes') || '바코드 타입 순서 변경'}
+                </Text>
+                <Text style={[s.modalSubtitle, { color: colors.textSecondary }]}>
+                  {t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[s.modalCloseButton, { backgroundColor: colors.background }]}
+                onPress={() => setBarcodeReorderVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 드래그 리스트 */}
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <DraggableFlatList
+                data={displayedBarcodeTypes}
+                onDragEnd={handleBarcodeTypeReorder}
+                keyExtractor={(item) => item.bcid}
+                renderItem={({ item, drag, isActive }) => {
+                  const catInfo = BARCODE_CATEGORIES[item.category] || {};
+                  return (
+                    <ScaleDecorator>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onLongPress={drag}
+                        disabled={isActive}
+                        style={[
+                          s.reorderItem,
+                          { backgroundColor: isActive ? colors.primary + '20' : colors.background },
+                          isActive && { shadowOpacity: 0.3, elevation: 8 }
+                        ]}
+                      >
+                        <TouchableOpacity
+                          onPressIn={drag}
+                          style={s.dragHandle}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="menu" size={22} color={colors.textTertiary} />
+                        </TouchableOpacity>
+                        <LinearGradient
+                          colors={catInfo.gradient || ['#667eea', '#764ba2']}
+                          style={s.reorderItemIcon}
+                        >
+                          <Ionicons name={catInfo.icon || 'barcode-outline'} size={18} color="#fff" />
+                        </LinearGradient>
+                        <Text style={[s.reorderItemText, { color: colors.text }]}>
+                          {item.name}
+                        </Text>
+                      </TouchableOpacity>
+                    </ScaleDecorator>
+                  );
+                }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              />
+            </GestureHandlerRootView>
+          </View>
+        </View>
+      </Modal>
+
       {/* 바코드 타입 선택 모달 (110종 전체) */}
       <Modal
         visible={barcodePickerVisible}
@@ -2655,21 +2807,7 @@ const s = StyleSheet.create({
   },
   typesScroll: {
     maxHeight: 110,
-    flex: 1,
-  },
-  typeSelectorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 20,
-  },
-  reorderButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
   },
   reorderItem: {
     flexDirection: 'row',
