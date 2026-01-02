@@ -1205,7 +1205,8 @@ export default {
     selectedLocation: '선택된 위치',
     latitude: '위도',
     longitude: '경도',
-    copyCoordinates: '좌표 복사',
+    noResults: '검색 결과 없음',
+    noResultsDesc: '해당 주소를 찾을 수 없습니다. 다른 검색어를 시도해주세요.',
   },
 
   // 위치

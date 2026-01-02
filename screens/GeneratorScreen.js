@@ -290,34 +290,40 @@ export default function GeneratorScreen() {
   useEffect(() => {
     const loadSelectedLocation = async () => {
       try {
-        const locationData = await AsyncStorage.getItem('selectedLocation');
+        const locationData = await AsyncStorage.getItem('@selected_map_location');
         if (locationData) {
-          const { latitude, longitude } = JSON.parse(locationData);
-          setFormData((prev) => ({
-            ...prev,
-            location: { latitude, longitude },
-          }));
+          const { latitude, longitude, timestamp } = JSON.parse(locationData);
+          // Only use location data if it's recent (within 30 seconds)
+          if (timestamp && Date.now() - timestamp < 30000) {
+            setFormData((prev) => ({
+              ...prev,
+              location: { latitude, longitude },
+            }));
+          }
           // Clear the stored location
-          await AsyncStorage.removeItem('selectedLocation');
+          await AsyncStorage.removeItem('@selected_map_location');
         }
       } catch (error) {
         console.error('Error loading selected location:', error);
       }
     };
 
-    // Check for location updates when screen comes into focus
-    const unsubscribe = router.addListener?.('focus', () => {
-      loadSelectedLocation();
-    });
-
+    // Check for location immediately
     loadSelectedLocation();
 
+    // Set up interval to check periodically (for when returning from map)
+    const intervalId = setInterval(loadSelectedLocation, 500);
+
+    // Clear interval after 3 seconds (enough time to return from map)
+    const timeoutId = setTimeout(() => {
+      clearInterval(intervalId);
+    }, 3000);
+
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
     };
-  }, []);
+  }, [selectedType]);
 
   const generateQRData = () => {
     const data = formData[selectedType];

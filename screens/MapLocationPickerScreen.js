@@ -15,11 +15,14 @@ import {
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+
+const SELECTED_LOCATION_KEY = '@selected_map_location';
 
 // 기본 위치 (서울 시청)
 const DEFAULT_LOCATION = {
@@ -106,27 +109,44 @@ export default function MapLocationPickerScreen() {
 
     setIsSearching(true);
     try {
-      const results = await Location.geocodeAsync(query);
+      // 한국 주소인 경우 "대한민국" 또는 "Korea"를 추가하여 검색 정확도 향상
+      const searchQuery = query.trim();
+      let results = await Location.geocodeAsync(searchQuery);
+
+      // 결과가 없으면 "South Korea"를 추가하여 다시 검색
+      if (!results || results.length === 0) {
+        const koreanQuery = `${searchQuery}, South Korea`;
+        results = await Location.geocodeAsync(koreanQuery);
+      }
+
       if (results && results.length > 0) {
         // 각 결과에 대해 역지오코딩으로 주소 가져오기
         const resultsWithAddress = await Promise.all(
           results.slice(0, 5).map(async (result) => {
-            const reverseResults = await Location.reverseGeocodeAsync({
-              latitude: result.latitude,
-              longitude: result.longitude,
-            });
-            const addressInfo = reverseResults?.[0];
-            const addressParts = [];
-            if (addressInfo?.country) addressParts.push(addressInfo.country);
-            if (addressInfo?.region) addressParts.push(addressInfo.region);
-            if (addressInfo?.city) addressParts.push(addressInfo.city);
-            if (addressInfo?.district) addressParts.push(addressInfo.district);
-            if (addressInfo?.street) addressParts.push(addressInfo.street);
+            try {
+              const reverseResults = await Location.reverseGeocodeAsync({
+                latitude: result.latitude,
+                longitude: result.longitude,
+              });
+              const addressInfo = reverseResults?.[0];
+              const addressParts = [];
+              if (addressInfo?.country) addressParts.push(addressInfo.country);
+              if (addressInfo?.region) addressParts.push(addressInfo.region);
+              if (addressInfo?.city) addressParts.push(addressInfo.city);
+              if (addressInfo?.district) addressParts.push(addressInfo.district);
+              if (addressInfo?.street) addressParts.push(addressInfo.street);
 
-            return {
-              ...result,
-              displayAddress: addressParts.join(' ') || query,
-            };
+              return {
+                ...result,
+                displayAddress: addressParts.join(' ') || searchQuery,
+              };
+            } catch (reverseError) {
+              // 역지오코딩 실패 시 좌표만 표시
+              return {
+                ...result,
+                displayAddress: searchQuery,
+              };
+            }
           })
         );
         setSearchResults(resultsWithAddress);
@@ -134,10 +154,16 @@ export default function MapLocationPickerScreen() {
       } else {
         setSearchResults([]);
         setShowResults(false);
+        // 결과가 없을 때 사용자에게 알림
+        Alert.alert(
+          t('map.noResults') || '검색 결과 없음',
+          t('map.noResultsDesc') || '해당 주소를 찾을 수 없습니다. 다른 검색어를 시도해주세요.'
+        );
       }
     } catch (error) {
       console.log('Geocode search error:', error);
       setSearchResults([]);
+      setShowResults(false);
     } finally {
       setIsSearching(false);
     }
@@ -247,16 +273,23 @@ export default function MapLocationPickerScreen() {
   };
 
   // 위치 선택 확인
-  const confirmLocation = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.back();
-    // 선택된 위치 데이터를 params로 전달하거나 콜백 사용
-    // 이 부분은 GeneratorScreen과의 연동 방식에 따라 수정 필요
-    router.setParams({
-      selectedLatitude: markerPosition.latitude.toString(),
-      selectedLongitude: markerPosition.longitude.toString(),
-      selectedAddress: address,
-    });
+  const confirmLocation = async () => {
+    try {
+      // AsyncStorage에 선택된 위치 저장
+      const locationData = {
+        latitude: markerPosition.latitude.toFixed(6),
+        longitude: markerPosition.longitude.toFixed(6),
+        address: address,
+        timestamp: Date.now(),
+      };
+      await AsyncStorage.setItem(SELECTED_LOCATION_KEY, JSON.stringify(locationData));
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.back();
+    } catch (error) {
+      console.log('Save location error:', error);
+      router.back();
+    }
   };
 
   return (
@@ -409,23 +442,6 @@ export default function MapLocationPickerScreen() {
             </Text>
           </View>
         </View>
-
-        {/* Copy Coordinates Button */}
-        <TouchableOpacity
-          style={[styles.copyButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
-          onPress={() => {
-            const coordString = `${markerPosition.latitude.toFixed(6)}, ${markerPosition.longitude.toFixed(6)}`;
-            // Clipboard.setString(coordString); // expo-clipboard 필요
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            Alert.alert(t('common.copied') || '복사됨', coordString);
-          }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="copy-outline" size={18} color={colors.primary} />
-          <Text style={[styles.copyButtonText, { color: colors.primary, fontFamily: fonts.medium }]}>
-            {t('map.copyCoordinates') || '좌표 복사'}
-          </Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -592,20 +608,6 @@ const styles = StyleSheet.create({
   },
   coordValue: {
     fontSize: 16,
-    fontWeight: '500',
-  },
-  copyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-  },
-  copyButtonText: {
-    fontSize: 14,
     fontWeight: '500',
   },
 });

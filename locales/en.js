@@ -1205,7 +1205,8 @@ export default {
     selectedLocation: 'Selected Location',
     latitude: 'Latitude',
     longitude: 'Longitude',
-    copyCoordinates: 'Copy Coordinates',
+    noResults: 'No Results',
+    noResultsDesc: 'Could not find the address. Please try a different search term.',
   },
 
   // Location
