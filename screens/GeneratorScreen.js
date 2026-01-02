@@ -3030,11 +3030,11 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   qrContainer: {
-    borderRadius: 20,
-    padding: 32,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 340,
+    minHeight: 280,
   },
   qrWrapper: {
     alignItems: 'center',
