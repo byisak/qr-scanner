@@ -1881,35 +1881,91 @@ export default function GeneratorScreen() {
                   <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
                   {/* 바코드 높이 */}
+                  <View style={s.settingItemVertical}>
+                    <View style={s.settingLabelRowSpaced}>
+                      <View style={s.settingLabelRow}>
+                        <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
+                        <Text style={[s.settingLabel, { color: colors.text }]}>
+                          {t('generator.barcodeHeight') || '높이'}
+                        </Text>
+                      </View>
+                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.height}</Text>
+                    </View>
+                    <Slider
+                      style={s.slider}
+                      minimumValue={40}
+                      maximumValue={120}
+                      step={10}
+                      value={barcodeSettings.height}
+                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.border}
+                      thumbTintColor={colors.primary}
+                    />
+                  </View>
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 글자 크기 */}
+                  <View style={s.settingItemVertical}>
+                    <View style={s.settingLabelRowSpaced}>
+                      <View style={s.settingLabelRow}>
+                        <Ionicons name="text" size={18} color={colors.primary} />
+                        <Text style={[s.settingLabel, { color: colors.text }]}>
+                          {t('generator.barcodeFontSize') || '글자 크기'}
+                        </Text>
+                      </View>
+                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.fontSize}</Text>
+                    </View>
+                    <Slider
+                      style={s.slider}
+                      minimumValue={10}
+                      maximumValue={20}
+                      step={1}
+                      value={barcodeSettings.fontSize}
+                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.border}
+                      thumbTintColor={colors.primary}
+                    />
+                  </View>
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 회전 */}
                   <View style={s.settingItem}>
                     <View style={s.settingLabelRow}>
-                      <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
+                      <Ionicons name="refresh-outline" size={18} color={colors.primary} />
                       <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeHeight') || '높이'}
+                        {t('generator.barcodeRotate') || '회전'}
                       </Text>
                     </View>
                     <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[40, 60, 80, 100, 120].map((val) => (
+                      {[
+                        { value: 'N', label: '0°' },
+                        { value: 'R', label: '90°' },
+                        { value: 'I', label: '180°' },
+                        { value: 'L', label: '270°' },
+                      ].map((item) => (
                         <TouchableOpacity
-                          key={`height-${val}`}
+                          key={`rotate-${item.value}`}
                           style={[
                             s.barcodeOptionBtn,
-                            barcodeSettings.height === val && { backgroundColor: colors.primary },
+                            barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
                           ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
+                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
                         >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.height === val ? '#fff' : colors.text }]}>
-                            {val}
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
+                            {item.label}
                           </Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
-                </View>
 
-                {/* 텍스트 설정 그룹 */}
-                <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
-                  {/* 텍스트 표시 */}
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 숫자 표시 */}
                   <View style={s.settingItem}>
                     <View style={s.settingLabelRow}>
                       <Ionicons name="text-outline" size={18} color={colors.primary} />
@@ -1941,35 +1997,7 @@ export default function GeneratorScreen() {
 
                   <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 폰트 크기 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="text" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeFontSize') || '글자 크기'}
-                      </Text>
-                    </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[10, 12, 14, 16, 18].map((val) => (
-                        <TouchableOpacity
-                          key={`font-${val}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.fontSize === val && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.fontSize === val ? '#fff' : colors.text }]}>
-                            {val}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                  {/* 커스텀 텍스트 */}
+                  {/* 표시 텍스트 */}
                   <View style={s.settingItem}>
                     <View style={s.settingLabelRow}>
                       <Ionicons name="create-outline" size={18} color={colors.primary} />
@@ -1992,39 +2020,6 @@ export default function GeneratorScreen() {
                     value={barcodeSettings.customText}
                     onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
                   />
-                </View>
-
-                {/* 회전 설정 그룹 */}
-                <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeRotate') || '회전'}
-                      </Text>
-                    </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[
-                        { value: 'N', label: '0°' },
-                        { value: 'R', label: '90°' },
-                        { value: 'I', label: '180°' },
-                        { value: 'L', label: '270°' },
-                      ].map((item) => (
-                        <TouchableOpacity
-                          key={`rotate-${item.value}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
-                            {item.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
                 </View>
               </View>
               )}
