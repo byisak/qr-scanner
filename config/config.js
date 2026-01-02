@@ -5,7 +5,7 @@ const extra = Constants.expoConfig?.extra || {};
 
 const config = {
   // 서버 URL
-  serverUrl: extra.serverUrl || 'http://158.247.248.140:3000',
+  serverUrl: extra.serverUrl || 'https://scanview.app',
 
   // ============================================================
   // 소셜 로그인 설정 (공개키만 - Secret은 서버에서 관리)
