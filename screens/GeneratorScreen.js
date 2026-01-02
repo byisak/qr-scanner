@@ -3031,8 +3031,6 @@ const s = StyleSheet.create({
   },
   qrContainer: {
     borderRadius: 20,
-    borderWidth: 2,
-    borderStyle: 'dashed',
     padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
