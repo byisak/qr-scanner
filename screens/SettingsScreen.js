@@ -784,7 +784,7 @@ export default function SettingsScreen() {
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
 
-          {/* 개선제안하기 */}
+          {/* 개선제안하기 - 임시 주석처리
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => Alert.alert(t('settings.suggestImprovement'), '준비 중입니다')}
@@ -796,8 +796,9 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+          */}
 
-          {/* 1:1 문의하기 */}
+          {/* 1:1 문의하기 - 임시 주석처리
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => Alert.alert(t('settings.oneOnOneInquiry'), '준비 중입니다')}
@@ -809,10 +810,11 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+          */}
 
           {/* 서비스 이용약관 */}
           <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push('/terms-of-service')}
             activeOpacity={0.7}
           >
