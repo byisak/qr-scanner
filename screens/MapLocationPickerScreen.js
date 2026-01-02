@@ -371,7 +371,7 @@ export default function MapLocationPickerScreen() {
         <MapView
           ref={mapRef}
           style={styles.map}
-          provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+          provider={PROVIDER_GOOGLE}
           initialRegion={region}
           onPress={handleMapPress}
           showsUserLocation={true}

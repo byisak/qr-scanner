@@ -36,6 +36,9 @@
         "com.apple.developer.icloud-services": ["CloudDocuments", "CloudKit"],
         "com.apple.developer.ubiquity-container-identifiers": ["iCloud.com.cubion.qrscanner"],
         "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner"
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
       }
     },
     "android": {
