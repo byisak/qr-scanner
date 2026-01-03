@@ -1639,7 +1639,7 @@ export default function GeneratorScreen() {
                       />
                       {isTypeLocked && (
                         <View style={s.typeLockIcon}>
-                          <LockIcon size={12} />
+                          <Ionicons name="lock-closed" size={12} color="#FF3B30" />
                         </View>
                       )}
                     </View>
@@ -2928,11 +2928,16 @@ const s = StyleSheet.create({
   },
   typeLockIcon: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: 'rgba(255, 59, 48, 0.9)',
-    borderRadius: 8,
-    padding: 2,
+    top: -2,
+    right: -2,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   typeText: {
     fontSize: 13,

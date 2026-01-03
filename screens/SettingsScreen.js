@@ -527,11 +527,20 @@ export default function SettingsScreen() {
           {/* 사진 저장 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/photo-save-settings')}
+            onPress={() => {
+              if (isLocked('photoSave')) {
+                showUnlockAlert('photoSave', () => router.push('/photo-save-settings'));
+              } else {
+                router.push('/photo-save-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
+                <LockIcon featureId="photoSave" size={14} color={colors.textTertiary} />
+              </View>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {photoSaveEnabled ? getQualityFullLabel(photoQuality) : t('settings.photoSaveDesc')}
               </Text>

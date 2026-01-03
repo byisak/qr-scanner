@@ -16,7 +16,9 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import LockIcon from '../components/LockIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
@@ -41,6 +43,7 @@ export default function BackupExportScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { syncStatus, lastSyncTime, iCloudEnabled, autoSyncEnabled, syncNow, toggleAutoSync, SYNC_STATUS } = useSync();
+  const { isLocked, showUnlockAlert } = useFeatureLock();
 
   const statusBarHeight = Platform.OS === 'ios' ? 50 : insets.top;
   const [isLoading, setIsLoading] = useState(false);
@@ -345,9 +348,12 @@ export default function BackupExportScreen() {
                 <Ionicons name="cloud-outline" size={28} color="#5AC8FA" />
               </View>
               <View style={styles.icloudInfo}>
-                <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  {t('backupExport.icloudAutoSync')}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                    {t('backupExport.icloudAutoSync')}
+                  </Text>
+                  <LockIcon featureId="icloudBackup" size={14} color={colors.textTertiary} />
+                </View>
                 <View style={styles.syncStatusRow}>
                   {syncStatus === SYNC_STATUS.SYNCING && (
                     <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 6 }} />
@@ -358,8 +364,14 @@ export default function BackupExportScreen() {
                 </View>
               </View>
               <Switch
-                value={autoSyncEnabled}
-                onValueChange={toggleAutoSync}
+                value={autoSyncEnabled && !isLocked('icloudBackup')}
+                onValueChange={(value) => {
+                  if (isLocked('icloudBackup')) {
+                    showUnlockAlert('icloudBackup', () => toggleAutoSync(value));
+                  } else {
+                    toggleAutoSync(value);
+                  }
+                }}
                 disabled={!iCloudEnabled}
                 trackColor={{ false: colors.border, true: '#5AC8FA' }}
                 thumbColor="#FFFFFF"
@@ -402,7 +414,13 @@ export default function BackupExportScreen() {
         <View style={[styles.optionsContainer, { backgroundColor: colors.surface }]}>
           <TouchableOpacity
             style={styles.optionItem}
-            onPress={handleGoogleBackup}
+            onPress={() => {
+              if (isLocked('googleDriveBackup')) {
+                showUnlockAlert('googleDriveBackup', handleGoogleBackup);
+              } else {
+                handleGoogleBackup();
+              }
+            }}
             disabled={isLoading}
             activeOpacity={0.7}
           >
@@ -410,9 +428,12 @@ export default function BackupExportScreen() {
               <Ionicons name="logo-google" size={28} color="#4285F4" />
             </View>
             <View style={styles.optionContent}>
-              <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                {t('backupExport.googleDriveBackup')}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                  {t('backupExport.googleDriveBackup')}
+                </Text>
+                <LockIcon featureId="googleDriveBackup" size={14} color={colors.textTertiary} />
+              </View>
               <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {lastGoogleBackupTime
                   ? `${t('backupExport.lastBackup')}: ${lastGoogleBackupTime.toLocaleDateString()} ${lastGoogleBackupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
