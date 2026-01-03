@@ -22,6 +22,7 @@ import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
+import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -294,6 +295,25 @@ export default function HistoryScreen() {
             const isQRCode = !item.type || item.type === 'qr' || item.type === 'qrcode';
             const ecLevel = item.errorCorrectionLevel;
 
+            // QR 콘텐츠 파싱 (QR 코드인 경우에만)
+            const parsedContent = isQRCode ? parseQRContent(item.code) : null;
+
+            // 콘텐츠 타입 레이블
+            const getContentTypeLabel = (type) => {
+              const labels = {
+                [QR_CONTENT_TYPES.URL]: t('qrTypes.url') || 'URL',
+                [QR_CONTENT_TYPES.PHONE]: t('qrTypes.phone') || '전화',
+                [QR_CONTENT_TYPES.SMS]: t('qrTypes.sms') || 'SMS',
+                [QR_CONTENT_TYPES.EMAIL]: t('qrTypes.email') || '이메일',
+                [QR_CONTENT_TYPES.WIFI]: t('qrTypes.wifi') || 'WiFi',
+                [QR_CONTENT_TYPES.GEO]: t('qrTypes.location') || '위치',
+                [QR_CONTENT_TYPES.CONTACT]: t('qrTypes.contact') || '연락처',
+                [QR_CONTENT_TYPES.EVENT]: t('qrTypes.event') || '일정',
+                [QR_CONTENT_TYPES.TEXT]: t('qrTypes.text') || '텍스트',
+              };
+              return labels[type] || type;
+            };
+
             // EC 레벨 색상
             const getECLevelColor = (level) => {
               if (!level) return colors.textSecondary;
@@ -349,7 +369,7 @@ export default function HistoryScreen() {
                       {item.code}
                     </Text>
 
-                    {/* 2줄: 바코드타입, 반복횟수, 에러레벨 */}
+                    {/* 2줄: 바코드타입, 콘텐츠타입, 반복횟수, 에러레벨 */}
                     <View style={s.badgeRow}>
                       {/* 바코드 타입 */}
                       <View style={[s.badge, { backgroundColor: colors.primary + '15' }]}>
@@ -362,6 +382,16 @@ export default function HistoryScreen() {
                           {isQRCode ? 'QR' : item.type.toUpperCase()}
                         </Text>
                       </View>
+
+                      {/* 콘텐츠 타입 (QR 코드이고 TEXT가 아닌 경우만) */}
+                      {parsedContent && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+                        <View style={[s.badge, { backgroundColor: parsedContent.color + '15' }]}>
+                          <Ionicons name={parsedContent.icon} size={11} color={parsedContent.color} />
+                          <Text style={[s.badgeText, { color: parsedContent.color }]}>
+                            {getContentTypeLabel(parsedContent.type)}
+                          </Text>
+                        </View>
+                      )}
 
                       {/* 반복 횟수 */}
                       {item.count && item.count > 1 && (

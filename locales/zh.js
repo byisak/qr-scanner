@@ -1131,4 +1131,37 @@ export default {
     qualityMinimumDesc: '最小文件，画质明显下降',
     note: '压缩率更改仅适用于新保存的照片',
   },
+
+  // QR内容类型
+  qrTypes: {
+    url: 'URL',
+    phone: '电话号码',
+    sms: '短信',
+    email: '邮件',
+    wifi: 'WiFi',
+    location: '位置',
+    contact: '联系人',
+    event: '日程',
+    text: '文本',
+  },
+
+  // QR类型操作
+  qrActions: {
+    call: '拨打电话',
+    sendSms: '发送短信',
+    sendEmail: '发送邮件',
+    openMap: '在地图中查看',
+    getDirections: '获取路线',
+    addContact: '添加联系人',
+    addContactDesc: '请在通讯录应用中手动添加。',
+    addToCalendar: '添加到日历',
+    addToCalendarDesc: '请在日历应用中手动添加。',
+    copyPassword: '复制密码',
+    passwordCopied: '密码已复制。',
+    noPassword: '没有密码。',
+    openWifiSettings: 'WiFi设置',
+    openSettingsManually: '请在设置应用中连接WiFi。',
+    searchWeb: '网页搜索',
+    cannotCall: '无法拨打电话。',
+  },
 };

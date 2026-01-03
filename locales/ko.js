@@ -1225,4 +1225,37 @@ export default {
     permissionDenied: '위치 권한이 필요합니다.',
     fetchError: '현재 위치를 가져올 수 없습니다.',
   },
+
+  // QR 콘텐츠 타입
+  qrTypes: {
+    url: 'URL',
+    phone: '전화번호',
+    sms: 'SMS',
+    email: '이메일',
+    wifi: 'WiFi',
+    location: '위치',
+    contact: '연락처',
+    event: '일정',
+    text: '텍스트',
+  },
+
+  // QR 타입별 액션
+  qrActions: {
+    call: '전화걸기',
+    sendSms: '문자 보내기',
+    sendEmail: '이메일 보내기',
+    openMap: '지도에서 보기',
+    getDirections: '길찾기',
+    addContact: '연락처 추가',
+    addContactDesc: '연락처 앱에서 수동으로 추가해주세요.',
+    addToCalendar: '캘린더에 추가',
+    addToCalendarDesc: '캘린더 앱에서 수동으로 추가해주세요.',
+    copyPassword: '비밀번호 복사',
+    passwordCopied: '비밀번호가 복사되었습니다.',
+    noPassword: '비밀번호가 없습니다.',
+    openWifiSettings: 'WiFi 설정',
+    openSettingsManually: '설정 앱에서 WiFi를 연결해주세요.',
+    searchWeb: '웹 검색',
+    cannotCall: '전화를 걸 수 없습니다.',
+  },
 };

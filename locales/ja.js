@@ -1131,4 +1131,37 @@ export default {
     qualityMinimumDesc: '最小サイズ、画質低下',
     note: '圧縮率の変更は新しく保存する写真にのみ適用されます',
   },
+
+  // QRコンテンツタイプ
+  qrTypes: {
+    url: 'URL',
+    phone: '電話番号',
+    sms: 'SMS',
+    email: 'メール',
+    wifi: 'WiFi',
+    location: '位置情報',
+    contact: '連絡先',
+    event: 'イベント',
+    text: 'テキスト',
+  },
+
+  // QRタイプ別アクション
+  qrActions: {
+    call: '電話をかける',
+    sendSms: 'SMSを送信',
+    sendEmail: 'メールを送信',
+    openMap: '地図で見る',
+    getDirections: '道順を表示',
+    addContact: '連絡先に追加',
+    addContactDesc: '連絡先アプリで手動で追加してください。',
+    addToCalendar: 'カレンダーに追加',
+    addToCalendarDesc: 'カレンダーアプリで手動で追加してください。',
+    copyPassword: 'パスワードをコピー',
+    passwordCopied: 'パスワードがコピーされました。',
+    noPassword: 'パスワードがありません。',
+    openWifiSettings: 'WiFi設定',
+    openSettingsManually: '設定アプリでWiFiに接続してください。',
+    searchWeb: 'Web検索',
+    cannotCall: '電話をかけることができません。',
+  },
 };

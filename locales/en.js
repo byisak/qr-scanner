@@ -1225,4 +1225,37 @@ export default {
     permissionDenied: 'Location permission is required.',
     fetchError: 'Unable to get current location.',
   },
+
+  // QR Content Types
+  qrTypes: {
+    url: 'URL',
+    phone: 'Phone',
+    sms: 'SMS',
+    email: 'Email',
+    wifi: 'WiFi',
+    location: 'Location',
+    contact: 'Contact',
+    event: 'Event',
+    text: 'Text',
+  },
+
+  // QR Type Actions
+  qrActions: {
+    call: 'Call',
+    sendSms: 'Send SMS',
+    sendEmail: 'Send Email',
+    openMap: 'Open Map',
+    getDirections: 'Get Directions',
+    addContact: 'Add Contact',
+    addContactDesc: 'Please add manually in the Contacts app.',
+    addToCalendar: 'Add to Calendar',
+    addToCalendarDesc: 'Please add manually in the Calendar app.',
+    copyPassword: 'Copy Password',
+    passwordCopied: 'Password has been copied.',
+    noPassword: 'No password available.',
+    openWifiSettings: 'WiFi Settings',
+    openSettingsManually: 'Please connect to WiFi in the Settings app.',
+    searchWeb: 'Search Web',
+    cannotCall: 'Cannot make a call.',
+  },
 };

@@ -1128,4 +1128,37 @@ export default {
     qualityMinimumDesc: 'Tamaño mínimo, pérdida notable de calidad',
     note: 'Los cambios de compresión solo aplican a nuevas fotos',
   },
+
+  // Tipos de contenido QR
+  qrTypes: {
+    url: 'URL',
+    phone: 'Teléfono',
+    sms: 'SMS',
+    email: 'Correo',
+    wifi: 'WiFi',
+    location: 'Ubicación',
+    contact: 'Contacto',
+    event: 'Evento',
+    text: 'Texto',
+  },
+
+  // Acciones por tipo de QR
+  qrActions: {
+    call: 'Llamar',
+    sendSms: 'Enviar SMS',
+    sendEmail: 'Enviar correo',
+    openMap: 'Ver en mapa',
+    getDirections: 'Obtener direcciones',
+    addContact: 'Agregar contacto',
+    addContactDesc: 'Por favor agregue manualmente en la app de Contactos.',
+    addToCalendar: 'Agregar al calendario',
+    addToCalendarDesc: 'Por favor agregue manualmente en la app de Calendario.',
+    copyPassword: 'Copiar contraseña',
+    passwordCopied: 'Contraseña copiada.',
+    noPassword: 'Sin contraseña.',
+    openWifiSettings: 'Ajustes WiFi',
+    openSettingsManually: 'Por favor conecte WiFi en la app de Ajustes.',
+    searchWeb: 'Buscar en web',
+    cannotCall: 'No se puede realizar la llamada.',
+  },
 };
