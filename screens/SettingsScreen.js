@@ -539,7 +539,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
-                <LockIcon featureId="photoSave" size={14} color={colors.textTertiary} />
+                <LockIcon featureId="photoSave" size={12} badge />
               </View>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {photoSaveEnabled ? getQualityFullLabel(photoQuality) : t('settings.photoSaveDesc')}

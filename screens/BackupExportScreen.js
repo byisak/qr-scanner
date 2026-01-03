@@ -352,7 +352,7 @@ export default function BackupExportScreen() {
                   <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                     {t('backupExport.icloudAutoSync')}
                   </Text>
-                  <LockIcon featureId="icloudBackup" size={14} color={colors.textTertiary} />
+                  <LockIcon featureId="icloudBackup" size={12} badge />
                 </View>
                 <View style={styles.syncStatusRow}>
                   {syncStatus === SYNC_STATUS.SYNCING && (
@@ -432,7 +432,7 @@ export default function BackupExportScreen() {
                 <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                   {t('backupExport.googleDriveBackup')}
                 </Text>
-                <LockIcon featureId="googleDriveBackup" size={14} color={colors.textTertiary} />
+                <LockIcon featureId="googleDriveBackup" size={12} badge />
               </View>
               <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {lastGoogleBackupTime
