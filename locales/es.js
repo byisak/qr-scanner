@@ -1184,5 +1184,6 @@ export default {
     openSettings: 'Abrir Ajustes',
     noNetworkName: 'No hay nombre de red disponible.',
     locationPermissionForWifi: 'Se requiere permiso de ubicación para la conexión WiFi.',
+    invalidPassword: 'La contraseña WPA/WPA2 debe tener al menos 8 caracteres. ¿Desea conectar en Ajustes?',
   },
 };

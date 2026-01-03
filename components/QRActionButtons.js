@@ -160,6 +160,28 @@ export default function QRActionButtons({
       return;
     }
 
+    const securityType = (data.security || 'WPA').toUpperCase();
+    const ssid = data.ssid;
+    const password = data.password || '';
+
+    // WPA/WPA2는 최소 8자 비밀번호 필요
+    if (securityType !== 'NOPASS' && securityType !== 'NONE' && securityType !== 'WEP') {
+      if (password.length > 0 && password.length < 8) {
+        Alert.alert(
+          t('qrActions.connectionFailed') || '연결 실패',
+          t('qrActions.invalidPassword') || 'WPA/WPA2 비밀번호는 8자 이상이어야 합니다. 설정에서 직접 연결하시겠습니까?',
+          [
+            { text: t('common.cancel') || '취소', style: 'cancel' },
+            {
+              text: t('qrActions.openSettings') || '설정 열기',
+              onPress: () => openWifiSettings()
+            }
+          ]
+        );
+        return;
+      }
+    }
+
     setIsConnecting(true);
 
     try {
@@ -177,32 +199,24 @@ export default function QRActionButtons({
       }
 
       // 보안 타입에 따른 연결
-      const securityType = (data.security || 'WPA').toUpperCase();
-      const ssid = data.ssid;
-      const password = data.password || '';
+      const isWep = securityType === 'WEP';
+      const isOpen = securityType === 'NOPASS' || securityType === 'NONE' || !password;
 
-      if (securityType === 'NOPASS' || securityType === 'NONE' || !password) {
+      if (isOpen) {
         // 오픈 네트워크
         if (Platform.OS === 'ios') {
           await WifiManager.connectToSSID(ssid);
         } else {
           await WifiManager.connectToProtectedSSID(ssid, '', false, false);
         }
-      } else if (securityType === 'WEP') {
-        // WEP 네트워크
-        await WifiManager.connectToProtectedSSID(ssid, password, false, false);
       } else {
-        // WPA/WPA2 네트워크
-        if (Platform.OS === 'ios') {
-          await WifiManager.connectToProtectedSSID(ssid, password, false, false);
-        } else {
-          await WifiManager.connectToProtectedSSID(ssid, password, false, false);
-        }
+        // 보안 네트워크 (WEP 또는 WPA/WPA2)
+        await WifiManager.connectToProtectedSSID(ssid, password, isWep, false);
       }
 
       Alert.alert(
         t('common.success') || '성공',
-        t('qrActions.wifiConnected') || `${ssid}에 연결되었습니다.`
+        (t('qrActions.wifiConnected') || 'WiFi에 연결되었습니다.').replace('{ssid}', ssid)
       );
     } catch (error) {
       console.error('WiFi connection error:', error);
@@ -215,22 +229,35 @@ export default function QRActionButtons({
           { text: t('common.cancel') || '취소', style: 'cancel' },
           {
             text: t('qrActions.openSettings') || '설정 열기',
-            onPress: async () => {
-              try {
-                if (Platform.OS === 'ios') {
-                  await Linking.openURL('App-Prefs:WIFI');
-                } else {
-                  await Linking.sendIntent('android.settings.WIFI_SETTINGS');
-                }
-              } catch (e) {
-                console.error('Open settings error:', e);
-              }
-            }
+            onPress: () => openWifiSettings()
           }
         ]
       );
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  // WiFi 설정 열기
+  const openWifiSettings = async () => {
+    try {
+      if (Platform.OS === 'ios') {
+        await Linking.openURL('App-Prefs:WIFI');
+      } else {
+        await Linking.sendIntent('android.settings.WIFI_SETTINGS');
+      }
+    } catch (e) {
+      console.error('Open settings error:', e);
+      // 폴백: 일반 설정 열기
+      try {
+        if (Platform.OS === 'ios') {
+          await Linking.openURL('app-settings:');
+        } else {
+          await Linking.openSettings();
+        }
+      } catch (e2) {
+        console.error('Open general settings error:', e2);
+      }
     }
   };
 

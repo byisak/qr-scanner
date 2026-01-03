@@ -1281,5 +1281,6 @@ export default {
     openSettings: 'Open Settings',
     noNetworkName: 'No network name available.',
     locationPermissionForWifi: 'Location permission is required for WiFi connection.',
+    invalidPassword: 'WPA/WPA2 password must be at least 8 characters. Would you like to connect in Settings?',
   },
 };

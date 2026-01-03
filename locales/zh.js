@@ -1187,5 +1187,6 @@ export default {
     openSettings: '打开设置',
     noNetworkName: '没有网络名称。',
     locationPermissionForWifi: 'WiFi连接需要位置权限。',
+    invalidPassword: 'WPA/WPA2密码必须至少8个字符。是否在设置中手动连接？',
   },
 };

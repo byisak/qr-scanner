@@ -1281,5 +1281,6 @@ export default {
     openSettings: '설정 열기',
     noNetworkName: '네트워크 이름이 없습니다.',
     locationPermissionForWifi: 'WiFi 연결을 위해 위치 권한이 필요합니다.',
+    invalidPassword: 'WPA/WPA2 비밀번호는 8자 이상이어야 합니다. 설정에서 직접 연결하시겠습니까?',
   },
 };

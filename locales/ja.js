@@ -1187,5 +1187,6 @@ export default {
     openSettings: '設定を開く',
     noNetworkName: 'ネットワーク名がありません。',
     locationPermissionForWifi: 'WiFi接続には位置情報の権限が必要です。',
+    invalidPassword: 'WPA/WPA2パスワードは8文字以上必要です。設定で直接接続しますか？',
   },
 };
