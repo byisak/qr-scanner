@@ -31,6 +31,13 @@ export default {
     remainingAds: 'Watch {remaining} more ads to unlock.',
     featureUnlocked: 'Feature unlocked!',
     allStylesUnlocked: 'All QR styles unlocked!',
+    // Ad loading/error related
+    adNotReady: 'Ad not ready',
+    adNotReadyMessage: 'Loading ad. Please try again in a moment.',
+    adError: 'Ad Error',
+    adErrorMessage: 'An error occurred while showing the ad.',
+    loadingAd: 'Loading...',
+    watchAdRequired: 'Watch {total} ad(s) to unlock this feature.',
   },
 
   // Auth

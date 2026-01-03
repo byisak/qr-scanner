@@ -30,6 +30,13 @@ export default {
     remainingAds: '解除まであと{remaining}回視聴してください。',
     featureUnlocked: '機能が解除されました！',
     allStylesUnlocked: 'すべてのQRスタイルが解除されました！',
+    // 広告ローディング/エラー関連
+    adNotReady: '広告準備中',
+    adNotReadyMessage: '広告を読み込んでいます。しばらくしてからもう一度お試しください。',
+    adError: '広告エラー',
+    adErrorMessage: '広告の表示中にエラーが発生しました。',
+    loadingAd: '読み込み中...',
+    watchAdRequired: 'この機能を解除するには広告を{total}回視聴する必要があります。',
   },
 
   // 認証

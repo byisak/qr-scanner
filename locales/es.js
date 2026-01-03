@@ -30,6 +30,13 @@ export default {
     remainingAds: 'Ve {remaining} anuncios más para desbloquear.',
     featureUnlocked: '¡Función desbloqueada!',
     allStylesUnlocked: '¡Todos los estilos QR desbloqueados!',
+    // Relacionado con carga/error de anuncios
+    adNotReady: 'Anuncio no listo',
+    adNotReadyMessage: 'Cargando anuncio. Por favor, inténtalo de nuevo en un momento.',
+    adError: 'Error de anuncio',
+    adErrorMessage: 'Ocurrió un error al mostrar el anuncio.',
+    loadingAd: 'Cargando...',
+    watchAdRequired: 'Ve {total} anuncio(s) para desbloquear esta función.',
   },
 
   // Autenticación

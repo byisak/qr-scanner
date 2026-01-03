@@ -30,6 +30,13 @@ export default {
     remainingAds: '再观看{remaining}次广告即可解锁。',
     featureUnlocked: '功能已解锁！',
     allStylesUnlocked: '所有QR样式已解锁！',
+    // 广告加载/错误相关
+    adNotReady: '广告准备中',
+    adNotReadyMessage: '正在加载广告，请稍后再试。',
+    adError: '广告错误',
+    adErrorMessage: '显示广告时发生错误。',
+    loadingAd: '加载中...',
+    watchAdRequired: '观看{total}次广告即可解锁此功能。',
   },
 
   // 认证

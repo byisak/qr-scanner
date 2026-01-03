@@ -31,6 +31,13 @@ export default {
     remainingAds: '해제까지 {remaining}회 더 시청해주세요.',
     featureUnlocked: '기능이 해제되었습니다!',
     allStylesUnlocked: '모든 QR 스타일이 해제되었습니다!',
+    // 광고 로딩/에러 관련
+    adNotReady: '광고 준비 중',
+    adNotReadyMessage: '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+    adError: '광고 오류',
+    adErrorMessage: '광고를 표시하는 중 오류가 발생했습니다.',
+    loadingAd: '로딩 중...',
+    watchAdRequired: '이 기능을 해제하려면 광고를 {total}회 시청해야 합니다.',
   },
 
   // 인증

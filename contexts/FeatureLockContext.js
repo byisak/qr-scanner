@@ -1,7 +1,13 @@
 // contexts/FeatureLockContext.js - 기능 잠금 상태 관리
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
+import {
+  RewardedAd,
+  RewardedAdEventType,
+  AdEventType,
+  TestIds,
+} from 'react-native-google-mobile-ads';
 import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import { useLanguage } from './LanguageContext';
 
@@ -11,12 +17,26 @@ const UNLOCKED_FEATURES_KEY = 'unlockedFeatures';
 const AD_WATCH_COUNT_KEY = 'adWatchCounts';
 const DEV_MODE_KEY = 'devModeEnabled';
 
+// 테스트 광고 ID (개발용) - 실제 배포 시 교체 필요
+const REWARDED_AD_UNIT_ID = __DEV__
+  ? TestIds.REWARDED
+  : Platform.select({
+      ios: 'ca-app-pub-XXXXX/XXXXX', // TODO: 실제 iOS 광고 단위 ID
+      android: 'ca-app-pub-XXXXX/XXXXX', // TODO: 실제 Android 광고 단위 ID
+    });
+
 export const FeatureLockProvider = ({ children }) => {
   const { t } = useLanguage();
   const [unlockedFeatures, setUnlockedFeatures] = useState([]);
   const [adWatchCounts, setAdWatchCounts] = useState({}); // { featureId: count }
   const [devModeEnabled, setDevModeEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 광고 관련 상태
+  const [isAdLoaded, setIsAdLoaded] = useState(false);
+  const [isAdLoading, setIsAdLoading] = useState(false);
+  const rewardedAdRef = useRef(null);
+  const rewardCallbackRef = useRef(null);
 
   // 저장된 해제 상태 및 개발 모드 로드
   useEffect(() => {
@@ -45,6 +65,95 @@ export const FeatureLockProvider = ({ children }) => {
       setIsLoading(false);
     }
   };
+
+  // 광고 로드
+  const loadRewardedAd = useCallback(() => {
+    if (isAdLoading || isAdLoaded) return;
+
+    setIsAdLoading(true);
+
+    try {
+      // 이전 인스턴스 정리
+      if (rewardedAdRef.current?.unsubscribe) {
+        rewardedAdRef.current.unsubscribe();
+      }
+
+      const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
+        requestNonPersonalizedAdsOnly: true,
+      });
+
+      // 로드 완료
+      const unsubscribeLoaded = rewarded.addAdEventListener(
+        RewardedAdEventType.LOADED,
+        () => {
+          setIsAdLoaded(true);
+          setIsAdLoading(false);
+          console.log('Rewarded ad loaded');
+        }
+      );
+
+      // 보상 획득
+      const unsubscribeEarned = rewarded.addAdEventListener(
+        RewardedAdEventType.EARNED_REWARD,
+        (reward) => {
+          console.log('User earned reward:', reward);
+          if (rewardCallbackRef.current) {
+            rewardCallbackRef.current();
+            rewardCallbackRef.current = null;
+          }
+        }
+      );
+
+      // 광고 닫힘
+      const unsubscribeClosed = rewarded.addAdEventListener(
+        AdEventType.CLOSED,
+        () => {
+          console.log('Rewarded ad closed');
+          setIsAdLoaded(false);
+          // 다음 광고 미리 로드
+          setTimeout(() => loadRewardedAd(), 1000);
+        }
+      );
+
+      // 에러
+      const unsubscribeError = rewarded.addAdEventListener(
+        AdEventType.ERROR,
+        (error) => {
+          console.error('Rewarded ad error:', error);
+          setIsAdLoading(false);
+          setIsAdLoaded(false);
+          // 에러 발생 시 재시도
+          setTimeout(() => loadRewardedAd(), 5000);
+        }
+      );
+
+      rewardedAdRef.current = {
+        ad: rewarded,
+        unsubscribe: () => {
+          unsubscribeLoaded();
+          unsubscribeEarned();
+          unsubscribeClosed();
+          unsubscribeError();
+        },
+      };
+
+      rewarded.load();
+    } catch (error) {
+      console.error('Failed to create rewarded ad:', error);
+      setIsAdLoading(false);
+    }
+  }, [isAdLoading, isAdLoaded]);
+
+  // 초기 광고 로드
+  useEffect(() => {
+    loadRewardedAd();
+
+    return () => {
+      if (rewardedAdRef.current?.unsubscribe) {
+        rewardedAdRef.current.unsubscribe();
+      }
+    };
+  }, []);
 
   // 개발 모드 토글
   const toggleDevMode = useCallback(async (enabled) => {
@@ -232,6 +341,94 @@ export const FeatureLockProvider = ({ children }) => {
     }
   }, [incrementAdWatchCount, unlock, t]);
 
+  // 리워드 광고 표시
+  const showRewardedAdAndProcess = useCallback(async (featureId, onUnlock) => {
+    if (!isAdLoaded || !rewardedAdRef.current?.ad) {
+      // 광고가 로드되지 않은 경우
+      Alert.alert(
+        t('featureLock.adNotReady') || '광고 준비 중',
+        t('featureLock.adNotReadyMessage') || '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+        [{ text: t('common.confirm') || '확인' }]
+      );
+      // 광고 다시 로드 시도
+      if (!isAdLoading) {
+        loadRewardedAd();
+      }
+      return;
+    }
+
+    // 보상 콜백 설정
+    rewardCallbackRef.current = () => handleAdWatched(featureId, onUnlock);
+
+    try {
+      await rewardedAdRef.current.ad.show();
+    } catch (error) {
+      console.error('Failed to show rewarded ad:', error);
+      Alert.alert(
+        t('featureLock.adError') || '광고 오류',
+        t('featureLock.adErrorMessage') || '광고를 표시하는 중 오류가 발생했습니다.',
+        [{ text: t('common.confirm') || '확인' }]
+      );
+    }
+  }, [isAdLoaded, isAdLoading, loadRewardedAd, handleAdWatched, t]);
+
+  // QR 스타일용 리워드 광고 표시
+  const showRewardedAdForQrStyles = useCallback(async (onUnlock) => {
+    const qrStyleFeatures = Object.keys(LOCKED_FEATURES).filter(
+      key => LOCKED_FEATURES[key].type === 'qrStyle'
+    );
+    const firstStyleId = qrStyleFeatures[0];
+
+    if (!isAdLoaded || !rewardedAdRef.current?.ad) {
+      Alert.alert(
+        t('featureLock.adNotReady') || '광고 준비 중',
+        t('featureLock.adNotReadyMessage') || '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+        [{ text: t('common.confirm') || '확인' }]
+      );
+      if (!isAdLoading) {
+        loadRewardedAd();
+      }
+      return;
+    }
+
+    // 보상 콜백 설정
+    rewardCallbackRef.current = async () => {
+      const feature = LOCKED_FEATURES[firstStyleId];
+      const requiredCount = feature?.adCount || 1;
+      const newCount = await incrementAdWatchCount(firstStyleId);
+
+      if (newCount >= requiredCount) {
+        const success = await unlockMultiple(qrStyleFeatures);
+        if (success) {
+          Alert.alert(
+            t('featureLock.unlocked') || '잠금 해제됨',
+            t('featureLock.allStylesUnlocked') || '모든 QR 스타일이 해제되었습니다!',
+            [{ text: t('common.confirm') || '확인', onPress: onUnlock }]
+          );
+        }
+      } else {
+        const remaining = requiredCount - newCount;
+        Alert.alert(
+          t('featureLock.adWatched') || '광고 시청 완료',
+          (t('featureLock.remainingAds') || '해제까지 {remaining}회 더 시청해주세요.')
+            .replace('{remaining}', remaining.toString()),
+          [{ text: t('common.confirm') || '확인' }]
+        );
+      }
+    };
+
+    try {
+      await rewardedAdRef.current.ad.show();
+    } catch (error) {
+      console.error('Failed to show rewarded ad:', error);
+      Alert.alert(
+        t('featureLock.adError') || '광고 오류',
+        t('featureLock.adErrorMessage') || '광고를 표시하는 중 오류가 발생했습니다.',
+        [{ text: t('common.confirm') || '확인' }]
+      );
+    }
+  }, [isAdLoaded, isAdLoading, loadRewardedAd, incrementAdWatchCount, unlockMultiple, t]);
+
   // 광고 시청 Alert 표시
   const showUnlockAlert = useCallback((featureId, onUnlock) => {
     const feature = LOCKED_FEATURES[featureId];
@@ -242,10 +439,15 @@ export const FeatureLockProvider = ({ children }) => {
     // 진행 상태 메시지 생성
     let progressMessage = t('featureLock.watchAdToUnlock') || '광고를 시청하면 이 기능을 사용할 수 있습니다';
     if (required > 1) {
-      progressMessage = (t('featureLock.watchAdProgress') || '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.')
-        .replace('{current}', current.toString())
-        .replace('{total}', required.toString())
-        .replace('{remaining}', remaining.toString());
+      if (current > 0) {
+        progressMessage = (t('featureLock.watchAdProgress') || '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.')
+          .replace('{current}', current.toString())
+          .replace('{total}', required.toString())
+          .replace('{remaining}', remaining.toString());
+      } else {
+        progressMessage = (t('featureLock.watchAdRequired') || '이 기능을 해제하려면 광고를 {total}회 시청해야 합니다.')
+          .replace('{total}', required.toString());
+      }
     }
 
     Alert.alert(
@@ -257,27 +459,14 @@ export const FeatureLockProvider = ({ children }) => {
           style: 'cancel'
         },
         {
-          text: t('featureLock.watchAd') || '광고 보기',
-          onPress: async () => {
-            // TODO: 실제 광고 SDK 연동
-            // 현재는 바로 광고 시청 처리 (테스트용)
-            Alert.alert(
-              t('common.notice') || '알림',
-              t('featureLock.adComingSoon') || '광고 기능이 곧 추가됩니다.\n지금은 무료로 해제됩니다!',
-              [
-                {
-                  text: t('common.confirm') || '확인',
-                  onPress: async () => {
-                    await handleAdWatched(featureId, onUnlock);
-                  }
-                }
-              ]
-            );
-          }
+          text: isAdLoaded
+            ? (t('featureLock.watchAd') || '광고 보기')
+            : (t('featureLock.loadingAd') || '로딩 중...'),
+          onPress: () => showRewardedAdAndProcess(featureId, onUnlock),
         },
       ]
     );
-  }, [t, getAdProgress, handleAdWatched]);
+  }, [t, getAdProgress, isAdLoaded, showRewardedAdAndProcess]);
 
   // 바코드 타입 해제 Alert
   const showBarcodeUnlockAlert = useCallback((onUnlock) => {
@@ -290,16 +479,20 @@ export const FeatureLockProvider = ({ children }) => {
       key => LOCKED_FEATURES[key].type === 'qrStyle'
     );
 
-    // QR 스타일은 모두 동일한 adCount 사용 (첫 번째 스타일 기준)
     const firstStyleId = qrStyleFeatures[0];
     const { current, required, remaining } = getAdProgress(firstStyleId);
 
     let progressMessage = t('featureLock.watchAdToUnlock') || '광고를 시청하면 이 기능을 사용할 수 있습니다';
     if (required > 1) {
-      progressMessage = (t('featureLock.watchAdProgress') || '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.')
-        .replace('{current}', current.toString())
-        .replace('{total}', required.toString())
-        .replace('{remaining}', remaining.toString());
+      if (current > 0) {
+        progressMessage = (t('featureLock.watchAdProgress') || '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.')
+          .replace('{current}', current.toString())
+          .replace('{total}', required.toString())
+          .replace('{remaining}', remaining.toString());
+      } else {
+        progressMessage = (t('featureLock.watchAdRequired') || '이 기능을 해제하려면 광고를 {total}회 시청해야 합니다.')
+          .replace('{total}', required.toString());
+      }
     }
 
     Alert.alert(
@@ -311,47 +504,14 @@ export const FeatureLockProvider = ({ children }) => {
           style: 'cancel'
         },
         {
-          text: t('featureLock.watchAd') || '광고 보기',
-          onPress: async () => {
-            Alert.alert(
-              t('common.notice') || '알림',
-              t('featureLock.adComingSoon') || '광고 기능이 곧 추가됩니다.\n지금은 무료로 해제됩니다!',
-              [
-                {
-                  text: t('common.confirm') || '확인',
-                  onPress: async () => {
-                    // QR 스타일은 모두 함께 해제
-                    const feature = LOCKED_FEATURES[firstStyleId];
-                    const requiredCount = feature?.adCount || 1;
-                    const newCount = await incrementAdWatchCount(firstStyleId);
-
-                    if (newCount >= requiredCount) {
-                      const success = await unlockMultiple(qrStyleFeatures);
-                      if (success) {
-                        Alert.alert(
-                          t('featureLock.unlocked') || '잠금 해제됨',
-                          t('featureLock.allStylesUnlocked') || '모든 QR 스타일이 해제되었습니다!',
-                          [{ text: t('common.confirm') || '확인', onPress: onUnlock }]
-                        );
-                      }
-                    } else {
-                      const remaining = requiredCount - newCount;
-                      Alert.alert(
-                        t('featureLock.adWatched') || '광고 시청 완료',
-                        (t('featureLock.remainingAds') || '해제까지 {remaining}회 더 시청해주세요.')
-                          .replace('{remaining}', remaining.toString()),
-                        [{ text: t('common.confirm') || '확인' }]
-                      );
-                    }
-                  }
-                }
-              ]
-            );
-          }
+          text: isAdLoaded
+            ? (t('featureLock.watchAd') || '광고 보기')
+            : (t('featureLock.loadingAd') || '로딩 중...'),
+          onPress: () => showRewardedAdForQrStyles(onUnlock),
         },
       ]
     );
-  }, [t, getAdProgress, incrementAdWatchCount, unlockMultiple]);
+  }, [t, getAdProgress, isAdLoaded, showRewardedAdForQrStyles]);
 
   const value = {
     isLocked,
@@ -373,6 +533,9 @@ export const FeatureLockProvider = ({ children }) => {
     toggleFeatureLock,
     unlockAllFeatures,
     isLoading,
+    isAdLoaded,
+    isAdLoading,
+    loadRewardedAd,
   };
 
   return (
