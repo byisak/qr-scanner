@@ -1148,9 +1148,12 @@ export default {
     // 카테고리
     settingsFeatures: '설정 기능',
     generatorFeatures: '생성 기능',
+    qrTypes: 'QR 타입',
+    qrTypesDesc: '텍스트 타입은 무료',
     barcodeTypes: '바코드 타입',
     qrStyles: 'QR 스타일',
     qrStylesDesc: '한 번에 모든 스타일 해제',
+    backupFeatures: '백업/내보내기',
     features: {
       batchScan: '배치 스캔',
       deleteScannedBarcode: '복사한 바코드 삭제',
@@ -1165,6 +1168,9 @@ export default {
       realtimeSync: '실시간 동기화',
       scanUrlIntegration: '스캔 URL 연동',
       productSearch: '제품 검색',
+      photoSave: '스캔 사진 저장',
+      icloudBackup: 'iCloud 백업',
+      googleDriveBackup: 'Google Drive 백업',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

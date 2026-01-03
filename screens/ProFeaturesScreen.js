@@ -26,12 +26,27 @@ const FEATURE_CATEGORIES = {
       { id: 'realtimeSync', icon: 'sync-outline', color: '#34C759' },
       { id: 'scanUrlIntegration', icon: 'link-outline', color: '#FF9500' },
       { id: 'productSearch', icon: 'search-outline', color: '#5856D6' },
+      { id: 'photoSave', icon: 'camera-outline', color: '#FF3B30' },
     ],
   },
   generator: {
     titleKey: 'proFeatures.generatorFeatures',
     features: [
       { id: 'barcodeTab', icon: 'barcode-outline', color: '#007AFF' },
+    ],
+  },
+  qrTypes: {
+    titleKey: 'proFeatures.qrTypes',
+    features: [
+      { id: 'qrTypeWebsite', icon: 'globe-outline', color: '#667eea', typeName: '웹사이트' },
+      { id: 'qrTypeContact', icon: 'person-outline', color: '#f5576c', typeName: '연락처' },
+      { id: 'qrTypeWifi', icon: 'wifi-outline', color: '#4facfe', typeName: 'WiFi' },
+      { id: 'qrTypeClipboard', icon: 'clipboard-outline', color: '#fa709a', typeName: '클립보드' },
+      { id: 'qrTypeEmail', icon: 'mail-outline', color: '#30cfd0', typeName: '이메일' },
+      { id: 'qrTypeSms', icon: 'chatbubble-outline', color: '#a8edea', typeName: 'SMS' },
+      { id: 'qrTypePhone', icon: 'call-outline', color: '#ff9a9e', typeName: '전화' },
+      { id: 'qrTypeEvent', icon: 'calendar-outline', color: '#fcb69f', typeName: '일정' },
+      { id: 'qrTypeLocation', icon: 'location-outline', color: '#ff6e7f', typeName: '위치' },
     ],
   },
   barcodeTypes: {
@@ -57,6 +72,13 @@ const FEATURE_CATEGORIES = {
       { id: 'qrStyleSunset', icon: 'sunny-outline', color: '#FF6B6B', styleName: 'Sunset' },
       { id: 'qrStyleDarkMode', icon: 'moon-outline', color: '#1A1A2E', styleName: 'Dark Mode' },
       { id: 'qrStyleNeon', icon: 'flash-outline', color: '#00FF88', styleName: 'Neon' },
+    ],
+  },
+  backup: {
+    titleKey: 'proFeatures.backupFeatures',
+    features: [
+      { id: 'icloudBackup', icon: 'cloud-outline', color: '#007AFF' },
+      { id: 'googleDriveBackup', icon: 'logo-google', color: '#4285F4' },
     ],
   },
 };
@@ -149,7 +171,7 @@ export default function ProFeaturesScreen() {
           <Ionicons name={feature.icon} size={24} color={feature.color} />
         </View>
         <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={2}>
-          {feature.barcodeName || feature.styleName || t(`proFeatures.features.${feature.id}`) || feature.id}
+          {feature.barcodeName || feature.styleName || feature.typeName || t(`proFeatures.features.${feature.id}`) || feature.id}
         </Text>
         {renderProgressBadge(feature.id, unlocked)}
       </TouchableOpacity>
@@ -258,6 +280,23 @@ export default function ProFeaturesScreen() {
           </View>
         </View>
 
+        {/* QR 타입 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <View style={s.sectionHeader}>
+            <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              {t('proFeatures.qrTypes') || 'QR 타입'}
+            </Text>
+            <Text style={[s.sectionSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('proFeatures.qrTypesDesc') || '텍스트 타입은 무료'}
+            </Text>
+          </View>
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.qrTypes.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
+            )}
+          </View>
+        </View>
+
         {/* 바코드 타입 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
@@ -283,6 +322,18 @@ export default function ProFeaturesScreen() {
           <View style={s.featureGrid}>
             {FEATURE_CATEGORIES.qrStyles.features.map((feature) =>
               renderFeatureItem(feature, handleQrStylePress)
+            )}
+          </View>
+        </View>
+
+        {/* 백업/내보내기 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('proFeatures.backupFeatures') || '백업/내보내기'}
+          </Text>
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.backup.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
             )}
           </View>
         </View>

@@ -10,8 +10,8 @@ export const DEV_MODE_UNLOCK_ALL = true;
 
 // ========================================
 // 광고 횟수 기준:
-// 2회: 기본 프리미엄 기능, 개별 바코드 타입
-// 3회: 업무 효율화 기능 (배치 스캔, URL 연동)
+// 2회: 기본 프리미엄 기능, 개별 바코드/QR 타입
+// 3회: 업무 효율화 기능 (배치 스캔, URL 연동, 백업)
 // 4회: 고급 비즈니스 기능 (실시간 동기화)
 // ========================================
 
@@ -22,6 +22,73 @@ export const LOCKED_FEATURES = {
     adCount: 2, // 바코드 생성 탭 - 기본 프리미엄
     type: 'generator',
     description: '바코드 생성 기능',
+  },
+
+  // ===== QR 타입 (텍스트 제외) =====
+  // 기본 무료: text (텍스트)
+  // 나머지는 각 2회 광고
+  qrTypeWebsite: {
+    id: 'qrTypeWebsite',
+    qrType: 'website',
+    adCount: 2,
+    type: 'qrType',
+    name: '웹사이트',
+  },
+  qrTypeContact: {
+    id: 'qrTypeContact',
+    qrType: 'contact',
+    adCount: 2,
+    type: 'qrType',
+    name: '연락처',
+  },
+  qrTypeWifi: {
+    id: 'qrTypeWifi',
+    qrType: 'wifi',
+    adCount: 2,
+    type: 'qrType',
+    name: 'WiFi',
+  },
+  qrTypeClipboard: {
+    id: 'qrTypeClipboard',
+    qrType: 'clipboard',
+    adCount: 2,
+    type: 'qrType',
+    name: '클립보드',
+  },
+  qrTypeEmail: {
+    id: 'qrTypeEmail',
+    qrType: 'email',
+    adCount: 2,
+    type: 'qrType',
+    name: '이메일',
+  },
+  qrTypeSms: {
+    id: 'qrTypeSms',
+    qrType: 'sms',
+    adCount: 2,
+    type: 'qrType',
+    name: 'SMS',
+  },
+  qrTypePhone: {
+    id: 'qrTypePhone',
+    qrType: 'phone',
+    adCount: 2,
+    type: 'qrType',
+    name: '전화',
+  },
+  qrTypeEvent: {
+    id: 'qrTypeEvent',
+    qrType: 'event',
+    adCount: 2,
+    type: 'qrType',
+    name: '일정',
+  },
+  qrTypeLocation: {
+    id: 'qrTypeLocation',
+    qrType: 'location',
+    adCount: 2,
+    type: 'qrType',
+    name: '위치',
   },
 
   // ===== QR 스타일 (Classic 제외) =====
@@ -86,6 +153,26 @@ export const LOCKED_FEATURES = {
     adCount: 2, // 편의 기능 - 제품 검색
     type: 'settings',
     description: '제품 검색 설정',
+  },
+  photoSave: {
+    id: 'photoSave',
+    adCount: 3, // 스캔 사진 저장
+    type: 'settings',
+    description: '스캔 사진 저장',
+  },
+
+  // ===== 백업/내보내기 =====
+  icloudBackup: {
+    id: 'icloudBackup',
+    adCount: 3, // iCloud 백업
+    type: 'backup',
+    description: 'iCloud 백업',
+  },
+  googleDriveBackup: {
+    id: 'googleDriveBackup',
+    adCount: 3, // Google Drive 백업
+    type: 'backup',
+    description: 'Google Drive 백업',
   },
 
   // ===== 바코드 타입 (기본 6개 제외한 나머지) =====
@@ -158,6 +245,9 @@ export const FREE_BARCODE_TYPES = [
   'code128',
   'qrcode',
 ];
+
+// 무료 QR 타입 (텍스트만 무료)
+export const FREE_QR_TYPES = ['text'];
 
 // 무료 QR 스타일 인덱스 (Classic만 무료)
 export const FREE_QR_STYLE_INDEX = 0;

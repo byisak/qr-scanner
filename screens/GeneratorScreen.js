@@ -36,7 +36,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
-import { FREE_BARCODE_TYPES } from '../config/lockedFeatures';
+import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -75,7 +75,7 @@ const QR_TYPES = [
 export default function GeneratorScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId } = useFeatureLock();
+  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -518,24 +518,45 @@ export default function GeneratorScreen() {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+
+    // QR 타입 잠금 체크 (text는 무료)
+    if (isQrTypeLocked(typeId)) {
+      const featureId = getQrTypeFeatureId(typeId);
+      if (featureId) {
+        showUnlockAlert(featureId, () => {
+          setSelectedType(typeId);
+          // 해제 후 clipboard 타입이면 클립보드 내용 로드
+          if (typeId === 'clipboard') {
+            loadClipboardContent();
+          }
+        });
+      }
+      return;
+    }
+
     setSelectedType(typeId);
 
     // Load clipboard content if clipboard type is selected
     if (typeId === 'clipboard') {
-      try {
-        const clipboardText = await Clipboard.getStringAsync();
-        if (clipboardText) {
-          setFormData((prev) => ({
-            ...prev,
-            clipboard: { text: clipboardText },
-          }));
-          Alert.alert('✓', t('generator.clipboardPasted'));
-        } else {
-          Alert.alert('ℹ️', t('generator.clipboardEmpty'));
-        }
-      } catch (error) {
-        console.error('Error reading clipboard:', error);
+      loadClipboardContent();
+    }
+  };
+
+  // 클립보드 내용 로드 헬퍼 함수
+  const loadClipboardContent = async () => {
+    try {
+      const clipboardText = await Clipboard.getStringAsync();
+      if (clipboardText) {
+        setFormData((prev) => ({
+          ...prev,
+          clipboard: { text: clipboardText },
+        }));
+        Alert.alert('✓', t('generator.clipboardPasted'));
+      } else {
+        Alert.alert('ℹ️', t('generator.clipboardEmpty'));
       }
+    } catch (error) {
+      console.error('Error reading clipboard:', error);
     }
   };
 
@@ -1592,37 +1613,45 @@ export default function GeneratorScreen() {
               contentContainerStyle={s.typesContainer}
               style={s.typesScroll}
             >
-              {orderedQrTypes.map((type) => (
-                <TouchableOpacity
-                  key={type.id}
-                  style={[
-                    s.typeButton,
-                    {
-                      backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
-                      borderColor: selectedType === type.id ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => handleTypeSelect(type.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[
-                    s.typeIconContainer,
-                    { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
-                  ]}>
-                    <Ionicons
-                      name={type.icon}
-                      size={22}
-                      color={selectedType === type.id ? '#fff' : colors.text}
-                    />
-                  </View>
-                  <Text style={[
-                    s.typeText,
-                    { color: selectedType === type.id ? '#fff' : colors.text }
-                  ]}>
-                    {t(`generator.types.${type.id}`)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {orderedQrTypes.map((type) => {
+                const isTypeLocked = isQrTypeLocked(type.id);
+                return (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[
+                      s.typeButton,
+                      {
+                        backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
+                        borderColor: selectedType === type.id ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => handleTypeSelect(type.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      s.typeIconContainer,
+                      { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
+                    ]}>
+                      <Ionicons
+                        name={type.icon}
+                        size={22}
+                        color={selectedType === type.id ? '#fff' : colors.text}
+                      />
+                      {isTypeLocked && (
+                        <View style={s.typeLockIcon}>
+                          <LockIcon size={12} />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[
+                      s.typeText,
+                      { color: selectedType === type.id ? '#fff' : colors.text }
+                    ]}>
+                      {t(`generator.types.${type.id}`)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
               {/* 순서 변경 버튼 */}
               <TouchableOpacity
                 style={[
@@ -2896,6 +2925,14 @@ const s = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  typeLockIcon: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: 'rgba(255, 59, 48, 0.9)',
+    borderRadius: 8,
+    padding: 2,
   },
   typeText: {
     fontSize: 13,

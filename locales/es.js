@@ -1079,9 +1079,12 @@ export default {
     // Categorías
     settingsFeatures: 'Funciones de configuración',
     generatorFeatures: 'Funciones de generador',
+    qrTypes: 'Tipos de QR',
+    qrTypesDesc: 'El tipo texto es gratis',
     barcodeTypes: 'Tipos de código de barras',
     qrStyles: 'Estilos QR',
     qrStylesDesc: 'Desbloquear todos los estilos a la vez',
+    backupFeatures: 'Respaldo/Exportar',
     features: {
       batchScan: 'Escaneo por lotes',
       deleteScannedBarcode: 'Eliminar código escaneado',
@@ -1095,6 +1098,9 @@ export default {
       realtimeSync: 'Sincronización en tiempo real',
       scanUrlIntegration: 'Integración URL de escaneo',
       productSearch: 'Búsqueda de productos',
+      photoSave: 'Guardar foto de escaneo',
+      icloudBackup: 'Respaldo iCloud',
+      googleDriveBackup: 'Respaldo Google Drive',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

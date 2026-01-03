@@ -8,7 +8,7 @@ import {
   AdEventType,
   TestIds,
 } from 'react-native-google-mobile-ads';
-import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
+import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_TYPES, FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import { useLanguage } from './LanguageContext';
 
 const FeatureLockContext = createContext();
@@ -192,6 +192,27 @@ export const FeatureLockProvider = ({ children }) => {
       f => f.type === 'barcode' && f.bcid === bcid
     );
     return barcodeFeature?.id || null;
+  }, []);
+
+  // QR 타입이 잠겨있는지 확인 (qrType으로 개별 체크)
+  const isQrTypeLocked = useCallback((qrType) => {
+    // 개발 모드: 모든 기능 잠금 해제
+    if (devModeEnabled) return false;
+    if (FREE_QR_TYPES.includes(qrType)) return false;
+    // qrType으로 해당 feature 찾기
+    const qrTypeFeature = Object.values(LOCKED_FEATURES).find(
+      f => f.type === 'qrType' && f.qrType === qrType
+    );
+    if (!qrTypeFeature) return false;
+    return isLocked(qrTypeFeature.id);
+  }, [isLocked, devModeEnabled]);
+
+  // qrType으로 feature ID 가져오기
+  const getQrTypeFeatureId = useCallback((qrType) => {
+    const qrTypeFeature = Object.values(LOCKED_FEATURES).find(
+      f => f.type === 'qrType' && f.qrType === qrType
+    );
+    return qrTypeFeature?.id || null;
   }, []);
 
   // QR 스타일이 잠겨있는지 확인 (인덱스 기반)
@@ -530,6 +551,8 @@ export const FeatureLockProvider = ({ children }) => {
     isLocked,
     isBarcodeTypeLocked,
     getBarcodeFeatureId,
+    isQrTypeLocked,
+    getQrTypeFeatureId,
     isQrStyleLocked,
     unlock,
     unlockMultiple,

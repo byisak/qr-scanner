@@ -1082,9 +1082,12 @@ export default {
     // 分类
     settingsFeatures: '设置功能',
     generatorFeatures: '生成功能',
+    qrTypes: 'QR类型',
+    qrTypesDesc: '文本类型免费',
     barcodeTypes: '条形码类型',
     qrStyles: 'QR样式',
     qrStylesDesc: '一次性解锁所有样式',
+    backupFeatures: '备份/导出',
     features: {
       batchScan: '批量扫描',
       deleteScannedBarcode: '删除已扫描条码',
@@ -1098,6 +1101,9 @@ export default {
       realtimeSync: '实时同步',
       scanUrlIntegration: '扫描URL集成',
       productSearch: '产品搜索',
+      photoSave: '扫描照片保存',
+      icloudBackup: 'iCloud备份',
+      googleDriveBackup: 'Google Drive备份',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

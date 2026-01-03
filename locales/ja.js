@@ -1082,9 +1082,12 @@ export default {
     // カテゴリ
     settingsFeatures: '設定機能',
     generatorFeatures: '生成機能',
+    qrTypes: 'QRタイプ',
+    qrTypesDesc: 'テキストタイプは無料',
     barcodeTypes: 'バーコードタイプ',
     qrStyles: 'QRスタイル',
     qrStylesDesc: '一度にすべてのスタイルを解除',
+    backupFeatures: 'バックアップ/エクスポート',
     features: {
       batchScan: 'バッチスキャン',
       deleteScannedBarcode: 'スキャンしたバーコードを削除',
@@ -1098,6 +1101,9 @@ export default {
       realtimeSync: 'リアルタイム同期',
       scanUrlIntegration: 'スキャンURL連携',
       productSearch: '製品検索',
+      photoSave: 'スキャン写真保存',
+      icloudBackup: 'iCloudバックアップ',
+      googleDriveBackup: 'Google Driveバックアップ',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

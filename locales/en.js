@@ -1148,9 +1148,12 @@ export default {
     // Categories
     settingsFeatures: 'Settings Features',
     generatorFeatures: 'Generator Features',
+    qrTypes: 'QR Types',
+    qrTypesDesc: 'Text type is free',
     barcodeTypes: 'Barcode Types',
     qrStyles: 'QR Styles',
     qrStylesDesc: 'Unlock all styles at once',
+    backupFeatures: 'Backup/Export',
     features: {
       batchScan: 'Batch Scan',
       deleteScannedBarcode: 'Delete Scanned Barcode',
@@ -1164,6 +1167,9 @@ export default {
       realtimeSync: 'Realtime Sync',
       scanUrlIntegration: 'Scan URL Integration',
       productSearch: 'Product Search',
+      photoSave: 'Scan Photo Save',
+      icloudBackup: 'iCloud Backup',
+      googleDriveBackup: 'Google Drive Backup',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
