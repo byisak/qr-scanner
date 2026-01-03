@@ -22,6 +22,8 @@
         "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
         "NSPhotoLibraryUsageDescription": "QR 코드에 로고를 추가하기 위해 사진 접근이 필요합니다.",
         "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다.",
+        "NSCalendarsUsageDescription": "QR 코드의 일정을 캘린더에 추가하기 위해 접근이 필요합니다.",
+        "NSContactsUsageDescription": "QR 코드의 연락처 정보를 저장하기 위해 접근이 필요합니다.",
         "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -55,7 +57,11 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
       ],
       "config": {
         "googleMaps": {
@@ -116,7 +122,19 @@
           "userTrackingUsageDescription": "맞춤형 광고를 제공하기 위해 사용됩니다."
         }
       ],
-      "@react-native-firebase/app"
+      "@react-native-firebase/app",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "QR 코드의 일정을 캘린더에 추가하기 위해 접근이 필요합니다."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "QR 코드의 연락처 정보를 저장하기 위해 접근이 필요합니다."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
