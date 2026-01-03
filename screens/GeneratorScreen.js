@@ -75,7 +75,7 @@ const QR_TYPES = [
 export default function GeneratorScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, showBarcodeUnlockAlert } = useFeatureLock();
+  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -2531,7 +2531,10 @@ export default function GeneratorScreen() {
                               ]}
                               onPress={() => {
                                 if (isBarcodeLocked) {
-                                  showBarcodeUnlockAlert(() => handleSelectBarcodeFromModal(format.bcid));
+                                  const featureId = getBarcodeFeatureId(format.bcid);
+                                  if (featureId) {
+                                    showUnlockAlert(featureId, () => handleSelectBarcodeFromModal(format.bcid));
+                                  }
                                 } else {
                                   handleSelectBarcodeFromModal(format.bcid);
                                 }
@@ -2544,7 +2547,10 @@ export default function GeneratorScreen() {
                                 onPress={(e) => {
                                   e.stopPropagation();
                                   if (isBarcodeLocked) {
-                                    showBarcodeUnlockAlert(() => toggleFavoriteBarcode(format.bcid));
+                                    const featureId = getBarcodeFeatureId(format.bcid);
+                                    if (featureId) {
+                                      showUnlockAlert(featureId, () => toggleFavoriteBarcode(format.bcid));
+                                    }
                                   } else {
                                     toggleFavoriteBarcode(format.bcid);
                                   }
