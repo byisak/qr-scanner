@@ -3,6 +3,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as Calendar from 'expo-calendar';
+import * as Contacts from 'expo-contacts';
 import { QR_CONTENT_TYPES } from '../utils/qrContentParser';
 
 /**
@@ -140,12 +142,21 @@ export default function QRActionButtons({
     Alert.alert(t('result.copySuccess') || '복사됨', t('qrActions.passwordCopied') || '비밀번호가 복사되었습니다.');
   };
 
-  // WiFi 설정 열기
-  const handleOpenWifiSettings = async () => {
+  // 네트워크 이름 복사
+  const handleCopyNetworkName = async () => {
+    if (!data.ssid) return;
+    await Clipboard.setStringAsync(data.ssid);
+    Alert.alert(t('result.copySuccess') || '복사됨', t('qrActions.networkCopied') || '네트워크 이름이 복사되었습니다.');
+  };
+
+  // WiFi 연결 (설정 앱으로 이동)
+  const handleConnectWifi = async () => {
     try {
       if (Platform.OS === 'ios') {
+        // iOS는 Wi-Fi 설정으로 이동
         await Linking.openURL('App-Prefs:WIFI');
       } else {
+        // Android는 Wi-Fi 설정으로 이동
         await Linking.sendIntent('android.settings.WIFI_SETTINGS');
       }
     } catch (error) {
@@ -153,29 +164,159 @@ export default function QRActionButtons({
     }
   };
 
-  // 연락처 추가 (expo-contacts 필요 - 추후 구현)
-  const handleAddContact = () => {
-    Alert.alert(
-      t('qrActions.addContact') || '연락처 추가',
-      t('qrActions.addContactDesc') || '연락처 앱에서 수동으로 추가해주세요.\n\n' +
-        (data.fullName ? `이름: ${data.fullName}\n` : '') +
-        (data.phones?.[0] ? `전화: ${data.phones[0]}\n` : '') +
-        (data.emails?.[0] ? `이메일: ${data.emails[0]}` : ''),
-      [{ text: t('common.ok') || '확인' }]
-    );
+  // 연락처 추가
+  const handleAddContact = async () => {
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('result.permissionDenied') || '권한 거부',
+          t('qrActions.contactPermissionDenied') || '연락처 권한이 필요합니다.'
+        );
+        return;
+      }
+
+      const contact = {
+        [Contacts.Fields.FirstName]: data.firstName || data.fullName || '',
+        [Contacts.Fields.LastName]: data.lastName || '',
+        [Contacts.Fields.Company]: data.organization || '',
+        [Contacts.Fields.JobTitle]: data.title || '',
+      };
+
+      if (data.phones && data.phones.length > 0) {
+        contact[Contacts.Fields.PhoneNumbers] = data.phones.map(phone => ({
+          label: 'mobile',
+          number: phone,
+        }));
+      }
+
+      if (data.emails && data.emails.length > 0) {
+        contact[Contacts.Fields.Emails] = data.emails.map(email => ({
+          label: 'work',
+          email: email,
+        }));
+      }
+
+      if (data.addresses && data.addresses.length > 0) {
+        contact[Contacts.Fields.Addresses] = data.addresses.map(addr => ({
+          label: 'home',
+          street: addr,
+        }));
+      }
+
+      if (data.urls && data.urls.length > 0) {
+        contact[Contacts.Fields.UrlAddresses] = data.urls.map(url => ({
+          label: 'homepage',
+          url: url,
+        }));
+      }
+
+      if (data.note) {
+        contact[Contacts.Fields.Note] = data.note;
+      }
+
+      // iOS에서는 presentFormAsync, Android에서도 동일
+      const contactId = await Contacts.addContactAsync(contact);
+
+      if (contactId) {
+        Alert.alert(
+          t('common.success') || '성공',
+          t('qrActions.contactAdded') || '연락처가 추가되었습니다.'
+        );
+      }
+    } catch (error) {
+      console.error('Add contact error:', error);
+      // 실패 시 수동 추가 안내
+      Alert.alert(
+        t('qrActions.addContact') || '연락처 추가',
+        t('qrActions.addContactDesc') || '연락처 앱에서 수동으로 추가해주세요.\n\n' +
+          (data.fullName ? `이름: ${data.fullName}\n` : '') +
+          (data.phones?.[0] ? `전화: ${data.phones[0]}\n` : '') +
+          (data.emails?.[0] ? `이메일: ${data.emails[0]}` : ''),
+        [{ text: t('common.confirm') || '확인' }]
+      );
+    }
   };
 
-  // 캘린더 추가 (expo-calendar 필요 - 추후 구현)
-  const handleAddToCalendar = () => {
-    Alert.alert(
-      t('qrActions.addToCalendar') || '캘린더에 추가',
-      t('qrActions.addToCalendarDesc') || '캘린더 앱에서 수동으로 추가해주세요.\n\n' +
-        (data.title ? `제목: ${data.title}\n` : '') +
-        (data.location ? `장소: ${data.location}\n` : '') +
-        (data.startDate ? `시작: ${data.startDate.toLocaleString()}\n` : '') +
-        (data.endDate ? `종료: ${data.endDate.toLocaleString()}` : ''),
-      [{ text: t('common.ok') || '확인' }]
-    );
+  // 캘린더에 추가
+  const handleAddToCalendar = async () => {
+    try {
+      const { status } = await Calendar.requestCalendarPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('result.permissionDenied') || '권한 거부',
+          t('qrActions.calendarPermissionDenied') || '캘린더 권한이 필요합니다.'
+        );
+        return;
+      }
+
+      // 기본 캘린더 가져오기
+      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+
+      // 쓰기 가능한 캘린더 찾기
+      let defaultCalendar = calendars.find(cal => cal.allowsModifications && cal.isPrimary);
+      if (!defaultCalendar) {
+        defaultCalendar = calendars.find(cal => cal.allowsModifications);
+      }
+
+      if (!defaultCalendar) {
+        // 캘린더가 없으면 새로 생성 (iOS)
+        if (Platform.OS === 'ios') {
+          const defaultCalendarSource = calendars.find(cal => cal.source?.isLocalAccount)?.source;
+          if (defaultCalendarSource) {
+            const newCalendarId = await Calendar.createCalendarAsync({
+              title: 'QR Scanner Events',
+              color: '#007AFF',
+              entityType: Calendar.EntityTypes.EVENT,
+              sourceId: defaultCalendarSource.id,
+              source: defaultCalendarSource,
+              name: 'qrScannerCalendar',
+              ownerAccount: 'personal',
+              accessLevel: Calendar.CalendarAccessLevel.OWNER,
+            });
+            defaultCalendar = { id: newCalendarId };
+          }
+        }
+      }
+
+      if (!defaultCalendar) {
+        Alert.alert(
+          t('result.error') || '오류',
+          t('qrActions.noCalendarFound') || '사용 가능한 캘린더가 없습니다.'
+        );
+        return;
+      }
+
+      const eventDetails = {
+        title: data.title || t('qrActions.untitledEvent') || '제목 없음',
+        startDate: data.startDate || new Date(),
+        endDate: data.endDate || new Date(Date.now() + 60 * 60 * 1000), // 기본 1시간
+        location: data.location || '',
+        notes: data.description || '',
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
+
+      const eventId = await Calendar.createEventAsync(defaultCalendar.id, eventDetails);
+
+      if (eventId) {
+        Alert.alert(
+          t('common.success') || '성공',
+          t('qrActions.eventAdded') || '일정이 캘린더에 추가되었습니다.'
+        );
+      }
+    } catch (error) {
+      console.error('Add to calendar error:', error);
+      // 실패 시 수동 추가 안내
+      Alert.alert(
+        t('qrActions.addToCalendar') || '캘린더에 추가',
+        t('qrActions.addToCalendarDesc') || '캘린더 앱에서 수동으로 추가해주세요.\n\n' +
+          (data.title ? `제목: ${data.title}\n` : '') +
+          (data.location ? `장소: ${data.location}\n` : '') +
+          (data.startDate ? `시작: ${data.startDate.toLocaleString()}\n` : '') +
+          (data.endDate ? `종료: ${data.endDate.toLocaleString()}` : ''),
+        [{ text: t('common.confirm') || '확인' }]
+      );
+    }
   };
 
   // 웹 검색
@@ -250,11 +391,11 @@ export default function QRActionButtons({
         return (
           <>
             <View style={styles.actionRow}>
-              {renderActionButton('wifi', t('qrActions.openWifiSettings') || 'WiFi 설정', handleOpenWifiSettings, '#5856D6')}
-              {renderActionButton('key', t('qrActions.copyPassword') || '비밀번호 복사', handleCopyWifiPassword, '#FF9500')}
+              {renderActionButton('wifi', t('qrActions.connect') || '연결', handleConnectWifi, '#34C759')}
+              {renderActionButton('copy', t('qrActions.copyNetworkName') || '네트워크 복사', handleCopyNetworkName)}
             </View>
             <View style={styles.actionRow}>
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
+              {renderActionButton('key', t('qrActions.copyPassword') || '비밀번호 복사', handleCopyWifiPassword, '#FF9500')}
               {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
             </View>
           </>

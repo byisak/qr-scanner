@@ -13,6 +13,7 @@ import { Colors } from '../constants/Colors';
 import AdBanner from '../components/AdBanner';
 import { parseQRContent, QR_CONTENT_TYPES, formatPhoneNumber } from '../utils/qrContentParser';
 import QRActionButtons from '../components/QRActionButtons';
+import QRContentInfoDisplay from '../components/QRContentInfoDisplay';
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -625,6 +626,16 @@ export default function ResultScreen() {
               </ScrollView>
             )}
           </View>
+
+          {/* QR 콘텐츠 정보 표시 (WiFi, 위치, 연락처, 일정 등) */}
+          {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT && parsedContent.type !== QR_CONTENT_TYPES.URL && (
+            <QRContentInfoDisplay
+              parsedContent={parsedContent}
+              colors={colors}
+              fonts={fonts}
+              t={t}
+            />
+          )}
 
           {/* 액션 버튼들 */}
           {!isEditing ? (
