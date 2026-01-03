@@ -1,10 +1,11 @@
 // components/QRActionButtons.js - QR 타입별 액션 버튼 컴포넌트
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Calendar from 'expo-calendar';
 import * as Contacts from 'expo-contacts';
+import WifiManager from 'react-native-wifi-reborn';
 import { QR_CONTENT_TYPES } from '../utils/qrContentParser';
 
 /**
@@ -149,18 +150,87 @@ export default function QRActionButtons({
     Alert.alert(t('result.copySuccess') || '복사됨', t('qrActions.networkCopied') || '네트워크 이름이 복사되었습니다.');
   };
 
-  // WiFi 연결 (설정 앱으로 이동)
+  // WiFi 연결 상태
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // WiFi 자동 연결
   const handleConnectWifi = async () => {
+    if (!data.ssid) {
+      Alert.alert(t('result.error') || '오류', t('qrActions.noNetworkName') || '네트워크 이름이 없습니다.');
+      return;
+    }
+
+    setIsConnecting(true);
+
     try {
-      if (Platform.OS === 'ios') {
-        // iOS는 Wi-Fi 설정으로 이동
-        await Linking.openURL('App-Prefs:WIFI');
-      } else {
-        // Android는 Wi-Fi 설정으로 이동
-        await Linking.sendIntent('android.settings.WIFI_SETTINGS');
+      // Android에서 위치 권한 필요
+      if (Platform.OS === 'android') {
+        const granted = await WifiManager.requestPermissions();
+        if (!granted) {
+          Alert.alert(
+            t('result.permissionDenied') || '권한 거부',
+            t('qrActions.locationPermissionForWifi') || 'WiFi 연결을 위해 위치 권한이 필요합니다.'
+          );
+          setIsConnecting(false);
+          return;
+        }
       }
+
+      // 보안 타입에 따른 연결
+      const securityType = (data.security || 'WPA').toUpperCase();
+      const ssid = data.ssid;
+      const password = data.password || '';
+
+      if (securityType === 'NOPASS' || securityType === 'NONE' || !password) {
+        // 오픈 네트워크
+        if (Platform.OS === 'ios') {
+          await WifiManager.connectToSSID(ssid);
+        } else {
+          await WifiManager.connectToProtectedSSID(ssid, '', false, false);
+        }
+      } else if (securityType === 'WEP') {
+        // WEP 네트워크
+        await WifiManager.connectToProtectedSSID(ssid, password, false, false);
+      } else {
+        // WPA/WPA2 네트워크
+        if (Platform.OS === 'ios') {
+          await WifiManager.connectToProtectedSSID(ssid, password, false, false);
+        } else {
+          await WifiManager.connectToProtectedSSID(ssid, password, false, false);
+        }
+      }
+
+      Alert.alert(
+        t('common.success') || '성공',
+        t('qrActions.wifiConnected') || `${ssid}에 연결되었습니다.`
+      );
     } catch (error) {
-      Alert.alert(t('result.info') || '정보', t('qrActions.openSettingsManually') || '설정 앱에서 WiFi를 연결해주세요.');
+      console.error('WiFi connection error:', error);
+
+      // 실패 시 설정 앱으로 이동 옵션 제공
+      Alert.alert(
+        t('qrActions.connectionFailed') || '연결 실패',
+        t('qrActions.wifiConnectionError') || 'WiFi 연결에 실패했습니다. 설정에서 직접 연결하시겠습니까?',
+        [
+          { text: t('common.cancel') || '취소', style: 'cancel' },
+          {
+            text: t('qrActions.openSettings') || '설정 열기',
+            onPress: async () => {
+              try {
+                if (Platform.OS === 'ios') {
+                  await Linking.openURL('App-Prefs:WIFI');
+                } else {
+                  await Linking.sendIntent('android.settings.WIFI_SETTINGS');
+                }
+              } catch (e) {
+                console.error('Open settings error:', e);
+              }
+            }
+          }
+        ]
+      );
+    } finally {
+      setIsConnecting(false);
     }
   };
 
@@ -331,14 +401,38 @@ export default function QRActionButtons({
   };
 
   // 액션 버튼 렌더링
-  const renderActionButton = (icon, label, onPress, color = colors.primary) => (
+  const renderActionButton = (icon, label, onPress, color = colors.primary, loading = false, disabled = false) => (
     <TouchableOpacity
-      style={[styles.actionButton, { backgroundColor: color + '15', borderColor: color + '30' }]}
+      style={[styles.actionButton, { backgroundColor: color + '15', borderColor: color + '30' }, disabled && { opacity: 0.6 }]}
       onPress={onPress}
       activeOpacity={0.7}
+      disabled={loading || disabled}
     >
-      <Ionicons name={icon} size={22} color={color} />
+      {loading ? (
+        <ActivityIndicator size="small" color={color} />
+      ) : (
+        <Ionicons name={icon} size={22} color={color} />
+      )}
       <Text style={[styles.actionLabel, { color, fontFamily: fonts.medium }]}>{label}</Text>
+    </TouchableOpacity>
+  );
+
+  // WiFi 연결 버튼 (로딩 상태 포함)
+  const renderWifiConnectButton = () => (
+    <TouchableOpacity
+      style={[styles.actionButton, { backgroundColor: '#34C759' + '15', borderColor: '#34C759' + '30' }, isConnecting && { opacity: 0.8 }]}
+      onPress={handleConnectWifi}
+      activeOpacity={0.7}
+      disabled={isConnecting}
+    >
+      {isConnecting ? (
+        <ActivityIndicator size="small" color="#34C759" />
+      ) : (
+        <Ionicons name="wifi" size={22} color="#34C759" />
+      )}
+      <Text style={[styles.actionLabel, { color: '#34C759', fontFamily: fonts.medium }]}>
+        {isConnecting ? (t('qrActions.connecting') || '연결 중...') : (t('qrActions.connect') || '연결')}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -391,7 +485,7 @@ export default function QRActionButtons({
         return (
           <>
             <View style={styles.actionRow}>
-              {renderActionButton('wifi', t('qrActions.connect') || '연결', handleConnectWifi, '#34C759')}
+              {renderWifiConnectButton()}
               {renderActionButton('copy', t('qrActions.copyNetworkName') || '네트워크 복사', handleCopyNetworkName)}
             </View>
             <View style={styles.actionRow}>

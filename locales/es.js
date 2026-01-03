@@ -1176,5 +1176,13 @@ export default {
     calendarPermissionDenied: 'Se requiere permiso de calendario.',
     noCalendarFound: 'No hay calendario disponible.',
     untitledEvent: 'Sin título',
+    // WiFi conexión relacionado
+    connecting: 'Conectando...',
+    wifiConnected: 'Conectado a WiFi.',
+    connectionFailed: 'Conexión fallida',
+    wifiConnectionError: 'Error al conectar a WiFi. ¿Desea conectar en Ajustes?',
+    openSettings: 'Abrir Ajustes',
+    noNetworkName: 'No hay nombre de red disponible.',
+    locationPermissionForWifi: 'Se requiere permiso de ubicación para la conexión WiFi.',
   },
 };

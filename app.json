@@ -38,7 +38,8 @@
         "com.apple.developer.icloud-container-identifiers": ["iCloud.com.cubion.qrscanner"],
         "com.apple.developer.icloud-services": ["CloudDocuments", "CloudKit"],
         "com.apple.developer.ubiquity-container-identifiers": ["iCloud.com.cubion.qrscanner"],
-        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner"
+        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner",
+        "com.apple.developer.networking.HotspotConfiguration": true
       },
       "config": {
         "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
@@ -61,7 +62,9 @@
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR",
         "android.permission.READ_CONTACTS",
-        "android.permission.WRITE_CONTACTS"
+        "android.permission.WRITE_CONTACTS",
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.CHANGE_WIFI_STATE"
       ],
       "config": {
         "googleMaps": {

@@ -1273,5 +1273,13 @@ export default {
     calendarPermissionDenied: '캘린더 권한이 필요합니다.',
     noCalendarFound: '사용 가능한 캘린더가 없습니다.',
     untitledEvent: '제목 없음',
+    // WiFi 연결 관련
+    connecting: '연결 중...',
+    wifiConnected: 'WiFi에 연결되었습니다.',
+    connectionFailed: '연결 실패',
+    wifiConnectionError: 'WiFi 연결에 실패했습니다. 설정에서 직접 연결하시겠습니까?',
+    openSettings: '설정 열기',
+    noNetworkName: '네트워크 이름이 없습니다.',
+    locationPermissionForWifi: 'WiFi 연결을 위해 위치 권한이 필요합니다.',
   },
 };

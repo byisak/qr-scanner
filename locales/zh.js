@@ -1179,5 +1179,13 @@ export default {
     calendarPermissionDenied: '需要日历权限。',
     noCalendarFound: '没有可用的日历。',
     untitledEvent: '无标题',
+    // WiFi连接相关
+    connecting: '连接中...',
+    wifiConnected: '已连接到WiFi。',
+    connectionFailed: '连接失败',
+    wifiConnectionError: 'WiFi连接失败。是否在设置中手动连接？',
+    openSettings: '打开设置',
+    noNetworkName: '没有网络名称。',
+    locationPermissionForWifi: 'WiFi连接需要位置权限。',
   },
 };

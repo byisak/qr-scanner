@@ -1179,5 +1179,13 @@ export default {
     calendarPermissionDenied: 'カレンダーの権限が必要です。',
     noCalendarFound: '利用可能なカレンダーがありません。',
     untitledEvent: 'タイトルなし',
+    // WiFi接続関連
+    connecting: '接続中...',
+    wifiConnected: 'WiFiに接続しました。',
+    connectionFailed: '接続失敗',
+    wifiConnectionError: 'WiFi接続に失敗しました。設定で直接接続しますか？',
+    openSettings: '設定を開く',
+    noNetworkName: 'ネットワーク名がありません。',
+    locationPermissionForWifi: 'WiFi接続には位置情報の権限が必要です。',
   },
 };
