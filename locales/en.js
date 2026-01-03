@@ -353,6 +353,8 @@ export default {
     termsOfServiceDesc: 'View terms of service',
     privacyPolicy: 'Privacy Policy',
     privacyPolicyDesc: 'View privacy policy',
+    analyticsConsent: 'Usage Analytics',
+    analyticsConsentDesc: 'Collect anonymous data to improve the app',
     versionInfo: 'Version Info',
     currentVersion: 'Current Version',
     // Cache

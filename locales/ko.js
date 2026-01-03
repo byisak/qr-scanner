@@ -355,6 +355,8 @@ export default {
     termsOfServiceDesc: '서비스 이용 약관 보기',
     privacyPolicy: '개인정보 처리방침',
     privacyPolicyDesc: '개인정보 처리방침 보기',
+    analyticsConsent: '사용 분석 동의',
+    analyticsConsentDesc: '앱 개선을 위한 익명 사용 데이터 수집',
     versionInfo: '버전정보',
     currentVersion: '현재 버전',
     // 캐시

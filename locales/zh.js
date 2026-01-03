@@ -339,6 +339,8 @@ export default {
     termsOfServiceDesc: '查看服务条款',
     privacyPolicy: '隐私政策',
     privacyPolicyDesc: '查看隐私政策',
+    analyticsConsent: '使用分析同意',
+    analyticsConsentDesc: '收集匿名数据以改进应用',
     versionInfo: '版本信息',
     currentVersion: '当前版本',
     // 缓存

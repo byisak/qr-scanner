@@ -339,6 +339,8 @@ export default {
     termsOfServiceDesc: 'Ver términos de servicio',
     privacyPolicy: 'Política de privacidad',
     privacyPolicyDesc: 'Ver política de privacidad',
+    analyticsConsent: 'Consentimiento de análisis',
+    analyticsConsentDesc: 'Recopilar datos anónimos para mejorar la app',
     versionInfo: 'Información de versión',
     currentVersion: 'Versión actual',
     // Caché

@@ -339,6 +339,8 @@ export default {
     termsOfServiceDesc: '利用規約を見る',
     privacyPolicy: 'プライバシーポリシー',
     privacyPolicyDesc: 'プライバシーポリシーを見る',
+    analyticsConsent: '使用分析の同意',
+    analyticsConsentDesc: 'アプリ改善のための匿名データ収集',
     versionInfo: 'バージョン情報',
     currentVersion: '現在のバージョン',
     // キャッシュ
