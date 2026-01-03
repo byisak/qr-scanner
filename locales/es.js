@@ -1070,6 +1070,17 @@ export default {
     removeAdsDesc: 'Actualiza a Pro para usar todas las funciones permanentemente sin anuncios',
     additionalFormats: 'Formatos adicionales',
     alreadyUnlocked: 'Esta función ya está desbloqueada',
+    // Relacionado con progreso
+    unlockProgress: 'Progreso de desbloqueo',
+    featuresUnlocked: 'funciones desbloqueadas',
+    adReady: 'Anuncio listo',
+    adLoading: 'Cargando anuncio...',
+    adNotLoaded: 'Esperando carga de anuncio',
+    // Categorías
+    settingsFeatures: 'Funciones de configuración',
+    generatorFeatures: 'Funciones de generador',
+    qrStyles: 'Estilos QR',
+    qrStylesDesc: 'Desbloquear todos los estilos a la vez',
     features: {
       batchScan: 'Escaneo por lotes',
       deleteScannedBarcode: 'Eliminar código escaneado',
@@ -1078,6 +1089,11 @@ export default {
       icloudSync: 'Sincronización iCloud',
       unlimitedExport: 'Exportación ilimitada',
       businessScannerMode: 'Modo escáner empresarial',
+      barcodeTab: 'Generador de códigos',
+      advancedBarcodes: 'Códigos avanzados',
+      realtimeSync: 'Sincronización en tiempo real',
+      scanUrlIntegration: 'Integración URL de escaneo',
+      productSearch: 'Búsqueda de productos',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

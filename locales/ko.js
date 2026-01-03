@@ -1139,6 +1139,17 @@ export default {
     removeAdsDesc: 'Pro 버전으로 업그레이드하면 모든 기능을 광고 없이 영구적으로 사용할 수 있습니다',
     additionalFormats: '추가 형식 생성',
     alreadyUnlocked: '이미 잠금해제된 기능입니다',
+    // 진행률 관련
+    unlockProgress: '해제 진행률',
+    featuresUnlocked: '기능 해제됨',
+    adReady: '광고 준비됨',
+    adLoading: '광고 로딩 중...',
+    adNotLoaded: '광고 로딩 대기',
+    // 카테고리
+    settingsFeatures: '설정 기능',
+    generatorFeatures: '생성 기능',
+    qrStyles: 'QR 스타일',
+    qrStylesDesc: '한 번에 모든 스타일 해제',
     features: {
       batchScan: '배치 스캔',
       deleteScannedBarcode: '복사한 바코드 삭제',
@@ -1147,6 +1158,12 @@ export default {
       icloudSync: 'iCloud 동기화',
       unlimitedExport: '무제한 내보내기',
       businessScannerMode: '비즈니스 스캐너 모드',
+      // 추가 기능
+      barcodeTab: '바코드 생성',
+      advancedBarcodes: '고급 바코드',
+      realtimeSync: '실시간 동기화',
+      scanUrlIntegration: '스캔 URL 연동',
+      productSearch: '제품 검색',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

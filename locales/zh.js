@@ -1073,6 +1073,17 @@ export default {
     removeAdsDesc: '升级到Pro版可永久无广告使用所有功能',
     additionalFormats: '额外格式生成',
     alreadyUnlocked: '此功能已解锁',
+    // 进度相关
+    unlockProgress: '解锁进度',
+    featuresUnlocked: '功能已解锁',
+    adReady: '广告已准备',
+    adLoading: '广告加载中...',
+    adNotLoaded: '广告加载等待中',
+    // 分类
+    settingsFeatures: '设置功能',
+    generatorFeatures: '生成功能',
+    qrStyles: 'QR样式',
+    qrStylesDesc: '一次性解锁所有样式',
     features: {
       batchScan: '批量扫描',
       deleteScannedBarcode: '删除已扫描条码',
@@ -1081,6 +1092,11 @@ export default {
       icloudSync: 'iCloud同步',
       unlimitedExport: '无限导出',
       businessScannerMode: '商务扫描模式',
+      barcodeTab: '条形码生成',
+      advancedBarcodes: '高级条形码',
+      realtimeSync: '实时同步',
+      scanUrlIntegration: '扫描URL集成',
+      productSearch: '产品搜索',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

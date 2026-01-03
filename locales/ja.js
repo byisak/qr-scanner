@@ -1073,6 +1073,17 @@ export default {
     removeAdsDesc: 'Proにアップグレードすると、すべての機能を広告なしで永続的に使用できます',
     additionalFormats: '追加フォーマット生成',
     alreadyUnlocked: 'この機能はすでにアンロックされています',
+    // 進捗関連
+    unlockProgress: '解除の進捗',
+    featuresUnlocked: '機能が解除されました',
+    adReady: '広告準備完了',
+    adLoading: '広告読み込み中...',
+    adNotLoaded: '広告読み込み待機中',
+    // カテゴリ
+    settingsFeatures: '設定機能',
+    generatorFeatures: '生成機能',
+    qrStyles: 'QRスタイル',
+    qrStylesDesc: '一度にすべてのスタイルを解除',
     features: {
       batchScan: 'バッチスキャン',
       deleteScannedBarcode: 'スキャンしたバーコードを削除',
@@ -1081,6 +1092,11 @@ export default {
       icloudSync: 'iCloud同期',
       unlimitedExport: '無制限エクスポート',
       businessScannerMode: 'ビジネススキャナーモード',
+      barcodeTab: 'バーコード生成',
+      advancedBarcodes: '高度なバーコード',
+      realtimeSync: 'リアルタイム同期',
+      scanUrlIntegration: 'スキャンURL連携',
+      productSearch: '製品検索',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
