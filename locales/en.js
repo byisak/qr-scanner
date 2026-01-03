@@ -1148,6 +1148,7 @@ export default {
     // Categories
     settingsFeatures: 'Settings Features',
     generatorFeatures: 'Generator Features',
+    barcodeTypes: 'Barcode Types',
     qrStyles: 'QR Styles',
     qrStylesDesc: 'Unlock all styles at once',
     features: {

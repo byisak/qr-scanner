@@ -1148,6 +1148,7 @@ export default {
     // 카테고리
     settingsFeatures: '설정 기능',
     generatorFeatures: '생성 기능',
+    barcodeTypes: '바코드 타입',
     qrStyles: 'QR 스타일',
     qrStylesDesc: '한 번에 모든 스타일 해제',
     features: {

@@ -82,11 +82,62 @@ export const LOCKED_FEATURES = {
 
   // ===== 바코드 타입 (기본 6개 제외한 나머지) =====
   // 기본 무료: UPC-A, UPC-E, EAN-13, EAN-8, Code 128, QR Code
-  advancedBarcodes: {
-    id: 'advancedBarcodes',
+  // 개별 잠금 바코드 타입
+  barcodeCode39: {
+    id: 'barcodeCode39',
+    bcid: 'code39',
     adCount: 1,
     type: 'barcode',
-    description: '고급 바코드 타입',
+    name: 'Code 39',
+  },
+  barcodeCode93: {
+    id: 'barcodeCode93',
+    bcid: 'code93',
+    adCount: 1,
+    type: 'barcode',
+    name: 'Code 93',
+  },
+  barcodeItf14: {
+    id: 'barcodeItf14',
+    bcid: 'itf14',
+    adCount: 1,
+    type: 'barcode',
+    name: 'ITF-14',
+  },
+  barcodeInterleaved: {
+    id: 'barcodeInterleaved',
+    bcid: 'interleaved2of5',
+    adCount: 1,
+    type: 'barcode',
+    name: 'Interleaved 2 of 5',
+  },
+  barcodeCodabar: {
+    id: 'barcodeCodabar',
+    bcid: 'rationalizedCodabar',
+    adCount: 1,
+    type: 'barcode',
+    name: 'Codabar',
+  },
+  barcodePdf417: {
+    id: 'barcodePdf417',
+    bcid: 'pdf417',
+    adCount: 1,
+    type: 'barcode',
+    name: 'PDF417',
+  },
+  barcodeDatamatrix: {
+    id: 'barcodeDatamatrix',
+    bcid: 'datamatrix',
+    adCount: 1,
+    type: 'barcode',
+    name: 'Data Matrix',
+  },
+  barcodeAztec: {
+    id: 'barcodeAztec',
+    bcid: 'azteccode',
+    adCount: 1,
+    type: 'barcode',
+    name: 'Aztec Code',
   },
 };
 

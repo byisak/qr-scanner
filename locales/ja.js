@@ -1082,6 +1082,7 @@ export default {
     // カテゴリ
     settingsFeatures: '設定機能',
     generatorFeatures: '生成機能',
+    barcodeTypes: 'バーコードタイプ',
     qrStyles: 'QRスタイル',
     qrStylesDesc: '一度にすべてのスタイルを解除',
     features: {

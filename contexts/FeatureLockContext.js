@@ -173,13 +173,26 @@ export const FeatureLockProvider = ({ children }) => {
     return !unlockedFeatures.includes(featureId);
   }, [unlockedFeatures, devModeEnabled]);
 
-  // 바코드 타입이 잠겨있는지 확인
+  // 바코드 타입이 잠겨있는지 확인 (bcid로 개별 체크)
   const isBarcodeTypeLocked = useCallback((bcid) => {
     // 개발 모드: 모든 기능 잠금 해제
     if (devModeEnabled) return false;
     if (FREE_BARCODE_TYPES.includes(bcid)) return false;
-    return isLocked('advancedBarcodes');
+    // bcid로 해당 바코드 feature 찾기
+    const barcodeFeature = Object.values(LOCKED_FEATURES).find(
+      f => f.type === 'barcode' && f.bcid === bcid
+    );
+    if (!barcodeFeature) return false;
+    return isLocked(barcodeFeature.id);
   }, [isLocked, devModeEnabled]);
+
+  // bcid로 feature ID 가져오기
+  const getBarcodeFeatureId = useCallback((bcid) => {
+    const barcodeFeature = Object.values(LOCKED_FEATURES).find(
+      f => f.type === 'barcode' && f.bcid === bcid
+    );
+    return barcodeFeature?.id || null;
+  }, []);
 
   // QR 스타일이 잠겨있는지 확인 (인덱스 기반)
   const isQrStyleLocked = useCallback((styleIndex) => {
@@ -516,6 +529,7 @@ export const FeatureLockProvider = ({ children }) => {
   const value = {
     isLocked,
     isBarcodeTypeLocked,
+    getBarcodeFeatureId,
     isQrStyleLocked,
     unlock,
     unlockMultiple,

@@ -1079,6 +1079,7 @@ export default {
     // Categorías
     settingsFeatures: 'Funciones de configuración',
     generatorFeatures: 'Funciones de generador',
+    barcodeTypes: 'Tipos de código de barras',
     qrStyles: 'Estilos QR',
     qrStylesDesc: 'Desbloquear todos los estilos a la vez',
     features: {

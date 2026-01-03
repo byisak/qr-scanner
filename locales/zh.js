@@ -1082,6 +1082,7 @@ export default {
     // 分类
     settingsFeatures: '设置功能',
     generatorFeatures: '生成功能',
+    barcodeTypes: '条形码类型',
     qrStyles: 'QR样式',
     qrStylesDesc: '一次性解锁所有样式',
     features: {

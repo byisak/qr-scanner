@@ -32,7 +32,19 @@ const FEATURE_CATEGORIES = {
     titleKey: 'proFeatures.generatorFeatures',
     features: [
       { id: 'barcodeTab', icon: 'barcode-outline', color: '#007AFF' },
-      { id: 'advancedBarcodes', icon: 'grid-outline', color: '#AF52DE' },
+    ],
+  },
+  barcodeTypes: {
+    titleKey: 'proFeatures.barcodeTypes',
+    features: [
+      { id: 'barcodeCode39', icon: 'barcode-outline', color: '#007AFF', barcodeName: 'Code 39' },
+      { id: 'barcodeCode93', icon: 'barcode-outline', color: '#5856D6', barcodeName: 'Code 93' },
+      { id: 'barcodeItf14', icon: 'barcode-outline', color: '#FF9500', barcodeName: 'ITF-14' },
+      { id: 'barcodeInterleaved', icon: 'barcode-outline', color: '#34C759', barcodeName: 'Interleaved' },
+      { id: 'barcodeCodabar', icon: 'barcode-outline', color: '#FF3B30', barcodeName: 'Codabar' },
+      { id: 'barcodePdf417', icon: 'barcode-outline', color: '#AF52DE', barcodeName: 'PDF417' },
+      { id: 'barcodeDatamatrix', icon: 'grid-outline', color: '#00C7BE', barcodeName: 'Data Matrix' },
+      { id: 'barcodeAztec', icon: 'apps-outline', color: '#FF6B6B', barcodeName: 'Aztec' },
     ],
   },
   qrStyles: {
@@ -137,7 +149,7 @@ export default function ProFeaturesScreen() {
           <Ionicons name={feature.icon} size={24} color={feature.color} />
         </View>
         <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={2}>
-          {feature.styleName || t(`proFeatures.features.${feature.id}`) || feature.id}
+          {feature.barcodeName || feature.styleName || t(`proFeatures.features.${feature.id}`) || feature.id}
         </Text>
         {renderProgressBadge(feature.id, unlocked)}
       </TouchableOpacity>
@@ -241,6 +253,18 @@ export default function ProFeaturesScreen() {
           </Text>
           <View style={s.featureGrid}>
             {FEATURE_CATEGORIES.generator.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
+            )}
+          </View>
+        </View>
+
+        {/* 바코드 타입 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('proFeatures.barcodeTypes') || '바코드 타입'}
+          </Text>
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.barcodeTypes.features.map((feature) =>
               renderFeatureItem(feature, handleFeaturePress)
             )}
           </View>
