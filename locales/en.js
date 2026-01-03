@@ -25,6 +25,12 @@ export default {
     watchAd: 'Watch Ad',
     adComingSoon: 'Ad feature coming soon.\nUnlocked for free now!',
     unlocked: 'Unlocked',
+    // Ad count related
+    watchAdProgress: 'Watched {current}/{total} ads\nWatch {remaining} more to unlock.',
+    adWatched: 'Ad Watched',
+    remainingAds: 'Watch {remaining} more ads to unlock.',
+    featureUnlocked: 'Feature unlocked!',
+    allStylesUnlocked: 'All QR styles unlocked!',
   },
 
   // Auth

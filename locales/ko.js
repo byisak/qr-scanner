@@ -25,6 +25,12 @@ export default {
     watchAd: '광고 보기',
     adComingSoon: '광고 기능이 곧 추가됩니다.\n지금은 무료로 해제됩니다!',
     unlocked: '잠금 해제됨',
+    // 광고 횟수 관련
+    watchAdProgress: '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.',
+    adWatched: '광고 시청 완료',
+    remainingAds: '해제까지 {remaining}회 더 시청해주세요.',
+    featureUnlocked: '기능이 해제되었습니다!',
+    allStylesUnlocked: '모든 QR 스타일이 해제되었습니다!',
   },
 
   // 인증

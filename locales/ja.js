@@ -17,6 +17,21 @@ export default {
     success: '成功',
   },
 
+  // 機能ロック
+  featureLock: {
+    lockedTitle: 'ロックされた機能',
+    watchAdToUnlock: '広告を視聴するとこの機能を使用できます',
+    watchAd: '広告を見る',
+    adComingSoon: '広告機能は近日追加予定です。\n今は無料で解除されます！',
+    unlocked: 'ロック解除',
+    // 広告回数関連
+    watchAdProgress: '広告 {current}/{total} 視聴完了\nあと{remaining}回視聴で解除されます。',
+    adWatched: '広告視聴完了',
+    remainingAds: '解除まであと{remaining}回視聴してください。',
+    featureUnlocked: '機能が解除されました！',
+    allStylesUnlocked: 'すべてのQRスタイルが解除されました！',
+  },
+
   // 認証
   auth: {
     // ログイン/会員登録ボタン

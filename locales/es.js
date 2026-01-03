@@ -17,6 +17,21 @@ export default {
     success: 'Éxito',
   },
 
+  // Bloqueo de funciones
+  featureLock: {
+    lockedTitle: 'Función bloqueada',
+    watchAdToUnlock: 'Mira un anuncio para desbloquear esta función',
+    watchAd: 'Ver anuncio',
+    adComingSoon: 'Función de anuncios próximamente.\n¡Desbloqueado gratis por ahora!',
+    unlocked: 'Desbloqueado',
+    // Relacionado con conteo de anuncios
+    watchAdProgress: 'Visto {current}/{total} anuncios\nVe {remaining} más para desbloquear.',
+    adWatched: 'Anuncio visto',
+    remainingAds: 'Ve {remaining} anuncios más para desbloquear.',
+    featureUnlocked: '¡Función desbloqueada!',
+    allStylesUnlocked: '¡Todos los estilos QR desbloqueados!',
+  },
+
   // Autenticación
   auth: {
     // Botón de inicio de sesión/registro

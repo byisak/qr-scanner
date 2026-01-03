@@ -17,6 +17,21 @@ export default {
     success: '成功',
   },
 
+  // 功能锁定
+  featureLock: {
+    lockedTitle: '锁定功能',
+    watchAdToUnlock: '观看广告即可解锁此功能',
+    watchAd: '观看广告',
+    adComingSoon: '广告功能即将上线。\n现在免费解锁！',
+    unlocked: '已解锁',
+    // 广告次数相关
+    watchAdProgress: '已观看 {current}/{total} 次广告\n再观看{remaining}次即可解锁。',
+    adWatched: '广告观看完成',
+    remainingAds: '再观看{remaining}次广告即可解锁。',
+    featureUnlocked: '功能已解锁！',
+    allStylesUnlocked: '所有QR样式已解锁！',
+  },
+
   // 认证
   auth: {
     // 登录/注册按钮
