@@ -103,16 +103,6 @@ const createCommonSites = (googleDomain, ebayDomain, amazonDomain) => {
     });
   }
 
-  // Open Food Facts (공통)
-  sites.push({
-    id: 'openfoodfacts',
-    name: 'Open Food Facts',
-    url: 'https://my.openfoodfacts.org/product/{code}',
-    enabled: false,
-    openMode: 'inApp',
-    activationMode: 'product',
-  });
-
   return sites;
 };
 
@@ -129,7 +119,6 @@ const COUNTRY_SEARCH_SITES = {
     { id: 'coupang', name: '쿠팡', url: 'https://www.coupang.com/np/search?q={code}', enabled: true, openMode: 'browser', activationMode: 'product' },
     { id: 'gmarket', name: 'G마켓', url: 'https://browse.gmarket.co.kr/search?keyword={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'auction', name: '옥션', url: 'https://browse.auction.co.kr/search?keyword={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
-    { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
   ],
   // 덴마크
   DK: createCommonSites('google.dk', 'ebay.com', 'amazon.de'),
@@ -187,14 +176,12 @@ const COUNTRY_SEARCH_SITES = {
     { id: 'rakuten', name: '楽天市場', url: 'https://search.rakuten.co.jp/search/mall/{code}/', enabled: true, openMode: 'browser', activationMode: 'product' },
     { id: 'yahoo', name: 'Yahoo!ショッピング', url: 'https://shopping.yahoo.co.jp/search?p={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
     { id: 'amazon', name: 'Amazon.co.jp', url: 'https://www.amazon.co.jp/s/?keywords={code}&language=', enabled: false, openMode: 'browser', activationMode: 'product' },
-    { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
   ],
   // 중국 본토
   CN: [
     { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd={code}', enabled: true, openMode: 'inApp', activationMode: 'product' },
     { id: 'taobao', name: '淘宝', url: 'https://s.taobao.com/search?q={code}', enabled: true, openMode: 'browser', activationMode: 'product' },
     { id: 'jd', name: '京东', url: 'https://search.jd.com/Search?keyword={code}', enabled: false, openMode: 'browser', activationMode: 'product' },
-    { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
   ],
   // 체코
   CZ: createCommonSites('google.cz', 'ebay.com', 'amazon.de'),
@@ -217,7 +204,6 @@ const COUNTRY_SEARCH_SITES = {
     { id: 'google', name: 'Google', url: 'https://www.google.com.hk/search?q={code}', enabled: true, openMode: 'inApp', activationMode: 'product' },
     { id: 'ebay', name: 'eBay.com.hk', url: 'https://www.ebay.com.hk/sch/i.html?_nkw={code}&mkcid=1&mkrid=711-53200-19255-0&campid=5338057533&toolid=20008&mkevt=1', enabled: true, openMode: 'browser', activationMode: 'product' },
     { id: 'amazon', name: 'Amazon.com', url: 'https://www.amazon.com/s/?keywords={code}&language=', enabled: false, openMode: 'browser', activationMode: 'product' },
-    { id: 'openfoodfacts', name: 'Open Food Facts', url: 'https://my.openfoodfacts.org/product/{code}', enabled: false, openMode: 'inApp', activationMode: 'product' },
   ],
 };
 

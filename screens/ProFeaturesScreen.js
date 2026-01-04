@@ -12,100 +12,169 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { LOCKED_FEATURES } from '../config/lockedFeatures';
 
-// 고급 기능 목록 (adCount: 필요한 광고 시청 횟수)
-const ADVANCED_FEATURES = [
-  { key: 'batchScan', icon: 'layers-outline', color: '#007AFF', adCount: 2 },
-  { key: 'deleteScannedBarcode', icon: 'trash-outline', color: '#FF3B30', adCount: 2 },
-  { key: 'copyToClipboard', icon: 'copy-outline', color: '#34C759', adCount: 2 },
-  { key: 'manualScanConfirm', icon: 'hand-left-outline', color: '#FF9500', adCount: 2 },
-  { key: 'icloudSync', icon: 'cloud-outline', color: '#5856D6', adCount: 4 },
-  { key: 'unlimitedExport', icon: 'download-outline', color: '#AF52DE', adCount: 2 },
-  { key: 'businessScannerMode', icon: 'briefcase-outline', color: '#00C7BE', adCount: 4 },
-];
-
-// 추가 테마 목록
-const EXTRA_THEMES = [
-  { key: 'oceanBreeze', colors: ['#0077B6', '#00B4D8', '#90E0EF'], adCount: 2 },
-  { key: 'classicLook', colors: ['#6B705C', '#A5A58D', '#B7B7A4'], adCount: 2 },
-  { key: 'urbanVibe', colors: ['#2D3436', '#636E72', '#B2BEC3'], adCount: 2 },
-  { key: 'darkPlanet', colors: ['#1A1A2E', '#16213E', '#0F3460'], adCount: 2 },
-  { key: 'custom', colors: ['#667EEA', '#764BA2', '#F093FB'], adCount: 4 },
-];
-
-// 추가 형식 생성 (바코드 타입)
-const BARCODE_FORMATS = [
-  { key: 'ean13', name: 'EAN-13', adCount: 2 },
-  { key: 'upca', name: 'UPC-A', adCount: 2 },
-  { key: 'upce', name: 'UPC-E', adCount: 2 },
-  { key: 'ean8', name: 'EAN-8', adCount: 2 },
-  { key: 'code39', name: 'Code 39', adCount: 2 },
-  { key: 'code128', name: 'Code 128', adCount: 2 },
-  { key: 'itf', name: 'ITF', adCount: 2 },
-  { key: 'datamatrix', name: 'Data Matrix', adCount: 2, unlocked: true },
-  { key: 'aztec', name: 'Aztec', adCount: 2 },
-  { key: 'pdf417', name: 'PDF417', adCount: 2 },
-  { key: 'microqr', name: 'Micro\nQR code', adCount: 2 },
-  { key: 'micropdf417', name: 'Micro\nPDF417', adCount: 2 },
-];
+// 기능 카테고리별 정리
+const FEATURE_CATEGORIES = {
+  settings: {
+    titleKey: 'proFeatures.settingsFeatures',
+    features: [
+      { id: 'batchScan', icon: 'layers-outline', color: '#007AFF' },
+      { id: 'realtimeSync', icon: 'sync-outline', color: '#34C759' },
+      { id: 'scanUrlIntegration', icon: 'link-outline', color: '#FF9500' },
+      { id: 'productSearch', icon: 'search-outline', color: '#5856D6' },
+      { id: 'photoSave', icon: 'camera-outline', color: '#FF3B30' },
+    ],
+  },
+  generator: {
+    titleKey: 'proFeatures.generatorFeatures',
+    features: [
+      { id: 'barcodeTab', icon: 'barcode-outline', color: '#007AFF' },
+    ],
+  },
+  qrTypes: {
+    titleKey: 'proFeatures.qrTypes',
+    features: [
+      { id: 'qrTypeWebsite', icon: 'globe-outline', color: '#667eea', typeName: '웹사이트' },
+      { id: 'qrTypeContact', icon: 'person-outline', color: '#f5576c', typeName: '연락처' },
+      { id: 'qrTypeWifi', icon: 'wifi-outline', color: '#4facfe', typeName: 'WiFi' },
+      { id: 'qrTypeClipboard', icon: 'clipboard-outline', color: '#fa709a', typeName: '클립보드' },
+      { id: 'qrTypeEmail', icon: 'mail-outline', color: '#30cfd0', typeName: '이메일' },
+      { id: 'qrTypeSms', icon: 'chatbubble-outline', color: '#a8edea', typeName: 'SMS' },
+      { id: 'qrTypePhone', icon: 'call-outline', color: '#ff9a9e', typeName: '전화' },
+      { id: 'qrTypeEvent', icon: 'calendar-outline', color: '#fcb69f', typeName: '일정' },
+      { id: 'qrTypeLocation', icon: 'location-outline', color: '#ff6e7f', typeName: '위치' },
+    ],
+  },
+  barcodeTypes: {
+    titleKey: 'proFeatures.barcodeTypes',
+    features: [
+      { id: 'barcodeCode39', icon: 'barcode-outline', color: '#007AFF', barcodeName: 'Code 39' },
+      { id: 'barcodeCode93', icon: 'barcode-outline', color: '#5856D6', barcodeName: 'Code 93' },
+      { id: 'barcodeItf14', icon: 'barcode-outline', color: '#FF9500', barcodeName: 'ITF-14' },
+      { id: 'barcodeInterleaved', icon: 'barcode-outline', color: '#34C759', barcodeName: 'Interleaved' },
+      { id: 'barcodeCodabar', icon: 'barcode-outline', color: '#FF3B30', barcodeName: 'Codabar' },
+      { id: 'barcodePdf417', icon: 'barcode-outline', color: '#AF52DE', barcodeName: 'PDF417' },
+      { id: 'barcodeDatamatrix', icon: 'grid-outline', color: '#00C7BE', barcodeName: 'Data Matrix' },
+      { id: 'barcodeAztec', icon: 'apps-outline', color: '#FF6B6B', barcodeName: 'Aztec' },
+    ],
+  },
+  qrStyles: {
+    titleKey: 'proFeatures.qrStyles',
+    features: [
+      { id: 'qrStyleRounded', icon: 'square-outline', color: '#FF3B30', styleName: 'Rounded' },
+      { id: 'qrStyleDots', icon: 'ellipse-outline', color: '#FF9500', styleName: 'Dots' },
+      { id: 'qrStyleClassy', icon: 'diamond-outline', color: '#34C759', styleName: 'Classy' },
+      { id: 'qrStyleBlueGradient', icon: 'color-palette-outline', color: '#007AFF', styleName: 'Blue Gradient' },
+      { id: 'qrStyleSunset', icon: 'sunny-outline', color: '#FF6B6B', styleName: 'Sunset' },
+      { id: 'qrStyleDarkMode', icon: 'moon-outline', color: '#1A1A2E', styleName: 'Dark Mode' },
+      { id: 'qrStyleNeon', icon: 'flash-outline', color: '#00FF88', styleName: 'Neon' },
+    ],
+  },
+  backup: {
+    titleKey: 'proFeatures.backupFeatures',
+    features: [
+      { id: 'icloudBackup', icon: 'cloud-outline', color: '#007AFF' },
+      { id: 'googleDriveBackup', icon: 'logo-google', color: '#4285F4' },
+    ],
+  },
+};
 
 export default function ProFeaturesScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
+  const {
+    isLocked,
+    getAdProgress,
+    showUnlockAlert,
+    showQrStyleUnlockAlert,
+    isAdLoaded,
+    isAdLoading,
+  } = useFeatureLock();
 
-  const handleFeaturePress = (featureKey, adCount) => {
-    Alert.alert(
-      t('proFeatures.watchAdToUnlock'),
-      t('proFeatures.watchAdDesc'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('proVersion.watchAd'),
-          onPress: () => {
-            Alert.alert(t('common.notice'), t('proFeatures.adComingSoon'));
-          }
-        },
-      ]
-    );
-  };
-
-  const handleThemePress = (themeKey, adCount) => {
-    Alert.alert(
-      t('proFeatures.watchAdToUnlock'),
-      t('proFeatures.watchAdDesc'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('proVersion.watchAd'),
-          onPress: () => {
-            Alert.alert(t('common.notice'), t('proFeatures.adComingSoon'));
-          }
-        },
-      ]
-    );
-  };
-
-  const handleBarcodePress = (barcodeKey, unlocked) => {
-    if (unlocked) {
-      Alert.alert(t('common.notice'), t('proFeatures.alreadyUnlocked'));
+  // 개별 기능 클릭 처리
+  const handleFeaturePress = (featureId) => {
+    if (!isLocked(featureId)) {
+      Alert.alert(
+        t('common.notice') || '알림',
+        t('proFeatures.alreadyUnlocked') || '이미 해제된 기능입니다.'
+      );
       return;
     }
-    Alert.alert(
-      t('proFeatures.watchAdToUnlock'),
-      t('proFeatures.watchAdDesc'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('proVersion.watchAd'),
-          onPress: () => {
-            Alert.alert(t('common.notice'), t('proFeatures.adComingSoon'));
-          }
-        },
-      ]
+    showUnlockAlert(featureId);
+  };
+
+  // QR 스타일 클릭 처리 (모든 스타일 한번에 해제)
+  const handleQrStylePress = (featureId) => {
+    if (!isLocked(featureId)) {
+      Alert.alert(
+        t('common.notice') || '알림',
+        t('proFeatures.alreadyUnlocked') || '이미 해제된 기능입니다.'
+      );
+      return;
+    }
+    showQrStyleUnlockAlert();
+  };
+
+  // 진행률 뱃지 렌더링
+  const renderProgressBadge = (featureId, isUnlocked) => {
+    if (isUnlocked) {
+      return (
+        <View style={[s.checkBadge, { backgroundColor: colors.success }]}>
+          <Ionicons name="checkmark" size={12} color="#fff" />
+        </View>
+      );
+    }
+
+    const { current, required } = getAdProgress(featureId);
+    const hasProgress = current > 0;
+
+    return (
+      <View style={[
+        s.progressBadge,
+        { backgroundColor: hasProgress ? colors.primary : (isDark ? '#333' : '#E5E5EA') }
+      ]}>
+        <Text style={[
+          s.progressText,
+          { color: hasProgress ? '#fff' : colors.text, fontFamily: fonts.semiBold }
+        ]}>
+          {hasProgress ? `${current}/${required}` : required}
+        </Text>
+      </View>
+    );
+  };
+
+  // 기능 아이템 렌더링
+  const renderFeatureItem = (feature, onPress) => {
+    const featureConfig = LOCKED_FEATURES[feature.id];
+    if (!featureConfig) return null;
+
+    const unlocked = !isLocked(feature.id);
+
+    return (
+      <TouchableOpacity
+        key={feature.id}
+        style={[
+          s.featureItem,
+          { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' },
+          unlocked && { borderColor: colors.success, borderWidth: 2 }
+        ]}
+        onPress={() => onPress(feature.id)}
+        activeOpacity={0.7}
+      >
+        <View style={[s.featureIconContainer, { backgroundColor: `${feature.color}15` }]}>
+          <Ionicons name={feature.icon} size={24} color={feature.color} />
+        </View>
+        <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={2}>
+          {feature.barcodeName || feature.styleName || feature.typeName || t(`proFeatures.features.${feature.id}`) || feature.id}
+        </Text>
+        {renderProgressBadge(feature.id, unlocked)}
+      </TouchableOpacity>
     );
   };
 
@@ -125,6 +194,15 @@ export default function ProFeaturesScreen() {
     );
   };
 
+  // 전체 잠금 상태 계산
+  const getTotalProgress = () => {
+    const allFeatures = Object.keys(LOCKED_FEATURES);
+    const unlockedCount = allFeatures.filter(id => !isLocked(id)).length;
+    return { unlocked: unlockedCount, total: allFeatures.length };
+  };
+
+  const progress = getTotalProgress();
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
@@ -133,124 +211,130 @@ export default function ProFeaturesScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('proFeatures.title')}
+          {t('proFeatures.title') || '기능 잠금 해제'}
         </Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
-        {/* 설명 */}
-        <Text style={[s.description, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-          {t('proFeatures.description')}
-        </Text>
+        {/* 전체 진행률 표시 */}
+        <View style={[s.progressCard, { backgroundColor: colors.surface }]}>
+          <View style={s.progressHeader}>
+            <Ionicons name="lock-open-outline" size={24} color={colors.primary} />
+            <Text style={[s.progressTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              {t('proFeatures.unlockProgress') || '해제 진행률'}
+            </Text>
+          </View>
+          <View style={s.progressBarContainer}>
+            <View
+              style={[
+                s.progressBar,
+                {
+                  backgroundColor: colors.primary,
+                  width: `${(progress.unlocked / progress.total) * 100}%`,
+                },
+              ]}
+            />
+          </View>
+          <Text style={[s.progressText2, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+            {progress.unlocked} / {progress.total} {t('proFeatures.featuresUnlocked') || '기능 해제됨'}
+          </Text>
+          {/* 광고 로딩 상태 표시 */}
+          <View style={s.adStatusRow}>
+            <Ionicons
+              name={isAdLoaded ? 'checkmark-circle' : 'time-outline'}
+              size={16}
+              color={isAdLoaded ? colors.success : colors.textSecondary}
+            />
+            <Text style={[s.adStatusText, { color: isAdLoaded ? colors.success : colors.textSecondary, fontFamily: fonts.regular }]}>
+              {isAdLoaded
+                ? (t('proFeatures.adReady') || '광고 준비됨')
+                : isAdLoading
+                  ? (t('proFeatures.adLoading') || '광고 로딩 중...')
+                  : (t('proFeatures.adNotLoaded') || '광고 로딩 대기')}
+            </Text>
+          </View>
+        </View>
 
-        {/* 고급 기능 섹션 */}
+        {/* 설정 기능 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('proFeatures.advancedFeatures')}
+            {t('proFeatures.settingsFeatures') || '설정 기능'}
           </Text>
           <View style={s.featureGrid}>
-            {ADVANCED_FEATURES.map((feature) => (
-              <TouchableOpacity
-                key={feature.key}
-                style={[s.featureItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
-                onPress={() => handleFeaturePress(feature.key, feature.adCount)}
-                activeOpacity={0.7}
-              >
-                <View style={[s.featureIconContainer, { backgroundColor: `${feature.color}15` }]}>
-                  <Ionicons name={feature.icon} size={24} color={feature.color} />
-                </View>
-                <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={2}>
-                  {t(`proFeatures.features.${feature.key}`)}
-                </Text>
-                <View style={[s.adCountBadge, { backgroundColor: isDark ? '#333' : '#E5E5EA' }]}>
-                  <Text style={[s.adCountText, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                    {feature.adCount}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+            {FEATURE_CATEGORIES.settings.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
+            )}
           </View>
         </View>
 
-        {/* 추가 테마 섹션 */}
+        {/* 생성 기능 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('proFeatures.extraThemes')}
+            {t('proFeatures.generatorFeatures') || '생성 기능'}
           </Text>
-          <View style={s.themeGrid}>
-            {EXTRA_THEMES.map((theme) => (
-              <TouchableOpacity
-                key={theme.key}
-                style={s.themeItem}
-                onPress={() => handleThemePress(theme.key, theme.adCount)}
-                activeOpacity={0.7}
-              >
-                <View style={s.themePreviewContainer}>
-                  <LinearGradient
-                    colors={theme.colors}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={s.themePreview}
-                  />
-                  <View style={[s.themeAdBadge, { backgroundColor: isDark ? '#333' : '#E5E5EA' }]}>
-                    <Text style={[s.adCountText, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                      {theme.adCount}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[s.themeName, { color: colors.text, fontFamily: fonts.medium }]}>
-                  {t(`proFeatures.themes.${theme.key}`)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.generator.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
+            )}
           </View>
         </View>
 
-        {/* 추가 형식 생성 섹션 */}
+        {/* QR 타입 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <View style={s.sectionHeader}>
+            <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              {t('proFeatures.qrTypes') || 'QR 타입'}
+            </Text>
+            <Text style={[s.sectionSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('proFeatures.qrTypesDesc') || '텍스트 타입은 무료'}
+            </Text>
+          </View>
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.qrTypes.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
+            )}
+          </View>
+        </View>
+
+        {/* 바코드 타입 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('proFeatures.additionalFormats')}
+            {t('proFeatures.barcodeTypes') || '바코드 타입'}
           </Text>
-          <View style={s.barcodeGrid}>
-            {BARCODE_FORMATS.map((barcode) => (
-              <TouchableOpacity
-                key={barcode.key}
-                style={[
-                  s.barcodeItem,
-                  { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' },
-                  barcode.unlocked && { borderColor: colors.success, borderWidth: 2 }
-                ]}
-                onPress={() => handleBarcodePress(barcode.key, barcode.unlocked)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="barcode-outline"
-                  size={28}
-                  color={barcode.unlocked ? colors.success : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    s.barcodeName,
-                    { color: colors.text, fontFamily: fonts.medium }
-                  ]}
-                  numberOfLines={2}
-                >
-                  {barcode.name}
-                </Text>
-                {barcode.unlocked ? (
-                  <View style={[s.checkBadge, { backgroundColor: colors.success }]}>
-                    <Ionicons name="checkmark" size={12} color="#fff" />
-                  </View>
-                ) : (
-                  <View style={[s.adCountBadge, { backgroundColor: isDark ? '#333' : '#E5E5EA' }]}>
-                    <Text style={[s.adCountText, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                      {barcode.adCount}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.barcodeTypes.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
+            )}
+          </View>
+        </View>
+
+        {/* QR 스타일 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <View style={s.sectionHeader}>
+            <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              {t('proFeatures.qrStyles') || 'QR 스타일'}
+            </Text>
+            <Text style={[s.sectionSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('proFeatures.qrStylesDesc') || '한 번에 모든 스타일 해제'}
+            </Text>
+          </View>
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.qrStyles.features.map((feature) =>
+              renderFeatureItem(feature, handleQrStylePress)
+            )}
+          </View>
+        </View>
+
+        {/* 백업/내보내기 섹션 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('proFeatures.backupFeatures') || '백업/내보내기'}
+          </Text>
+          <View style={s.featureGrid}>
+            {FEATURE_CATEGORIES.backup.features.map((feature) =>
+              renderFeatureItem(feature, handleFeaturePress)
+            )}
           </View>
         </View>
 
@@ -268,7 +352,7 @@ export default function ProFeaturesScreen() {
           >
             <Ionicons name="sparkles" size={20} color="#fff" />
             <Text style={[s.removeAdsText, { fontFamily: fonts.bold }]}>
-              {t('proFeatures.removeAds')}
+              {t('proFeatures.removeAds') || '광고 제거하기'}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -306,11 +390,52 @@ const s = StyleSheet.create({
   scrollContent: {
     padding: 20,
   },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
+  // 진행률 카드
+  progressCard: {
+    borderRadius: 16,
+    padding: 20,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  progressTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressText2: {
+    fontSize: 14,
     textAlign: 'center',
+    marginBottom: 8,
+  },
+  adStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  adStatusText: {
+    fontSize: 13,
   },
   section: {
     borderRadius: 16,
@@ -322,10 +447,16 @@ const s = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
+  sectionHeader: {
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 17,
     fontWeight: '700',
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
   },
   featureGrid: {
     flexDirection: 'row',
@@ -367,6 +498,21 @@ const s = StyleSheet.create({
   },
   adCountText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  progressBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressText: {
+    fontSize: 11,
     fontWeight: '700',
   },
   themeGrid: {

@@ -4,7 +4,7 @@
 
 ### URL 생성 방식
 - **세션 ID**: 8자리 영숫자 (62^8 ≈ 218조 조합)
-- **URL 형식**: `http://158.247.248.140:3000/{sessionId}`
+- **URL 형식**: `https://scanview.app/{sessionId}`
 
 ---
 

@@ -17,10 +17,13 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.cubion.qrscanner",
       "usesIcloudStorage": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "QR 코드 스캔을 위해 카메라 접근이 필요합니다.",
         "NSPhotoLibraryUsageDescription": "QR 코드에 로고를 추가하기 위해 사진 접근이 필요합니다.",
         "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다.",
+        "NSCalendarsUsageDescription": "QR 코드의 일정을 캘린더에 추가하기 위해 접근이 필요합니다.",
+        "NSContactsUsageDescription": "QR 코드의 연락처 정보를 저장하기 위해 접근이 필요합니다.",
         "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -35,7 +38,11 @@
         "com.apple.developer.icloud-container-identifiers": ["iCloud.com.cubion.qrscanner"],
         "com.apple.developer.icloud-services": ["CloudDocuments", "CloudKit"],
         "com.apple.developer.ubiquity-container-identifiers": ["iCloud.com.cubion.qrscanner"],
-        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner"
+        "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner",
+        "com.apple.developer.networking.HotspotConfiguration": true
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
       }
     },
     "android": {
@@ -44,13 +51,20 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.cubion.qrscanner",
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS",
+        "android.permission.ACCESS_WIFI_STATE",
+        "android.permission.CHANGE_WIFI_STATE"
       ],
       "config": {
         "googleMaps": {
@@ -64,6 +78,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-maps",
+        {
+          "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
+        }
+      ],
       [
         "react-native-cloud-store",
         {
@@ -104,13 +124,26 @@
           "delayAppMeasurementInit": true,
           "userTrackingUsageDescription": "맞춤형 광고를 제공하기 위해 사용됩니다."
         }
+      ],
+      "@react-native-firebase/app",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "QR 코드의 일정을 캘린더에 추가하기 위해 접근이 필요합니다."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "QR 코드의 연락처 정보를 저장하기 위해 접근이 필요합니다."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
-      "serverUrl": "http://158.247.248.140:3000",
+      "serverUrl": "https://scanview.app",
       "kakao": {
         "nativeAppKey": "YOUR_KAKAO_NATIVE_APP_KEY"
       },

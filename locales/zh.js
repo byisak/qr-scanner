@@ -17,6 +17,28 @@ export default {
     success: '成功',
   },
 
+  // 功能锁定
+  featureLock: {
+    lockedTitle: '锁定功能',
+    watchAdToUnlock: '观看广告即可解锁此功能',
+    watchAd: '观看广告',
+    adComingSoon: '广告功能即将上线。\n现在免费解锁！',
+    unlocked: '已解锁',
+    // 广告次数相关
+    watchAdProgress: '已观看 {current}/{total} 次广告\n再观看{remaining}次即可解锁。',
+    adWatched: '广告观看完成',
+    remainingAds: '再观看{remaining}次广告即可解锁。',
+    featureUnlocked: '功能已解锁！',
+    allStylesUnlocked: '所有QR样式已解锁！',
+    // 广告加载/错误相关
+    adNotReady: '广告准备中',
+    adNotReadyMessage: '正在加载广告，请稍后再试。',
+    adError: '广告错误',
+    adErrorMessage: '显示广告时发生错误。',
+    loadingAd: '加载中...',
+    watchAdRequired: '观看{total}次广告即可解锁此功能。',
+  },
+
   // 认证
   auth: {
     // 登录/注册按钮
@@ -339,6 +361,8 @@ export default {
     termsOfServiceDesc: '查看服务条款',
     privacyPolicy: '隐私政策',
     privacyPolicyDesc: '查看隐私政策',
+    analyticsConsent: '使用分析同意',
+    analyticsConsentDesc: '收集匿名数据以改进应用',
     versionInfo: '版本信息',
     currentVersion: '当前版本',
     // 缓存
@@ -1049,6 +1073,21 @@ export default {
     removeAdsDesc: '升级到Pro版可永久无广告使用所有功能',
     additionalFormats: '额外格式生成',
     alreadyUnlocked: '此功能已解锁',
+    // 进度相关
+    unlockProgress: '解锁进度',
+    featuresUnlocked: '功能已解锁',
+    adReady: '广告已准备',
+    adLoading: '广告加载中...',
+    adNotLoaded: '广告加载等待中',
+    // 分类
+    settingsFeatures: '设置功能',
+    generatorFeatures: '生成功能',
+    qrTypes: 'QR类型',
+    qrTypesDesc: '文本类型免费',
+    barcodeTypes: '条形码类型',
+    qrStyles: 'QR样式',
+    qrStylesDesc: '一次性解锁所有样式',
+    backupFeatures: '备份/导出',
     features: {
       batchScan: '批量扫描',
       deleteScannedBarcode: '删除已扫描条码',
@@ -1057,6 +1096,14 @@ export default {
       icloudSync: 'iCloud同步',
       unlimitedExport: '无限导出',
       businessScannerMode: '商务扫描模式',
+      barcodeTab: '条形码生成',
+      advancedBarcodes: '高级条形码',
+      realtimeSync: '实时同步',
+      scanUrlIntegration: '扫描URL集成',
+      productSearch: '产品搜索',
+      photoSave: '扫描照片保存',
+      icloudBackup: 'iCloud备份',
+      googleDriveBackup: 'Google Drive备份',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
@@ -1128,5 +1175,63 @@ export default {
     qualityMinimum: '最小',
     qualityMinimumDesc: '最小文件，画质明显下降',
     note: '压缩率更改仅适用于新保存的照片',
+  },
+
+  // QR内容类型
+  qrTypes: {
+    url: 'URL',
+    phone: '电话号码',
+    sms: '短信',
+    email: '邮件',
+    wifi: 'WiFi',
+    location: '位置',
+    contact: '联系人',
+    event: '日程',
+    text: '文本',
+  },
+
+  // QR类型操作
+  qrActions: {
+    call: '拨打电话',
+    sendSms: '发送短信',
+    sendEmail: '发送邮件',
+    openMap: '在地图中查看',
+    getDirections: '获取路线',
+    addContact: '添加联系人',
+    addContactDesc: '请在通讯录应用中手动添加。',
+    addToCalendar: '添加到日历',
+    addToCalendarDesc: '请在日历应用中手动添加。',
+    copyPassword: '复制密码',
+    passwordCopied: '密码已复制。',
+    noPassword: '没有密码。',
+    openWifiSettings: 'WiFi设置',
+    openSettingsManually: '请在设置应用中连接WiFi。',
+    searchWeb: '网页搜索',
+    cannotCall: '无法拨打电话。',
+    // 额外翻译
+    connect: '连接',
+    networkName: '网络',
+    copyNetworkName: '复制网络',
+    networkCopied: '网络名称已复制。',
+    password: '密码',
+    security: '加密',
+    latitude: '纬度',
+    longitude: '经度',
+    address: '地址',
+    contactAdded: '联系人已添加。',
+    contactPermissionDenied: '需要通讯录权限。',
+    eventAdded: '日程已添加到日历。',
+    calendarPermissionDenied: '需要日历权限。',
+    noCalendarFound: '没有可用的日历。',
+    untitledEvent: '无标题',
+    // WiFi连接相关
+    connecting: '连接中...',
+    wifiConnected: '已连接到WiFi。',
+    connectionFailed: '连接失败',
+    wifiConnectionError: 'WiFi连接失败。是否在设置中手动连接？',
+    openSettings: '打开设置',
+    noNetworkName: '没有网络名称。',
+    locationPermissionForWifi: 'WiFi连接需要位置权限。',
+    invalidPassword: 'WPA/WPA2密码必须至少8个字符。是否在设置中手动连接？',
   },
 };

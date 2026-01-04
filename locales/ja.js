@@ -17,6 +17,28 @@ export default {
     success: '成功',
   },
 
+  // 機能ロック
+  featureLock: {
+    lockedTitle: 'ロックされた機能',
+    watchAdToUnlock: '広告を視聴するとこの機能を使用できます',
+    watchAd: '広告を見る',
+    adComingSoon: '広告機能は近日追加予定です。\n今は無料で解除されます！',
+    unlocked: 'ロック解除',
+    // 広告回数関連
+    watchAdProgress: '広告 {current}/{total} 視聴完了\nあと{remaining}回視聴で解除されます。',
+    adWatched: '広告視聴完了',
+    remainingAds: '解除まであと{remaining}回視聴してください。',
+    featureUnlocked: '機能が解除されました！',
+    allStylesUnlocked: 'すべてのQRスタイルが解除されました！',
+    // 広告ローディング/エラー関連
+    adNotReady: '広告準備中',
+    adNotReadyMessage: '広告を読み込んでいます。しばらくしてからもう一度お試しください。',
+    adError: '広告エラー',
+    adErrorMessage: '広告の表示中にエラーが発生しました。',
+    loadingAd: '読み込み中...',
+    watchAdRequired: 'この機能を解除するには広告を{total}回視聴する必要があります。',
+  },
+
   // 認証
   auth: {
     // ログイン/会員登録ボタン
@@ -339,6 +361,8 @@ export default {
     termsOfServiceDesc: '利用規約を見る',
     privacyPolicy: 'プライバシーポリシー',
     privacyPolicyDesc: 'プライバシーポリシーを見る',
+    analyticsConsent: '使用分析の同意',
+    analyticsConsentDesc: 'アプリ改善のための匿名データ収集',
     versionInfo: 'バージョン情報',
     currentVersion: '現在のバージョン',
     // キャッシュ
@@ -1049,6 +1073,21 @@ export default {
     removeAdsDesc: 'Proにアップグレードすると、すべての機能を広告なしで永続的に使用できます',
     additionalFormats: '追加フォーマット生成',
     alreadyUnlocked: 'この機能はすでにアンロックされています',
+    // 進捗関連
+    unlockProgress: '解除の進捗',
+    featuresUnlocked: '機能が解除されました',
+    adReady: '広告準備完了',
+    adLoading: '広告読み込み中...',
+    adNotLoaded: '広告読み込み待機中',
+    // カテゴリ
+    settingsFeatures: '設定機能',
+    generatorFeatures: '生成機能',
+    qrTypes: 'QRタイプ',
+    qrTypesDesc: 'テキストタイプは無料',
+    barcodeTypes: 'バーコードタイプ',
+    qrStyles: 'QRスタイル',
+    qrStylesDesc: '一度にすべてのスタイルを解除',
+    backupFeatures: 'バックアップ/エクスポート',
     features: {
       batchScan: 'バッチスキャン',
       deleteScannedBarcode: 'スキャンしたバーコードを削除',
@@ -1057,6 +1096,14 @@ export default {
       icloudSync: 'iCloud同期',
       unlimitedExport: '無制限エクスポート',
       businessScannerMode: 'ビジネススキャナーモード',
+      barcodeTab: 'バーコード生成',
+      advancedBarcodes: '高度なバーコード',
+      realtimeSync: 'リアルタイム同期',
+      scanUrlIntegration: 'スキャンURL連携',
+      productSearch: '製品検索',
+      photoSave: 'スキャン写真保存',
+      icloudBackup: 'iCloudバックアップ',
+      googleDriveBackup: 'Google Driveバックアップ',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
@@ -1128,5 +1175,63 @@ export default {
     qualityMinimum: '最小',
     qualityMinimumDesc: '最小サイズ、画質低下',
     note: '圧縮率の変更は新しく保存する写真にのみ適用されます',
+  },
+
+  // QRコンテンツタイプ
+  qrTypes: {
+    url: 'URL',
+    phone: '電話番号',
+    sms: 'SMS',
+    email: 'メール',
+    wifi: 'WiFi',
+    location: '位置情報',
+    contact: '連絡先',
+    event: 'イベント',
+    text: 'テキスト',
+  },
+
+  // QRタイプ別アクション
+  qrActions: {
+    call: '電話をかける',
+    sendSms: 'SMSを送信',
+    sendEmail: 'メールを送信',
+    openMap: '地図で見る',
+    getDirections: '道順を表示',
+    addContact: '連絡先に追加',
+    addContactDesc: '連絡先アプリで手動で追加してください。',
+    addToCalendar: 'カレンダーに追加',
+    addToCalendarDesc: 'カレンダーアプリで手動で追加してください。',
+    copyPassword: 'パスワードをコピー',
+    passwordCopied: 'パスワードがコピーされました。',
+    noPassword: 'パスワードがありません。',
+    openWifiSettings: 'WiFi設定',
+    openSettingsManually: '設定アプリでWiFiに接続してください。',
+    searchWeb: 'Web検索',
+    cannotCall: '電話をかけることができません。',
+    // 追加翻訳
+    connect: '接続',
+    networkName: 'ネットワーク',
+    copyNetworkName: 'ネットワークをコピー',
+    networkCopied: 'ネットワーク名がコピーされました。',
+    password: 'パスワード',
+    security: '暗号化',
+    latitude: '緯度',
+    longitude: '経度',
+    address: '住所',
+    contactAdded: '連絡先が追加されました。',
+    contactPermissionDenied: '連絡先の権限が必要です。',
+    eventAdded: '予定がカレンダーに追加されました。',
+    calendarPermissionDenied: 'カレンダーの権限が必要です。',
+    noCalendarFound: '利用可能なカレンダーがありません。',
+    untitledEvent: 'タイトルなし',
+    // WiFi接続関連
+    connecting: '接続中...',
+    wifiConnected: 'WiFiに接続しました。',
+    connectionFailed: '接続失敗',
+    wifiConnectionError: 'WiFi接続に失敗しました。設定で直接接続しますか？',
+    openSettings: '設定を開く',
+    noNetworkName: 'ネットワーク名がありません。',
+    locationPermissionForWifi: 'WiFi接続には位置情報の権限が必要です。',
+    invalidPassword: 'WPA/WPA2パスワードは8文字以上必要です。設定で直接接続しますか？',
   },
 };

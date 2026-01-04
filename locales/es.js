@@ -17,6 +17,28 @@ export default {
     success: 'Éxito',
   },
 
+  // Bloqueo de funciones
+  featureLock: {
+    lockedTitle: 'Función bloqueada',
+    watchAdToUnlock: 'Mira un anuncio para desbloquear esta función',
+    watchAd: 'Ver anuncio',
+    adComingSoon: 'Función de anuncios próximamente.\n¡Desbloqueado gratis por ahora!',
+    unlocked: 'Desbloqueado',
+    // Relacionado con conteo de anuncios
+    watchAdProgress: 'Visto {current}/{total} anuncios\nVe {remaining} más para desbloquear.',
+    adWatched: 'Anuncio visto',
+    remainingAds: 'Ve {remaining} anuncios más para desbloquear.',
+    featureUnlocked: '¡Función desbloqueada!',
+    allStylesUnlocked: '¡Todos los estilos QR desbloqueados!',
+    // Relacionado con carga/error de anuncios
+    adNotReady: 'Anuncio no listo',
+    adNotReadyMessage: 'Cargando anuncio. Por favor, inténtalo de nuevo en un momento.',
+    adError: 'Error de anuncio',
+    adErrorMessage: 'Ocurrió un error al mostrar el anuncio.',
+    loadingAd: 'Cargando...',
+    watchAdRequired: 'Ve {total} anuncio(s) para desbloquear esta función.',
+  },
+
   // Autenticación
   auth: {
     // Botón de inicio de sesión/registro
@@ -339,6 +361,8 @@ export default {
     termsOfServiceDesc: 'Ver términos de servicio',
     privacyPolicy: 'Política de privacidad',
     privacyPolicyDesc: 'Ver política de privacidad',
+    analyticsConsent: 'Consentimiento de análisis',
+    analyticsConsentDesc: 'Recopilar datos anónimos para mejorar la app',
     versionInfo: 'Información de versión',
     currentVersion: 'Versión actual',
     // Caché
@@ -1046,6 +1070,21 @@ export default {
     removeAdsDesc: 'Actualiza a Pro para usar todas las funciones permanentemente sin anuncios',
     additionalFormats: 'Formatos adicionales',
     alreadyUnlocked: 'Esta función ya está desbloqueada',
+    // Relacionado con progreso
+    unlockProgress: 'Progreso de desbloqueo',
+    featuresUnlocked: 'funciones desbloqueadas',
+    adReady: 'Anuncio listo',
+    adLoading: 'Cargando anuncio...',
+    adNotLoaded: 'Esperando carga de anuncio',
+    // Categorías
+    settingsFeatures: 'Funciones de configuración',
+    generatorFeatures: 'Funciones de generador',
+    qrTypes: 'Tipos de QR',
+    qrTypesDesc: 'El tipo texto es gratis',
+    barcodeTypes: 'Tipos de código de barras',
+    qrStyles: 'Estilos QR',
+    qrStylesDesc: 'Desbloquear todos los estilos a la vez',
+    backupFeatures: 'Respaldo/Exportar',
     features: {
       batchScan: 'Escaneo por lotes',
       deleteScannedBarcode: 'Eliminar código escaneado',
@@ -1054,6 +1093,14 @@ export default {
       icloudSync: 'Sincronización iCloud',
       unlimitedExport: 'Exportación ilimitada',
       businessScannerMode: 'Modo escáner empresarial',
+      barcodeTab: 'Generador de códigos',
+      advancedBarcodes: 'Códigos avanzados',
+      realtimeSync: 'Sincronización en tiempo real',
+      scanUrlIntegration: 'Integración URL de escaneo',
+      productSearch: 'Búsqueda de productos',
+      photoSave: 'Guardar foto de escaneo',
+      icloudBackup: 'Respaldo iCloud',
+      googleDriveBackup: 'Respaldo Google Drive',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
@@ -1125,5 +1172,63 @@ export default {
     qualityMinimum: 'Mínima',
     qualityMinimumDesc: 'Tamaño mínimo, pérdida notable de calidad',
     note: 'Los cambios de compresión solo aplican a nuevas fotos',
+  },
+
+  // Tipos de contenido QR
+  qrTypes: {
+    url: 'URL',
+    phone: 'Teléfono',
+    sms: 'SMS',
+    email: 'Correo',
+    wifi: 'WiFi',
+    location: 'Ubicación',
+    contact: 'Contacto',
+    event: 'Evento',
+    text: 'Texto',
+  },
+
+  // Acciones por tipo de QR
+  qrActions: {
+    call: 'Llamar',
+    sendSms: 'Enviar SMS',
+    sendEmail: 'Enviar correo',
+    openMap: 'Ver en mapa',
+    getDirections: 'Obtener direcciones',
+    addContact: 'Agregar contacto',
+    addContactDesc: 'Por favor agregue manualmente en la app de Contactos.',
+    addToCalendar: 'Agregar al calendario',
+    addToCalendarDesc: 'Por favor agregue manualmente en la app de Calendario.',
+    copyPassword: 'Copiar contraseña',
+    passwordCopied: 'Contraseña copiada.',
+    noPassword: 'Sin contraseña.',
+    openWifiSettings: 'Ajustes WiFi',
+    openSettingsManually: 'Por favor conecte WiFi en la app de Ajustes.',
+    searchWeb: 'Buscar en web',
+    cannotCall: 'No se puede realizar la llamada.',
+    // Traducciones adicionales
+    connect: 'Conectar',
+    networkName: 'Red',
+    copyNetworkName: 'Copiar red',
+    networkCopied: 'Nombre de red copiado.',
+    password: 'Contraseña',
+    security: 'Seguridad',
+    latitude: 'Latitud',
+    longitude: 'Longitud',
+    address: 'Dirección',
+    contactAdded: 'Contacto agregado.',
+    contactPermissionDenied: 'Se requiere permiso de contactos.',
+    eventAdded: 'Evento agregado al calendario.',
+    calendarPermissionDenied: 'Se requiere permiso de calendario.',
+    noCalendarFound: 'No hay calendario disponible.',
+    untitledEvent: 'Sin título',
+    // WiFi conexión relacionado
+    connecting: 'Conectando...',
+    wifiConnected: 'Conectado a WiFi.',
+    connectionFailed: 'Conexión fallida',
+    wifiConnectionError: 'Error al conectar a WiFi. ¿Desea conectar en Ajustes?',
+    openSettings: 'Abrir Ajustes',
+    noNetworkName: 'No hay nombre de red disponible.',
+    locationPermissionForWifi: 'Se requiere permiso de ubicación para la conexión WiFi.',
+    invalidPassword: 'La contraseña WPA/WPA2 debe tener al menos 8 caracteres. ¿Desea conectar en Ajustes?',
   },
 };

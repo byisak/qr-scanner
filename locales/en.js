@@ -15,6 +15,7 @@ export default {
     apply: 'Apply',
     notice: 'Notice',
     success: 'Success',
+    copied: 'Copied',
   },
 
   // Feature Lock
@@ -24,6 +25,19 @@ export default {
     watchAd: 'Watch Ad',
     adComingSoon: 'Ad feature coming soon.\nUnlocked for free now!',
     unlocked: 'Unlocked',
+    // Ad count related
+    watchAdProgress: 'Watched {current}/{total} ads\nWatch {remaining} more to unlock.',
+    adWatched: 'Ad Watched',
+    remainingAds: 'Watch {remaining} more ads to unlock.',
+    featureUnlocked: 'Feature unlocked!',
+    allStylesUnlocked: 'All QR styles unlocked!',
+    // Ad loading/error related
+    adNotReady: 'Ad not ready',
+    adNotReadyMessage: 'Loading ad. Please try again in a moment.',
+    adError: 'Ad Error',
+    adErrorMessage: 'An error occurred while showing the ad.',
+    loadingAd: 'Loading...',
+    watchAdRequired: 'Watch {total} ad(s) to unlock this feature.',
   },
 
   // Auth
@@ -352,6 +366,8 @@ export default {
     termsOfServiceDesc: 'View terms of service',
     privacyPolicy: 'Privacy Policy',
     privacyPolicyDesc: 'View privacy policy',
+    analyticsConsent: 'Usage Analytics',
+    analyticsConsentDesc: 'Collect anonymous data to improve the app',
     versionInfo: 'Version Info',
     currentVersion: 'Current Version',
     // Cache
@@ -846,6 +862,12 @@ export default {
     saveErrorMessage: 'Failed to save QR code.',
     clipboardPasted: 'Clipboard content pasted',
     clipboardEmpty: 'Clipboard is empty',
+    selectLocation: 'Select Location',
+    selectFromMap: 'Select from Map',
+    reorderTypes: 'Reorder QR Types',
+    reorderTypesDesc: 'Drag to reorder',
+    reorder: 'Order',
+    reorderBarcodeTypes: 'Reorder Barcode Types',
     // QR Style
     qrStyle: {
       title: 'QR Style',
@@ -1117,6 +1139,21 @@ export default {
     removeAdsDesc: 'Upgrade to Pro to use all features permanently without ads',
     additionalFormats: 'Additional Formats',
     alreadyUnlocked: 'This feature is already unlocked',
+    // Progress related
+    unlockProgress: 'Unlock Progress',
+    featuresUnlocked: 'features unlocked',
+    adReady: 'Ad ready',
+    adLoading: 'Loading ad...',
+    adNotLoaded: 'Ad loading pending',
+    // Categories
+    settingsFeatures: 'Settings Features',
+    generatorFeatures: 'Generator Features',
+    qrTypes: 'QR Types',
+    qrTypesDesc: 'Text type is free',
+    barcodeTypes: 'Barcode Types',
+    qrStyles: 'QR Styles',
+    qrStylesDesc: 'Unlock all styles at once',
+    backupFeatures: 'Backup/Export',
     features: {
       batchScan: 'Batch Scan',
       deleteScannedBarcode: 'Delete Scanned Barcode',
@@ -1125,6 +1162,14 @@ export default {
       icloudSync: 'iCloud Sync',
       unlimitedExport: 'Unlimited Export',
       businessScannerMode: 'Business Scanner Mode',
+      barcodeTab: 'Barcode Generator',
+      advancedBarcodes: 'Advanced Barcodes',
+      realtimeSync: 'Realtime Sync',
+      scanUrlIntegration: 'Scan URL Integration',
+      productSearch: 'Product Search',
+      photoSave: 'Scan Photo Save',
+      icloudBackup: 'iCloud Backup',
+      googleDriveBackup: 'Google Drive Backup',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
@@ -1196,5 +1241,82 @@ export default {
     qualityMinimum: 'Minimum',
     qualityMinimumDesc: 'Smallest size, noticeable quality loss',
     note: 'Compression changes only apply to newly saved photos',
+  },
+
+  // Map
+  map: {
+    searchPlaceholder: 'Search address...',
+    selectedLocation: 'Selected Location',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+    noResults: 'No Results',
+    noResultsDesc: 'Could not find the address. Please try a different search term.',
+    requiresBuild: 'Development Build Required',
+    requiresBuildDesc: 'Map feature requires a Development Build.\nNot supported in Expo Go.',
+    useCurrentLocation: 'Use Current Location',
+  },
+
+  // Location
+  location: {
+    permissionDenied: 'Location permission is required.',
+    fetchError: 'Unable to get current location.',
+  },
+
+  // QR Content Types
+  qrTypes: {
+    url: 'URL',
+    phone: 'Phone',
+    sms: 'SMS',
+    email: 'Email',
+    wifi: 'WiFi',
+    location: 'Location',
+    contact: 'Contact',
+    event: 'Event',
+    text: 'Text',
+  },
+
+  // QR Type Actions
+  qrActions: {
+    call: 'Call',
+    sendSms: 'Send SMS',
+    sendEmail: 'Send Email',
+    openMap: 'Open Map',
+    getDirections: 'Get Directions',
+    addContact: 'Add Contact',
+    addContactDesc: 'Please add manually in the Contacts app.',
+    addToCalendar: 'Add to Calendar',
+    addToCalendarDesc: 'Please add manually in the Calendar app.',
+    copyPassword: 'Copy Password',
+    passwordCopied: 'Password has been copied.',
+    noPassword: 'No password available.',
+    openWifiSettings: 'WiFi Settings',
+    openSettingsManually: 'Please connect to WiFi in the Settings app.',
+    searchWeb: 'Search Web',
+    cannotCall: 'Cannot make a call.',
+    // Additional translations
+    connect: 'Connect',
+    networkName: 'Network',
+    copyNetworkName: 'Copy Network',
+    networkCopied: 'Network name has been copied.',
+    password: 'Password',
+    security: 'Security',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
+    address: 'Address',
+    contactAdded: 'Contact has been added.',
+    contactPermissionDenied: 'Contact permission is required.',
+    eventAdded: 'Event has been added to calendar.',
+    calendarPermissionDenied: 'Calendar permission is required.',
+    noCalendarFound: 'No calendar available.',
+    untitledEvent: 'Untitled Event',
+    // WiFi connection related
+    connecting: 'Connecting...',
+    wifiConnected: 'Connected to WiFi.',
+    connectionFailed: 'Connection Failed',
+    wifiConnectionError: 'Failed to connect to WiFi. Would you like to connect in Settings?',
+    openSettings: 'Open Settings',
+    noNetworkName: 'No network name available.',
+    locationPermissionForWifi: 'Location permission is required for WiFi connection.',
+    invalidPassword: 'WPA/WPA2 password must be at least 8 characters. Would you like to connect in Settings?',
   },
 };

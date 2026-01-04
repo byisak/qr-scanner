@@ -8,8 +8,8 @@ import {
   TextInput,
   Alert,
   Modal,
-  Platform,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -242,6 +242,20 @@ export default function GroupEditScreen() {
 
   // 그룹 아이템 렌더링
   const renderItem = useCallback(({ item, drag, isActive }) => {
+    // 아이콘 및 색상 결정
+    let iconName = 'folder';
+    let iconColor = colors.primary;
+    if (item.isCloudSync) {
+      iconName = 'cloud';
+      iconColor = colors.primary;
+    } else if (item.isScanUrlGroup) {
+      iconName = 'link';
+      iconColor = colors.success;
+    } else if (item.id === DEFAULT_GROUP_ID) {
+      iconName = 'home';
+      iconColor = colors.primary;
+    }
+
     return (
       <ScaleDecorator>
         <TouchableOpacity
@@ -249,9 +263,12 @@ export default function GroupEditScreen() {
           onLongPress={drag}
           disabled={isActive}
           style={[
-            s.groupItem,
-            { backgroundColor: colors.surface },
-            isActive && { shadowOpacity: 0.3, elevation: 8 }
+            s.reorderItem,
+            {
+              backgroundColor: isActive ? colors.primary + '20' : colors.surface,
+              borderColor: colors.border,
+            },
+            isActive && { shadowOpacity: 0.3, elevation: 8, borderColor: colors.primary }
           ]}
         >
           {/* 드래그 핸들 */}
@@ -263,52 +280,51 @@ export default function GroupEditScreen() {
             <Ionicons name="menu" size={22} color={colors.textTertiary} />
           </TouchableOpacity>
 
-          <View style={s.groupInfo}>
-            {item.isCloudSync && (
-              <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-            )}
-            {item.isScanUrlGroup && (
-              <Ionicons name="link" size={18} color={colors.success} style={{ marginRight: 8 }} />
-            )}
-            <Text style={[s.groupName, { color: colors.text }]}>{item.name}</Text>
+          {/* 아이콘 */}
+          <View style={[s.reorderItemIcon, { backgroundColor: iconColor + '15' }]}>
+            <Ionicons name={iconName} size={20} color={iconColor} />
+          </View>
+
+          {/* 그룹 이름 */}
+          <View style={s.reorderItemTextContainer}>
+            <Text style={[s.reorderItemText, { color: colors.text }]}>{item.name}</Text>
             {item.id === DEFAULT_GROUP_ID && (
-              <View style={[s.badge, { backgroundColor: colors.primary + '20' }]}>
-                <Text style={[s.badgeText, { color: colors.primary }]}>
-                  {t('groupEdit.defaultGroup').split(' ')[0] || '기본'}
-                </Text>
-              </View>
+              <Text style={[s.reorderItemSubtext, { color: colors.textSecondary }]}>
+                {t('groupEdit.defaultGroup') || '기본'}
+              </Text>
             )}
             {item.isCloudSync && (
-              <View style={[s.badge, { backgroundColor: colors.primary, marginLeft: 6 }]}>
-                <Text style={[s.badgeText, { color: '#fff' }]}>Cloud</Text>
-              </View>
+              <Text style={[s.reorderItemSubtext, { color: colors.primary }]}>
+                Cloud Sync
+              </Text>
             )}
           </View>
 
+          {/* 액션 버튼들 */}
           <View style={s.groupActions}>
             {/* 이름 변경 버튼 */}
             <TouchableOpacity
-              style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled]}
               onPress={() => openEditModal(item)}
               disabled={item.id === DEFAULT_GROUP_ID}
             >
               <Ionicons
                 name="create-outline"
-                size={22}
-                color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.primary}
+                size={20}
+                color={item.id === DEFAULT_GROUP_ID ? colors.textTertiary : colors.primary}
               />
             </TouchableOpacity>
 
             {/* 삭제 버튼 */}
             <TouchableOpacity
-              style={[s.iconButton, item.id === DEFAULT_GROUP_ID && s.iconButtonDisabled]}
+              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled]}
               onPress={() => deleteGroup(item.id)}
               disabled={item.id === DEFAULT_GROUP_ID}
             >
               <Ionicons
                 name="trash-outline"
-                size={22}
-                color={item.id === DEFAULT_GROUP_ID ? colors.borderLight : colors.error}
+                size={20}
+                color={item.id === DEFAULT_GROUP_ID ? colors.textTertiary : colors.error}
               />
             </TouchableOpacity>
           </View>
@@ -342,10 +358,9 @@ export default function GroupEditScreen() {
           <View style={{ width: 28 }} />
         </View>
 
-        {/* 드래그 안내 문구 */}
-        <View style={[s.dragHint, { backgroundColor: colors.inputBackground }]}>
-          <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
-          <Text style={[s.dragHintText, { color: colors.textSecondary }]}>
+        {/* 서브타이틀 - 드래그 안내 */}
+        <View style={s.subtitleContainer}>
+          <Text style={[s.subtitle, { color: colors.textSecondary }]}>
             {t('groupEdit.dragToReorder') || '≡ 아이콘을 길게 눌러 순서를 변경하세요'}
           </Text>
         </View>
@@ -361,15 +376,15 @@ export default function GroupEditScreen() {
         />
 
         {/* 그룹 추가 버튼 */}
-        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom }]}>
-        <TouchableOpacity
-          style={[s.addButton, { backgroundColor: colors.primary }]}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Ionicons name="add-circle" size={24} color="#fff" />
-          <Text style={s.addButtonText}>{t('groupEdit.addGroup')}</Text>
-        </TouchableOpacity>
-      </View>
+        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 20 }]}>
+          <TouchableOpacity
+            style={[s.addButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowAddModal(true)}
+          >
+            <Ionicons name="add-circle" size={24} color="#fff" />
+            <Text style={s.addButtonText}>{t('groupEdit.addGroup')}</Text>
+          </TouchableOpacity>
+        </View>
 
       {/* 그룹 추가 모달 */}
       <Modal
@@ -510,66 +525,61 @@ const s = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  dragHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    gap: 8,
+  subtitleContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  dragHintText: {
-    fontSize: 13,
+  subtitle: {
+    fontSize: 14,
   },
   listContent: {
-    padding: 15,
-    paddingBottom: 250,
+    paddingVertical: 8,
+    paddingBottom: 280,
   },
-  groupItem: {
+  reorderItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    paddingLeft: 8,
-    borderRadius: 14,
-    marginBottom: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  reorderItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  reorderItemTextContainer: {
+    flex: 1,
+  },
+  reorderItemText: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  reorderItemSubtext: {
+    fontSize: 12,
+    marginTop: 2,
   },
   dragHandle: {
     padding: 8,
-    marginRight: 4,
-  },
-  groupInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  groupName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  badge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+    marginRight: 8,
   },
   groupActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  iconButton: {
+  actionButton: {
     padding: 8,
+    borderRadius: 8,
   },
-  iconButtonDisabled: {
-    opacity: 0.3,
+  actionButtonDisabled: {
+    opacity: 0.4,
   },
   addButtonContainer: {
     position: 'absolute',
@@ -577,7 +587,6 @@ const s = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingBottom: 40,
     paddingTop: 10,
   },
   addButton: {

@@ -28,6 +28,7 @@ import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner from '../components/AdBanner';
+import { getAnalyticsConsent, setAnalyticsConsent } from '../utils/analytics';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -65,6 +66,8 @@ export default function SettingsScreen() {
   // 캐시 크기
   const [cacheSize, setCacheSize] = useState(0);
   const [isCalculatingCache, setIsCalculatingCache] = useState(false);
+  // 분석 동의 상태
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
 
   // 캐시 크기 계산
   const calculateCacheSize = useCallback(async () => {
@@ -153,6 +156,12 @@ export default function SettingsScreen() {
     );
   };
 
+  // 분석 동의 토글
+  const handleAnalyticsToggle = async (value) => {
+    setAnalyticsEnabled(value);
+    await setAnalyticsConsent(value);
+  };
+
   // 압축률 전체 라벨 반환 (예: "높음 고화질(권장)")
   const getQualityFullLabel = (quality) => {
     const labels = {
@@ -216,6 +225,10 @@ export default function SettingsScreen() {
         if (q !== null) {
           setPhotoQuality(q);
         }
+
+        // 분석 동의 상태 로드
+        const analyticsConsent = await getAnalyticsConsent();
+        setAnalyticsEnabled(analyticsConsent);
       } catch (error) {
         console.error('Load settings error:', error);
       }
@@ -370,27 +383,18 @@ export default function SettingsScreen() {
             onPress={() => router.push('/profile-settings')}
             activeOpacity={0.7}
           >
-            <View style={s.profileLeft}>
-              <View style={[s.profileAvatar, { backgroundColor: isDark ? '#333' : '#f0f0f0' }]}>
-                {user?.profileImage ? (
-                  <Image source={{ uri: user.profileImage }} style={s.avatarImage} />
-                ) : (
-                  <Ionicons name="person" size={32} color={colors.textTertiary} />
-                )}
-              </View>
-              <View style={s.profileInfo}>
-                <View style={s.profileNameRow}>
-                  <Text style={[s.profileName, { color: colors.text, fontFamily: fonts.bold }]}>
-                    {user?.name || 'User'}
-                  </Text>
-                  <Text style={[s.profileNameSuffix, { color: colors.text, fontFamily: fonts.regular }]}>
-                    {' '}{language === 'ko' ? '님' : ''}
-                  </Text>
-                </View>
-                <Text style={[s.profileEmail, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {user?.email || ''}
+            <View style={s.profileInfo}>
+              <View style={s.profileNameRow}>
+                <Text style={[s.profileName, { color: colors.text, fontFamily: fonts.bold }]}>
+                  {user?.name || 'User'}
+                </Text>
+                <Text style={[s.profileNameSuffix, { color: colors.text, fontFamily: fonts.regular }]}>
+                  {' '}{language === 'ko' ? '님' : ''}
                 </Text>
               </View>
+              <Text style={[s.profileEmail, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {user?.email || ''}
+              </Text>
             </View>
             <TouchableOpacity
               style={s.settingsIconButton}
@@ -523,7 +527,13 @@ export default function SettingsScreen() {
           {/* 사진 저장 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/photo-save-settings')}
+            onPress={() => {
+              if (isLocked('photoSave')) {
+                showUnlockAlert('photoSave', () => router.push('/photo-save-settings'));
+              } else {
+                router.push('/photo-save-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -533,6 +543,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="photoSave" size={12} badge />
               <Text style={[s.statusText, { color: photoSaveEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {photoSaveEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -578,7 +589,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('continuousScan.description') || t('settings.batchScanModeDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="batchScan" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="batchScan" size={12} badge />
               <Text style={[s.statusText, { color: continuousScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {continuousScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -603,7 +614,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="scanUrlIntegration" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="scanUrlIntegration" size={12} badge />
               <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {on ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -663,7 +674,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.realtimeSyncDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="realtimeSync" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="realtimeSync" size={12} badge />
               <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {realtimeSyncEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -692,7 +703,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="productSearch" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="productSearch" size={12} badge />
               <Text style={[s.statusText, { color: productAutoSearch ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {productAutoSearch ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -784,7 +795,7 @@ export default function SettingsScreen() {
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
 
-          {/* 개선제안하기 */}
+          {/* 개선제안하기 - 임시 주석처리
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => Alert.alert(t('settings.suggestImprovement'), '준비 중입니다')}
@@ -796,8 +807,9 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+          */}
 
-          {/* 1:1 문의하기 */}
+          {/* 1:1 문의하기 - 임시 주석처리
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => Alert.alert(t('settings.oneOnOneInquiry'), '준비 중입니다')}
@@ -809,10 +821,11 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+          */}
 
           {/* 서비스 이용약관 */}
           <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push('/terms-of-service')}
             activeOpacity={0.7}
           >
@@ -835,6 +848,24 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+
+          {/* 사용 분석 동의 */}
+          <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                {t('settings.analyticsConsent') || '사용 분석 동의'}
+              </Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t('settings.analyticsConsentDesc') || '앱 개선을 위한 익명 사용 데이터 수집'}
+              </Text>
+            </View>
+            <Switch
+              value={analyticsEnabled}
+              onValueChange={handleAnalyticsToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
 
           {/* 버전정보 */}
           <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>

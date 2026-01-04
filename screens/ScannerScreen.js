@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
 import {
   DEBOUNCE_DELAYS,
@@ -38,6 +39,7 @@ import {
 } from '../constants/Timing';
 import websocketClient from '../utils/websocket';
 import config from '../config/config';
+import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/analytics';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
@@ -54,6 +56,7 @@ function ScannerScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const { triggerSync } = useSync();
+  const { user } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
   const { width: winWidth, height: winHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -162,6 +165,15 @@ function ScannerScreen() {
   useEffect(() => {
     scanResultModeRef.current = scanResultMode;
   }, [scanResultMode]);
+
+  // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
+  useEffect(() => {
+    if (realtimeSyncEnabled && activeSessionId) {
+      const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+      websocketClient.setUserId(validUserId);
+      console.log('[WebSocket] User changed, updated userId:', validUserId);
+    }
+  }, [user, realtimeSyncEnabled, activeSessionId]);
 
   // 토스트 표시 함수 (ScanToast 컴포넌트가 애니메이션 처리)
   const showToast = useCallback((toastInfo) => {
@@ -329,7 +341,10 @@ function ScannerScreen() {
               // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
               websocketClient.connect(config.serverUrl);
               websocketClient.setSessionId(selectedGroupId);
-              console.log('WebSocket connected for session group:', selectedGroupId);
+              // 개발 모드 user_id는 전송하지 않음 (dev- prefix 제외)
+              const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+              websocketClient.setUserId(validUserId);
+              console.log('WebSocket connected for session group:', selectedGroupId, 'userId:', validUserId);
             }
           }
         }
@@ -376,6 +391,9 @@ function ScannerScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // 화면 조회 추적
+      trackScreenView('Scanner', 'ScannerScreen');
+
       // 이전 cleanup 타이머 취소 (경쟁 상태 방지)
       if (cleanupTimeoutRef.current) {
         clearTimeout(cleanupTimeoutRef.current);
@@ -513,7 +531,10 @@ function ScannerScreen() {
                 // WebSocket 서버에 연결 (항상 config.serverUrl 사용)
                 websocketClient.connect(config.serverUrl);
                 websocketClient.setSessionId(selectedGroupId);
-                console.log('WebSocket connected for session group:', selectedGroupId);
+                // 개발 모드 user_id는 전송하지 않음 (dev- prefix 제외)
+                const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+                websocketClient.setUserId(validUserId);
+                console.log('WebSocket connected for session group:', selectedGroupId, 'userId:', validUserId);
               } else {
                 setActiveSessionId('');
               }
@@ -1005,11 +1026,17 @@ function ScannerScreen() {
     // 사진 촬영 (활성화된 경우)
     let photoUri = null;
     if (photoSaveEnabledRef.current) {
-      try {
-        const photoResult = await capturePhoto();
-        photoUri = photoResult?.croppedUri || photoResult;
-      } catch (error) {
-        console.log('Photo capture error:', error);
+      // 배치에 이미 같은 코드가 있으면 사진 저장 스킵 (저장 공간 절약)
+      const isDuplicateInBatch = batchScannedItems.some(item => item.code === data);
+      if (!isDuplicateInBatch) {
+        try {
+          const photoResult = await capturePhoto();
+          photoUri = photoResult?.croppedUri || photoResult;
+        } catch (error) {
+          console.log('Photo capture error:', error);
+        }
+      } else {
+        console.log('[processBatchScan] Skipping photo for duplicate code:', data);
       }
     }
 
@@ -1093,6 +1120,13 @@ function ScannerScreen() {
 
       lastScannedData.current = data;
       lastScannedTime.current = now;
+
+      // 스캔 이벤트 추적
+      if (normalizedType === 'qr' || normalizedType === 'qrcode') {
+        trackQRScanned(normalizedType, data.startsWith('http') ? 'url' : 'text');
+      } else {
+        trackBarcodeScanned(normalizedType);
+      }
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
@@ -1282,19 +1316,25 @@ function ScannerScreen() {
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
-      // 사진 저장이 활성화되어 있으면 촬영
+      // 사진 저장이 활성화되어 있으면 촬영 (중복 코드는 사진 저장 스킵)
       let photoPromise = null;
       const photoStartTime = Date.now();
       console.log('[ScannerScreen] Photo save enabled:', photoSaveEnabledRef.current);
       if (photoSaveEnabledRef.current) {
-        console.log('[ScannerScreen] Starting photo capture at:', photoStartTime);
-        photoPromise = capturePhoto().then(result => {
-          console.log('[ScannerScreen] Photo capture completed in:', Date.now() - photoStartTime, 'ms');
-          return result;
-        }).catch(err => {
-          console.log('Background photo capture error:', err);
-          return null;
-        });
+        // 히스토리에서 중복 여부 확인 - 중복이면 사진 저장 스킵 (저장 공간 절약)
+        const duplicateCheck = await checkDuplicateInHistory(data);
+        if (!duplicateCheck.isDuplicate) {
+          console.log('[ScannerScreen] Starting photo capture at:', photoStartTime);
+          photoPromise = capturePhoto().then(result => {
+            console.log('[ScannerScreen] Photo capture completed in:', Date.now() - photoStartTime, 'ms');
+            return result;
+          }).catch(err => {
+            console.log('Background photo capture error:', err);
+            return null;
+          });
+        } else {
+          console.log('[ScannerScreen] Skipping photo for duplicate code (already in history):', data);
+        }
       }
 
       if (navigationTimerRef.current) {
@@ -1559,7 +1599,10 @@ function ScannerScreen() {
         // WebSocket 연결 (항상 config.serverUrl 사용)
         websocketClient.connect(config.serverUrl);
         websocketClient.setSessionId(groupId);
-        console.log('WebSocket connected for session group:', groupId);
+        // 개발 모드 user_id는 전송하지 않음 (dev- prefix 제외)
+        const validUserId = user?.id && !user.id.startsWith('dev-') ? user.id : null;
+        websocketClient.setUserId(validUserId);
+        console.log('WebSocket connected for session group:', groupId, 'userId:', validUserId);
       } else {
         // 일반 그룹 선택 시 WebSocket 연결 해제
         setActiveSessionId('');
@@ -1571,7 +1614,7 @@ function ScannerScreen() {
     } catch (error) {
       console.error('Failed to select group:', error);
     }
-  }, [realtimeSyncEnabled]);
+  }, [realtimeSyncEnabled, user]);
 
   // 갤러리 사진 목록 상태
   const [galleryModalVisible, setGalleryModalVisible] = useState(false);

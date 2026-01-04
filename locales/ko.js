@@ -15,6 +15,7 @@ export default {
     apply: '적용',
     notice: '알림',
     success: '성공',
+    copied: '복사됨',
   },
 
   // 기능 잠금
@@ -24,6 +25,19 @@ export default {
     watchAd: '광고 보기',
     adComingSoon: '광고 기능이 곧 추가됩니다.\n지금은 무료로 해제됩니다!',
     unlocked: '잠금 해제됨',
+    // 광고 횟수 관련
+    watchAdProgress: '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.',
+    adWatched: '광고 시청 완료',
+    remainingAds: '해제까지 {remaining}회 더 시청해주세요.',
+    featureUnlocked: '기능이 해제되었습니다!',
+    allStylesUnlocked: '모든 QR 스타일이 해제되었습니다!',
+    // 광고 로딩/에러 관련
+    adNotReady: '광고 준비 중',
+    adNotReadyMessage: '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+    adError: '광고 오류',
+    adErrorMessage: '광고를 표시하는 중 오류가 발생했습니다.',
+    loadingAd: '로딩 중...',
+    watchAdRequired: '이 기능을 해제하려면 광고를 {total}회 시청해야 합니다.',
   },
 
   // 인증
@@ -354,6 +368,8 @@ export default {
     termsOfServiceDesc: '서비스 이용 약관 보기',
     privacyPolicy: '개인정보 처리방침',
     privacyPolicyDesc: '개인정보 처리방침 보기',
+    analyticsConsent: '사용 분석 동의',
+    analyticsConsentDesc: '앱 개선을 위한 익명 사용 데이터 수집',
     versionInfo: '버전정보',
     currentVersion: '현재 버전',
     // 캐시
@@ -846,6 +862,12 @@ export default {
     saveErrorMessage: 'QR 코드 저장에 실패했습니다.',
     clipboardPasted: '클립보드 내용을 가져왔습니다',
     clipboardEmpty: '클립보드가 비어있습니다',
+    selectLocation: '위치 선택',
+    selectFromMap: '지도에서 선택',
+    reorderTypes: 'QR 타입 순서 변경',
+    reorderTypesDesc: '드래그하여 순서를 변경하세요',
+    reorder: '순서',
+    reorderBarcodeTypes: '바코드 타입 순서 변경',
     // QR 스타일
     qrStyle: {
       title: 'QR 스타일',
@@ -1117,6 +1139,21 @@ export default {
     removeAdsDesc: 'Pro 버전으로 업그레이드하면 모든 기능을 광고 없이 영구적으로 사용할 수 있습니다',
     additionalFormats: '추가 형식 생성',
     alreadyUnlocked: '이미 잠금해제된 기능입니다',
+    // 진행률 관련
+    unlockProgress: '해제 진행률',
+    featuresUnlocked: '기능 해제됨',
+    adReady: '광고 준비됨',
+    adLoading: '광고 로딩 중...',
+    adNotLoaded: '광고 로딩 대기',
+    // 카테고리
+    settingsFeatures: '설정 기능',
+    generatorFeatures: '생성 기능',
+    qrTypes: 'QR 타입',
+    qrTypesDesc: '텍스트 타입은 무료',
+    barcodeTypes: '바코드 타입',
+    qrStyles: 'QR 스타일',
+    qrStylesDesc: '한 번에 모든 스타일 해제',
+    backupFeatures: '백업/내보내기',
     features: {
       batchScan: '배치 스캔',
       deleteScannedBarcode: '복사한 바코드 삭제',
@@ -1125,6 +1162,15 @@ export default {
       icloudSync: 'iCloud 동기화',
       unlimitedExport: '무제한 내보내기',
       businessScannerMode: '비즈니스 스캐너 모드',
+      // 추가 기능
+      barcodeTab: '바코드 생성',
+      advancedBarcodes: '고급 바코드',
+      realtimeSync: '실시간 동기화',
+      scanUrlIntegration: '스캔 URL 연동',
+      productSearch: '제품 검색',
+      photoSave: '스캔 사진 저장',
+      icloudBackup: 'iCloud 백업',
+      googleDriveBackup: 'Google Drive 백업',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
@@ -1196,5 +1242,82 @@ export default {
     qualityMinimum: '최소',
     qualityMinimumDesc: '최저 용량, 화질 저하',
     note: '압축률 변경은 새로 저장되는 사진에만 적용됩니다',
+  },
+
+  // 지도
+  map: {
+    searchPlaceholder: '주소 검색...',
+    selectedLocation: '선택된 위치',
+    latitude: '위도',
+    longitude: '경도',
+    noResults: '검색 결과 없음',
+    noResultsDesc: '해당 주소를 찾을 수 없습니다. 다른 검색어를 시도해주세요.',
+    requiresBuild: 'Development Build 필요',
+    requiresBuildDesc: '지도 기능을 사용하려면 Development Build가 필요합니다.\nExpo Go에서는 지원되지 않습니다.',
+    useCurrentLocation: '현재 위치 사용',
+  },
+
+  // 위치
+  location: {
+    permissionDenied: '위치 권한이 필요합니다.',
+    fetchError: '현재 위치를 가져올 수 없습니다.',
+  },
+
+  // QR 콘텐츠 타입
+  qrTypes: {
+    url: 'URL',
+    phone: '전화번호',
+    sms: 'SMS',
+    email: '이메일',
+    wifi: 'WiFi',
+    location: '위치',
+    contact: '연락처',
+    event: '일정',
+    text: '텍스트',
+  },
+
+  // QR 타입별 액션
+  qrActions: {
+    call: '전화걸기',
+    sendSms: '문자 보내기',
+    sendEmail: '이메일 보내기',
+    openMap: '지도에서 보기',
+    getDirections: '길찾기',
+    addContact: '연락처 추가',
+    addContactDesc: '연락처 앱에서 수동으로 추가해주세요.',
+    addToCalendar: '캘린더에 추가',
+    addToCalendarDesc: '캘린더 앱에서 수동으로 추가해주세요.',
+    copyPassword: '비밀번호 복사',
+    passwordCopied: '비밀번호가 복사되었습니다.',
+    noPassword: '비밀번호가 없습니다.',
+    openWifiSettings: 'WiFi 설정',
+    openSettingsManually: '설정 앱에서 WiFi를 연결해주세요.',
+    searchWeb: '웹 검색',
+    cannotCall: '전화를 걸 수 없습니다.',
+    // 추가 번역
+    connect: '연결',
+    networkName: '네트워크',
+    copyNetworkName: '네트워크 복사',
+    networkCopied: '네트워크 이름이 복사되었습니다.',
+    password: '비밀번호',
+    security: '암호화',
+    latitude: '위도',
+    longitude: '경도',
+    address: '주소',
+    contactAdded: '연락처가 추가되었습니다.',
+    contactPermissionDenied: '연락처 권한이 필요합니다.',
+    eventAdded: '일정이 캘린더에 추가되었습니다.',
+    calendarPermissionDenied: '캘린더 권한이 필요합니다.',
+    noCalendarFound: '사용 가능한 캘린더가 없습니다.',
+    untitledEvent: '제목 없음',
+    // WiFi 연결 관련
+    connecting: '연결 중...',
+    wifiConnected: 'WiFi에 연결되었습니다.',
+    connectionFailed: '연결 실패',
+    wifiConnectionError: 'WiFi 연결에 실패했습니다. 설정에서 직접 연결하시겠습니까?',
+    openSettings: '설정 열기',
+    noNetworkName: '네트워크 이름이 없습니다.',
+    locationPermissionForWifi: 'WiFi 연결을 위해 위치 권한이 필요합니다.',
+    invalidPassword: 'WPA/WPA2 비밀번호는 8자 이상이어야 합니다. 설정에서 직접 연결하시겠습니까?',
   },
 };

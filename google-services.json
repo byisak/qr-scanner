@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "824067722624",
+    "project_id": "qrcode-e17ad",
+    "storage_bucket": "qrcode-e17ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:824067722624:android:326c9dca00700a0d11c565",
+        "android_client_info": {
+          "package_name": "com.cubion.qrscanner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCaC8fR8ot5bvY6GlHsrUIbUnY3f5UOJMA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

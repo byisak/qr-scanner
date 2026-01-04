@@ -36,14 +36,18 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
-import { FREE_BARCODE_TYPES } from '../config/lockedFeatures';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
+import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Slider from '@react-native-community/slider';
+import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved, trackQRShared } from '../utils/analytics';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -71,7 +75,7 @@ const QR_TYPES = [
 export default function GeneratorScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, showBarcodeUnlockAlert } = useFeatureLock();
+  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -106,6 +110,14 @@ export default function GeneratorScreen() {
   const [barcodePickerVisible, setBarcodePickerVisible] = useState(false);
   const [barcodeSearchQuery, setBarcodeSearchQuery] = useState('');
 
+  // QR 타입 순서 관리
+  const [qrTypeOrder, setQrTypeOrder] = useState(QR_TYPES.map(t => t.id));
+  const [qrTypeReorderVisible, setQrTypeReorderVisible] = useState(false);
+
+  // 바코드 타입 순서 관리
+  const [barcodeTypeOrder, setBarcodeTypeOrder] = useState([]);
+  const [barcodeReorderVisible, setBarcodeReorderVisible] = useState(false);
+
   // 즐겨찾기 및 숨긴 기본 바코드 로드
   useEffect(() => {
     const loadFavorites = async () => {
@@ -125,12 +137,86 @@ export default function GeneratorScreen() {
     loadFavorites();
   }, []);
 
+  // QR 타입 순서 로드
+  useEffect(() => {
+    const loadQrTypeOrder = async () => {
+      try {
+        const savedOrder = await AsyncStorage.getItem('qrTypeOrder');
+        if (savedOrder) {
+          const order = JSON.parse(savedOrder);
+          // 저장된 순서에 새로 추가된 타입이 있으면 뒤에 추가
+          const allTypeIds = QR_TYPES.map(t => t.id);
+          const validOrder = order.filter(id => allTypeIds.includes(id));
+          const missingTypes = allTypeIds.filter(id => !validOrder.includes(id));
+          setQrTypeOrder([...validOrder, ...missingTypes]);
+        }
+      } catch (error) {
+        console.error('Error loading QR type order:', error);
+      }
+    };
+    loadQrTypeOrder();
+  }, []);
+
+  // 순서대로 정렬된 QR 타입 목록
+  const orderedQrTypes = useMemo(() => {
+    return qrTypeOrder
+      .map(id => QR_TYPES.find(t => t.id === id))
+      .filter(Boolean);
+  }, [qrTypeOrder]);
+
+  // QR 타입 순서 저장
+  const saveQrTypeOrder = async (newOrder) => {
+    try {
+      await AsyncStorage.setItem('qrTypeOrder', JSON.stringify(newOrder));
+    } catch (error) {
+      console.error('Error saving QR type order:', error);
+    }
+  };
+
+  // QR 타입 순서 변경 핸들러
+  const handleQrTypeReorder = async ({ data }) => {
+    const newOrder = data.map(item => item.id);
+    setQrTypeOrder(newOrder);
+    await saveQrTypeOrder(newOrder);
+  };
+
+  // 바코드 타입 순서 로드
+  useEffect(() => {
+    const loadBarcodeOrder = async () => {
+      try {
+        const savedOrder = await AsyncStorage.getItem('barcodeTypeOrder');
+        if (savedOrder) {
+          setBarcodeTypeOrder(JSON.parse(savedOrder));
+        }
+      } catch (error) {
+        console.error('Error loading barcode type order:', error);
+      }
+    };
+    loadBarcodeOrder();
+  }, []);
+
+  // 바코드 타입 순서 저장
+  const saveBarcodeTypeOrder = async (newOrder) => {
+    try {
+      await AsyncStorage.setItem('barcodeTypeOrder', JSON.stringify(newOrder));
+    } catch (error) {
+      console.error('Error saving barcode type order:', error);
+    }
+  };
+
+  // 바코드 타입 순서 변경 핸들러
+  const handleBarcodeTypeReorder = async ({ data }) => {
+    const newOrder = data.map(item => item.bcid);
+    setBarcodeTypeOrder(newOrder);
+    await saveBarcodeTypeOrder(newOrder);
+  };
+
   // 현재 선택된 바코드 정보 조회
   const selectedBarcodeInfo = useMemo(() => {
     return ALL_BWIP_BARCODES.find(b => b.bcid === selectedBarcodeFormat) || ALL_BWIP_BARCODES[0];
   }, [selectedBarcodeFormat]);
 
-  // 표시할 바코드 타입 목록 계산 (숨기지 않은 기본 + 즐겨찾기)
+  // 표시할 바코드 타입 목록 계산 (숨기지 않은 기본 + 즐겨찾기, 저장된 순서 반영)
   const displayedBarcodeTypes = useMemo(() => {
     const defaultTypes = ALL_BWIP_BARCODES.filter(
       b => DEFAULT_BARCODE_BCIDS.includes(b.bcid) && !hiddenDefaults.includes(b.bcid)
@@ -138,8 +224,27 @@ export default function GeneratorScreen() {
     const favoriteTypes = ALL_BWIP_BARCODES.filter(
       b => favoriteBarcodes.includes(b.bcid) && !DEFAULT_BARCODE_BCIDS.includes(b.bcid)
     );
-    return [...defaultTypes, ...favoriteTypes];
-  }, [favoriteBarcodes, hiddenDefaults]);
+    const allTypes = [...defaultTypes, ...favoriteTypes];
+
+    // 저장된 순서가 있으면 적용
+    if (barcodeTypeOrder.length > 0) {
+      const ordered = [];
+      // 저장된 순서대로 먼저 추가
+      barcodeTypeOrder.forEach(bcid => {
+        const type = allTypes.find(t => t.bcid === bcid);
+        if (type) ordered.push(type);
+      });
+      // 저장된 순서에 없는 타입들은 뒤에 추가
+      allTypes.forEach(type => {
+        if (!barcodeTypeOrder.includes(type.bcid)) {
+          ordered.push(type);
+        }
+      });
+      return ordered;
+    }
+
+    return allTypes;
+  }, [favoriteBarcodes, hiddenDefaults, barcodeTypeOrder]);
 
   // 모달에서 검색 필터링된 바코드 목록
   const filteredBarcodes = useMemo(() => {
@@ -286,38 +391,37 @@ export default function GeneratorScreen() {
     }
   }, [params.initialMode, params.initialType, params.initialData, params.initialBarcodeFormat, params.initialBarcodeValue]);
 
-  // Load selected location from map picker
-  useEffect(() => {
-    const loadSelectedLocation = async () => {
-      try {
-        const locationData = await AsyncStorage.getItem('selectedLocation');
-        if (locationData) {
-          const { latitude, longitude } = JSON.parse(locationData);
-          setFormData((prev) => ({
-            ...prev,
-            location: { latitude, longitude },
-          }));
-          // Clear the stored location
-          await AsyncStorage.removeItem('selectedLocation');
+  // Load selected location from map picker when screen gets focus
+  useFocusEffect(
+    useCallback(() => {
+      // 화면 조회 추적
+      trackScreenView('Generator', 'GeneratorScreen');
+
+      const loadSelectedLocation = async () => {
+        try {
+          const locationData = await AsyncStorage.getItem('@selected_map_location');
+          console.log('[LOCATION DEBUG] 저장된 위치 데이터:', locationData);
+          if (locationData) {
+            const { latitude, longitude, timestamp } = JSON.parse(locationData);
+            // Only use location data if it's recent (within 60 seconds)
+            if (timestamp && Date.now() - timestamp < 60000) {
+              console.log('[LOCATION DEBUG] 위치 업데이트:', { latitude, longitude });
+              setFormData((prev) => ({
+                ...prev,
+                location: { latitude, longitude },
+              }));
+            }
+            // Clear the stored location
+            await AsyncStorage.removeItem('@selected_map_location');
+          }
+        } catch (error) {
+          console.error('Error loading selected location:', error);
         }
-      } catch (error) {
-        console.error('Error loading selected location:', error);
-      }
-    };
+      };
 
-    // Check for location updates when screen comes into focus
-    const unsubscribe = router.addListener?.('focus', () => {
       loadSelectedLocation();
-    });
-
-    loadSelectedLocation();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, []);
+    }, [])
+  );
 
   const generateQRData = () => {
     const data = formData[selectedType];
@@ -414,24 +518,45 @@ export default function GeneratorScreen() {
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+
+    // QR 타입 잠금 체크 (text는 무료)
+    if (isQrTypeLocked(typeId)) {
+      const featureId = getQrTypeFeatureId(typeId);
+      if (featureId) {
+        showUnlockAlert(featureId, () => {
+          setSelectedType(typeId);
+          // 해제 후 clipboard 타입이면 클립보드 내용 로드
+          if (typeId === 'clipboard') {
+            loadClipboardContent();
+          }
+        });
+      }
+      return;
+    }
+
     setSelectedType(typeId);
 
     // Load clipboard content if clipboard type is selected
     if (typeId === 'clipboard') {
-      try {
-        const clipboardText = await Clipboard.getStringAsync();
-        if (clipboardText) {
-          setFormData((prev) => ({
-            ...prev,
-            clipboard: { text: clipboardText },
-          }));
-          Alert.alert('✓', t('generator.clipboardPasted'));
-        } else {
-          Alert.alert('ℹ️', t('generator.clipboardEmpty'));
-        }
-      } catch (error) {
-        console.error('Error reading clipboard:', error);
+      loadClipboardContent();
+    }
+  };
+
+  // 클립보드 내용 로드 헬퍼 함수
+  const loadClipboardContent = async () => {
+    try {
+      const clipboardText = await Clipboard.getStringAsync();
+      if (clipboardText) {
+        setFormData((prev) => ({
+          ...prev,
+          clipboard: { text: clipboardText },
+        }));
+        Alert.alert('✓', t('generator.clipboardPasted'));
+      } else {
+        Alert.alert('ℹ️', t('generator.clipboardEmpty'));
       }
+    } catch (error) {
+      console.error('Error reading clipboard:', error);
     }
   };
 
@@ -1488,37 +1613,61 @@ export default function GeneratorScreen() {
               contentContainerStyle={s.typesContainer}
               style={s.typesScroll}
             >
-              {QR_TYPES.map((type) => (
-                <TouchableOpacity
-                  key={type.id}
-                  style={[
-                    s.typeButton,
-                    {
-                      backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
-                      borderColor: selectedType === type.id ? colors.primary : colors.border,
-                    },
-                  ]}
-                  onPress={() => handleTypeSelect(type.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[
-                    s.typeIconContainer,
-                    { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
-                  ]}>
-                    <Ionicons
-                      name={type.icon}
-                      size={22}
-                      color={selectedType === type.id ? '#fff' : colors.text}
-                    />
-                  </View>
-                  <Text style={[
-                    s.typeText,
-                    { color: selectedType === type.id ? '#fff' : colors.text }
-                  ]}>
-                    {t(`generator.types.${type.id}`)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {orderedQrTypes.map((type) => {
+                const isTypeLocked = isQrTypeLocked(type.id);
+                return (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[
+                      s.typeButton,
+                      {
+                        backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
+                        borderColor: selectedType === type.id ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => handleTypeSelect(type.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[
+                      s.typeIconContainer,
+                      { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
+                    ]}>
+                      <Ionicons
+                        name={type.icon}
+                        size={22}
+                        color={selectedType === type.id ? '#fff' : colors.text}
+                      />
+                      {isTypeLocked && (
+                        <View style={s.typeLockIcon}>
+                          <Ionicons name="lock-closed" size={12} color="#FF3B30" />
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[
+                      s.typeText,
+                      { color: selectedType === type.id ? '#fff' : colors.text }
+                    ]}>
+                      {t(`generator.types.${type.id}`)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {/* 순서 변경 버튼 */}
+              <TouchableOpacity
+                style={[
+                  s.typeButton,
+                  { backgroundColor: colors.surface, borderColor: colors.border }
+                ]}
+                onPress={() => setQrTypeReorderVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
+                  <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
+                </View>
+                <Text style={[s.typeText, { color: colors.textSecondary }]}>
+                  {t('generator.reorder') || '순서'}
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
 
             {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
@@ -1622,6 +1771,23 @@ export default function GeneratorScreen() {
                   {t('generator.addBarcode') || '더보기'}
                 </Text>
               </TouchableOpacity>
+
+              {/* 바코드 순서 변경 버튼 */}
+              <TouchableOpacity
+                style={[
+                  s.typeButton,
+                  { backgroundColor: colors.surface, borderColor: colors.border }
+                ]}
+                onPress={() => setBarcodeReorderVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
+                  <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
+                </View>
+                <Text style={[s.typeText, { color: colors.textSecondary }]}>
+                  {t('generator.reorder') || '순서'}
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
 
             {/* 배너 광고 - 바코드 선택과 입력 폼 사이 */}
@@ -1712,25 +1878,108 @@ export default function GeneratorScreen() {
                 {/* 크기 설정 그룹 */}
                 <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
                   {/* 바코드 너비 */}
+                  <View style={s.settingItemVertical}>
+                    <View style={s.settingLabelRowSpaced}>
+                      <View style={s.settingLabelRow}>
+                        <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                        <Text style={[s.settingLabel, { color: colors.text }]}>
+                          {t('generator.barcodeWidth') || '너비'}
+                        </Text>
+                      </View>
+                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.scale}x</Text>
+                    </View>
+                    <Slider
+                      style={s.slider}
+                      minimumValue={1}
+                      maximumValue={9}
+                      step={1}
+                      value={barcodeSettings.scale}
+                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.border}
+                      thumbTintColor={colors.primary}
+                    />
+                  </View>
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 바코드 높이 */}
+                  <View style={s.settingItemVertical}>
+                    <View style={s.settingLabelRowSpaced}>
+                      <View style={s.settingLabelRow}>
+                        <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
+                        <Text style={[s.settingLabel, { color: colors.text }]}>
+                          {t('generator.barcodeHeight') || '높이'}
+                        </Text>
+                      </View>
+                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.height}</Text>
+                    </View>
+                    <Slider
+                      style={s.slider}
+                      minimumValue={40}
+                      maximumValue={120}
+                      step={10}
+                      value={barcodeSettings.height}
+                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.border}
+                      thumbTintColor={colors.primary}
+                    />
+                  </View>
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 글자 크기 */}
+                  <View style={s.settingItemVertical}>
+                    <View style={s.settingLabelRowSpaced}>
+                      <View style={s.settingLabelRow}>
+                        <Ionicons name="text" size={18} color={colors.primary} />
+                        <Text style={[s.settingLabel, { color: colors.text }]}>
+                          {t('generator.barcodeFontSize') || '글자 크기'}
+                        </Text>
+                      </View>
+                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.fontSize}</Text>
+                    </View>
+                    <Slider
+                      style={s.slider}
+                      minimumValue={10}
+                      maximumValue={20}
+                      step={1}
+                      value={barcodeSettings.fontSize}
+                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
+                      minimumTrackTintColor={colors.primary}
+                      maximumTrackTintColor={colors.border}
+                      thumbTintColor={colors.primary}
+                    />
+                  </View>
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 회전 */}
                   <View style={s.settingItem}>
                     <View style={s.settingLabelRow}>
-                      <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                      <Ionicons name="refresh-outline" size={18} color={colors.primary} />
                       <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeWidth') || '너비'}
+                        {t('generator.barcodeRotate') || '회전'}
                       </Text>
                     </View>
                     <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[1, 2, 3, 4, 5].map((val) => (
+                      {[
+                        { value: 'N', label: '0°' },
+                        { value: 'R', label: '90°' },
+                        { value: 'I', label: '180°' },
+                        { value: 'L', label: '270°' },
+                      ].map((item) => (
                         <TouchableOpacity
-                          key={`scale-${val}`}
+                          key={`rotate-${item.value}`}
                           style={[
                             s.barcodeOptionBtn,
-                            barcodeSettings.scale === val && { backgroundColor: colors.primary },
+                            barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
                           ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
+                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
                         >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.scale === val ? '#fff' : colors.text }]}>
-                            {val}x
+                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
+                            {item.label}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -1739,36 +1988,7 @@ export default function GeneratorScreen() {
 
                   <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 바코드 높이 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeHeight') || '높이'}
-                      </Text>
-                    </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[40, 60, 80, 100, 120].map((val) => (
-                        <TouchableOpacity
-                          key={`height-${val}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.height === val && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.height === val ? '#fff' : colors.text }]}>
-                            {val}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                </View>
-
-                {/* 텍스트 설정 그룹 */}
-                <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
-                  {/* 텍스트 표시 */}
+                  {/* 숫자 표시 */}
                   <View style={s.settingItem}>
                     <View style={s.settingLabelRow}>
                       <Ionicons name="text-outline" size={18} color={colors.primary} />
@@ -1800,35 +2020,7 @@ export default function GeneratorScreen() {
 
                   <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 폰트 크기 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="text" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeFontSize') || '글자 크기'}
-                      </Text>
-                    </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[10, 12, 14, 16, 18].map((val) => (
-                        <TouchableOpacity
-                          key={`font-${val}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.fontSize === val && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.fontSize === val ? '#fff' : colors.text }]}>
-                            {val}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                  {/* 커스텀 텍스트 */}
+                  {/* 표시 텍스트 */}
                   <View style={s.settingItem}>
                     <View style={s.settingLabelRow}>
                       <Ionicons name="create-outline" size={18} color={colors.primary} />
@@ -1851,39 +2043,6 @@ export default function GeneratorScreen() {
                     value={barcodeSettings.customText}
                     onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
                   />
-                </View>
-
-                {/* 회전 설정 그룹 */}
-                <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeRotate') || '회전'}
-                      </Text>
-                    </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[
-                        { value: 'N', label: '0°' },
-                        { value: 'R', label: '90°' },
-                        { value: 'I', label: '180°' },
-                        { value: 'L', label: '270°' },
-                      ].map((item) => (
-                        <TouchableOpacity
-                          key={`rotate-${item.value}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
-                            {item.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
                 </View>
               </View>
               )}
@@ -2064,7 +2223,7 @@ export default function GeneratorScreen() {
                       fontSize={barcodeSettings.fontSize}
                       background="#ffffff"
                       lineColor="#000000"
-                      margin={16}
+                      margin={4}
                       maxWidth={280}
                       rotate={barcodeSettings.rotate}
                       alttext={barcodeSettings.customText}
@@ -2134,6 +2293,150 @@ export default function GeneratorScreen() {
         onPickLogo={handlePickLogo}
         onRemoveLogo={handleRemoveLogo}
       />
+
+      {/* QR 타입 순서 변경 모달 */}
+      <Modal
+        visible={qrTypeReorderVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setQrTypeReorderVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%' }]}>
+            {/* 모달 헤더 */}
+            <View style={s.modalHeader}>
+              <View>
+                <Text style={[s.modalTitle, { color: colors.text }]}>
+                  {t('generator.reorderTypes') || 'QR 타입 순서 변경'}
+                </Text>
+                <Text style={[s.modalSubtitle, { color: colors.textSecondary }]}>
+                  {t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[s.modalCloseButton, { backgroundColor: colors.background }]}
+                onPress={() => setQrTypeReorderVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 드래그 리스트 */}
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <DraggableFlatList
+                data={orderedQrTypes}
+                onDragEnd={handleQrTypeReorder}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item, drag, isActive }) => (
+                  <ScaleDecorator>
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onLongPress={drag}
+                      disabled={isActive}
+                      style={[
+                        s.reorderItem,
+                        { backgroundColor: isActive ? colors.primary + '20' : colors.background },
+                        isActive && { shadowOpacity: 0.3, elevation: 8 }
+                      ]}
+                    >
+                      <TouchableOpacity
+                        onPressIn={drag}
+                        style={s.dragHandle}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        <Ionicons name="menu" size={22} color={colors.textTertiary} />
+                      </TouchableOpacity>
+                      <View style={[s.reorderItemIcon, { backgroundColor: colors.primary + '15' }]}>
+                        <Ionicons name={item.icon} size={20} color={colors.primary} />
+                      </View>
+                      <Text style={[s.reorderItemText, { color: colors.text }]}>
+                        {t(`generator.types.${item.id}`)}
+                      </Text>
+                    </TouchableOpacity>
+                  </ScaleDecorator>
+                )}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              />
+            </GestureHandlerRootView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 바코드 타입 순서 변경 모달 */}
+      <Modal
+        visible={barcodeReorderVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setBarcodeReorderVisible(false)}
+      >
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%' }]}>
+            {/* 모달 헤더 */}
+            <View style={s.modalHeader}>
+              <View>
+                <Text style={[s.modalTitle, { color: colors.text }]}>
+                  {t('generator.reorderBarcodeTypes') || '바코드 타입 순서 변경'}
+                </Text>
+                <Text style={[s.modalSubtitle, { color: colors.textSecondary }]}>
+                  {t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[s.modalCloseButton, { backgroundColor: colors.background }]}
+                onPress={() => setBarcodeReorderVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 드래그 리스트 */}
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <DraggableFlatList
+                data={displayedBarcodeTypes}
+                onDragEnd={handleBarcodeTypeReorder}
+                keyExtractor={(item) => item.bcid}
+                renderItem={({ item, drag, isActive }) => {
+                  const catInfo = BARCODE_CATEGORIES[item.category] || {};
+                  return (
+                    <ScaleDecorator>
+                      <TouchableOpacity
+                        activeOpacity={0.9}
+                        onLongPress={drag}
+                        disabled={isActive}
+                        style={[
+                          s.reorderItem,
+                          { backgroundColor: isActive ? colors.primary + '20' : colors.background },
+                          isActive && { shadowOpacity: 0.3, elevation: 8 }
+                        ]}
+                      >
+                        <TouchableOpacity
+                          onPressIn={drag}
+                          style={s.dragHandle}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="menu" size={22} color={colors.textTertiary} />
+                        </TouchableOpacity>
+                        <LinearGradient
+                          colors={catInfo.gradient || ['#667eea', '#764ba2']}
+                          style={s.reorderItemIcon}
+                        >
+                          <Ionicons name={catInfo.icon || 'barcode-outline'} size={18} color="#fff" />
+                        </LinearGradient>
+                        <Text style={[s.reorderItemText, { color: colors.text }]}>
+                          {item.name}
+                        </Text>
+                      </TouchableOpacity>
+                    </ScaleDecorator>
+                  );
+                }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              />
+            </GestureHandlerRootView>
+          </View>
+        </View>
+      </Modal>
 
       {/* 바코드 타입 선택 모달 (110종 전체) */}
       <Modal
@@ -2257,7 +2560,10 @@ export default function GeneratorScreen() {
                               ]}
                               onPress={() => {
                                 if (isBarcodeLocked) {
-                                  showBarcodeUnlockAlert(() => handleSelectBarcodeFromModal(format.bcid));
+                                  const featureId = getBarcodeFeatureId(format.bcid);
+                                  if (featureId) {
+                                    showUnlockAlert(featureId, () => handleSelectBarcodeFromModal(format.bcid));
+                                  }
                                 } else {
                                   handleSelectBarcodeFromModal(format.bcid);
                                 }
@@ -2270,7 +2576,10 @@ export default function GeneratorScreen() {
                                 onPress={(e) => {
                                   e.stopPropagation();
                                   if (isBarcodeLocked) {
-                                    showBarcodeUnlockAlert(() => toggleFavoriteBarcode(format.bcid));
+                                    const featureId = getBarcodeFeatureId(format.bcid);
+                                    if (featureId) {
+                                      showUnlockAlert(featureId, () => toggleFavoriteBarcode(format.bcid));
+                                    }
                                   } else {
                                     toggleFavoriteBarcode(format.bcid);
                                   }
@@ -2395,10 +2704,9 @@ const s = StyleSheet.create({
     minHeight: 160,
   },
   barcodePreviewContainer: {
-    minHeight: 120,
-    maxHeight: 250,
+    minHeight: 80,
     overflow: 'hidden',
-    padding: 16,
+    padding: 8,
   },
   barcodePreviewWrapper: {
     alignItems: 'center',
@@ -2406,8 +2714,8 @@ const s = StyleSheet.create({
     width: '100%',
   },
   barcodeBackground: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -2459,11 +2767,29 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  settingItemVertical: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 10,
+  },
   settingLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     flex: 1,
+  },
+  settingLabelRowSpaced: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+  },
+  sliderValue: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   settingLabel: {
     fontSize: 14,
@@ -2474,7 +2800,23 @@ const s = StyleSheet.create({
     marginVertical: 14,
     opacity: 0.5,
   },
+  barcodeOptionScroll: {
+    flexGrow: 0,
+  },
+  barcodeOptionScrollFull: {
+    marginHorizontal: -4,
+  },
+  barcodeOptionScrollContent: {
+    paddingHorizontal: 4,
+  },
   barcodeOptionControl: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 3,
+    gap: 2,
+  },
+  barcodeOptionControlCompact: {
     flexDirection: 'row',
     borderRadius: 10,
     borderWidth: 1,
@@ -2488,6 +2830,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 40,
+  },
+  barcodeOptionBtnCompact: {
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 36,
   },
   barcodeOptionText: {
     fontSize: 13,
@@ -2523,6 +2873,32 @@ const s = StyleSheet.create({
     maxHeight: 110,
     marginBottom: 20,
   },
+  reorderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 12,
+  },
+  reorderItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  reorderItemText: {
+    fontSize: 15,
+    fontWeight: '500',
+    flex: 1,
+  },
+  dragHandle: {
+    padding: 8,
+    marginRight: 8,
+  },
   typesContainer: {
     paddingHorizontal: 20,
     paddingVertical: 8,
@@ -2549,6 +2925,19 @@ const s = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  typeLockIcon: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   typeText: {
     fontSize: 13,
@@ -2693,13 +3082,11 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
   qrContainer: {
-    borderRadius: 20,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    padding: 32,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 340,
+    minHeight: 280,
   },
   qrWrapper: {
     alignItems: 'center',

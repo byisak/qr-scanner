@@ -1,5 +1,5 @@
 // screens/ResultScreen.js - Expo Router 버전
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -11,6 +11,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { Colors } from '../constants/Colors';
 import AdBanner from '../components/AdBanner';
+import { parseQRContent, QR_CONTENT_TYPES, formatPhoneNumber } from '../utils/qrContentParser';
+import QRActionButtons from '../components/QRActionButtons';
+import QRContentInfoDisplay from '../components/QRContentInfoDisplay';
 
 export default function ResultScreen() {
   const router = useRouter();
@@ -57,6 +60,27 @@ export default function ResultScreen() {
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+
+  // QR 콘텐츠 파싱 (타입 감지)
+  const parsedContent = useMemo(() => {
+    return parseQRContent(displayText);
+  }, [displayText]);
+
+  // QR 콘텐츠 타입 레이블
+  const getContentTypeLabel = (type) => {
+    const labels = {
+      [QR_CONTENT_TYPES.URL]: t('qrTypes.url') || 'URL',
+      [QR_CONTENT_TYPES.PHONE]: t('qrTypes.phone') || '전화번호',
+      [QR_CONTENT_TYPES.SMS]: t('qrTypes.sms') || 'SMS',
+      [QR_CONTENT_TYPES.EMAIL]: t('qrTypes.email') || '이메일',
+      [QR_CONTENT_TYPES.WIFI]: t('qrTypes.wifi') || 'WiFi',
+      [QR_CONTENT_TYPES.GEO]: t('qrTypes.location') || '위치',
+      [QR_CONTENT_TYPES.CONTACT]: t('qrTypes.contact') || '연락처',
+      [QR_CONTENT_TYPES.EVENT]: t('qrTypes.event') || '일정',
+      [QR_CONTENT_TYPES.TEXT]: t('qrTypes.text') || '텍스트',
+    };
+    return labels[type] || type;
+  };
 
   // URL 열기 방식 설정 로드
   useEffect(() => {
@@ -549,7 +573,7 @@ export default function ResultScreen() {
       >
         {/* 메인 데이터 카드 */}
         <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>
-          {/* 바코드 타입 & EC 레벨 뱃지 */}
+          {/* 바코드 타입 & 콘텐츠 타입 & EC 레벨 뱃지 */}
           <View style={styles.badgeRow}>
             {barcodeType && (
               <View style={[styles.typeBadge, { backgroundColor: colors.primary + '15' }]}>
@@ -560,6 +584,15 @@ export default function ResultScreen() {
                 />
                 <Text style={[styles.typeBadgeText, { color: colors.primary }]}>
                   {isQRCode ? 'QR Code' : barcodeType.toUpperCase()}
+                </Text>
+              </View>
+            )}
+            {/* 콘텐츠 타입 뱃지 */}
+            {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+              <View style={[styles.typeBadge, { backgroundColor: parsedContent.color + '15' }]}>
+                <Ionicons name={parsedContent.icon} size={14} color={parsedContent.color} />
+                <Text style={[styles.typeBadgeText, { color: parsedContent.color }]}>
+                  {getContentTypeLabel(parsedContent.type)}
                 </Text>
               </View>
             )}
@@ -594,41 +627,40 @@ export default function ResultScreen() {
             )}
           </View>
 
+          {/* QR 콘텐츠 정보 표시 (WiFi, 위치, 연락처, 일정 등) */}
+          {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT && parsedContent.type !== QR_CONTENT_TYPES.URL && (
+            <QRContentInfoDisplay
+              parsedContent={parsedContent}
+              colors={colors}
+              fonts={fonts}
+              t={t}
+            />
+          )}
+
           {/* 액션 버튼들 */}
           {!isEditing ? (
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.actionChip, { backgroundColor: colors.primary + '12' }]}
-                onPress={handleCopy}
-              >
-                <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                <Text style={[styles.actionChipText, { color: colors.primary }]}>{t('result.copy')}</Text>
-              </TouchableOpacity>
+            <View style={styles.actionSection}>
+              {/* QR 타입별 액션 버튼 */}
+              <QRActionButtons
+                parsedContent={parsedContent}
+                colors={colors}
+                fonts={fonts}
+                t={t}
+                onCopy={handleCopy}
+                onShare={handleShare}
+                onOpenUrl={handleOpenUrl}
+              />
 
+              {/* 코드 재생성 버튼 */}
               <TouchableOpacity
-                style={[styles.actionChip, { backgroundColor: colors.primary + '12' }]}
-                onPress={handleShare}
-              >
-                <Ionicons name="share-outline" size={18} color={colors.primary} />
-                <Text style={[styles.actionChipText, { color: colors.primary }]}>{t('result.share')}</Text>
-              </TouchableOpacity>
-
-              {(isUrl || editedText.startsWith('http://') || editedText.startsWith('https://')) && (
-                <TouchableOpacity
-                  style={[styles.actionChip, { backgroundColor: colors.success + '12' }]}
-                  onPress={handleOpenUrl}
-                >
-                  <Ionicons name="open-outline" size={18} color={colors.success} />
-                  <Text style={[styles.actionChipText, { color: colors.success }]}>{t('result.open')}</Text>
-                </TouchableOpacity>
-              )}
-
-              <TouchableOpacity
-                style={[styles.actionChip, { backgroundColor: colors.primary + '12' }]}
+                style={[styles.regenerateButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
                 onPress={handleRegenerateCode}
+                activeOpacity={0.7}
               >
-                <Ionicons name="qr-code-outline" size={18} color={colors.primary} />
-                <Text style={[styles.actionChipText, { color: colors.primary }]}>{t('result.regenerateCode')}</Text>
+                <Ionicons name="qr-code-outline" size={18} color={colors.textSecondary} />
+                <Text style={[styles.regenerateButtonText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+                  {t('result.regenerateCode') || '코드 재생성'}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -1108,5 +1140,22 @@ const styles = StyleSheet.create({
   ecLevelListPercent: {
     fontSize: 12,
     marginTop: 1,
+  },
+  actionSection: {
+    gap: 12,
+  },
+  regenerateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  regenerateButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
