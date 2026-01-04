@@ -71,13 +71,13 @@ export default function ProfileSettingsScreen() {
   const getProviderName = (provider) => {
     switch (provider) {
       case 'kakao':
-        return '카카오 로그인';
+        return t('auth.kakaoLogin');
       case 'google':
-        return 'Google 로그인';
+        return t('auth.googleLogin');
       case 'apple':
-        return 'Apple 로그인';
+        return t('auth.appleLogin');
       case 'email':
-        return '이메일 로그인';
+        return t('auth.emailLogin');
       default:
         return provider;
     }
@@ -103,22 +103,6 @@ export default function ProfileSettingsScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* 프로필 이미지 섹션 */}
-        <View style={styles.profileImageSection}>
-          <View style={[styles.profileImageWrapper, { backgroundColor: colors.surface }]}>
-            {user?.profileImage ? (
-              <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
-            ) : (
-              <Ionicons name="person" size={48} color={colors.textTertiary} />
-            )}
-          </View>
-          <TouchableOpacity style={styles.changeImageButton}>
-            <Text style={[styles.changeImageText, { color: '#E67E22', fontFamily: fonts.medium }]}>
-              {t('auth.changeProfileImage')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* 프로필 정보 섹션 */}
         <View style={[styles.section, { backgroundColor: colors.surface }]}>
           {/* 닉네임 */}
