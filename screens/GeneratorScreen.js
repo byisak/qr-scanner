@@ -1743,7 +1743,7 @@ export default function GeneratorScreen() {
                       s.typeDesc,
                       { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textTertiary, fontFamily: fonts.regular }
                     ]} numberOfLines={1}>
-                      {t(`barcodeTypes.${format.bcid}Desc`) || format.description}
+                      {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -2627,7 +2627,7 @@ export default function GeneratorScreen() {
                                 s.modalBarcodeDesc,
                                 { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
                               ]} numberOfLines={2}>
-                                {t(`barcodeTypes.${format.bcid}Desc`) || format.description}
+                                {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
                               </Text>
                             </TouchableOpacity>
                           );
