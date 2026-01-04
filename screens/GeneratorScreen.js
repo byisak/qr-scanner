@@ -2541,8 +2541,8 @@ export default function GeneratorScreen() {
                         >
                           <Ionicons name={catInfo.icon || 'barcode-outline'} size={16} color="#fff" />
                         </LinearGradient>
-                        <Text style={[s.categoryTitle, { color: colors.textSecondary }]}>
-                          {catInfo.name || category} ({barcodes.length})
+                        <Text style={[s.categoryTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                          {t(`generator.barcodeCategories.${category}`) || catInfo.name || category} ({barcodes.length})
                         </Text>
                       </View>
                       <View style={s.categoryGrid}>
@@ -2625,9 +2625,9 @@ export default function GeneratorScreen() {
                               </Text>
                               <Text style={[
                                 s.modalBarcodeDesc,
-                                { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+                                { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
                               ]} numberOfLines={2}>
-                                {format.description}
+                                {t(`barcodeTypes.${format.bcid}Desc`) || format.description}
                               </Text>
                             </TouchableOpacity>
                           );
