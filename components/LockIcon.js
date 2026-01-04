@@ -69,14 +69,6 @@ const styles = StyleSheet.create({
   },
   badgeContainer: {
     marginLeft: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: HOT_PINK,
-    backgroundColor: 'rgba(255, 20, 147, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
 
