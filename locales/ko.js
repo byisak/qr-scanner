@@ -967,6 +967,7 @@ export default {
     reorderTypesDesc: '드래그하여 순서를 변경하세요',
     reorder: '순서',
     reorderBarcodeTypes: '바코드 타입 순서 변경',
+    digits: '자리',
     // QR 스타일
     qrStyle: {
       title: 'QR 스타일',

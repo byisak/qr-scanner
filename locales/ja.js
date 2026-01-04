@@ -948,6 +948,11 @@ export default {
       imageSize: '画像サイズ',
       imageMargin: '画像の余白',
     },
+    reorderTypes: 'QRタイプの順序変更',
+    reorderTypesDesc: 'ドラッグして順序を変更',
+    reorder: '順序',
+    reorderBarcodeTypes: 'バーコードタイプの順序変更',
+    digits: '桁',
   },
 
   // バックアップエクスポート

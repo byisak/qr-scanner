@@ -948,6 +948,11 @@ export default {
       imageSize: '图片大小',
       imageMargin: '图片边距',
     },
+    reorderTypes: '重新排列QR类型',
+    reorderTypesDesc: '拖动以重新排列',
+    reorder: '排序',
+    reorderBarcodeTypes: '重新排列条形码类型',
+    digits: '位',
   },
 
   // 备份导出

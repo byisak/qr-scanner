@@ -1848,8 +1848,8 @@ export default function GeneratorScreen() {
                   <View style={s.barcodeHint}>
                     <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
                     <Text style={[s.barcodeHintText, { color: colors.textSecondary }]}>
-                      {selectedBarcodeInfo.description}
-                      {selectedBarcodeInfo.fixedLength ? ` (${selectedBarcodeInfo.fixedLength}자리)` : ''}
+                      {t(`barcodeSelection.${selectedBarcodeInfo.bcid}Desc`) || selectedBarcodeInfo.description}
+                      {selectedBarcodeInfo.fixedLength ? ` (${selectedBarcodeInfo.fixedLength}${t('generator.digits') || '자리'})` : ''}
                     </Text>
                   </View>
                 </View>

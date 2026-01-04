@@ -978,6 +978,7 @@ export default {
     reorderTypesDesc: 'Drag to reorder',
     reorder: 'Order',
     reorderBarcodeTypes: 'Reorder Barcode Types',
+    digits: 'digits',
     // QR Style
     qrStyle: {
       title: 'QR Style',

@@ -945,6 +945,11 @@ export default {
       imageSize: 'Tamaño de imagen',
       imageMargin: 'Margen de imagen',
     },
+    reorderTypes: 'Reordenar tipos de QR',
+    reorderTypesDesc: 'Arrastra para reordenar',
+    reorder: 'Orden',
+    reorderBarcodeTypes: 'Reordenar tipos de código de barras',
+    digits: 'dígitos',
   },
 
   // Exportar copia de seguridad
