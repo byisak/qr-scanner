@@ -348,12 +348,9 @@ export default function BackupExportScreen() {
                 <Ionicons name="cloud-outline" size={28} color="#5AC8FA" />
               </View>
               <View style={styles.icloudInfo}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                    {t('backupExport.icloudAutoSync')}
-                  </Text>
-                  <LockIcon featureId="icloudBackup" size={12} badge />
-                </View>
+                <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                  {t('backupExport.icloudAutoSync')}
+                </Text>
                 <View style={styles.syncStatusRow}>
                   {syncStatus === SYNC_STATUS.SYNCING && (
                     <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 6 }} />
@@ -363,6 +360,7 @@ export default function BackupExportScreen() {
                   </Text>
                 </View>
               </View>
+              <LockIcon featureId="icloudBackup" size={12} badge />
               <Switch
                 value={autoSyncEnabled && !isLocked('icloudBackup')}
                 onValueChange={(value) => {
@@ -428,18 +426,16 @@ export default function BackupExportScreen() {
               <Ionicons name="logo-google" size={28} color="#4285F4" />
             </View>
             <View style={styles.optionContent}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  {t('backupExport.googleDriveBackup')}
-                </Text>
-                <LockIcon featureId="googleDriveBackup" size={12} badge />
-              </View>
+              <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                {t('backupExport.googleDriveBackup')}
+              </Text>
               <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {lastGoogleBackupTime
                   ? `${t('backupExport.lastBackup')}: ${lastGoogleBackupTime.toLocaleDateString()} ${lastGoogleBackupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                   : t('backupExport.neverBackedUp')}
               </Text>
             </View>
+            <LockIcon featureId="googleDriveBackup" size={12} badge />
             {isLoading && loadingType === 'google' ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (

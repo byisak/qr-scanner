@@ -537,15 +537,13 @@ export default function SettingsScreen() {
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
-                <LockIcon featureId="photoSave" size={12} badge />
-              </View>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {photoSaveEnabled ? getQualityFullLabel(photoQuality) : t('settings.photoSaveDesc')}
               </Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="photoSave" size={12} badge />
               <Text style={[s.statusText, { color: photoSaveEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {photoSaveEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -591,7 +589,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('continuousScan.description') || t('settings.batchScanModeDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="batchScan" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="batchScan" size={12} badge />
               <Text style={[s.statusText, { color: continuousScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {continuousScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -616,7 +614,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="scanUrlIntegration" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="scanUrlIntegration" size={12} badge />
               <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {on ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -676,7 +674,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.realtimeSyncDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="realtimeSync" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="realtimeSync" size={12} badge />
               <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {realtimeSyncEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
@@ -705,7 +703,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
             </View>
             <View style={s.menuItemRight}>
-              <LockIcon featureId="productSearch" size={14} color={colors.textTertiary} />
+              <LockIcon featureId="productSearch" size={12} badge />
               <Text style={[s.statusText, { color: productAutoSearch ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {productAutoSearch ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
