@@ -75,6 +75,11 @@ export default {
     passwordRequireAlphaNum: '영문+숫자',
     passwordMatch: '비밀번호 일치',
     passwordNotMatch: '비밀번호 불일치',
+    // 로그인 제공자
+    kakaoLogin: '카카오 로그인',
+    googleLogin: 'Google 로그인',
+    appleLogin: 'Apple 로그인',
+    emailLogin: '이메일 로그인',
     // 프로필 설정
     profileSettings: '계정 설정',
     profileImage: '프로필 이미지',
@@ -1167,10 +1172,6 @@ export default {
     unknownError: '알 수 없는 오류',
     icloudSyncError: 'iCloud 동기화 중 오류가 발생했습니다.',
     googleLoginError: 'Google 로그인 중 오류가 발생했습니다.',
-    kakaoLogin: '카카오 로그인',
-    googleLogin: 'Google 로그인',
-    appleLogin: 'Apple 로그인',
-    emailLogin: '이메일 로그인',
     uploadFailed: '업로드 실패',
     googleDriveBackupError: 'Google Drive 백업 중 오류가 발생했습니다.',
     fileListFetchFailed: '파일 목록 조회 실패',

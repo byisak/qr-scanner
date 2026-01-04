@@ -75,6 +75,11 @@ export default {
     passwordRequireAlphaNum: 'Letters+Numbers',
     passwordMatch: 'Passwords match',
     passwordNotMatch: 'Passwords do not match',
+    // Login providers
+    kakaoLogin: 'Kakao Login',
+    googleLogin: 'Google Login',
+    appleLogin: 'Apple Login',
+    emailLogin: 'Email Login',
     // Profile settings
     profileSettings: 'Account Settings',
     profileImage: 'Profile Image',
@@ -1178,10 +1183,6 @@ export default {
     unknownError: 'Unknown error',
     icloudSyncError: 'Error syncing with iCloud.',
     googleLoginError: 'Error logging in with Google.',
-    kakaoLogin: 'Kakao Login',
-    googleLogin: 'Google Login',
-    appleLogin: 'Apple Login',
-    emailLogin: 'Email Login',
     uploadFailed: 'Upload failed',
     googleDriveBackupError: 'Error backing up to Google Drive.',
     fileListFetchFailed: 'Failed to fetch file list',

@@ -74,6 +74,11 @@ export default {
     passwordRequireAlphaNum: '英数字',
     passwordMatch: 'パスワード一致',
     passwordNotMatch: 'パスワード不一致',
+    // ログインプロバイダー
+    kakaoLogin: 'カカオログイン',
+    googleLogin: 'Googleログイン',
+    appleLogin: 'Appleログイン',
+    emailLogin: 'メールログイン',
     // プロフィール設定
     profileSettings: 'アカウント設定',
     profileImage: 'プロフィール画像',
@@ -1105,10 +1110,6 @@ export default {
     unknownError: '不明なエラー',
     icloudSyncError: 'iCloud同期中にエラーが発生しました。',
     googleLoginError: 'Googleログイン中にエラーが発生しました。',
-    kakaoLogin: 'カカオログイン',
-    googleLogin: 'Googleログイン',
-    appleLogin: 'Appleログイン',
-    emailLogin: 'メールログイン',
     uploadFailed: 'アップロード失敗',
     googleDriveBackupError: 'Google Driveバックアップ中にエラーが発生しました。',
     fileListFetchFailed: 'ファイルリストの取得に失敗しました',

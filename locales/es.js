@@ -74,6 +74,11 @@ export default {
     passwordRequireAlphaNum: 'Letras+Números',
     passwordMatch: 'Contraseñas coinciden',
     passwordNotMatch: 'Contraseñas no coinciden',
+    // Proveedores de inicio de sesión
+    kakaoLogin: 'Inicio de sesión con Kakao',
+    googleLogin: 'Inicio de sesión con Google',
+    appleLogin: 'Inicio de sesión con Apple',
+    emailLogin: 'Inicio de sesión con Email',
     // Configuración de perfil
     profileSettings: 'Configuración de cuenta',
     profileImage: 'Imagen de perfil',
@@ -1102,10 +1107,6 @@ export default {
     unknownError: 'Error desconocido',
     icloudSyncError: 'Error al sincronizar con iCloud.',
     googleLoginError: 'Error al iniciar sesión con Google.',
-    kakaoLogin: 'Inicio de sesión con Kakao',
-    googleLogin: 'Inicio de sesión con Google',
-    appleLogin: 'Inicio de sesión con Apple',
-    emailLogin: 'Inicio de sesión con Email',
     uploadFailed: 'Error de carga',
     googleDriveBackupError: 'Error al hacer copia en Google Drive.',
     fileListFetchFailed: 'Error al obtener la lista de archivos',

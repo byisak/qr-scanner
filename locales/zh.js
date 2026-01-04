@@ -74,6 +74,11 @@ export default {
     passwordRequireAlphaNum: '字母+数字',
     passwordMatch: '密码一致',
     passwordNotMatch: '密码不一致',
+    // 登录提供商
+    kakaoLogin: 'Kakao登录',
+    googleLogin: 'Google登录',
+    appleLogin: 'Apple登录',
+    emailLogin: '邮箱登录',
     // 个人资料设置
     profileSettings: '账户设置',
     profileImage: '头像',
@@ -1105,10 +1110,6 @@ export default {
     unknownError: '未知错误',
     icloudSyncError: 'iCloud同步时出错。',
     googleLoginError: 'Google登录时出错。',
-    kakaoLogin: 'Kakao登录',
-    googleLogin: 'Google登录',
-    appleLogin: 'Apple登录',
-    emailLogin: '邮箱登录',
     uploadFailed: '上传失败',
     googleDriveBackupError: 'Google Drive备份时出错。',
     fileListFetchFailed: '获取文件列表失败',
