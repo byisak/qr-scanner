@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 
 // 광고 활성화 플래그
-const AD_ENABLED = true;
+// TODO: 스크린샷 촬영 후 true로 복원
+const AD_ENABLED = false;
 
 // 네이티브 모듈 동적 로드 (Expo Go 호환성)
 let BannerAd = null;
