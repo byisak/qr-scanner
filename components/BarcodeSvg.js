@@ -116,9 +116,9 @@ export const ALL_BWIP_BARCODES = [
   { bcid: 'code49', name: 'Code 49', category: 'stacked', description: '코드 49', placeholder: 'ABC123' },
 
   // ===== 기타 =====
-  { bcid: 'raw', name: 'Raw (Custom)', category: 'other', description: '원시 바코드', placeholder: '1 2 3 4' },
-  { bcid: 'daft', name: 'DAFT Code', category: 'other', description: 'DAFT 코드', placeholder: 'DAFTDAFT' },
-  { bcid: 'symbol', name: 'Miscellaneous Symbols', category: 'other', description: '기타 심볼', placeholder: 'fima' },
+  // { bcid: 'raw', name: 'Raw (Custom)', category: 'other', description: '원시 바코드', placeholder: '1 2 3 4' },
+  // { bcid: 'daft', name: 'DAFT Code', category: 'other', description: 'DAFT 코드', placeholder: 'DAFTDAFT' },
+  // { bcid: 'symbol', name: 'Miscellaneous Symbols', category: 'other', description: '기타 심볼', placeholder: 'fima' },
 
   // ===== 국가별 특수 =====
   { bcid: 'vin', name: 'VIN (Vehicle ID)', category: 'automotive', description: '차량식별번호', placeholder: '1M8GDM9A_KP042788' },
@@ -126,7 +126,7 @@ export const ALL_BWIP_BARCODES = [
   { bcid: 'ean14', name: 'EAN-14', category: 'gs1', description: '물류 단위 식별', placeholder: '12345678901231' },
   { bcid: 'leitcode', name: 'Leitcode', category: 'postal', description: '독일 우편 라이트코드', placeholder: '21348075016401' },
   { bcid: 'identcode', name: 'Identcode', category: 'postal', description: '독일 우편 신원코드', placeholder: '563102430313' },
-  { bcid: 'swissqrcode', name: 'Swiss QR Code', category: 'other', description: '스위스 결제 QR', placeholder: 'SPC\\n0200\\n1' },
+  // { bcid: 'swissqrcode', name: 'Swiss QR Code', category: 'other', description: '스위스 결제 QR', placeholder: 'SPC\\n0200\\n1' },
 ];
 
 /**
