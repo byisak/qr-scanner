@@ -344,8 +344,13 @@ export default function BackupExportScreen() {
         {Platform.OS === 'ios' && (
           <View style={[styles.icloudSection, { backgroundColor: colors.surface }]}>
             <View style={styles.icloudHeader}>
-              <View style={[styles.icloudIconContainer, { backgroundColor: '#5AC8FA15' }]}>
-                <Ionicons name="cloud-outline" size={28} color="#5AC8FA" />
+              <View style={{ position: 'relative' }}>
+                <View style={[styles.icloudIconContainer, { backgroundColor: '#5AC8FA15' }]}>
+                  <Ionicons name="cloud-outline" size={28} color="#5AC8FA" />
+                </View>
+                <View style={styles.iconLockBadge}>
+                  <LockIcon featureId="icloudBackup" size={12} badge style={{ marginLeft: 0 }} />
+                </View>
               </View>
               <View style={styles.icloudInfo}>
                 <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
@@ -360,7 +365,6 @@ export default function BackupExportScreen() {
                   </Text>
                 </View>
               </View>
-              <LockIcon featureId="icloudBackup" size={12} badge />
               <Switch
                 value={autoSyncEnabled && !isLocked('icloudBackup')}
                 onValueChange={(value) => {
@@ -422,8 +426,13 @@ export default function BackupExportScreen() {
             disabled={isLoading}
             activeOpacity={0.7}
           >
-            <View style={[styles.optionIconContainer, { backgroundColor: '#4285F415' }]}>
-              <Ionicons name="logo-google" size={28} color="#4285F4" />
+            <View style={{ position: 'relative' }}>
+              <View style={[styles.optionIconContainer, { backgroundColor: '#4285F415' }]}>
+                <Ionicons name="logo-google" size={28} color="#4285F4" />
+              </View>
+              <View style={styles.iconLockBadge}>
+                <LockIcon featureId="googleDriveBackup" size={12} badge style={{ marginLeft: 0 }} />
+              </View>
             </View>
             <View style={styles.optionContent}>
               <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
@@ -435,7 +444,6 @@ export default function BackupExportScreen() {
                   : t('backupExport.neverBackedUp')}
               </Text>
             </View>
-            <LockIcon featureId="googleDriveBackup" size={12} badge />
             {isLoading && loadingType === 'google' ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
@@ -511,6 +519,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconLockBadge: {
+    position: 'absolute',
+    top: -4,
+    left: -4,
+    zIndex: 1,
   },
   icloudInfo: {
     flex: 1,
