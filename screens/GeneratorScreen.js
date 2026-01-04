@@ -1735,9 +1735,15 @@ export default function GeneratorScreen() {
                     </LinearGradient>
                     <Text style={[
                       s.typeText,
-                      { color: isSelected ? '#fff' : colors.text }
+                      { color: isSelected ? '#fff' : colors.text, fontFamily: fonts.semiBold }
                     ]}>
                       {format.name}
+                    </Text>
+                    <Text style={[
+                      s.typeDesc,
+                      { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textTertiary, fontFamily: fonts.regular }
+                    ]} numberOfLines={1}>
+                      {t(`barcodeTypes.${format.bcid}Desc`) || format.description}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -2942,6 +2948,11 @@ const s = StyleSheet.create({
   typeText: {
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  typeDesc: {
+    fontSize: 10,
+    marginTop: 2,
     letterSpacing: -0.2,
   },
   formSection: {
