@@ -427,8 +427,8 @@ export default function SettingsScreen() {
           <AdBanner />
         </View>
 
-        {/* Pro 버전 */}
-        <TouchableOpacity
+        {/* Pro 버전 - TODO: 추후 프로버전 출시 시 주석 해제 */}
+        {/* <TouchableOpacity
           style={[s.proSection, { backgroundColor: colors.surface }]}
           onPress={() => router.push('/pro-version')}
           activeOpacity={0.7}
@@ -457,6 +457,29 @@ export default function SettingsScreen() {
             <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
             <Text style={[s.watchAdSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}> - {t('proVersion.freeUnlock')}</Text>
           </TouchableOpacity>
+        </TouchableOpacity> */}
+
+        {/* 광고보기 - 기능 잠금 해제 */}
+        <TouchableOpacity
+          style={[s.proSection, { backgroundColor: colors.surface }]}
+          onPress={() => router.push('/pro-features')}
+          activeOpacity={0.7}
+        >
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={s.proBanner}
+          >
+            <View style={s.proBannerContent}>
+              <Ionicons name="play-circle" size={24} color="#fff" />
+              <View style={s.proBannerText}>
+                <Text style={[s.proTitle, { fontFamily: fonts.bold }]}>{t('proVersion.watchAd')}</Text>
+                <Text style={[s.proDesc, { fontFamily: fonts.regular }]}>{t('proVersion.freeUnlock')}</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#fff" />
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* 알림 섹션 */}
