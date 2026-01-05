@@ -2,7 +2,7 @@
 // @mgcrea/vision-camera-barcode-scanner 기반 네이티브 QR 스캐너 컴포넌트
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -19,7 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
-const AnimatedHighlight = ({ highlight, borderColor, fillColor }) => {
+const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value }) => {
   const x = useSharedValue(highlight.origin.x);
   const y = useSharedValue(highlight.origin.y);
   const width = useSharedValue(highlight.size.width);
@@ -48,13 +48,37 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor }) => {
     opacity: opacity.value,
   }));
 
-  return <Animated.View style={animatedStyle} />;
+  const labelStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: x.value,
+    top: y.value + height.value + 4,
+    maxWidth: Math.max(width.value, 200),
+    opacity: opacity.value,
+  }));
+
+  return (
+    <>
+      <Animated.View style={animatedStyle} />
+      {showValue && value && (
+        <Animated.View style={labelStyle}>
+          <View style={styles.valueLabel}>
+            <Text style={styles.valueLabelText} numberOfLines={2}>
+              {value}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
+    </>
+  );
 };
 
 // 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
-const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)' }) => {
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)' }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
+
+  // 2개 이상일 때만 값 표시
+  const showValues = barcodes.length >= 2;
 
   useEffect(() => {
     if (!highlights || highlights.length === 0) {
@@ -73,8 +97,9 @@ const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(
     setTrackedHighlights(highlights.map((h, i) => ({
       ...h,
       key: `highlight-${i}`,
+      value: barcodes[i]?.value || null,
     })));
-  }, [highlights]);
+  }, [highlights, barcodes]);
 
   if (trackedHighlights.length === 0) return null;
 
@@ -86,6 +111,8 @@ const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(
           highlight={highlight}
           borderColor={borderColor}
           fillColor={fillColor}
+          showValue={showValues}
+          value={highlight.value}
         />
       ))}
     </View>
@@ -146,6 +173,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   useEffect(() => {
     onMultipleCodesDetectedRef.current = onMultipleCodesDetected;
   }, [onMultipleCodesDetected]);
+
+  // 현재 감지된 바코드 목록 (하이라이트에 값 표시용)
+  const [detectedBarcodes, setDetectedBarcodes] = useState([]);
+  const detectedBarcodesTimeoutRef = useRef(null);
 
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
@@ -227,6 +258,21 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // Worklets.createRunOnJS로 JS 스레드에서 실행할 함수 생성
   const runOnJSCallback = Worklets.createRunOnJS(handleBarcodeDetected);
 
+  // 감지된 바코드 상태 업데이트 (하이라이트에 값 표시용)
+  const updateDetectedBarcodes = useCallback((barcodesData) => {
+    // 기존 타임아웃 클리어
+    if (detectedBarcodesTimeoutRef.current) {
+      clearTimeout(detectedBarcodesTimeoutRef.current);
+    }
+
+    setDetectedBarcodes(barcodesData || []);
+
+    // 500ms 후 자동으로 클리어 (바코드가 화면에서 사라지면)
+    detectedBarcodesTimeoutRef.current = setTimeout(() => {
+      setDetectedBarcodes([]);
+    }, 500);
+  }, []);
+
   // 다중 바코드 감지 콜백 핸들러 (JS 스레드에서 실행)
   const handleMultipleCodesDetected = useCallback((count, barcodesData) => {
     console.log(`[NativeQRScanner] Multiple codes detected: ${count}`, barcodesData?.length);
@@ -245,6 +291,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 다중 바코드 감지용 Worklet 콜백
   const runOnJSMultiCallback = Worklets.createRunOnJS(handleMultipleCodesDetected);
   const runOnJSLogCallback = Worklets.createRunOnJS(logBarcodeCount);
+  const runOnJSUpdateBarcodes = Worklets.createRunOnJS(updateDetectedBarcodes);
 
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
@@ -262,14 +309,21 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       runOnJSLogCallback(barcodes.length);
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
-      if (barcodes.length >= multiCodeThreshold && onMultipleCodesDetectedRef.current) {
+      if (barcodes.length >= multiCodeThreshold) {
         // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
         const barcodesData = barcodes.map((barcode) => ({
           value: barcode.value,
           type: barcode.type,
           frame: barcode.frame,
         }));
-        runOnJSMultiCallback(barcodes.length, barcodesData);
+
+        // 하이라이트에 값 표시를 위해 항상 바코드 상태 업데이트
+        runOnJSUpdateBarcodes(barcodesData);
+
+        // 다중 감지 콜백 호출
+        if (onMultipleCodesDetectedRef.current) {
+          runOnJSMultiCallback(barcodes.length, barcodesData);
+        }
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
@@ -382,6 +436,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       {showHighlights && (
         <CustomHighlights
           highlights={highlights}
+          barcodes={detectedBarcodes}
           borderColor={highlightColor}
           fillColor={highlightFillColor}
         />
@@ -427,6 +482,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  valueLabel: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  valueLabelText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
