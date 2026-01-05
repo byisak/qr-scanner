@@ -370,10 +370,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         // 하이라이트에 값 표시를 위해 항상 바코드 상태 업데이트
         runOnJSUpdateBarcodes(barcodesData);
 
-        // 다중 감지 콜백 호출
-        if (onMultipleCodesDetectedRef.current) {
-          runOnJSMultiCallback(barcodes.length, barcodesData);
-        }
+        // 다중 감지 콜백 호출 (워크릿에서 ref 접근 불가하므로 항상 호출)
+        runOnJSMultiCallback(barcodes.length, barcodesData);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
