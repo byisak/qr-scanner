@@ -151,6 +151,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   onCodeScanned,
   onMultipleCodesDetected, // 2개 이상 바코드 감지 시 콜백
   multiCodeThreshold = 2, // 다중 감지 기준 (기본 2개)
+  selectCenterBarcode = true, // 여러 코드 감지 시 중앙에 가장 가까운 코드만 선택 (기본값: true)
   onError,
   style,
   showHighlights = false, // 하이라이트 표시 여부 (기본값: false)
@@ -177,6 +178,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 현재 감지된 바코드 목록 (하이라이트에 값 표시용)
   const [detectedBarcodes, setDetectedBarcodes] = useState([]);
   const detectedBarcodesTimeoutRef = useRef(null);
+
+  // selectCenterBarcode를 worklet에서 사용하기 위한 shared value
+  const selectCenterBarcodeShared = useSharedValue(selectCenterBarcode);
+  useEffect(() => {
+    selectCenterBarcodeShared.value = selectCenterBarcode;
+  }, [selectCenterBarcode]);
 
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
@@ -310,6 +317,48 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold) {
+        // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택
+        if (selectCenterBarcodeShared.value) {
+          // 프레임 중앙 좌표 계산
+          const frameWidth = frameDimensions?.width || 1920;
+          const frameHeight = frameDimensions?.height || 1440;
+          const centerX = frameWidth / 2;
+          const centerY = frameHeight / 2;
+
+          // 각 바코드의 중앙과 프레임 중앙 사이의 거리 계산
+          let closestBarcode = barcodes[0];
+          let minDistance = Number.MAX_VALUE;
+
+          for (let i = 0; i < barcodes.length; i++) {
+            const bc = barcodes[i];
+            if (bc.frame) {
+              // 바코드 중앙 좌표
+              const bcCenterX = bc.frame.x + bc.frame.width / 2;
+              const bcCenterY = bc.frame.y + bc.frame.height / 2;
+              // 거리 계산 (유클리드 거리)
+              const distance = Math.sqrt(
+                Math.pow(bcCenterX - centerX, 2) + Math.pow(bcCenterY - centerY, 2)
+              );
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestBarcode = bc;
+              }
+            }
+          }
+
+          // 중앙에 가장 가까운 바코드로 단일 스캔 콜백 호출
+          const ecLevel = closestBarcode.errorCorrectionLevel || closestBarcode.native?.errorCorrectionLevel;
+          runOnJSCallback({
+            value: closestBarcode.value,
+            type: closestBarcode.type,
+            frame: closestBarcode.frame,
+            cornerPoints: closestBarcode.cornerPoints,
+            frameDimensions: frameDimensions,
+            errorCorrectionLevel: ecLevel,
+          });
+          return;
+        }
+
         // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
         const barcodesData = barcodes.map((barcode) => ({
           value: barcode.value,

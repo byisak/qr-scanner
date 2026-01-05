@@ -1925,6 +1925,7 @@ function ScannerScreen() {
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
+        selectCenterBarcode={!multiCodeModeEnabled}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"
