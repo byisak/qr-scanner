@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
@@ -198,6 +199,7 @@ function ImageAnalysisScreen() {
   const [zxingScript, setZxingScript] = useState(null);
   const [savedCount, setSavedCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingHistory, setIsSavingHistory] = useState(false);
 
   const webViewRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -527,6 +529,121 @@ function ImageAnalysisScreen() {
     }
   };
 
+  // 개별 바코드를 기록에 저장
+  const handleSaveToHistory = async (result, index) => {
+    try {
+      // 그룹별 히스토리 가져오기
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+
+      // 기본 그룹에 저장
+      if (!historyByGroup.default) {
+        historyByGroup.default = [];
+      }
+
+      // 바코드 타입 정규화
+      const normalizedType = result.format.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const historyItem = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        code: result.text,
+        timestamp: Date.now(),
+        url: null,
+        photoUri: null,
+        type: normalizedType,
+        ecLevel: null,
+        count: 1,
+      };
+
+      historyByGroup.default.unshift(historyItem);
+
+      // 최대 1000개까지만 저장
+      if (historyByGroup.default.length > 1000) {
+        historyByGroup.default = historyByGroup.default.slice(0, 1000);
+      }
+
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      Alert.alert(
+        t('imageAnalysis.historySaveSuccess'),
+        t('imageAnalysis.historySaveSuccessMessage', { number: index + 1 })
+      );
+    } catch (err) {
+      console.error('Save to history error:', err);
+      Alert.alert(t('common.error'), t('imageAnalysis.saveError'));
+    }
+  };
+
+  // 모든 바코드를 기록에 저장
+  const handleSaveAllToHistory = async () => {
+    if (results.length === 0) return;
+
+    try {
+      setIsSavingHistory(true);
+
+      // 그룹별 히스토리 가져오기
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+
+      if (!historyByGroup.default) {
+        historyByGroup.default = [];
+      }
+
+      let successCount = 0;
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+
+        // 바코드 타입 정규화
+        const normalizedType = result.format.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const historyItem = {
+          id: `${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
+          code: result.text,
+          timestamp: Date.now() + i, // 순서 유지를 위해 약간의 시간 차이
+          url: null,
+          photoUri: null,
+          type: normalizedType,
+          ecLevel: null,
+          count: 1,
+        };
+
+        historyByGroup.default.unshift(historyItem);
+        successCount++;
+      }
+
+      // 최대 1000개까지만 저장
+      if (historyByGroup.default.length > 1000) {
+        historyByGroup.default = historyByGroup.default.slice(0, 1000);
+      }
+
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      setIsSavingHistory(false);
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      Alert.alert(
+        t('imageAnalysis.historyAllSaveSuccess'),
+        t('imageAnalysis.historyAllSaveSuccessMessage', { count: successCount })
+      );
+    } catch (err) {
+      console.error('Save all to history error:', err);
+      setIsSavingHistory(false);
+      Alert.alert(t('common.error'), t('imageAnalysis.saveError'));
+    }
+  };
+
   // 전체 JSON 다운로드 - ZXing WASM 원본 데이터 전체
   const handleDownloadAllJson = async () => {
     if (results.length === 0) return;
@@ -771,7 +888,7 @@ function ImageAnalysisScreen() {
                   <Text style={styles.saveAllButtonText}>JSON</Text>
                 </TouchableOpacity>
 
-                {/* 모두 저장 버튼 */}
+                {/* 이미지 모두 저장 버튼 */}
                 {results.some(r => r.position) && (
                   <TouchableOpacity
                     style={[styles.saveAllButton, { backgroundColor: colors.primary }]}
@@ -789,6 +906,23 @@ function ImageAnalysisScreen() {
                     )}
                   </TouchableOpacity>
                 )}
+
+                {/* 기록 모두 저장 버튼 */}
+                <TouchableOpacity
+                  style={[styles.saveAllButton, { backgroundColor: '#E67E22' }]}
+                  onPress={handleSaveAllToHistory}
+                  activeOpacity={0.7}
+                  disabled={isSavingHistory}
+                >
+                  {isSavingHistory ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Ionicons name="bookmark-outline" size={16} color="#fff" />
+                      <Text style={styles.saveAllButtonText}>{t('imageAnalysis.saveAllToHistory')}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -852,7 +986,7 @@ function ImageAnalysisScreen() {
                     >
                       <Ionicons name="download-outline" size={18} color={colors.text} />
                       <Text style={[styles.actionButtonText, { color: colors.text }]}>
-                        {t('result.save')}
+                        {t('imageAnalysis.saveImage')}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -866,6 +1000,14 @@ function ImageAnalysisScreen() {
                     <Text style={[styles.actionButtonText, { color: '#fff' }]}>
                       {t('result.open')}
                     </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.historyButton]}
+                    onPress={() => handleSaveToHistory(result, index)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="bookmark-outline" size={18} color="#fff" />
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -1121,6 +1263,11 @@ const styles = StyleSheet.create({
   },
   jsonButton: {
     backgroundColor: '#2E7D32',
+    flex: 0,
+    paddingHorizontal: 12,
+  },
+  historyButton: {
+    backgroundColor: '#E67E22',
     flex: 0,
     paddingHorizontal: 12,
   },
