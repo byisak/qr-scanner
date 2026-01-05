@@ -434,6 +434,23 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
+      // 여러 코드 인식 모드 ON이고 1개만 감지된 경우에도 멀티 콜백 호출
+      if (!selectCenterBarcodeShared.value && barcodes.length === 1) {
+        const barcode = barcodes[0];
+        const rawValue = barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '';
+        const value = String(rawValue).trim();
+
+        if (value && value.length > 0 && value !== 'undefined' && value !== 'null') {
+          const singleBarcodeData = [{
+            value: value,
+            type: barcode.type,
+            frame: barcode.frame,
+          }];
+          runOnJSMultiCallback(1, singleBarcodeData);
+          return;
+        }
+      }
+
       const barcode = barcodes[0];
 
       // EC level: 라이브러리 패치로 barcode.errorCorrectionLevel에 있거나,
