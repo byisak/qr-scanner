@@ -889,7 +889,74 @@ function ImageAnalysisScreen() {
           </View>
         </View>
 
-        {/* 결과 섹션 */}
+        {/* 스캐너에서 감지된 바코드 섹션 (상단에 먼저 표시) */}
+        {scannerDetectedBarcodes.length > 0 && (
+          <View style={styles.resultsSection}>
+            <View style={styles.resultsSectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('imageAnalysis.scannerDetected') || '스캐너 감지'} ({scannerDetectedBarcodes.length})
+              </Text>
+            </View>
+
+            <Text style={[styles.scannerDetectedInfo, { color: colors.textSecondary }]}>
+              {t('imageAnalysis.scannerDetectedDesc') || '실시간 스캐너에서 감지된 코드입니다'}
+            </Text>
+
+            {scannerDetectedBarcodes.map((barcode, index) => {
+              const color = getBarcodeColor(index);
+              return (
+                <View
+                  key={`scanner-${index}`}
+                  style={[styles.resultCard, { backgroundColor: colors.surface, borderLeftColor: color }]}
+                >
+                  <View style={styles.resultHeader}>
+                    <View style={[styles.resultIndex, { backgroundColor: color }]}>
+                      <Ionicons name="scan" size={12} color="#fff" />
+                    </View>
+                    <Text style={[styles.resultFormat, { color: colors.textSecondary }]}>
+                      {formatName(barcode.type)}
+                    </Text>
+                  </View>
+
+                  <Text style={[styles.resultText, { color: colors.text }]} numberOfLines={3}>
+                    {barcode.value}
+                  </Text>
+
+                  <View style={styles.resultActions}>
+                    {/* 복사 */}
+                    <TouchableOpacity
+                      style={[styles.resultIconButton, { backgroundColor: colors.border }]}
+                      onPress={() => handleCopyResult(barcode.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="copy-outline" size={20} color={colors.text} />
+                    </TouchableOpacity>
+
+                    {/* 열기 */}
+                    <TouchableOpacity
+                      style={[styles.resultIconButton, styles.primaryButton]}
+                      onPress={() => handleOpenResult({ text: barcode.value, format: barcode.type })}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="open-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+
+                    {/* 기록 저장 */}
+                    <TouchableOpacity
+                      style={[styles.resultIconButton, styles.historyButton]}
+                      onPress={() => handleSaveToHistory({ text: barcode.value, format: barcode.type }, index)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="bookmark-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* 이미지 분석 결과 섹션 */}
         <View style={styles.resultsSection}>
           <View style={styles.resultsSectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -959,7 +1026,7 @@ function ImageAnalysisScreen() {
           )}
 
           {results.map((result, index) => {
-            const color = getBarcodeColor(index);
+            const color = getBarcodeColor(index + scannerDetectedBarcodes.length);
             return (
               <View
                 key={result.id}
@@ -967,7 +1034,7 @@ function ImageAnalysisScreen() {
               >
                 <View style={styles.resultHeader}>
                   <View style={[styles.resultIndex, { backgroundColor: color }]}>
-                    <Text style={styles.resultIndexText}>{index + 1}</Text>
+                    <Text style={styles.resultIndexText}>{index + scannerDetectedBarcodes.length + 1}</Text>
                   </View>
                   <Text style={[styles.resultFormat, { color: colors.textSecondary }]}>
                     {formatName(result.format)}
@@ -1030,73 +1097,6 @@ function ImageAnalysisScreen() {
             );
           })}
         </View>
-
-        {/* 스캐너에서 감지된 바코드 섹션 */}
-        {scannerDetectedBarcodes.length > 0 && (
-          <View style={styles.resultsSection}>
-            <View style={styles.resultsSectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                {t('imageAnalysis.scannerDetected') || '스캐너 감지'} ({scannerDetectedBarcodes.length})
-              </Text>
-            </View>
-
-            <Text style={[styles.scannerDetectedInfo, { color: colors.textSecondary }]}>
-              {t('imageAnalysis.scannerDetectedDesc') || '실시간 스캐너에서 감지된 코드입니다'}
-            </Text>
-
-            {scannerDetectedBarcodes.map((barcode, index) => {
-              const color = getBarcodeColor(index + results.length);
-              return (
-                <View
-                  key={`scanner-${index}`}
-                  style={[styles.resultCard, { backgroundColor: colors.surface, borderLeftColor: color }]}
-                >
-                  <View style={styles.resultHeader}>
-                    <View style={[styles.resultIndex, { backgroundColor: color }]}>
-                      <Ionicons name="scan" size={12} color="#fff" />
-                    </View>
-                    <Text style={[styles.resultFormat, { color: colors.textSecondary }]}>
-                      {formatName(barcode.type)}
-                    </Text>
-                  </View>
-
-                  <Text style={[styles.resultText, { color: colors.text }]} numberOfLines={3}>
-                    {barcode.value}
-                  </Text>
-
-                  <View style={styles.resultActions}>
-                    {/* 복사 */}
-                    <TouchableOpacity
-                      style={[styles.resultIconButton, { backgroundColor: colors.border }]}
-                      onPress={() => handleCopyResult(barcode.value)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="copy-outline" size={20} color={colors.text} />
-                    </TouchableOpacity>
-
-                    {/* 열기 */}
-                    <TouchableOpacity
-                      style={[styles.resultIconButton, styles.primaryButton]}
-                      onPress={() => handleOpenResult({ text: barcode.value, format: barcode.type })}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="open-outline" size={20} color="#fff" />
-                    </TouchableOpacity>
-
-                    {/* 기록 저장 */}
-                    <TouchableOpacity
-                      style={[styles.resultIconButton, styles.historyButton]}
-                      onPress={() => handleSaveToHistory({ text: barcode.value, format: barcode.type }, index)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="bookmark-outline" size={20} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
       </ScrollView>
 
       {/* 숨겨진 WebView - 바코드 분석용 (레이아웃 외부) */}
