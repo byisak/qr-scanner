@@ -880,18 +880,17 @@ function ImageAnalysisScreen() {
               <View style={styles.headerButtons}>
                 {/* JSON 다운로드 버튼 */}
                 <TouchableOpacity
-                  style={[styles.saveAllButton, { backgroundColor: '#2E7D32' }]}
+                  style={[styles.iconButton, { backgroundColor: '#2E7D32' }]}
                   onPress={handleDownloadAllJson}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="code-download-outline" size={16} color="#fff" />
-                  <Text style={styles.saveAllButtonText}>JSON</Text>
+                  <Ionicons name="code-download-outline" size={20} color="#fff" />
                 </TouchableOpacity>
 
                 {/* 이미지 모두 저장 버튼 */}
                 {results.some(r => r.position) && (
                   <TouchableOpacity
-                    style={[styles.saveAllButton, { backgroundColor: colors.primary }]}
+                    style={[styles.iconButton, { backgroundColor: colors.primary }]}
                     onPress={handleSaveAllBarcodes}
                     activeOpacity={0.7}
                     disabled={isSaving}
@@ -899,17 +898,14 @@ function ImageAnalysisScreen() {
                     {isSaving ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <>
-                        <Ionicons name="download-outline" size={16} color="#fff" />
-                        <Text style={styles.saveAllButtonText}>{t('imageAnalysis.saveAll')}</Text>
-                      </>
+                      <Ionicons name="images-outline" size={20} color="#fff" />
                     )}
                   </TouchableOpacity>
                 )}
 
                 {/* 기록 모두 저장 버튼 */}
                 <TouchableOpacity
-                  style={[styles.saveAllButton, { backgroundColor: '#E67E22' }]}
+                  style={[styles.iconButton, { backgroundColor: '#E67E22' }]}
                   onPress={handleSaveAllToHistory}
                   activeOpacity={0.7}
                   disabled={isSavingHistory}
@@ -917,10 +913,7 @@ function ImageAnalysisScreen() {
                   {isSavingHistory ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <>
-                      <Ionicons name="bookmark-outline" size={16} color="#fff" />
-                      <Text style={styles.saveAllButtonText}>{t('imageAnalysis.saveAllToHistory')}</Text>
-                    </>
+                    <Ionicons name="bookmarks-outline" size={20} color="#fff" />
                   )}
                 </TouchableOpacity>
               </View>
@@ -967,55 +960,51 @@ function ImageAnalysisScreen() {
                 </Text>
 
                 <View style={styles.resultActions}>
+                  {/* 복사 */}
                   <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: colors.border }]}
+                    style={[styles.resultIconButton, { backgroundColor: colors.border }]}
                     onPress={() => handleCopyResult(result.text)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="copy-outline" size={18} color={colors.text} />
-                    <Text style={[styles.actionButtonText, { color: colors.text }]}>
-                      {t('result.copy')}
-                    </Text>
+                    <Ionicons name="copy-outline" size={20} color={colors.text} />
                   </TouchableOpacity>
 
+                  {/* 이미지 저장 */}
                   {result.position && (
                     <TouchableOpacity
-                      style={[styles.actionButton, { backgroundColor: colors.border }]}
+                      style={[styles.resultIconButton, { backgroundColor: colors.border }]}
                       onPress={() => handleSaveBarcode(result, index)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="download-outline" size={18} color={colors.text} />
-                      <Text style={[styles.actionButtonText, { color: colors.text }]}>
-                        {t('imageAnalysis.saveImage')}
-                      </Text>
+                      <Ionicons name="image-outline" size={20} color={colors.text} />
                     </TouchableOpacity>
                   )}
 
+                  {/* 열기 */}
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.primaryButton]}
+                    style={[styles.resultIconButton, styles.primaryButton]}
                     onPress={() => handleOpenResult(result)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="open-outline" size={18} color="#fff" />
-                    <Text style={[styles.actionButtonText, { color: '#fff' }]}>
-                      {t('result.open')}
-                    </Text>
+                    <Ionicons name="open-outline" size={20} color="#fff" />
                   </TouchableOpacity>
 
+                  {/* 기록 저장 */}
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.historyButton]}
+                    style={[styles.resultIconButton, styles.historyButton]}
                     onPress={() => handleSaveToHistory(result, index)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="bookmark-outline" size={18} color="#fff" />
+                    <Ionicons name="bookmark-outline" size={20} color="#fff" />
                   </TouchableOpacity>
 
+                  {/* JSON */}
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.jsonButton]}
+                    style={[styles.resultIconButton, styles.jsonButton]}
                     onPress={() => handleDownloadSingleJson(result, index)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="code-slash-outline" size={18} color="#fff" />
+                    <Ionicons name="code-slash-outline" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1174,6 +1163,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   saveAllButtonText: {
     color: '#fff',
     fontSize: 13,
@@ -1258,18 +1254,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
+  resultIconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   primaryButton: {
     backgroundColor: '#007AFF',
   },
   jsonButton: {
     backgroundColor: '#2E7D32',
-    flex: 0,
-    paddingHorizontal: 12,
   },
   historyButton: {
     backgroundColor: '#E67E22',
-    flex: 0,
-    paddingHorizontal: 12,
   },
   actionButtonText: {
     fontSize: 14,
