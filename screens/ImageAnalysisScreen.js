@@ -271,17 +271,25 @@ function ImageAnalysisScreen() {
           return;
         }
 
+        // 원본 이미지 크기 로그 (디버깅용)
+        console.log('[ImageAnalysis] Original image:', imageUri, 'size:', fileInfo.size ? `${(fileInfo.size / 1024).toFixed(1)}KB` : 'unknown');
+
         // EXIF 회전 정규화 - 빈 actions로 manipulateAsync 호출하면 EXIF orientation이 적용됨
-        console.log('Normalizing image orientation...');
+        // 바코드 인식률 향상을 위해 무압축 사용
+        console.log('Normalizing image orientation (high quality)...');
         const manipulatedImage = await ImageManipulator.manipulateAsync(
           imageUri,
           [], // 빈 actions - EXIF rotation만 적용
-          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+          { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
         );
 
         const normalizedUri = manipulatedImage.uri;
         setNormalizedImageUri(normalizedUri);
-        console.log('Image normalized:', manipulatedImage.width, 'x', manipulatedImage.height);
+
+        // 처리된 이미지 정보 로그
+        const processedInfo = await FileSystem.getInfoAsync(normalizedUri);
+        console.log('[ImageAnalysis] Processed image:', manipulatedImage.width, 'x', manipulatedImage.height,
+          'size:', processedInfo.size ? `${(processedInfo.size / 1024).toFixed(1)}KB` : 'unknown');
 
         // 정규화된 이미지 크기 사용
         const width = manipulatedImage.width;
