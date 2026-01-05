@@ -257,6 +257,14 @@ export const LOCKED_FEATURES = {
     type: 'barcode',
     name: 'Aztec Code',
   },
+  // 기타 모든 바코드 (개별 정의되지 않은 바코드용)
+  barcodeOther: {
+    id: 'barcodeOther',
+    adCount: 2,
+    type: 'barcode',
+    name: '기타 바코드',
+    description: '개별 정의되지 않은 모든 바코드 타입',
+  },
 };
 
 // 무료로 제공되는 바코드 타입 (bcid 기준)
