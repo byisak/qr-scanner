@@ -145,6 +145,7 @@ export default {
     uploadImage: 'Auto Code Analysis',
     scanned: 'Scanned',
     viewDetails: 'View Details',
+    viewMultiResults: 'View {count} Codes',
   },
 
   // Image analysis screen

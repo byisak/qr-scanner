@@ -117,6 +117,7 @@ function ScannerScreen() {
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
   const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
   const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
+  const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes }
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -1089,7 +1090,7 @@ function ScannerScreen() {
     startResetTimer(RESET_DELAYS.NORMAL);
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
-  // 다중 바코드 감지 핸들러 - ImageAnalysisScreen으로 이동
+  // 다중 바코드 감지 핸들러 - 자동 이동 대신 보류 데이터 저장
   const handleMultipleCodesDetected = useCallback(async (count, barcodesData) => {
     console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
 
@@ -1127,26 +1128,49 @@ function ScannerScreen() {
       // 실시간 스캐너에서 감지된 바코드 데이터 직렬화
       const detectedBarcodes = barcodesData ? JSON.stringify(barcodesData) : null;
 
-      // ImageAnalysisScreen으로 이동 (스캐너에서 감지된 바코드 정보 포함)
-      isNavigatingRef.current = true;
-      router.push({
-        pathname: '/image-analysis',
-        params: {
-          imageUri: photo.uri,
-          detectedBarcodes: detectedBarcodes
-        }
+      // 자동 이동 대신 보류 데이터 저장 (사용자가 버튼 클릭 시 이동)
+      setPendingMultiScanData({
+        imageUri: photo.uri,
+        barcodes: detectedBarcodes,
+        count: count
       });
 
       // 플래그 해제 (약간의 딜레이 후)
       setTimeout(() => {
         isProcessingMultiRef.current = false;
-        isNavigatingRef.current = false;
-      }, 2000);
+      }, 1000);
     } catch (error) {
       console.error('[ScannerScreen] Error handling multiple codes:', error);
       isProcessingMultiRef.current = false;
     }
-  }, [isActive, router]);
+  }, [isActive]);
+
+  // 다중 바코드 결과 보기 핸들러
+  const handleViewMultiResults = useCallback(() => {
+    if (!pendingMultiScanData) return;
+
+    isNavigatingRef.current = true;
+    router.push({
+      pathname: '/image-analysis',
+      params: {
+        imageUri: pendingMultiScanData.imageUri,
+        detectedBarcodes: pendingMultiScanData.barcodes
+      }
+    });
+
+    // 보류 데이터 초기화
+    setPendingMultiScanData(null);
+
+    // 플래그 해제 (약간의 딜레이 후)
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 2000);
+  }, [pendingMultiScanData, router]);
+
+  // 다중 바코드 보류 데이터 닫기 핸들러
+  const handleCloseMultiScan = useCallback(() => {
+    setPendingMultiScanData(null);
+  }, []);
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
@@ -2133,6 +2157,29 @@ function ScannerScreen() {
         bottomOffset={bottomOffset + 50}
       />
 
+      {/* 다중 바코드 감지 시 결과 보기 버튼 */}
+      {pendingMultiScanData && (
+        <View style={[styles.multiScanButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
+          <TouchableOpacity
+            style={styles.multiScanButton}
+            onPress={handleViewMultiResults}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="qr-code" size={20} color="#fff" />
+            <Text style={styles.multiScanButtonText}>
+              {t('scanner.viewMultiResults').replace('{count}', pendingMultiScanData.count.toString())}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.multiScanCloseButton}
+            onPress={handleCloseMultiScan}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* 하단 배너 광고 - 탭바 바로 위 */}
       <AdBanner
         wrapperStyle={{
@@ -2492,6 +2539,45 @@ const styles = StyleSheet.create({
   galleryFooterLoading: {
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  multiScanButtonContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  multiScanButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.95)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  multiScanButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  multiScanCloseButton: {
+    backgroundColor: 'rgba(100, 100, 100, 0.95)',
+    padding: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
 

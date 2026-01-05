@@ -145,6 +145,7 @@ export default {
     uploadImage: '코드 자동 분석',
     scanned: '스캔 완료',
     viewDetails: '자세히 보기',
+    viewMultiResults: '{count}개 코드 결과 보기',
   },
 
   // 이미지 분석 화면

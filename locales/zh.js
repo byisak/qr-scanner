@@ -140,6 +140,9 @@ export default {
     noSessionUrl: '没有传输地址',
     pleaseGenerateUrl: '要使用实时服务器传输，请先在设置中生成地址。',
     uploadImage: '代码自动分析',
+    scanned: '扫描完成',
+    viewDetails: '查看详情',
+    viewMultiResults: '查看{count}个代码结果',
   },
 
   // 图片分析界面

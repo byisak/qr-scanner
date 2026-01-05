@@ -140,6 +140,9 @@ export default {
     noSessionUrl: 'Sin URL de sesión',
     pleaseGenerateUrl: 'Por favor, genera una URL en configuración para usar la sincronización en tiempo real.',
     uploadImage: 'Análisis automático',
+    scanned: 'Escaneado',
+    viewDetails: 'Ver detalles',
+    viewMultiResults: 'Ver {count} códigos',
   },
 
   // Pantalla de análisis de imagen

@@ -140,6 +140,9 @@ export default {
     noSessionUrl: '送信URLがありません',
     pleaseGenerateUrl: 'リアルタイム送信を使用するには、設定でURLを生成してください。',
     uploadImage: 'コード自動分析',
+    scanned: 'スキャン完了',
+    viewDetails: '詳細を見る',
+    viewMultiResults: '{count}個のコード結果を見る',
   },
 
   // 画像分析画面
