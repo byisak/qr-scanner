@@ -346,8 +346,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold) {
         // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
+        // value가 없을 경우 displayValue, rawValue, data 순으로 fallback
         const barcodesData = barcodes.map((barcode) => ({
-          value: barcode.value,
+          value: barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '',
           type: barcode.type,
           frame: barcode.frame,
         }));
