@@ -1255,7 +1255,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   resultIconButton: {
-    width: 44,
+    flex: 1,
     height: 44,
     borderRadius: 10,
     justifyContent: 'center',
