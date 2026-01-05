@@ -298,6 +298,11 @@ function ScannerScreen() {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
         const isRealtimeSyncEnabled = realtimeSync === 'true';
 
+        // 기본 그룹 정의
+        const defaultGroup = { id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() };
+
+        let localizedGroups = [defaultGroup];
+
         if (groupsData) {
           const groups = JSON.parse(groupsData);
           // 삭제된 그룹 필터링, 실시간 서버전송이 꺼져있으면 세션 그룹도 필터링
@@ -308,25 +313,30 @@ function ScannerScreen() {
           });
 
           // 기본 그룹 이름을 현재 언어로 변환
-          const localizedGroups = filteredGroups.map(g => {
+          localizedGroups = filteredGroups.map(g => {
             if (g.id === 'default') {
               return { ...g, name: t('groupEdit.defaultGroup') };
             }
             return g;
           });
 
-          const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
-          if (currentGroup) {
-            setCurrentGroupName(currentGroup.name);
-          } else if (localizedGroups.length > 0) {
-            // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
-            setCurrentGroupId('default');
-            setCurrentGroupName(t('groupEdit.defaultGroup'));
-            await AsyncStorage.setItem('selectedGroupId', 'default');
+          // 기본 그룹이 없으면 추가
+          if (!localizedGroups.find(g => g.id === 'default')) {
+            localizedGroups.unshift(defaultGroup);
           }
-          // 사용 가능한 그룹 목록 설정
-          setAvailableGroups(localizedGroups);
         }
+
+        const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
+        if (currentGroup) {
+          setCurrentGroupName(currentGroup.name);
+        } else {
+          // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
+          setCurrentGroupId('default');
+          setCurrentGroupName(t('groupEdit.defaultGroup'));
+          await AsyncStorage.setItem('selectedGroupId', 'default');
+        }
+        // 사용 가능한 그룹 목록 설정
+        setAvailableGroups(localizedGroups);
 
         // 실시간 서버전송 설정 로드
         if (isRealtimeSyncEnabled) {
@@ -487,6 +497,11 @@ function ScannerScreen() {
           const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
           const isRealtimeSyncEnabled = realtimeSync === 'true';
 
+          // 기본 그룹 정의
+          const defaultGroup = { id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() };
+
+          let localizedGroups = [defaultGroup];
+
           if (groupsData) {
             const groups = JSON.parse(groupsData);
             // 삭제된 그룹 필터링, 실시간 서버전송이 꺼져있으면 세션 그룹도 필터링
@@ -497,25 +512,30 @@ function ScannerScreen() {
             });
 
             // 기본 그룹 이름을 현재 언어로 변환
-            const localizedGroups = filteredGroups.map(g => {
+            localizedGroups = filteredGroups.map(g => {
               if (g.id === 'default') {
                 return { ...g, name: t('groupEdit.defaultGroup') };
               }
               return g;
             });
 
-            const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
-            if (currentGroup) {
-              setCurrentGroupName(currentGroup.name);
-            } else if (localizedGroups.length > 0) {
-              // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
-              setCurrentGroupId('default');
-              setCurrentGroupName(t('groupEdit.defaultGroup'));
-              await AsyncStorage.setItem('selectedGroupId', 'default');
+            // 기본 그룹이 없으면 추가
+            if (!localizedGroups.find(g => g.id === 'default')) {
+              localizedGroups.unshift(defaultGroup);
             }
-            // 사용 가능한 그룹 목록 설정
-            setAvailableGroups(localizedGroups);
           }
+
+          const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
+          if (currentGroup) {
+            setCurrentGroupName(currentGroup.name);
+          } else {
+            // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
+            setCurrentGroupId('default');
+            setCurrentGroupName(t('groupEdit.defaultGroup'));
+            await AsyncStorage.setItem('selectedGroupId', 'default');
+          }
+          // 사용 가능한 그룹 목록 설정
+          setAvailableGroups(localizedGroups);
 
           // 실시간 서버전송 설정 로드
           if (isRealtimeSyncEnabled) {
