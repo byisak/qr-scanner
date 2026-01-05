@@ -17,12 +17,7 @@ export const DEV_MODE_UNLOCK_ALL = true;
 
 export const LOCKED_FEATURES = {
   // ===== Generator 화면 =====
-  barcodeTab: {
-    id: 'barcodeTab',
-    adCount: 2, // 바코드 생성 탭 - 기본 프리미엄
-    type: 'generator',
-    description: '바코드 생성 기능',
-  },
+  // barcodeTab은 기본 해제 (잠금 없음)
 
   // ===== QR 타입 (텍스트 제외) =====
   // 기본 무료: text (텍스트)
@@ -175,9 +170,37 @@ export const LOCKED_FEATURES = {
     description: 'Google Drive 백업',
   },
 
-  // ===== 바코드 타입 (기본 6개 제외한 나머지) =====
-  // 기본 무료: UPC-A, UPC-E, EAN-13, EAN-8, Code 128, QR Code
+  // ===== 바코드 타입 (code128 제외한 모든 바코드) =====
+  // 기본 무료: Code 128만
   // 개별 잠금 바코드 타입 - 각 2회 (개별 해제)
+  barcodeEan13: {
+    id: 'barcodeEan13',
+    bcid: 'ean13',
+    adCount: 2,
+    type: 'barcode',
+    name: 'EAN-13',
+  },
+  barcodeEan8: {
+    id: 'barcodeEan8',
+    bcid: 'ean8',
+    adCount: 2,
+    type: 'barcode',
+    name: 'EAN-8',
+  },
+  barcodeUpca: {
+    id: 'barcodeUpca',
+    bcid: 'upca',
+    adCount: 2,
+    type: 'barcode',
+    name: 'UPC-A',
+  },
+  barcodeUpce: {
+    id: 'barcodeUpce',
+    bcid: 'upce',
+    adCount: 2,
+    type: 'barcode',
+    name: 'UPC-E',
+  },
   barcodeCode39: {
     id: 'barcodeCode39',
     bcid: 'code39',
@@ -237,13 +260,9 @@ export const LOCKED_FEATURES = {
 };
 
 // 무료로 제공되는 바코드 타입 (bcid 기준)
+// code128만 무료
 export const FREE_BARCODE_TYPES = [
-  'upca',
-  'upce',
-  'ean13',
-  'ean8',
   'code128',
-  'qrcode',
 ];
 
 // 무료 QR 타입 (텍스트만 무료)
