@@ -119,6 +119,7 @@ function ScannerScreen() {
   const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
   const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
+  const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -509,6 +510,10 @@ function ScannerScreen() {
           // 여러 코드 인식 모드 로드
           const multiCodeMode = await AsyncStorage.getItem('multiCodeModeEnabled');
           setMultiCodeModeEnabled(multiCodeMode === 'true');
+
+          // 바코드 값 표시 설정 로드
+          const showValues = await AsyncStorage.getItem('multiCodeShowValues');
+          setShowBarcodeValues(showValues === null ? true : showValues === 'true');
 
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
@@ -1926,6 +1931,7 @@ function ScannerScreen() {
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
         selectCenterBarcode={!multiCodeModeEnabled}
+        showBarcodeValues={multiCodeModeEnabled && showBarcodeValues}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"

@@ -73,12 +73,12 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
 };
 
 // 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
-const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)' }) => {
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
 
-  // 2개 이상일 때만 값 표시
-  const showValues = barcodes.length >= 2;
+  // 2개 이상이고 showBarcodeValues가 true일 때만 값 표시
+  const showValues = showBarcodeValues && barcodes.length >= 2;
 
   useEffect(() => {
     if (!highlights || highlights.length === 0) {
@@ -152,6 +152,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   onMultipleCodesDetected, // 2개 이상 바코드 감지 시 콜백
   multiCodeThreshold = 2, // 다중 감지 기준 (기본 2개)
   selectCenterBarcode = true, // 여러 코드 감지 시 중앙에 가장 가까운 코드만 선택 (기본값: true)
+  showBarcodeValues = true, // 바코드 경계 아래에 값 표시 여부 (기본값: true)
   onError,
   style,
   showHighlights = false, // 하이라이트 표시 여부 (기본값: false)
@@ -488,6 +489,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           barcodes={detectedBarcodes}
           borderColor={highlightColor}
           fillColor={highlightFillColor}
+          showBarcodeValues={showBarcodeValues}
         />
       )}
     </View>

@@ -357,17 +357,7 @@ export default function SettingsScreen() {
     })();
   }, [photoSaveEnabled]);
 
-  // 여러 코드 인식 모드 설정 저장
-  useEffect(() => {
-    (async () => {
-      try {
-        await AsyncStorage.setItem('multiCodeModeEnabled', multiCodeModeEnabled.toString());
-      } catch (error) {
-        console.error('Save multi code mode settings error:', error);
-      }
-    })();
-  }, [multiCodeModeEnabled]);
-
+  // 참고: multiCodeModeEnabled 저장은 MultiCodeModeSettingsScreen에서만 처리
   // 참고: continuousScanEnabled 저장은 ContinuousScanSettingsScreen에서만 처리
   // SettingsScreen에서는 읽기만 하고, 로드 시 동기화만 수행
 
@@ -637,19 +627,22 @@ export default function SettingsScreen() {
           </TouchableOpacity>
 
           {/* 여러 코드 인식 모드 */}
-          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight }]}>
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/multi-code-mode-settings')}
+            activeOpacity={0.7}
+          >
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.multiCodeMode')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.multiCodeModeDesc')}</Text>
             </View>
-            <Switch
-              value={multiCodeModeEnabled}
-              onValueChange={setMultiCodeModeEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.multiCodeMode')}
-            />
-          </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: multiCodeModeEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {multiCodeModeEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
 
           {/* 스캔 연동 URL */}
           <TouchableOpacity

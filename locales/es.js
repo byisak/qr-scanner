@@ -1254,6 +1254,17 @@ export default {
     infoMessage: 'Cuando el modo de escaneo continuo está habilitado, puedes escanear múltiples códigos rápidamente en la pantalla de escaneo. Los resultados se muestran como toast en la parte inferior, toca para ver detalles.',
   },
 
+  // Configuración del modo multicódigo
+  multiCodeMode: {
+    title: 'Modo multicódigo',
+    enable: 'Modo multicódigo',
+    enableDesc: 'Recopila múltiples códigos y ve los resultados de una vez',
+    displayOptions: 'Opciones de visualización',
+    showValues: 'Mostrar valores de códigos detectados',
+    showValuesDesc: 'Muestra los valores reconocidos debajo de los límites del código',
+    infoMessage: 'Cuando el modo multicódigo está habilitado, puedes mover la cámara para escanear múltiples códigos, luego toca el botón Ver Resultados en la parte inferior para verlos todos a la vez.',
+  },
+
   // Configuración de escaneo por lotes (compatibilidad)
   batchScan: {
     title: 'Configuración de escaneo por lotes',

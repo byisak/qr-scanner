@@ -1328,6 +1328,17 @@ export default {
     infoMessage: 'When continuous scan mode is enabled, you can quickly scan multiple codes on the scan screen. Results are shown as toast at the bottom, tap to see details.',
   },
 
+  // Multi-code mode settings
+  multiCodeMode: {
+    title: 'Multi-Code Mode',
+    enable: 'Multi-Code Mode',
+    enableDesc: 'Collect multiple codes and view results at once',
+    displayOptions: 'Display Options',
+    showValues: 'Show Detected Code Values',
+    showValuesDesc: 'Display recognized values below barcode boundaries',
+    infoMessage: 'When multi-code mode is enabled, you can move the camera to scan multiple codes, then tap the View Results button at the bottom to see them all at once.',
+  },
+
   // Batch scan settings (legacy compatibility)
   batchScan: {
     title: 'Batch Scan Settings',

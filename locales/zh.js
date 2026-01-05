@@ -1257,6 +1257,17 @@ export default {
     infoMessage: '启用连续扫描模式后，可以在扫描页面快速扫描多个代码。结果将在底部以提示形式显示，点击可查看详情。',
   },
 
+  // 多码识别模式设置
+  multiCodeMode: {
+    title: '多码识别模式',
+    enable: '多码识别模式',
+    enableDesc: '收集多个代码后一次性查看结果',
+    displayOptions: '显示选项',
+    showValues: '显示识别的代码值',
+    showValuesDesc: '在条形码边界下方显示识别的值',
+    infoMessage: '启用多码识别模式后，可以移动相机扫描多个代码，然后点击底部的查看结果按钮一次性查看全部结果。',
+  },
+
   // 批量扫描设置（旧版兼容）
   batchScan: {
     title: '批量扫描设置',
