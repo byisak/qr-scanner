@@ -174,6 +174,7 @@ function ScannerScreen() {
 
   // multiCodeModeEnabled 상태를 ref에 동기화
   useEffect(() => {
+    console.log(`[ScannerScreen] multiCodeModeEnabled changed: ${multiCodeModeEnabled}`);
     multiCodeModeEnabledRef.current = multiCodeModeEnabled;
     // 모드 비활성화 시 스캔된 코드 초기화
     if (!multiCodeModeEnabled) {
@@ -509,6 +510,7 @@ function ScannerScreen() {
 
           // 여러 코드 인식 모드 로드
           const multiCodeMode = await AsyncStorage.getItem('multiCodeModeEnabled');
+          console.log(`[ScannerScreen] Loaded multiCodeModeEnabled from storage: "${multiCodeMode}" -> ${multiCodeMode === 'true'}`);
           setMultiCodeModeEnabled(multiCodeMode === 'true');
 
           // 바코드 값 표시 설정 로드
