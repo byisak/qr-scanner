@@ -210,6 +210,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // selectCenterBarcode를 worklet에서 사용하기 위한 shared value
   const selectCenterBarcodeShared = useSharedValue(selectCenterBarcode);
   useEffect(() => {
+    console.log(`[NativeQRScanner] selectCenterBarcode prop changed: ${selectCenterBarcode}`);
     selectCenterBarcodeShared.value = selectCenterBarcode;
   }, [selectCenterBarcode]);
 
