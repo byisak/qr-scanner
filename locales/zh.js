@@ -551,6 +551,7 @@ export default {
     deleteConfirmMessage: '确定要删除此分组和所有扫描记录吗？',
     defaultGroup: '默认分组',
     cannotDeleteDefault: '无法删除默认分组。',
+    cannotEditDefault: '无法重命名默认分组。',
     emptyName: '请输入分组名称。',
     selectGroup: '选择分组',
     dragToReorder: '长按≡图标可调整顺序',

@@ -619,6 +619,7 @@ export default {
     deleteConfirmMessage: 'Do you want to delete this group and all scan records?',
     defaultGroup: 'Default Group',
     cannotDeleteDefault: 'Cannot delete default group.',
+    cannotEditDefault: 'Cannot rename default group.',
     emptyName: 'Please enter a group name.',
     selectGroup: 'Select Group',
     dragToReorder: 'Hold ≡ icon to reorder',

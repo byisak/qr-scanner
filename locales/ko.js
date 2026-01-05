@@ -608,6 +608,7 @@ export default {
     deleteConfirmMessage: '이 그룹과 모든 스캔 기록을 삭제하시겠습니까?',
     defaultGroup: '기본 그룹',
     cannotDeleteDefault: '기본 그룹은 삭제할 수 없습니다.',
+    cannotEditDefault: '기본 그룹은 이름을 변경할 수 없습니다.',
     emptyName: '그룹 이름을 입력해주세요.',
     selectGroup: '그룹 선택',
     dragToReorder: '≡ 아이콘을 길게 눌러 순서를 변경하세요',

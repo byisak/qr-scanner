@@ -182,7 +182,7 @@ export default function GroupEditScreen() {
     }
 
     if (editingGroup.id === DEFAULT_GROUP_ID) {
-      Alert.alert(t('common.error') || '오류', t('groupEdit.cannotDeleteDefault'));
+      Alert.alert(t('common.error') || '오류', t('groupEdit.cannotEditDefault') || '기본 그룹은 이름을 변경할 수 없습니다.');
       return;
     }
 

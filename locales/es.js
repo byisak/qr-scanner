@@ -551,6 +551,7 @@ export default {
     deleteConfirmMessage: '¿Deseas eliminar este grupo y todos los registros de escaneo?',
     defaultGroup: 'Grupo predeterminado',
     cannotDeleteDefault: 'No se puede eliminar el grupo predeterminado.',
+    cannotEditDefault: 'No se puede cambiar el nombre del grupo predeterminado.',
     emptyName: 'Por favor, ingresa un nombre de grupo.',
     selectGroup: 'Seleccionar grupo',
     dragToReorder: 'Mantén presionado ≡ para reordenar',

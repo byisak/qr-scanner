@@ -551,6 +551,7 @@ export default {
     deleteConfirmMessage: 'このグループとすべてのスキャン履歴を削除しますか？',
     defaultGroup: 'デフォルトグループ',
     cannotDeleteDefault: 'デフォルトグループは削除できません。',
+    cannotEditDefault: 'デフォルトグループの名前は変更できません。',
     emptyName: 'グループ名を入力してください。',
     selectGroup: 'グループを選択',
     dragToReorder: '≡アイコンを長押しして順序を変更',
