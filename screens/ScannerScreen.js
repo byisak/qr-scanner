@@ -1136,25 +1136,28 @@ function ScannerScreen() {
       let newCodesAdded = false;
 
       barcodesData.forEach((barcode) => {
-        // 빈 값이면 무시
-        if (!barcode.value || barcode.value.trim() === '') {
-          console.log(`[ScannerScreen] Skipping barcode with empty value`);
+        // 값을 문자열로 변환하고 정리
+        const value = String(barcode.value || '').trim();
+
+        // 빈 값이면 무시 (더 엄격한 체크)
+        if (!value || value.length === 0) {
+          console.log(`[ScannerScreen] Skipping barcode with empty value (original: "${barcode.value}")`);
           return;
         }
 
         const isDuplicate = scannedCodesRef.current.some(
-          (existing) => existing.value === barcode.value
+          (existing) => existing.value === value
         );
         if (!isDuplicate) {
           scannedCodesRef.current.push({
-            value: barcode.value,
+            value: value,
             type: barcode.type,
             frame: barcode.frame,
           });
           newCodesAdded = true;
-          console.log(`[ScannerScreen] Added new code: ${barcode.value}`);
+          console.log(`[ScannerScreen] Added new code (len=${value.length}): ${value}`);
         } else {
-          console.log(`[ScannerScreen] Duplicate code: ${barcode.value}`);
+          console.log(`[ScannerScreen] Duplicate code: ${value}`);
         }
       });
 
@@ -1188,12 +1191,13 @@ function ScannerScreen() {
           }, 1500);
         }
 
-        // 누적된 바코드 데이터로 보류 데이터 업데이트
-        const accumulatedBarcodes = JSON.stringify(scannedCodesRef.current);
+        // 누적된 바코드 데이터로 보류 데이터 업데이트 (빈 값 필터링)
+        const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
+        const accumulatedBarcodes = JSON.stringify(validBarcodes);
         setPendingMultiScanData({
           imageUri: imageUri,
           barcodes: accumulatedBarcodes,
-          count: scannedCodesRef.current.length
+          count: validBarcodes.length
         });
       }
     }
