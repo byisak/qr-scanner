@@ -405,6 +405,7 @@ function ScannerScreen() {
       setCanScan(true); // 화면 복귀 시 스캔 허용
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
+      isProcessingMultiRef.current = false; // 다중 바코드 처리 플래그 리셋
       setContinuousScanCount(0); // 연속 스캔 카운터 리셋
       resetAll();
 
