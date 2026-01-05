@@ -317,9 +317,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }, []);
 
   // 디버그 로그용 콜백 (Worklet에서 JS로 로그 전달)
-  const logBarcodeCount = useCallback((count) => {
+  const logBarcodeCount = useCallback((count, selectCenterValue) => {
     if (count > 1) {
-      console.log(`[NativeQRScanner] Frame barcodes count: ${count}`);
+      console.log(`[NativeQRScanner] Frame barcodes count: ${count}, selectCenterBarcode: ${selectCenterValue}`);
     }
   }, []);
 
@@ -340,8 +340,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return;
       }
 
-      // 디버그: 프레임당 바코드 개수 로그
-      runOnJSLogCallback(barcodes.length);
+      // 디버그: 프레임당 바코드 개수 및 모드 로그
+      runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value);
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold) {
