@@ -317,9 +317,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }, []);
 
   // 디버그 로그용 콜백 (Worklet에서 JS로 로그 전달)
-  const logBarcodeCount = useCallback((count, selectCenterValue, barcodeInfo) => {
+  const logBarcodeCount = useCallback((count, selectCenterValue, barcodeInfo, filteredCount) => {
     if (count > 1) {
-      console.log(`[NativeQRScanner] Frame barcodes count: ${count}, selectCenterBarcode: ${selectCenterValue}`);
+      console.log(`[NativeQRScanner] Frame: raw=${count}, filtered=${filteredCount}, selectCenterBarcode: ${selectCenterValue}`);
       // 각 바코드의 상세 정보 출력
       if (barcodeInfo) {
         console.log(`[NativeQRScanner] Barcodes detail: ${barcodeInfo}`);
@@ -344,33 +344,24 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return;
       }
 
-      // 디버그: 프레임당 바코드 개수 및 모드 로그 (각 바코드의 값 관련 속성들 출력)
-      const barcodeDetails = barcodes.map((bc, idx) => {
-        // 모든 값 관련 속성들을 수집
-        const valueProps = {
-          value: bc.value,
-          displayValue: bc.displayValue,
-          rawValue: bc.rawValue,
-          data: bc.data,
-          rawData: bc.rawData,
-          content: bc.content,
-          type: bc.type,
-        };
-        return `[${idx}]: ${JSON.stringify(valueProps)}`;
-      }).join(' | ');
-      runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails);
-
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold) {
         // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
         // value가 없을 경우 displayValue, rawValue, data 순으로 fallback
         // 빈 값인 바코드는 필터링 (바운드리 박스 전환 시 발생하는 빈 값 방지)
         const barcodesData = [];
+        const barcodeDetails = [];
         for (let i = 0; i < barcodes.length; i++) {
           const barcode = barcodes[i];
-          const value = barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '';
-          // 빈 값이 아닌 경우에만 추가
-          if (value && value.length > 0) {
+          const rawValue = barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '';
+          // 값을 문자열로 변환하고 공백 제거
+          const value = String(rawValue).trim();
+
+          // 디버그: 각 바코드의 값 정보 기록
+          barcodeDetails.push(`[${i}]: v="${value}" (raw="${barcode.value}")`);
+
+          // 빈 값이 아닌 경우에만 추가 (더 엄격한 체크)
+          if (value && value.length > 0 && value !== 'undefined' && value !== 'null') {
             barcodesData.push({
               value: value,
               type: barcode.type,
@@ -378,6 +369,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
             });
           }
         }
+
+        // 디버그 로그: 필터링 전후 개수와 각 바코드의 값
+        runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails.join(' | '), barcodesData.length);
 
         // 유효한 바코드가 없으면 무시
         if (barcodesData.length === 0) {
