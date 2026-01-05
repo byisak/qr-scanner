@@ -134,6 +134,7 @@ function ScannerScreen() {
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
   const scanResultModeRef = useRef('popup'); // 스캔 결과 표시 모드 ref
   const cleanupTimeoutRef = useRef(null); // cleanup 타이머 ref (경쟁 상태 방지)
+  const isProcessingMultiRef = useRef(false); // 다중 바코드 처리 중 플래그
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -1067,6 +1068,54 @@ function ScannerScreen() {
     startResetTimer(RESET_DELAYS.NORMAL);
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
+  // 다중 바코드 감지 핸들러 - ImageAnalysisScreen으로 이동
+  const handleMultipleCodesDetected = useCallback(async (count) => {
+    // 중복 처리 방지
+    if (isProcessingMultiRef.current || isNavigatingRef.current || !isActive) return;
+    isProcessingMultiRef.current = true;
+
+    console.log(`[ScannerScreen] Multiple codes detected: ${count}`);
+
+    try {
+      // 햅틱 피드백 (다른 패턴)
+      if (hapticEnabledRef.current) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+
+      // 사진 캡처
+      if (!cameraRef.current) {
+        console.warn('[ScannerScreen] Camera ref not available');
+        isProcessingMultiRef.current = false;
+        return;
+      }
+
+      const photo = await cameraRef.current.takePhoto();
+      if (!photo || !photo.uri) {
+        console.warn('[ScannerScreen] Failed to capture photo');
+        isProcessingMultiRef.current = false;
+        return;
+      }
+
+      console.log('[ScannerScreen] Photo captured:', photo.uri);
+
+      // ImageAnalysisScreen으로 이동
+      isNavigatingRef.current = true;
+      router.push({
+        pathname: '/image-analysis',
+        params: { imageUri: photo.uri }
+      });
+
+      // 플래그 해제 (약간의 딜레이 후)
+      setTimeout(() => {
+        isProcessingMultiRef.current = false;
+        isNavigatingRef.current = false;
+      }, 2000);
+    } catch (error) {
+      console.error('[ScannerScreen] Error handling multiple codes:', error);
+      isProcessingMultiRef.current = false;
+    }
+  }, [isActive, router]);
+
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
@@ -1764,6 +1813,7 @@ function ScannerScreen() {
         torch={torchOn ? 'on' : 'off'}
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
+        onMultipleCodesDetected={handleMultipleCodesDetected}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"

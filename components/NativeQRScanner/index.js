@@ -122,6 +122,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   facing = 'back',
   barcodeTypes = ['qr'],
   onCodeScanned,
+  onMultipleCodesDetected, // 2개 이상 바코드 감지 시 콜백
+  multiCodeThreshold = 2, // 다중 감지 기준 (기본 2개)
   onError,
   style,
   showHighlights = false, // 하이라이트 표시 여부 (기본값: false)
@@ -138,6 +140,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   useEffect(() => {
     onCodeScannedRef.current = onCodeScanned;
   }, [onCodeScanned]);
+
+  // onMultipleCodesDetected의 최신 참조를 유지하기 위한 ref
+  const onMultipleCodesDetectedRef = useRef(onMultipleCodesDetected);
+  useEffect(() => {
+    onMultipleCodesDetectedRef.current = onMultipleCodesDetected;
+  }, [onMultipleCodesDetected]);
 
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
@@ -219,6 +227,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // Worklets.createRunOnJS로 JS 스레드에서 실행할 함수 생성
   const runOnJSCallback = Worklets.createRunOnJS(handleBarcodeDetected);
 
+  // 다중 바코드 감지 콜백 핸들러 (JS 스레드에서 실행)
+  const handleMultipleCodesDetected = useCallback((count) => {
+    if (onMultipleCodesDetectedRef.current) {
+      onMultipleCodesDetectedRef.current(count);
+    }
+  }, []);
+
+  // 다중 바코드 감지용 Worklet 콜백
+  const runOnJSMultiCallback = Worklets.createRunOnJS(handleMultipleCodesDetected);
+
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
     fps: 10,
@@ -229,6 +247,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       if (barcodes.length === 0) {
         return;
+      }
+
+      // 다중 바코드 감지 시 (multiCodeThreshold 이상)
+      if (barcodes.length >= multiCodeThreshold && onMultipleCodesDetectedRef.current) {
+        runOnJSMultiCallback(barcodes.length);
+        return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
       const barcode = barcodes[0];
