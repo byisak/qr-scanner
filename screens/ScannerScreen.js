@@ -1129,6 +1129,11 @@ function ScannerScreen() {
       let newCodesAdded = false;
 
       barcodesData.forEach((barcode) => {
+        // 빈 값이면 무시
+        if (!barcode.value || barcode.value.trim() === '') {
+          return;
+        }
+
         const isDuplicate = scannedCodesRef.current.some(
           (existing) => existing.value === barcode.value
         );
