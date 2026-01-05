@@ -271,6 +271,8 @@ export default {
     photoSaveDesc: 'Guardar foto al escanear código QR',
     batchScanMode: 'Modo de escaneo por lotes',
     batchScanModeDesc: 'Escanear múltiples códigos QR/barras continuamente',
+    multiCodeMode: 'Modo multicódigo',
+    multiCodeModeDesc: 'Recopilar múltiples códigos y ver resultados a la vez',
     selectBarcodes: 'Seleccionar códigos de barras',
     selectedCount: ' tipos de código seleccionados',
     exportHistory: 'Exportar historial',

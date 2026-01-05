@@ -276,6 +276,8 @@ export default {
     photoSaveDesc: 'QR 코드 스캔 시 사진 저장',
     batchScanMode: '배치 스캔 모드',
     batchScanModeDesc: '여러 QR/바코드를 연속으로 스캔합니다',
+    multiCodeMode: '여러 코드 인식 모드',
+    multiCodeModeDesc: '여러 코드를 모아서 한번에 결과 확인',
     selectBarcodes: '인식할 바코드 선택',
     selectedCount: '개 바코드 타입 선택됨',
     exportHistory: '기록 내보내기',

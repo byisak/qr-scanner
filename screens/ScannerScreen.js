@@ -117,7 +117,8 @@ function ScannerScreen() {
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
   const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
   const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
-  const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes }
+  const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
+  const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -136,6 +137,8 @@ function ScannerScreen() {
   const scanResultModeRef = useRef('popup'); // 스캔 결과 표시 모드 ref
   const cleanupTimeoutRef = useRef(null); // cleanup 타이머 ref (경쟁 상태 방지)
   const isProcessingMultiRef = useRef(false); // 다중 바코드 처리 중 플래그
+  const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
+  const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -167,6 +170,16 @@ function ScannerScreen() {
   useEffect(() => {
     scanResultModeRef.current = scanResultMode;
   }, [scanResultMode]);
+
+  // multiCodeModeEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    multiCodeModeEnabledRef.current = multiCodeModeEnabled;
+    // 모드 비활성화 시 스캔된 코드 초기화
+    if (!multiCodeModeEnabled) {
+      scannedCodesRef.current = [];
+      setPendingMultiScanData(null);
+    }
+  }, [multiCodeModeEnabled]);
 
   // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
   useEffect(() => {
@@ -417,6 +430,8 @@ function ScannerScreen() {
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
       isProcessingMultiRef.current = false; // 다중 바코드 처리 플래그 리셋
+      scannedCodesRef.current = []; // 여러 코드 인식 모드 스캔 목록 리셋
+      setPendingMultiScanData(null); // 다중 바코드 보류 데이터 리셋
       setContinuousScanCount(0); // 연속 스캔 카운터 리셋
       resetAll();
 
@@ -490,6 +505,10 @@ function ScannerScreen() {
           if (resultMode) {
             setScanResultMode(resultMode);
           }
+
+          // 여러 코드 인식 모드 로드
+          const multiCodeMode = await AsyncStorage.getItem('multiCodeModeEnabled');
+          setMultiCodeModeEnabled(multiCodeMode === 'true');
 
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
@@ -1153,13 +1172,14 @@ function ScannerScreen() {
     router.push({
       pathname: '/image-analysis',
       params: {
-        imageUri: pendingMultiScanData.imageUri,
+        imageUri: pendingMultiScanData.imageUri || '',
         detectedBarcodes: pendingMultiScanData.barcodes
       }
     });
 
-    // 보류 데이터 초기화
+    // 보류 데이터 및 스캔된 코드 초기화
     setPendingMultiScanData(null);
+    scannedCodesRef.current = [];
 
     // 플래그 해제 (약간의 딜레이 후)
     setTimeout(() => {
@@ -1170,6 +1190,7 @@ function ScannerScreen() {
   // 다중 바코드 보류 데이터 닫기 핸들러
   const handleCloseMultiScan = useCallback(() => {
     setPendingMultiScanData(null);
+    scannedCodesRef.current = [];
   }, []);
 
   const handleBarCodeScanned = useCallback(
@@ -1517,6 +1538,40 @@ function ScannerScreen() {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 500);
+            startResetTimer(RESET_DELAYS.NORMAL);
+            return;
+          }
+
+          // 여러 코드 인식 모드일 경우
+          if (multiCodeModeEnabledRef.current) {
+            // 이미 스캔된 코드인지 확인 (중복 방지)
+            const isDuplicateInSession = scannedCodesRef.current.some(item => item.code === data);
+            if (!isDuplicateInSession) {
+              // 새 코드 추가
+              scannedCodesRef.current = [...scannedCodesRef.current, {
+                code: data,
+                type: normalizedType,
+                timestamp: Date.now(),
+                errorCorrectionLevel: detectedEcLevel,
+              }];
+
+              // pendingMultiScanData 업데이트
+              setPendingMultiScanData({
+                imageUri: null,
+                barcodes: JSON.stringify(scannedCodesRef.current.map(item => ({
+                  value: item.code,
+                  type: item.type,
+                }))),
+                count: scannedCodesRef.current.length,
+                scannedCodes: scannedCodesRef.current,
+              });
+            }
+
+            // 스캔 재활성화 (계속 스캔 가능)
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 300);
             startResetTimer(RESET_DELAYS.NORMAL);
             return;
           }

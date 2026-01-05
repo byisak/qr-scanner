@@ -271,6 +271,8 @@ export default {
     photoSaveDesc: 'QRコードスキャン時に写真を保存',
     batchScanMode: 'バッチスキャンモード',
     batchScanModeDesc: '複数のQR/バーコードを連続してスキャンします',
+    multiCodeMode: '複数コード認識モード',
+    multiCodeModeDesc: '複数のコードをまとめて結果を確認',
     selectBarcodes: '認識するバーコードを選択',
     selectedCount: '個のバーコードタイプが選択されました',
     exportHistory: '履歴のエクスポート',

@@ -47,6 +47,7 @@ export default function SettingsScreen() {
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 기본값: 끔
   const [continuousScanEnabled, setContinuousScanEnabled] = useState(false);
+  const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
@@ -299,6 +300,10 @@ export default function SettingsScreen() {
 
           setContinuousScanEnabled(cs === 'true');
 
+          // 여러 코드 인식 모드 설정 로드
+          const mcm = await AsyncStorage.getItem('multiCodeModeEnabled');
+          setMultiCodeModeEnabled(mcm === 'true');
+
           // 제품 검색 자동 실행 설정 로드
           const pas = await AsyncStorage.getItem('productAutoSearch');
           setProductAutoSearch(pas === 'true');
@@ -351,6 +356,17 @@ export default function SettingsScreen() {
       }
     })();
   }, [photoSaveEnabled]);
+
+  // 여러 코드 인식 모드 설정 저장
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem('multiCodeModeEnabled', multiCodeModeEnabled.toString());
+      } catch (error) {
+        console.error('Save multi code mode settings error:', error);
+      }
+    })();
+  }, [multiCodeModeEnabled]);
 
   // 참고: continuousScanEnabled 저장은 ContinuousScanSettingsScreen에서만 처리
   // SettingsScreen에서는 읽기만 하고, 로드 시 동기화만 수행
@@ -619,6 +635,21 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
           </TouchableOpacity>
+
+          {/* 여러 코드 인식 모드 */}
+          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.multiCodeMode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.multiCodeModeDesc')}</Text>
+            </View>
+            <Switch
+              value={multiCodeModeEnabled}
+              onValueChange={setMultiCodeModeEnabled}
+              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.multiCodeMode')}
+            />
+          </View>
 
           {/* 스캔 연동 URL */}
           <TouchableOpacity

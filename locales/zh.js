@@ -271,6 +271,8 @@ export default {
     photoSaveDesc: '扫描二维码时保存照片',
     batchScanMode: '批量扫描模式',
     batchScanModeDesc: '连续扫描多个二维码/条形码',
+    multiCodeMode: '多码识别模式',
+    multiCodeModeDesc: '收集多个代码后一次性查看结果',
     selectBarcodes: '选择要识别的条形码',
     selectedCount: '个条形码类型已选择',
     exportHistory: '导出历史记录',
