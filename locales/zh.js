@@ -157,6 +157,8 @@ export default {
     results: '识别的代码',
     noResults: '未找到条码',
     noResultsDesc: '在此图片中未检测到条码或二维码。\n请尝试其他图片。',
+    scannerDetected: '扫描器检测',
+    scannerDetectedDesc: '实时扫描器检测到的代码',
     saveAll: '保存所有图片',
     saveImage: '保存图片',
     saveAllToHistory: '全部保存到历史',

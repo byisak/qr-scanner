@@ -162,6 +162,8 @@ export default {
     results: 'Detected Codes',
     noResults: 'No barcodes found',
     noResultsDesc: 'No barcodes or QR codes were detected in this image.\nTry another image.',
+    scannerDetected: 'Scanner Detected',
+    scannerDetectedDesc: 'Codes detected by real-time scanner',
     saveAll: 'Save All Images',
     saveImage: 'Save Image',
     saveAllToHistory: 'Save All to History',

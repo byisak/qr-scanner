@@ -157,6 +157,8 @@ export default {
     results: 'Códigos detectados',
     noResults: 'No se encontraron códigos',
     noResultsDesc: 'No se detectaron códigos de barras ni QR en esta imagen.\nIntenta con otra imagen.',
+    scannerDetected: 'Detectado por escáner',
+    scannerDetectedDesc: 'Códigos detectados por el escáner en tiempo real',
     saveAll: 'Guardar todas las imágenes',
     saveImage: 'Guardar imagen',
     saveAllToHistory: 'Guardar todo en historial',

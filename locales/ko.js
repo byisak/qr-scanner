@@ -162,6 +162,8 @@ export default {
     results: '인식된 코드',
     noResults: '바코드를 찾을 수 없습니다',
     noResultsDesc: '이미지에서 바코드나 QR코드가 인식되지 않았습니다.\n다른 이미지를 시도해보세요.',
+    scannerDetected: '스캐너 감지',
+    scannerDetectedDesc: '실시간 스캐너에서 감지된 코드입니다',
     saveAll: '이미지 모두 저장',
     saveImage: '이미지 저장',
     saveAllToHistory: '기록 모두 저장',

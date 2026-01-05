@@ -228,10 +228,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const runOnJSCallback = Worklets.createRunOnJS(handleBarcodeDetected);
 
   // 다중 바코드 감지 콜백 핸들러 (JS 스레드에서 실행)
-  const handleMultipleCodesDetected = useCallback((count) => {
-    console.log(`[NativeQRScanner] Multiple codes detected: ${count}`);
+  const handleMultipleCodesDetected = useCallback((count, barcodesData) => {
+    console.log(`[NativeQRScanner] Multiple codes detected: ${count}`, barcodesData?.length);
     if (onMultipleCodesDetectedRef.current) {
-      onMultipleCodesDetectedRef.current(count);
+      onMultipleCodesDetectedRef.current(count, barcodesData);
     }
   }, []);
 
@@ -263,7 +263,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold && onMultipleCodesDetectedRef.current) {
-        runOnJSMultiCallback(barcodes.length);
+        // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
+        const barcodesData = barcodes.map((barcode) => ({
+          value: barcode.value,
+          type: barcode.type,
+          frame: barcode.frame,
+        }));
+        runOnJSMultiCallback(barcodes.length, barcodesData);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 

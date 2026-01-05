@@ -157,6 +157,8 @@ export default {
     results: '検出されたコード',
     noResults: 'バーコードが見つかりません',
     noResultsDesc: 'この画像からバーコードやQRコードが検出されませんでした。\n別の画像をお試しください。',
+    scannerDetected: 'スキャナー検出',
+    scannerDetectedDesc: 'リアルタイムスキャナーで検出されたコード',
     saveAll: 'すべての画像を保存',
     saveImage: '画像を保存',
     saveAllToHistory: 'すべて履歴に保存',

@@ -1070,8 +1070,8 @@ function ScannerScreen() {
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
   // 다중 바코드 감지 핸들러 - ImageAnalysisScreen으로 이동
-  const handleMultipleCodesDetected = useCallback(async (count) => {
-    console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
+  const handleMultipleCodesDetected = useCallback(async (count, barcodesData) => {
+    console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
 
     // 중복 처리 방지
     if (isProcessingMultiRef.current || isNavigatingRef.current || !isActive) {
@@ -1104,11 +1104,17 @@ function ScannerScreen() {
 
       console.log('[ScannerScreen] Photo captured:', photo.uri);
 
-      // ImageAnalysisScreen으로 이동
+      // 실시간 스캐너에서 감지된 바코드 데이터 직렬화
+      const detectedBarcodes = barcodesData ? JSON.stringify(barcodesData) : null;
+
+      // ImageAnalysisScreen으로 이동 (스캐너에서 감지된 바코드 정보 포함)
       isNavigatingRef.current = true;
       router.push({
         pathname: '/image-analysis',
-        params: { imageUri: photo.uri }
+        params: {
+          imageUri: photo.uri,
+          detectedBarcodes: detectedBarcodes
+        }
       });
 
       // 플래그 해제 (약간의 딜레이 후)
