@@ -364,11 +364,25 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       if (barcodes.length >= multiCodeThreshold) {
         // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
         // value가 없을 경우 displayValue, rawValue, data 순으로 fallback
-        const barcodesData = barcodes.map((barcode) => ({
-          value: barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '',
-          type: barcode.type,
-          frame: barcode.frame,
-        }));
+        // 빈 값인 바코드는 필터링 (바운드리 박스 전환 시 발생하는 빈 값 방지)
+        const barcodesData = [];
+        for (let i = 0; i < barcodes.length; i++) {
+          const barcode = barcodes[i];
+          const value = barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '';
+          // 빈 값이 아닌 경우에만 추가
+          if (value && value.length > 0) {
+            barcodesData.push({
+              value: value,
+              type: barcode.type,
+              frame: barcode.frame,
+            });
+          }
+        }
+
+        // 유효한 바코드가 없으면 무시
+        if (barcodesData.length === 0) {
+          return;
+        }
 
         // 하이라이트에 값 표시를 위해 항상 바코드 상태 업데이트 (모드와 상관없이)
         runOnJSUpdateBarcodes(barcodesData);
@@ -381,12 +395,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           const centerX = frameWidth / 2;
           const centerY = frameHeight / 2;
 
-          // 각 바코드의 중앙과 프레임 중앙 사이의 거리 계산
-          let closestBarcode = barcodes[0];
+          // 필터링된 바코드 중에서 중앙에 가장 가까운 것을 선택
+          let closestBarcode = barcodesData[0];
+          let closestOriginalBarcode = barcodes[0];
           let minDistance = Number.MAX_VALUE;
 
-          for (let i = 0; i < barcodes.length; i++) {
-            const bc = barcodes[i];
+          for (let i = 0; i < barcodesData.length; i++) {
+            const bc = barcodesData[i];
             if (bc.frame) {
               // 바코드 중앙 좌표
               const bcCenterX = bc.frame.x + bc.frame.width / 2;
@@ -398,25 +413,29 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
               if (distance < minDistance) {
                 minDistance = distance;
                 closestBarcode = bc;
+                // 원본 바코드에서 EC level 가져오기 위해 인덱스로 찾기
+                closestOriginalBarcode = barcodes.find(
+                  (b) => b.frame && b.frame.x === bc.frame.x && b.frame.y === bc.frame.y
+                ) || barcodes[0];
               }
             }
           }
 
           // 중앙에 가장 가까운 바코드로 단일 스캔 콜백 호출
-          const ecLevel = closestBarcode.errorCorrectionLevel || closestBarcode.native?.errorCorrectionLevel;
+          const ecLevel = closestOriginalBarcode.errorCorrectionLevel || closestOriginalBarcode.native?.errorCorrectionLevel;
           runOnJSCallback({
             value: closestBarcode.value,
             type: closestBarcode.type,
             frame: closestBarcode.frame,
-            cornerPoints: closestBarcode.cornerPoints,
+            cornerPoints: closestOriginalBarcode.cornerPoints,
             frameDimensions: frameDimensions,
             errorCorrectionLevel: ecLevel,
           });
           return;
         }
 
-        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출
-        runOnJSMultiCallback(barcodes.length, barcodesData);
+        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (필터링된 개수 전달)
+        runOnJSMultiCallback(barcodesData.length, barcodesData);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
