@@ -1070,11 +1070,16 @@ function ScannerScreen() {
 
   // 다중 바코드 감지 핸들러 - ImageAnalysisScreen으로 이동
   const handleMultipleCodesDetected = useCallback(async (count) => {
+    console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
+
     // 중복 처리 방지
-    if (isProcessingMultiRef.current || isNavigatingRef.current || !isActive) return;
+    if (isProcessingMultiRef.current || isNavigatingRef.current || !isActive) {
+      console.log('[ScannerScreen] Blocked by conditions');
+      return;
+    }
     isProcessingMultiRef.current = true;
 
-    console.log(`[ScannerScreen] Multiple codes detected: ${count}`);
+    console.log(`[ScannerScreen] Processing multiple codes: ${count}`);
 
     try {
       // 햅틱 피드백 (다른 패턴)
