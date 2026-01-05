@@ -317,9 +317,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }, []);
 
   // 디버그 로그용 콜백 (Worklet에서 JS로 로그 전달)
-  const logBarcodeCount = useCallback((count, selectCenterValue) => {
+  const logBarcodeCount = useCallback((count, selectCenterValue, barcodeInfo) => {
     if (count > 1) {
       console.log(`[NativeQRScanner] Frame barcodes count: ${count}, selectCenterBarcode: ${selectCenterValue}`);
+      // 각 바코드의 상세 정보 출력
+      if (barcodeInfo) {
+        console.log(`[NativeQRScanner] Barcodes detail: ${barcodeInfo}`);
+      }
     }
   }, []);
 
@@ -340,8 +344,21 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return;
       }
 
-      // 디버그: 프레임당 바코드 개수 및 모드 로그
-      runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value);
+      // 디버그: 프레임당 바코드 개수 및 모드 로그 (각 바코드의 값 관련 속성들 출력)
+      const barcodeDetails = barcodes.map((bc, idx) => {
+        // 모든 값 관련 속성들을 수집
+        const valueProps = {
+          value: bc.value,
+          displayValue: bc.displayValue,
+          rawValue: bc.rawValue,
+          data: bc.data,
+          rawData: bc.rawData,
+          content: bc.content,
+          type: bc.type,
+        };
+        return `[${idx}]: ${JSON.stringify(valueProps)}`;
+      }).join(' | ');
+      runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails);
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold) {
