@@ -18,6 +18,8 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
 const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value }) => {
   const x = useSharedValue(highlight.origin.x);
@@ -73,7 +75,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
 };
 
 // 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
-const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true }) => {
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
 
@@ -94,12 +96,39 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
     if (now - lastUpdateRef.current < 16) return;
     lastUpdateRef.current = now;
 
-    setTrackedHighlights(highlights.map((h, i) => ({
+    let filteredHighlights = highlights;
+
+    // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
+    if (selectCenterOnly && highlights.length >= 2) {
+      const screenCenterX = SCREEN_WIDTH / 2;
+      const screenCenterY = SCREEN_HEIGHT / 2;
+
+      let closestIndex = 0;
+      let minDistance = Number.MAX_VALUE;
+
+      highlights.forEach((h, i) => {
+        // 하이라이트 중앙 좌표 계산
+        const hCenterX = h.origin.x + h.size.width / 2;
+        const hCenterY = h.origin.y + h.size.height / 2;
+        // 화면 중앙과의 거리
+        const distance = Math.sqrt(
+          Math.pow(hCenterX - screenCenterX, 2) + Math.pow(hCenterY - screenCenterY, 2)
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = i;
+        }
+      });
+
+      filteredHighlights = [highlights[closestIndex]];
+    }
+
+    setTrackedHighlights(filteredHighlights.map((h, i) => ({
       ...h,
       key: `highlight-${i}`,
       value: barcodes[i]?.value || null,
     })));
-  }, [highlights, barcodes]);
+  }, [highlights, barcodes, selectCenterOnly]);
 
   if (trackedHighlights.length === 0) return null;
 
@@ -118,8 +147,6 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
     </View>
   );
 };
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // 바코드 타입 매핑 (expo-camera 타입 -> @mgcrea/vision-camera-barcode-scanner 타입)
 const BARCODE_TYPE_MAP = {
@@ -488,6 +515,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           borderColor={highlightColor}
           fillColor={highlightFillColor}
           showBarcodeValues={showBarcodeValues}
+          selectCenterOnly={selectCenterBarcode}
         />
       )}
     </View>
