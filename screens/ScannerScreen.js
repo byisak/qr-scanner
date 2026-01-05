@@ -1162,7 +1162,7 @@ function ScannerScreen() {
       // 플래그 해제 (약간의 딜레이 후)
       setTimeout(() => {
         isProcessingMultiRef.current = false;
-      }, 1000);
+      }, 1500);
     } catch (error) {
       console.error('[ScannerScreen] Error handling multiple codes:', error);
       isProcessingMultiRef.current = false;
