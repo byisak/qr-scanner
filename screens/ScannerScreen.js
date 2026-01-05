@@ -1114,60 +1114,74 @@ function ScannerScreen() {
     startResetTimer(RESET_DELAYS.NORMAL);
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
-  // 다중 바코드 감지 핸들러 - 자동 이동 대신 보류 데이터 저장
+  // 다중 바코드 감지 핸들러 - 중복 제외하고 누적
   const handleMultipleCodesDetected = useCallback(async (count, barcodesData) => {
     console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
 
-    // 중복 처리 방지
-    if (isProcessingMultiRef.current || isNavigatingRef.current || !isActive) {
-      console.log('[ScannerScreen] Blocked by conditions');
+    // 네비게이션 중이거나 비활성화 상태면 무시
+    if (isNavigatingRef.current || !isActive) {
+      console.log('[ScannerScreen] Blocked by navigation or inactive');
       return;
     }
-    isProcessingMultiRef.current = true;
 
-    console.log(`[ScannerScreen] Processing multiple codes: ${count}`);
+    // 새로 감지된 바코드 중 중복되지 않은 것만 추가
+    if (barcodesData && barcodesData.length > 0) {
+      let newCodesAdded = false;
 
-    try {
-      // 햅틱 피드백 (다른 패턴)
-      if (hapticEnabledRef.current) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      }
-
-      // 사진 캡처
-      if (!cameraRef.current) {
-        console.warn('[ScannerScreen] Camera ref not available');
-        isProcessingMultiRef.current = false;
-        return;
-      }
-
-      const photo = await cameraRef.current.takePhoto();
-      if (!photo || !photo.uri) {
-        console.warn('[ScannerScreen] Failed to capture photo');
-        isProcessingMultiRef.current = false;
-        return;
-      }
-
-      console.log('[ScannerScreen] Photo captured:', photo.uri);
-
-      // 실시간 스캐너에서 감지된 바코드 데이터 직렬화
-      const detectedBarcodes = barcodesData ? JSON.stringify(barcodesData) : null;
-
-      // 자동 이동 대신 보류 데이터 저장 (사용자가 버튼 클릭 시 이동)
-      setPendingMultiScanData({
-        imageUri: photo.uri,
-        barcodes: detectedBarcodes,
-        count: count
+      barcodesData.forEach((barcode) => {
+        const isDuplicate = scannedCodesRef.current.some(
+          (existing) => existing.value === barcode.value
+        );
+        if (!isDuplicate) {
+          scannedCodesRef.current.push({
+            value: barcode.value,
+            type: barcode.type,
+            frame: barcode.frame,
+          });
+          newCodesAdded = true;
+        }
       });
 
-      // 플래그 해제 (약간의 딜레이 후)
-      setTimeout(() => {
-        isProcessingMultiRef.current = false;
-      }, 1500);
-    } catch (error) {
-      console.error('[ScannerScreen] Error handling multiple codes:', error);
-      isProcessingMultiRef.current = false;
+      // 새로운 코드가 추가되었을 때만 처리
+      if (newCodesAdded) {
+        console.log(`[ScannerScreen] Accumulated unique codes: ${scannedCodesRef.current.length}`);
+
+        // 햅틱 피드백 (새 코드 추가 시)
+        if (hapticEnabledRef.current) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+
+        // 첫 번째 감지 시에만 사진 캡처 (isProcessingMultiRef로 중복 방지)
+        let imageUri = pendingMultiScanData?.imageUri || null;
+
+        if (!isProcessingMultiRef.current && !imageUri && cameraRef.current) {
+          isProcessingMultiRef.current = true;
+          try {
+            const photo = await cameraRef.current.takePhoto();
+            if (photo && photo.uri) {
+              imageUri = photo.uri;
+              console.log('[ScannerScreen] Photo captured:', imageUri);
+            }
+          } catch (error) {
+            console.error('[ScannerScreen] Photo capture error:', error);
+          }
+
+          // 플래그 해제 (딜레이 후)
+          setTimeout(() => {
+            isProcessingMultiRef.current = false;
+          }, 1500);
+        }
+
+        // 누적된 바코드 데이터로 보류 데이터 업데이트
+        const accumulatedBarcodes = JSON.stringify(scannedCodesRef.current);
+        setPendingMultiScanData({
+          imageUri: imageUri,
+          barcodes: accumulatedBarcodes,
+          count: scannedCodesRef.current.length
+        });
+      }
     }
-  }, [isActive]);
+  }, [isActive, pendingMultiScanData?.imageUri]);
 
   // 다중 바코드 결과 보기 핸들러
   const handleViewMultiResults = useCallback(() => {
