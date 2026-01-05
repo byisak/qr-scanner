@@ -229,13 +229,22 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
   // 다중 바코드 감지 콜백 핸들러 (JS 스레드에서 실행)
   const handleMultipleCodesDetected = useCallback((count) => {
+    console.log(`[NativeQRScanner] Multiple codes detected: ${count}`);
     if (onMultipleCodesDetectedRef.current) {
       onMultipleCodesDetectedRef.current(count);
     }
   }, []);
 
+  // 디버그 로그용 콜백 (Worklet에서 JS로 로그 전달)
+  const logBarcodeCount = useCallback((count) => {
+    if (count > 1) {
+      console.log(`[NativeQRScanner] Frame barcodes count: ${count}`);
+    }
+  }, []);
+
   // 다중 바코드 감지용 Worklet 콜백
   const runOnJSMultiCallback = Worklets.createRunOnJS(handleMultipleCodesDetected);
+  const runOnJSLogCallback = Worklets.createRunOnJS(logBarcodeCount);
 
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
@@ -248,6 +257,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       if (barcodes.length === 0) {
         return;
       }
+
+      // 디버그: 프레임당 바코드 개수 로그
+      runOnJSLogCallback(barcodes.length);
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold && onMultipleCodesDetectedRef.current) {
