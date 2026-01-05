@@ -345,7 +345,17 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
       if (barcodes.length >= multiCodeThreshold) {
-        // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택
+        // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
+        const barcodesData = barcodes.map((barcode) => ({
+          value: barcode.value,
+          type: barcode.type,
+          frame: barcode.frame,
+        }));
+
+        // 하이라이트에 값 표시를 위해 항상 바코드 상태 업데이트 (모드와 상관없이)
+        runOnJSUpdateBarcodes(barcodesData);
+
+        // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택 (여러 코드 인식 모드 OFF)
         if (selectCenterBarcodeShared.value) {
           // 프레임 중앙 좌표 계산
           const frameWidth = frameDimensions?.width || 1920;
@@ -387,17 +397,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           return;
         }
 
-        // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
-        const barcodesData = barcodes.map((barcode) => ({
-          value: barcode.value,
-          type: barcode.type,
-          frame: barcode.frame,
-        }));
-
-        // 하이라이트에 값 표시를 위해 항상 바코드 상태 업데이트
-        runOnJSUpdateBarcodes(barcodesData);
-
-        // 다중 감지 콜백 호출 (워크릿에서 ref 접근 불가하므로 항상 호출)
+        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출
         runOnJSMultiCallback(barcodes.length, barcodesData);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
