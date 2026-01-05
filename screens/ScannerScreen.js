@@ -1118,6 +1118,13 @@ function ScannerScreen() {
   const handleMultipleCodesDetected = useCallback(async (count, barcodesData) => {
     console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
 
+    // 디버그: 각 바코드의 값 로그
+    if (barcodesData) {
+      barcodesData.forEach((bc, idx) => {
+        console.log(`[ScannerScreen] Barcode ${idx}: value="${bc.value}", type="${bc.type}"`);
+      });
+    }
+
     // 네비게이션 중이거나 비활성화 상태면 무시
     if (isNavigatingRef.current || !isActive) {
       console.log('[ScannerScreen] Blocked by navigation or inactive');
@@ -1131,6 +1138,7 @@ function ScannerScreen() {
       barcodesData.forEach((barcode) => {
         // 빈 값이면 무시
         if (!barcode.value || barcode.value.trim() === '') {
+          console.log(`[ScannerScreen] Skipping barcode with empty value`);
           return;
         }
 
@@ -1144,6 +1152,9 @@ function ScannerScreen() {
             frame: barcode.frame,
           });
           newCodesAdded = true;
+          console.log(`[ScannerScreen] Added new code: ${barcode.value}`);
+        } else {
+          console.log(`[ScannerScreen] Duplicate code: ${barcode.value}`);
         }
       });
 
