@@ -1,7 +1,7 @@
 // utils/captureWithOverlay.js
 // Skia를 사용하여 사진 위에 바코드 오버레이를 합성하는 유틸리티
 
-import { Skia, Canvas, Image as SkiaImage, AlphaType, ColorType } from '@shopify/react-native-skia';
+import { Skia } from '@shopify/react-native-skia';
 import * as FileSystem from 'expo-file-system';
 import { LABEL_COLORS } from '../constants/Colors';
 
@@ -11,7 +11,7 @@ import { LABEL_COLORS } from '../constants/Colors';
  * @param {Array} barcodes - 바코드 데이터 배열 [{bounds, value, colorIndex, screenSize}]
  * @param {number} screenWidth - 화면 너비
  * @param {number} screenHeight - 화면 높이
- * @returns {Promise<string>} - 합성된 이미지의 base64 data URI
+ * @returns {Promise<string>} - 합성된 이미지 파일 경로
  */
 export async function captureWithOverlay(imageUri, barcodes, screenWidth, screenHeight) {
   try {
@@ -21,7 +21,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
 
     if (!image) {
       console.error('[captureWithOverlay] Failed to load image');
-      return null;
+      return imageUri;
     }
 
     const imgWidth = image.width();
@@ -31,7 +31,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
     const surface = Skia.Surface.Make(imgWidth, imgHeight);
     if (!surface) {
       console.error('[captureWithOverlay] Failed to create surface');
-      return null;
+      return imageUri;
     }
 
     const canvas = surface.getCanvas();
@@ -59,7 +59,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
 
       // 바운더리 박스 (채우기)
       const fillPaint = Skia.Paint();
-      fillPaint.setColor(Skia.Color(hexToRgba(color, 0.15)));
+      fillPaint.setColor(Skia.Color(hexToRgba(color, 0.2)));
       canvas.drawRRect(
         Skia.RRectXY(Skia.XYWHRect(x, y, width, height), 8, 8),
         fillPaint
@@ -69,20 +69,20 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
       const strokePaint = Skia.Paint();
       strokePaint.setColor(Skia.Color(color));
       strokePaint.setStyle(1); // Stroke
-      strokePaint.setStrokeWidth(4);
+      strokePaint.setStrokeWidth(Math.max(4, width / 50));
       canvas.drawRRect(
         Skia.RRectXY(Skia.XYWHRect(x, y, width, height), 8, 8),
         strokePaint
       );
 
-      // 라벨 배경
+      // 라벨 배경 및 텍스트
       if (barcode.value) {
         const labelText = barcode.value.length > 30
           ? barcode.value.substring(0, 30) + '...'
           : barcode.value;
 
-        const fontSize = Math.max(24, Math.min(40, width / 8));
-        const labelPadding = 12;
+        const fontSize = Math.max(20, Math.min(40, width / 10));
+        const labelPadding = 10;
         const labelWidth = Math.min(width + 40, labelText.length * fontSize * 0.6 + labelPadding * 2);
         const labelHeight = fontSize + labelPadding * 2;
         const labelY = y + height + 8;
@@ -91,7 +91,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
         const labelBgPaint = Skia.Paint();
         labelBgPaint.setColor(Skia.Color(color));
         canvas.drawRRect(
-          Skia.RRectXY(Skia.XYWHRect(x, labelY, labelWidth, labelHeight), 8, 8),
+          Skia.RRectXY(Skia.XYWHRect(x, labelY, labelWidth, labelHeight), 6, 6),
           labelBgPaint
         );
 
@@ -99,7 +99,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
         const font = Skia.Font(null, fontSize);
         const textPaint = Skia.Paint();
         textPaint.setColor(Skia.Color('white'));
-        canvas.drawText(labelText, x + labelPadding, labelY + fontSize + 4, textPaint, font);
+        canvas.drawText(labelText, x + labelPadding, labelY + fontSize + 2, textPaint, font);
       }
     }
 
@@ -107,14 +107,14 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
     const snapshot = surface.makeImageSnapshot();
     if (!snapshot) {
       console.error('[captureWithOverlay] Failed to create snapshot');
-      return null;
+      return imageUri;
     }
 
     // Base64로 인코딩
     const bytes = snapshot.encodeToBytes();
     if (!bytes) {
       console.error('[captureWithOverlay] Failed to encode image');
-      return null;
+      return imageUri;
     }
 
     // 파일로 저장
@@ -129,7 +129,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
 
   } catch (error) {
     console.error('[captureWithOverlay] Error:', error);
-    return null;
+    return imageUri;
   }
 }
 
