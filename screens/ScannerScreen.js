@@ -1285,6 +1285,35 @@ function ScannerScreen() {
     setVisibleHighlightsCount(count);
   }, []);
 
+  // 검증된 바코드 변경 핸들러 (투표 기반 - 각 바운더리가 검증한 값)
+  const handleVerifiedBarcodesChange = useCallback((verifiedBarcodes) => {
+    // 네비게이션 중이거나 비활성화 상태면 무시
+    if (isNavigatingRef.current || !isActive) return;
+    // 여러 코드 인식 모드가 아니면 무시
+    if (!multiCodeModeEnabledRef.current) return;
+
+    console.log(`[ScannerScreen] Verified barcodes: ${verifiedBarcodes?.length}`);
+
+    if (verifiedBarcodes && verifiedBarcodes.length > 0) {
+      // 검증된 바코드로 pendingMultiScanData 업데이트
+      // 중복 제거 (같은 값이 여러 바운더리에서 나올 수 있음)
+      const uniqueValues = new Map();
+      verifiedBarcodes.forEach(bc => {
+        if (bc.value && !uniqueValues.has(bc.value)) {
+          uniqueValues.set(bc.value, bc);
+        }
+      });
+
+      const uniqueBarcodes = Array.from(uniqueValues.values());
+
+      setPendingMultiScanData({
+        imageUri: null,
+        barcodes: JSON.stringify(uniqueBarcodes),
+        count: uniqueBarcodes.length
+      });
+    }
+  }, [isActive]);
+
   // 결과 창 열기 핸들러 (결과창 자동 열림 비활성화 시 사용)
   const handleOpenResultWindow = useCallback(() => {
     if (!lastScannedCode) return;
@@ -2085,6 +2114,7 @@ function ScannerScreen() {
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
         onDetectedBarcodesChange={handleDetectedBarcodesChange}
+        onVerifiedBarcodesChange={handleVerifiedBarcodesChange}
         onVisibleHighlightsChange={handleVisibleHighlightsChange}
         selectCenterBarcode={!multiCodeModeEnabled}
         showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}

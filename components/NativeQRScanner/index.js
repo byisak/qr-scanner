@@ -74,13 +74,15 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
   );
 };
 
-// 커스텀 하이라이트 컴포넌트 (객체 추적 알고리즘 적용)
-const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.5)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false, onVisibleCountChange }) => {
+// 커스텀 하이라이트 컴포넌트 (객체 추적 알고리즘 적용 + 투표 기반 값 검증)
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.5)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false, onVisibleCountChange, onVerifiedBarcodesChange }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
-  // 추적 중인 하이라이트: id -> {x, y, width, height, value, lastSeen}
+  // 추적 중인 하이라이트: id -> {x, y, width, height, valueCounts: Map<value, count>, bestValue, lastSeen}
   const trackedObjectsRef = useRef(new Map());
   const nextIdRef = useRef(0);
+  // 마지막으로 콜백된 검증된 바코드 키 (중복 콜백 방지)
+  const lastVerifiedKeyRef = useRef('');
 
   // showBarcodeValues가 true이고 바코드가 있으면 값 표시
   const showValues = showBarcodeValues && barcodes.length > 0;
@@ -101,6 +103,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       const timeout = setTimeout(() => {
         setTrackedHighlights([]);
         trackedObjectsRef.current.clear();
+        lastVerifiedKeyRef.current = ''; // 검증 키도 초기화
       }, 300);
       return () => clearTimeout(timeout);
     }
@@ -188,23 +191,29 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       tracked.height = candidate.current.height;
       tracked.lastSeen = now;
 
-      // 값 업데이트 (매우 보수적으로 - 높은 신뢰도에서만 변경)
+      // 투표 기반 값 업데이트 - 각 값의 출현 횟수 카운트
       if (candidate.current.value) {
-        if (!tracked.value) {
-          // 값이 없으면 새 값 설정
-          tracked.value = candidate.current.value;
-          tracked.valueConfidence = 1;
-        } else if (tracked.value === candidate.current.value) {
-          // 같은 값이면 신뢰도 증가
-          tracked.valueConfidence = Math.min((tracked.valueConfidence || 0) + 2, 15);
-        } else {
-          // 다른 값이면 신뢰도 감소 (천천히)
-          tracked.valueConfidence = Math.max((tracked.valueConfidence || 0) - 0.5, 0);
-          // 신뢰도가 매우 낮을 때만 값 변경 (6 이하)
-          if (tracked.valueConfidence <= 1) {
-            tracked.value = candidate.current.value;
-            tracked.valueConfidence = 1;
+        const value = String(candidate.current.value).trim();
+        if (value && value !== 'null' && value !== 'undefined') {
+          // valueCounts Map이 없으면 생성
+          if (!tracked.valueCounts) {
+            tracked.valueCounts = new Map();
           }
+          // 현재 값의 카운트 증가
+          const currentCount = tracked.valueCounts.get(value) || 0;
+          tracked.valueCounts.set(value, currentCount + 1);
+
+          // 가장 많이 나온 값을 bestValue로 설정
+          let maxCount = 0;
+          let bestValue = null;
+          for (const [v, count] of tracked.valueCounts) {
+            if (count > maxCount) {
+              maxCount = count;
+              bestValue = v;
+            }
+          }
+          tracked.bestValue = bestValue;
+          tracked.bestValueCount = maxCount;
         }
       }
     }
@@ -213,13 +222,22 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     currentHighlights.forEach((current, idx) => {
       if (!matched.has(idx)) {
         const newId = nextIdRef.current++;
+        const value = current.value ? String(current.value).trim() : null;
+        const validValue = value && value !== 'null' && value !== 'undefined' ? value : null;
+
+        const valueCounts = new Map();
+        if (validValue) {
+          valueCounts.set(validValue, 1);
+        }
+
         trackedObjectsRef.current.set(newId, {
           x: current.x,
           y: current.y,
           width: current.width,
           height: current.height,
-          value: current.value,
-          valueConfidence: current.value ? 1 : 0,
+          valueCounts: valueCounts,
+          bestValue: validValue,
+          bestValueCount: validValue ? 1 : 0,
           lastSeen: now,
         });
         matchResults.set(idx, newId);
@@ -233,7 +251,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       }
     }
 
-    // 최종 결과 생성
+    // 최종 결과 생성 - bestValue 사용 (투표 결과)
     const newTracked = currentHighlights.map((current, idx) => {
       const trackId = matchResults.get(idx);
       const tracked = trackedObjectsRef.current.get(trackId);
@@ -241,7 +259,8 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       return {
         ...current.original,
         key: `track-${trackId}`,
-        value: tracked?.value || current.value,
+        value: tracked?.bestValue || current.value,
+        voteCount: tracked?.bestValueCount || 0,
       };
     });
 
@@ -251,7 +270,30 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     if (onVisibleCountChange) {
       onVisibleCountChange(newTracked.length);
     }
-  }, [highlights, barcodes, selectCenterOnly, onVisibleCountChange]);
+
+    // 검증된 바코드만 콜백 (3회 이상 동일 값 감지된 경우)
+    if (onVerifiedBarcodesChange) {
+      const verifiedBarcodes = [];
+      for (const [id, tracked] of trackedObjectsRef.current) {
+        if (tracked.bestValue && tracked.bestValueCount >= 3) {
+          verifiedBarcodes.push({
+            value: tracked.bestValue,
+            voteCount: tracked.bestValueCount,
+            type: 'qr', // TODO: 타입도 추적하면 좋음
+          });
+        }
+      }
+
+      // 변경된 경우에만 콜백 호출 (중복 방지)
+      if (verifiedBarcodes.length > 0) {
+        const verifiedKey = verifiedBarcodes.map(bc => `${bc.value}:${bc.voteCount}`).sort().join('|');
+        if (verifiedKey !== lastVerifiedKeyRef.current) {
+          lastVerifiedKeyRef.current = verifiedKey;
+          onVerifiedBarcodesChange(verifiedBarcodes);
+        }
+      }
+    }
+  }, [highlights, barcodes, selectCenterOnly, onVisibleCountChange, onVerifiedBarcodesChange]);
 
   if (trackedHighlights.length === 0) return null;
 
@@ -302,6 +344,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   onCodeScanned,
   onMultipleCodesDetected, // 2개 이상 바코드 감지 시 콜백
   onDetectedBarcodesChange, // 감지된 바코드 목록 변경 시 콜백 (React 상태 기반, Worklet 우회)
+  onVerifiedBarcodesChange, // 검증된 바코드 콜백 (투표 기반 - 각 바운더리가 검증한 값)
   onVisibleHighlightsChange, // 화면에 표시되는 하이라이트 개수 변경 시 콜백
   multiCodeThreshold = 2, // 다중 감지 기준 (기본 2개)
   selectCenterBarcode = true, // 여러 코드 감지 시 중앙에 가장 가까운 코드만 선택 (기본값: true)
@@ -730,6 +773,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           showBarcodeValues={showBarcodeValues}
           selectCenterOnly={selectCenterBarcode}
           onVisibleCountChange={onVisibleHighlightsChange}
+          onVerifiedBarcodesChange={onVerifiedBarcodesChange}
         />
       )}
     </View>
