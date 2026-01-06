@@ -149,7 +149,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
     // 기존 추적 객체와 새 하이라이트 매칭 (Hungarian 알고리즘 대신 탐욕적 매칭)
     const matched = new Set(); // 매칭된 새 하이라이트 인덱스
     const matchedTracked = new Set(); // 매칭된 기존 추적 객체 ID
-    const MAX_DISTANCE = 150; // 매칭 최대 거리
+    const MAX_DISTANCE = 100; // 매칭 최대 거리 (더 엄격하게)
 
     // 거리 기반 매칭
     const trackedEntries = Array.from(trackedObjectsRef.current.entries());
@@ -188,15 +188,23 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       tracked.height = candidate.current.height;
       tracked.lastSeen = now;
 
-      // 값 업데이트 (새 값이 있고, 기존 값과 다르면 신뢰도 기반 업데이트)
+      // 값 업데이트 (매우 보수적으로 - 높은 신뢰도에서만 변경)
       if (candidate.current.value) {
-        if (!tracked.value || tracked.valueConfidence <= 3) {
+        if (!tracked.value) {
+          // 값이 없으면 새 값 설정
           tracked.value = candidate.current.value;
-          tracked.valueConfidence = (tracked.valueConfidence || 0) + 1;
+          tracked.valueConfidence = 1;
         } else if (tracked.value === candidate.current.value) {
-          tracked.valueConfidence = Math.min((tracked.valueConfidence || 0) + 1, 10);
+          // 같은 값이면 신뢰도 증가
+          tracked.valueConfidence = Math.min((tracked.valueConfidence || 0) + 2, 15);
         } else {
-          tracked.valueConfidence = Math.max((tracked.valueConfidence || 0) - 1, 0);
+          // 다른 값이면 신뢰도 감소 (천천히)
+          tracked.valueConfidence = Math.max((tracked.valueConfidence || 0) - 0.5, 0);
+          // 신뢰도가 매우 낮을 때만 값 변경 (6 이하)
+          if (tracked.valueConfidence <= 1) {
+            tracked.value = candidate.current.value;
+            tracked.valueConfidence = 1;
+          }
         }
       }
     }
