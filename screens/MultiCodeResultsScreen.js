@@ -19,11 +19,13 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { Colors } from '../constants/Colors';
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { isDark } = useTheme();
   const { t, fonts } = useLanguage();
+  const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
 
   const [codes, setCodes] = useState([]);
