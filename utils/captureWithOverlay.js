@@ -1,7 +1,7 @@
 // utils/captureWithOverlay.js
 // Skia를 사용하여 사진 위에 바코드 오버레이를 합성하는 유틸리티
 
-import { Skia } from '@shopify/react-native-skia';
+import { Skia, ImageFormat } from '@shopify/react-native-skia';
 import * as FileSystem from 'expo-file-system/legacy';
 import { LABEL_COLORS } from '../constants/Colors';
 
@@ -15,6 +15,9 @@ import { LABEL_COLORS } from '../constants/Colors';
  */
 export async function captureWithOverlay(imageUri, barcodes, screenWidth, screenHeight) {
   try {
+    console.log('[captureWithOverlay] Starting...');
+    const startTime = Date.now();
+
     // 이미지 로드
     const imageData = await Skia.Data.fromURI(imageUri);
     const image = Skia.Image.MakeImageFromEncoded(imageData);
@@ -26,6 +29,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
 
     const imgWidth = image.width();
     const imgHeight = image.height();
+    console.log(`[captureWithOverlay] Image loaded: ${imgWidth}x${imgHeight} (${Date.now() - startTime}ms)`);
 
     // 오프스크린 캔버스 생성
     const surface = Skia.Surface.Make(imgWidth, imgHeight);
@@ -59,9 +63,9 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
 
       // 바운더리 박스 (채우기)
       const fillPaint = Skia.Paint();
-      fillPaint.setColor(Skia.Color(hexToRgba(color, 0.2)));
+      fillPaint.setColor(Skia.Color(hexToRgba(color, 0.25)));
       canvas.drawRRect(
-        Skia.RRectXY(Skia.XYWHRect(x, y, width, height), 8, 8),
+        Skia.RRectXY(Skia.XYWHRect(x, y, width, height), 12 * scaleX, 12 * scaleY),
         fillPaint
       );
 
@@ -69,49 +73,52 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
       const strokePaint = Skia.Paint();
       strokePaint.setColor(Skia.Color(color));
       strokePaint.setStyle(1); // Stroke
-      strokePaint.setStrokeWidth(Math.max(4, width / 50));
+      strokePaint.setStrokeWidth(Math.max(6, width / 40));
       canvas.drawRRect(
-        Skia.RRectXY(Skia.XYWHRect(x, y, width, height), 8, 8),
+        Skia.RRectXY(Skia.XYWHRect(x, y, width, height), 12 * scaleX, 12 * scaleY),
         strokePaint
       );
 
       // 라벨 배경 (색상 인디케이터)
       if (barcode.value) {
-        const labelHeight = Math.max(30, height / 8);
-        const labelY = y + height + 8;
+        const labelHeight = Math.max(40, height / 6);
+        const labelY = y + height + 12 * scaleY;
 
-        // 라벨 배경
         const labelBgPaint = Skia.Paint();
         labelBgPaint.setColor(Skia.Color(color));
         canvas.drawRRect(
-          Skia.RRectXY(Skia.XYWHRect(x, labelY, width, labelHeight), 6, 6),
+          Skia.RRectXY(Skia.XYWHRect(x, labelY, width, labelHeight), 8 * scaleX, 8 * scaleY),
           labelBgPaint
         );
       }
     }
 
-    // 이미지로 변환
+    console.log(`[captureWithOverlay] Drawing done (${Date.now() - startTime}ms)`);
+
+    // 이미지로 변환 - encodeToBase64 직접 사용 (훨씬 빠름)
     const snapshot = surface.makeImageSnapshot();
     if (!snapshot) {
       console.error('[captureWithOverlay] Failed to create snapshot');
       return imageUri;
     }
 
-    // Base64로 인코딩
-    const bytes = snapshot.encodeToBytes();
-    if (!bytes) {
+    // JPEG 80% 품질로 Base64 인코딩 (빠르고 작은 파일)
+    const base64 = snapshot.encodeToBase64(ImageFormat.JPEG, 80);
+    if (!base64) {
       console.error('[captureWithOverlay] Failed to encode image');
       return imageUri;
     }
 
+    console.log(`[captureWithOverlay] Encoded (${Date.now() - startTime}ms)`);
+
     // 파일로 저장
     const fileName = `composite_${Date.now()}.jpg`;
     const filePath = `${FileSystem.cacheDirectory}${fileName}`;
-    await FileSystem.writeAsStringAsync(filePath, bytesToBase64(bytes), {
+    await FileSystem.writeAsStringAsync(filePath, base64, {
       encoding: 'base64',
     });
 
-    console.log('[captureWithOverlay] Composite image saved:', filePath);
+    console.log(`[captureWithOverlay] Complete! (${Date.now() - startTime}ms) -> ${filePath}`);
     return filePath;
 
   } catch (error) {
@@ -126,14 +133,4 @@ function hexToRgba(hex, alpha) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-// Uint8Array를 Base64 문자열로 변환
-function bytesToBase64(bytes) {
-  let binary = '';
-  const len = bytes.length;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
 }
