@@ -112,40 +112,6 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     let filteredHighlights = highlights;
     let filteredBarcodes = barcodes || [];
 
-    // barcodes가 있고 highlights보다 적으면, 유효한 바코드 기반으로 필터링
-    // 이렇게 하면 화면에 표시되는 바운더리 개수와 스캔된 코드 개수가 일치함
-    if (barcodes && barcodes.length > 0 && barcodes.length < highlights.length) {
-      // 유효한 값이 있는 바코드만 필터링
-      const validBarcodes = barcodes.filter(bc => {
-        if (bc && bc.value != null) {
-          const valueStr = String(bc.value).trim();
-          return valueStr.length > 0 && valueStr !== 'null' && valueStr !== 'undefined';
-        }
-        return false;
-      });
-
-      if (validBarcodes.length > 0) {
-        // validBarcodes의 frame과 가장 가까운 highlights를 매칭
-        filteredBarcodes = validBarcodes;
-        filteredHighlights = validBarcodes.map(bc => {
-          if (!bc.frame) return highlights[0];
-          let closest = highlights[0];
-          let minDist = Number.MAX_VALUE;
-          highlights.forEach(h => {
-            const dist = Math.sqrt(
-              Math.pow((h.origin.x + h.size.width/2) - (bc.frame.x + bc.frame.width/2), 2) +
-              Math.pow((h.origin.y + h.size.height/2) - (bc.frame.y + bc.frame.height/2), 2)
-            );
-            if (dist < minDist) {
-              minDist = dist;
-              closest = h;
-            }
-          });
-          return closest;
-        });
-      }
-    }
-
     // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
     if (selectCenterOnly && filteredHighlights.length >= 2) {
       const screenCenterX = SCREEN_WIDTH / 2;
@@ -535,13 +501,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         // 디버그 로그: 필터링 전후 개수와 각 바코드의 값
         runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails.join(' | '), validBarcodesData.length);
 
-        // 유효한 바코드가 없으면 무시
-        if (validBarcodesData.length === 0) {
+        // 바코드가 없으면 무시
+        if (allBarcodesData.length === 0) {
           return;
         }
 
-        // 하이라이트에 값 표시를 위해 유효한 바코드만 상태 업데이트
-        runOnJSUpdateBarcodes(validBarcodesData);
+        // 하이라이트에 값 표시를 위해 모든 바코드 상태 업데이트
+        runOnJSUpdateBarcodes(allBarcodesData);
 
         // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택 (여러 코드 인식 모드 OFF)
         if (selectCenterBarcodeShared.value) {
@@ -590,8 +556,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           return;
         }
 
-        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (유효한 바코드만 전달)
-        runOnJSMultiCallback(validBarcodesData.length, validBarcodesData);
+        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (모든 바코드 전달)
+        runOnJSMultiCallback(allBarcodesData.length, allBarcodesData);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
