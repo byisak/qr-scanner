@@ -74,52 +74,43 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
   );
 };
 
-// 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
+// 커스텀 하이라이트 컴포넌트 (객체 추적 알고리즘 적용)
 const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
-  // 신뢰도 기반 값 저장: position -> {value, confidence, lastSeen}
-  const valueMapRef = useRef(new Map());
+  // 추적 중인 하이라이트: id -> {x, y, width, height, value, lastSeen}
+  const trackedObjectsRef = useRef(new Map());
+  const nextIdRef = useRef(0);
 
   // showBarcodeValues가 true이고 바코드가 있으면 값 표시
   const showValues = showBarcodeValues && barcodes.length > 0;
 
-  // 위치 키 생성 함수 (큰 그리드로 안정성 향상)
-  const GRID_SIZE = 120;
-  const getPositionKey = (x, y) => {
-    return `${Math.round(x / GRID_SIZE) * GRID_SIZE}-${Math.round(y / GRID_SIZE) * GRID_SIZE}`;
-  };
-
-  // 주변 위치 키들 찾기
-  const getNearbyKeys = (x, y) => {
-    const baseX = Math.round(x / GRID_SIZE) * GRID_SIZE;
-    const baseY = Math.round(y / GRID_SIZE) * GRID_SIZE;
-    const offsets = [[0, 0], [-GRID_SIZE, 0], [GRID_SIZE, 0], [0, -GRID_SIZE], [0, GRID_SIZE]];
-    return offsets.map(([dx, dy]) => `${baseX + dx}-${baseY + dy}`);
+  // 두 하이라이트 간의 거리 계산
+  const getDistance = (h1, h2) => {
+    const cx1 = h1.x + h1.width / 2;
+    const cy1 = h1.y + h1.height / 2;
+    const cx2 = h2.x + h2.width / 2;
+    const cy2 = h2.y + h2.height / 2;
+    return Math.sqrt(Math.pow(cx1 - cx2, 2) + Math.pow(cy1 - cy2, 2));
   };
 
   useEffect(() => {
     const now = Date.now();
 
     if (!highlights || highlights.length === 0) {
-      // 하이라이트가 없으면 페이드아웃
       const timeout = setTimeout(() => {
         setTrackedHighlights([]);
-        // 오래된 캐시 정리 (2초 이상 안 본 것)
-        for (const [key, entry] of valueMapRef.current) {
-          if (now - entry.lastSeen > 2000) {
-            valueMapRef.current.delete(key);
-          }
-        }
+        trackedObjectsRef.current.clear();
       }, 300);
       return () => clearTimeout(timeout);
     }
 
     // 너무 빠른 업데이트 방지
-    if (now - lastUpdateRef.current < 30) return;
+    if (now - lastUpdateRef.current < 50) return;
     lastUpdateRef.current = now;
 
     let filteredHighlights = highlights;
+    let filteredBarcodes = barcodes;
 
     // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
     if (selectCenterOnly && highlights.length >= 2) {
@@ -142,78 +133,109 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       });
 
       filteredHighlights = [highlights[closestIndex]];
+      filteredBarcodes = barcodes[closestIndex] ? [barcodes[closestIndex]] : [];
     }
 
-    // 위치 기반 키 중복 방지용 카운터
-    const keyCounter = new Map();
+    // 현재 프레임의 하이라이트를 표준 형식으로 변환
+    const currentHighlights = filteredHighlights.map((h, idx) => ({
+      x: h.origin.x,
+      y: h.origin.y,
+      width: h.size.width,
+      height: h.size.height,
+      value: filteredBarcodes[idx]?.value || null,
+      original: h,
+    }));
 
-    // 하이라이트에 값 매칭 (인덱스 기반 우선, 캐시 백업)
-    const newTracked = filteredHighlights.map((h, idx) => {
-      const posKey = getPositionKey(h.origin.x, h.origin.y);
+    // 기존 추적 객체와 새 하이라이트 매칭 (Hungarian 알고리즘 대신 탐욕적 매칭)
+    const matched = new Set(); // 매칭된 새 하이라이트 인덱스
+    const matchedTracked = new Set(); // 매칭된 기존 추적 객체 ID
+    const MAX_DISTANCE = 150; // 매칭 최대 거리
 
-      // 1. 인덱스 기반으로 값 찾기 (가장 신뢰할 수 있음)
-      let barcodeValue = barcodes[idx]?.value || null;
+    // 거리 기반 매칭
+    const trackedEntries = Array.from(trackedObjectsRef.current.entries());
 
-      // 2. 값을 찾았으면 캐시 업데이트
-      if (barcodeValue) {
-        const existing = valueMapRef.current.get(posKey);
-        if (existing) {
-          if (existing.value === barcodeValue) {
-            existing.confidence = Math.min(existing.confidence + 1, 10);
-            existing.lastSeen = now;
-          } else {
-            // 다른 값이면 신뢰도에 따라 처리
-            if (existing.confidence <= 3) {
-              valueMapRef.current.set(posKey, { value: barcodeValue, confidence: 1, lastSeen: now });
-            } else {
-              existing.confidence -= 1;
-              // 기존 값 유지
-              barcodeValue = existing.value;
-            }
-          }
-        } else {
-          valueMapRef.current.set(posKey, { value: barcodeValue, confidence: 1, lastSeen: now });
+    // 모든 가능한 매칭의 거리 계산
+    const matchCandidates = [];
+    trackedEntries.forEach(([id, tracked]) => {
+      currentHighlights.forEach((current, idx) => {
+        const dist = getDistance(tracked, current);
+        if (dist < MAX_DISTANCE) {
+          matchCandidates.push({ id, idx, dist, tracked, current });
         }
-      } else {
-        // 3. 인덱스로 못 찾으면 캐시에서 찾기
-        const cached = valueMapRef.current.get(posKey);
-        if (cached) {
-          barcodeValue = cached.value;
-          cached.lastSeen = now;
-        }
-
-        // 4. 주변 위치에서 찾기
-        if (!barcodeValue) {
-          const nearbyKeys = getNearbyKeys(h.origin.x, h.origin.y);
-          for (const nearKey of nearbyKeys) {
-            const nearCached = valueMapRef.current.get(nearKey);
-            if (nearCached) {
-              barcodeValue = nearCached.value;
-              nearCached.lastSeen = now;
-              break;
-            }
-          }
-        }
-      }
-
-      // 위치 기반 키 생성 (중복 시 카운터 추가)
-      const count = keyCounter.get(posKey) || 0;
-      keyCounter.set(posKey, count + 1);
-      const stableKey = count === 0 ? `pos-${posKey}` : `pos-${posKey}-${count}`;
-
-      return {
-        ...h,
-        key: stableKey,
-        value: barcodeValue,
-      };
+      });
     });
 
-    // 오래된 캐시 정리
-    for (const [key, entry] of valueMapRef.current) {
-      if (now - entry.lastSeen > 3000) {
-        valueMapRef.current.delete(key);
+    // 거리 순으로 정렬하여 가까운 것부터 매칭
+    matchCandidates.sort((a, b) => a.dist - b.dist);
+
+    const matchResults = new Map(); // 새 하이라이트 인덱스 -> 추적 ID
+
+    for (const candidate of matchCandidates) {
+      if (matched.has(candidate.idx) || matchedTracked.has(candidate.id)) {
+        continue; // 이미 매칭됨
+      }
+
+      // 매칭 성공
+      matched.add(candidate.idx);
+      matchedTracked.add(candidate.id);
+      matchResults.set(candidate.idx, candidate.id);
+
+      // 추적 객체 업데이트
+      const tracked = trackedObjectsRef.current.get(candidate.id);
+      tracked.x = candidate.current.x;
+      tracked.y = candidate.current.y;
+      tracked.width = candidate.current.width;
+      tracked.height = candidate.current.height;
+      tracked.lastSeen = now;
+
+      // 값 업데이트 (새 값이 있고, 기존 값과 다르면 신뢰도 기반 업데이트)
+      if (candidate.current.value) {
+        if (!tracked.value || tracked.valueConfidence <= 3) {
+          tracked.value = candidate.current.value;
+          tracked.valueConfidence = (tracked.valueConfidence || 0) + 1;
+        } else if (tracked.value === candidate.current.value) {
+          tracked.valueConfidence = Math.min((tracked.valueConfidence || 0) + 1, 10);
+        } else {
+          tracked.valueConfidence = Math.max((tracked.valueConfidence || 0) - 1, 0);
+        }
       }
     }
+
+    // 매칭되지 않은 새 하이라이트에 새 ID 부여
+    currentHighlights.forEach((current, idx) => {
+      if (!matched.has(idx)) {
+        const newId = nextIdRef.current++;
+        trackedObjectsRef.current.set(newId, {
+          x: current.x,
+          y: current.y,
+          width: current.width,
+          height: current.height,
+          value: current.value,
+          valueConfidence: current.value ? 1 : 0,
+          lastSeen: now,
+        });
+        matchResults.set(idx, newId);
+      }
+    });
+
+    // 오래된 추적 객체 제거
+    for (const [id, tracked] of trackedObjectsRef.current) {
+      if (now - tracked.lastSeen > 500) {
+        trackedObjectsRef.current.delete(id);
+      }
+    }
+
+    // 최종 결과 생성
+    const newTracked = currentHighlights.map((current, idx) => {
+      const trackId = matchResults.get(idx);
+      const tracked = trackedObjectsRef.current.get(trackId);
+
+      return {
+        ...current.original,
+        key: `track-${trackId}`,
+        value: tracked?.value || current.value,
+      };
+    });
 
     setTrackedHighlights(newTracked);
   }, [highlights, barcodes, selectCenterOnly]);
