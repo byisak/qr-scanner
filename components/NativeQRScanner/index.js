@@ -75,7 +75,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
 };
 
 // 커스텀 하이라이트 컴포넌트 (객체 추적 알고리즘 적용)
-const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.7)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
   // 추적 중인 하이라이트: id -> {x, y, width, height, value, lastSeen}
