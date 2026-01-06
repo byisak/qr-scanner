@@ -601,6 +601,24 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
 
+          {/* 결과창 자동 열림 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/result-window-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.resultWindowAutoOpen')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.resultWindowAutoOpenDesc')}</Text>
+            </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: resultWindowAutoOpen ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {resultWindowAutoOpen ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
+
         </View>
 
         {/* 고급 스캔 기능 섹션 */}
@@ -645,24 +663,6 @@ export default function SettingsScreen() {
             <View style={s.menuItemRight}>
               <Text style={[s.statusText, { color: multiCodeModeEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {multiCodeModeEnabled ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </TouchableOpacity>
-
-          {/* 결과창 자동 열림 */}
-          <TouchableOpacity
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/result-window-settings')}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.resultWindowAutoOpen')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.resultWindowAutoOpenDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: resultWindowAutoOpen ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {resultWindowAutoOpen ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
