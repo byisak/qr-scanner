@@ -1264,13 +1264,26 @@ function ScannerScreen() {
 
     isNavigatingRef.current = true;
 
-    // 바코드 데이터만 전달 (이미지 캡쳐 생략 - 속도 개선)
-    // 결과 화면에서 바코드 목록만 표시
+    // 빠른 사진 캡쳐 (속도 우선)
+    let capturedImageUri = '';
+    try {
+      if (cameraRef.current) {
+        const photo = await cameraRef.current.takePhoto({
+          qualityPrioritization: 'speed',
+        });
+        if (photo?.uri) {
+          capturedImageUri = photo.uri.startsWith('file://') ? photo.uri : `file://${photo.uri}`;
+        }
+      }
+    } catch (error) {
+      console.error('[ScannerScreen] Photo capture failed:', error);
+    }
+
     router.push({
       pathname: '/multi-code-results',
       params: {
         detectedBarcodes: pendingMultiScanData.barcodes,
-        capturedImageUri: '', // 이미지 캡쳐 생략
+        capturedImageUri,
       }
     });
 
