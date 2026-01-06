@@ -20,7 +20,7 @@ import Animated, {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// 바코드 라벨 배경색 팔레트 (서로 구분되는 색상들 - 20가지)
+// 바코드 라벨 배경색 팔레트 (서로 구분되는 색상들 - 25가지)
 const LABEL_COLORS = [
   '#E91E63', // 핑크
   '#2196F3', // 파랑
@@ -42,6 +42,11 @@ const LABEL_COLORS = [
   '#9E9E9E', // 그레이
   '#E040FB', // 퍼플악센트
   '#00E676', // 그린악센트
+  '#FF6F00', // 앰버다크
+  '#1A237E', // 인디고다크
+  '#B71C1C', // 레드다크
+  '#1B5E20', // 그린다크
+  '#4A148C', // 퍼플다크
 ];
 
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
