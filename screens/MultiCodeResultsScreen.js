@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Colors, LABEL_COLORS } from '../constants/Colors';
+import BarcodeOverlayImage from '../components/BarcodeOverlayImage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -252,11 +253,14 @@ export default function MultiCodeResultsScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             capturedImageUri ? (
-              <View style={styles.capturedImageContainer}>
-                <Image
-                  source={{ uri: capturedImageUri }}
-                  style={styles.capturedImage}
-                  resizeMode="cover"
+              <View style={styles.capturedImageWrapper}>
+                <BarcodeOverlayImage
+                  imageUri={capturedImageUri}
+                  barcodes={codes}
+                  imageWidth={codes[0]?.screenSize?.width || SCREEN_WIDTH}
+                  imageHeight={codes[0]?.screenSize?.height || SCREEN_WIDTH * (4/3)}
+                  containerWidth={SCREEN_WIDTH - 32}
+                  showValues={true}
                 />
               </View>
             ) : null
@@ -312,17 +316,8 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 36,
   },
-  capturedImageContainer: {
-    width: SCREEN_WIDTH - 32,
-    aspectRatio: 3 / 4,
-    borderRadius: 12,
-    overflow: 'hidden',
+  capturedImageWrapper: {
     marginBottom: 16,
-    backgroundColor: '#000',
-  },
-  capturedImage: {
-    width: '100%',
-    height: '100%',
   },
   listContent: {
     padding: 16,
