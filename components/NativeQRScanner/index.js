@@ -161,8 +161,8 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
         }
       }
 
-      // 안정적인 키 생성 (위치 기반)
-      const stableKey = `pos-${Math.round(h.origin.x / 10) * 10}-${Math.round(h.origin.y / 10) * 10}`;
+      // 안정적인 키 생성 (위치 기반 + 인덱스로 고유성 보장)
+      const stableKey = `pos-${Math.round(h.origin.x / 10) * 10}-${Math.round(h.origin.y / 10) * 10}-${idx}`;
 
       return {
         ...h,
