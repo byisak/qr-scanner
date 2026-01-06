@@ -30,6 +30,10 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
     const imgWidth = image.width();
     const imgHeight = image.height();
     console.log(`[captureWithOverlay] Image loaded: ${imgWidth}x${imgHeight} (${Date.now() - startTime}ms)`);
+    console.log(`[captureWithOverlay] Barcodes to draw: ${barcodes.length}`);
+    barcodes.forEach((bc, i) => {
+      console.log(`[captureWithOverlay] Barcode ${i}: value="${bc.value}", hasBounds=${!!bc.bounds}, bounds=${JSON.stringify(bc.bounds)}`);
+    });
 
     // 오프스크린 캔버스 생성
     const surface = Skia.Surface.Make(imgWidth, imgHeight);

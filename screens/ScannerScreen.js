@@ -1174,11 +1174,20 @@ function ScannerScreen() {
             value: value,
             type: barcode.type,
             frame: barcode.frame,
+            bounds: barcode.bounds || barcode.frame, // bounds가 있으면 사용, 없으면 frame
+            screenSize: barcode.screenSize,
+            colorIndex: barcode.colorIndex,
           });
           newCodesAdded = true;
           console.log(`[ScannerScreen] Added new code (len=${value.length}): ${value}`);
         } else {
-          console.log(`[ScannerScreen] Duplicate code: ${value}`);
+          // 기존 코드의 bounds 업데이트 (위치가 변경될 수 있으므로)
+          const existing = scannedCodesRef.current.find(item => item.value === value);
+          if (existing && (barcode.bounds || barcode.frame)) {
+            existing.bounds = barcode.bounds || barcode.frame;
+            existing.screenSize = barcode.screenSize;
+            existing.colorIndex = barcode.colorIndex;
+          }
         }
       });
 
@@ -1235,9 +1244,20 @@ function ScannerScreen() {
             value: value,
             type: barcode.type,
             frame: barcode.frame,
+            bounds: barcode.bounds || barcode.frame,
+            screenSize: barcode.screenSize,
+            colorIndex: barcode.colorIndex,
           });
           newCodesAdded = true;
           console.log(`[ScannerScreen] Added via state: ${value}`);
+        } else {
+          // 기존 코드의 bounds 업데이트
+          const existing = scannedCodesRef.current.find(item => item.value === value);
+          if (existing && (barcode.bounds || barcode.frame)) {
+            existing.bounds = barcode.bounds || barcode.frame;
+            existing.screenSize = barcode.screenSize;
+            existing.colorIndex = barcode.colorIndex;
+          }
         }
       });
 
@@ -1331,6 +1351,19 @@ function ScannerScreen() {
     console.log(`[ScannerScreen] Verified barcodes: ${verifiedBarcodes?.length}`);
 
     if (verifiedBarcodes && verifiedBarcodes.length > 0) {
+      // scannedCodesRef에 있는 바코드의 bounds 업데이트
+      verifiedBarcodes.forEach(bc => {
+        if (bc.value && bc.bounds) {
+          const existing = scannedCodesRef.current.find(item => item.value === bc.value);
+          if (existing) {
+            // bounds와 screenSize 업데이트
+            existing.bounds = bc.bounds;
+            existing.screenSize = bc.screenSize;
+            existing.colorIndex = bc.colorIndex;
+          }
+        }
+      });
+
       // 검증된 바코드로 pendingMultiScanData 업데이트
       // 중복 제거 (같은 값이 여러 바운더리에서 나올 수 있음)
       const uniqueValues = new Map();
