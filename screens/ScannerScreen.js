@@ -1261,17 +1261,9 @@ function ScannerScreen() {
         }
       });
 
-      // 상태 업데이트 - 빈 값 엄격히 필터링
-      const validBarcodes = scannedCodesRef.current.filter(bc => {
-        if (!bc.value) return false;
-        const val = String(bc.value).trim();
-        return val.length > 0 && val !== 'null' && val !== 'undefined';
-      });
-      setPendingMultiScanData({
-        imageUri: null,
-        barcodes: JSON.stringify(validBarcodes),
-        count: validBarcodes.length
-      });
+      // 참고: setPendingMultiScanData는 handleVerifiedBarcodesChange에서만 호출
+      // handleDetectedBarcodesChange에서는 scannedCodesRef에만 축적하고,
+      // bounds가 보장된 handleVerifiedBarcodesChange에서 pendingMultiScanData를 설정함
 
       if (newCodesAdded && hapticEnabledRef.current) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -1288,7 +1280,14 @@ function ScannerScreen() {
     // 바코드 데이터 파싱
     let barcodes = [];
     try {
-      barcodes = JSON.parse(pendingMultiScanData.barcodes);
+      const parsed = JSON.parse(pendingMultiScanData.barcodes);
+      // bounds가 유효한 바코드만 필터링 (안전 장치)
+      barcodes = parsed.filter(bc => {
+        const hasValue = bc.value && String(bc.value).trim().length > 0;
+        const hasBounds = bc.bounds && bc.bounds.x !== undefined && bc.bounds.y !== undefined;
+        return hasValue && hasBounds;
+      });
+      console.log(`[ScannerScreen] Filtered barcodes with bounds: ${barcodes.length}/${parsed.length}`);
     } catch (e) {
       console.error('[ScannerScreen] Failed to parse barcodes:', e);
     }
