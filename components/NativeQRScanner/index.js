@@ -78,6 +78,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
 const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
+  const trackedByValueRef = useRef(new Map()); // 바코드 값 기반 추적
 
   // 2개 이상이고 showBarcodeValues가 true일 때만 값 표시
   const showValues = showBarcodeValues && barcodes.length >= 2;
@@ -87,6 +88,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       // 하이라이트가 없으면 페이드아웃
       const timeout = setTimeout(() => {
         setTrackedHighlights([]);
+        trackedByValueRef.current.clear();
       }, 300);
       return () => clearTimeout(timeout);
     }
@@ -97,6 +99,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
     lastUpdateRef.current = now;
 
     let filteredHighlights = highlights;
+    let filteredBarcodes = barcodes;
 
     // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
     if (selectCenterOnly && highlights.length >= 2) {
@@ -121,13 +124,25 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       });
 
       filteredHighlights = [highlights[closestIndex]];
+      filteredBarcodes = [barcodes[closestIndex]];
     }
 
-    setTrackedHighlights(filteredHighlights.map((h, i) => ({
-      ...h,
-      key: `highlight-${i}`,
-      value: barcodes[i]?.value || null,
-    })));
+    // 바코드 값 기반으로 안정적인 키 생성
+    const newTracked = filteredHighlights.map((h, i) => {
+      const barcodeValue = filteredBarcodes[i]?.value || null;
+      // 값이 있으면 값 기반 키, 없으면 위치 기반 키
+      const stableKey = barcodeValue
+        ? `value-${barcodeValue}`
+        : `pos-${Math.round(h.origin.x)}-${Math.round(h.origin.y)}`;
+
+      return {
+        ...h,
+        key: stableKey,
+        value: barcodeValue,
+      };
+    });
+
+    setTrackedHighlights(newTracked);
   }, [highlights, barcodes, selectCenterOnly]);
 
   if (trackedHighlights.length === 0) return null;
