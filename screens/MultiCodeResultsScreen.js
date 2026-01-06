@@ -22,7 +22,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Colors, LABEL_COLORS } from '../constants/Colors';
-import BarcodeOverlayImage from '../components/BarcodeOverlayImage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -36,12 +35,6 @@ export default function MultiCodeResultsScreen() {
   const [codes, setCodes] = useState([]);
   const [savedCodes, setSavedCodes] = useState(new Set());
   const [capturedImageUri, setCapturedImageUri] = useState(null);
-  const [photoMeta, setPhotoMeta] = useState({
-    photoWidth: 0,
-    photoHeight: 0,
-    screenWidth: SCREEN_WIDTH,
-    screenHeight: SCREEN_HEIGHT,
-  });
 
   useEffect(() => {
     // params에서 바코드 데이터 파싱
@@ -55,19 +48,11 @@ export default function MultiCodeResultsScreen() {
       }
     }
 
-    // 캡쳐 이미지 URI 설정
+    // 캡쳐 이미지 URI 설정 (Skia로 오버레이가 이미 합성된 이미지)
     if (params.capturedImageUri) {
       setCapturedImageUri(params.capturedImageUri);
     }
-
-    // 사진 메타데이터 설정
-    setPhotoMeta({
-      photoWidth: parseInt(params.photoWidth) || 0,
-      photoHeight: parseInt(params.photoHeight) || 0,
-      screenWidth: parseInt(params.screenWidth) || SCREEN_WIDTH,
-      screenHeight: parseInt(params.screenHeight) || SCREEN_HEIGHT,
-    });
-  }, [params.detectedBarcodes, params.capturedImageUri, params.photoWidth, params.photoHeight, params.screenWidth, params.screenHeight]);
+  }, [params.detectedBarcodes, params.capturedImageUri]);
 
   // 히스토리에 코드 저장
   const saveCodeToHistory = useCallback(async (codeValue, barcodeType = 'qr') => {
@@ -266,20 +251,7 @@ export default function MultiCodeResultsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            capturedImageUri && photoMeta.photoWidth > 0 ? (
-              <View style={styles.capturedImageWrapper}>
-                <BarcodeOverlayImage
-                  imageUri={capturedImageUri}
-                  barcodes={codes}
-                  photoWidth={photoMeta.photoWidth}
-                  photoHeight={photoMeta.photoHeight}
-                  screenWidth={photoMeta.screenWidth}
-                  screenHeight={photoMeta.screenHeight}
-                  containerWidth={SCREEN_WIDTH - 32}
-                  showValues={true}
-                />
-              </View>
-            ) : capturedImageUri ? (
+            capturedImageUri ? (
               <View style={styles.capturedImageContainer}>
                 <Image
                   source={{ uri: capturedImageUri }}
@@ -339,11 +311,6 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 36,
-  },
-  capturedImageWrapper: {
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: 'hidden',
   },
   capturedImageContainer: {
     width: SCREEN_WIDTH - 32,
