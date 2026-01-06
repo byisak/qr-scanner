@@ -21,6 +21,9 @@ import { LABEL_COLORS } from '../../constants/Colors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// 투표 기반 검증 임계값 - 최소 3번 이상 동일한 값이 감지되어야 검증됨
+const MIN_VOTE_THRESHOLD = 3;
+
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
 const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor }) => {
   const x = useSharedValue(highlight.origin.x);
@@ -273,12 +276,13 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       onVisibleCountChange(newTracked.length);
     }
 
-    // 모든 화면에 표시 중인 바코드를 colorIndex, 위치 정보와 함께 전달
+    // 검증된 바코드만 필터링하여 전달 (투표 수 >= MIN_VOTE_THRESHOLD)
     if (onVerifiedBarcodesChange) {
-      const allVisibleBarcodes = [];
+      const verifiedBarcodes = [];
       for (const highlight of newTracked) {
-        if (highlight.value) {
-          allVisibleBarcodes.push({
+        // 값이 있고, 투표 수가 임계값 이상인 바코드만 포함
+        if (highlight.value && (highlight.voteCount || 0) >= MIN_VOTE_THRESHOLD) {
+          verifiedBarcodes.push({
             value: highlight.value,
             voteCount: highlight.voteCount || 0,
             colorIndex: highlight.colorIndex,
@@ -300,11 +304,11 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       }
 
       // 변경된 경우에만 콜백 호출 (중복 방지)
-      if (allVisibleBarcodes.length > 0) {
-        const verifiedKey = allVisibleBarcodes.map(bc => `${bc.value}:${bc.colorIndex}`).sort().join('|');
+      if (verifiedBarcodes.length > 0) {
+        const verifiedKey = verifiedBarcodes.map(bc => `${bc.value}:${bc.colorIndex}`).sort().join('|');
         if (verifiedKey !== lastVerifiedKeyRef.current) {
           lastVerifiedKeyRef.current = verifiedKey;
-          onVerifiedBarcodesChange(allVisibleBarcodes);
+          onVerifiedBarcodesChange(verifiedBarcodes);
         }
       }
     }
