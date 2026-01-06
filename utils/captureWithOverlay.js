@@ -108,7 +108,7 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
     const fileName = `composite_${Date.now()}.jpg`;
     const filePath = `${FileSystem.cacheDirectory}${fileName}`;
     await FileSystem.writeAsStringAsync(filePath, bytesToBase64(bytes), {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: 'base64',
     });
 
     console.log('[captureWithOverlay] Composite image saved:', filePath);
