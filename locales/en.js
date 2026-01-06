@@ -276,6 +276,8 @@ export default {
     batchScanModeDesc: 'Scan multiple QR/barcodes continuously',
     multiCodeMode: 'Multi-Code Mode',
     multiCodeModeDesc: 'Collect multiple codes and view results at once',
+    resultWindowAutoOpen: 'Auto-Open Result Window',
+    resultWindowAutoOpenDesc: 'Auto-navigate to result screen on scan',
     selectBarcodes: 'Select Barcodes',
     selectedCount: ' barcode types selected',
     exportHistory: 'Export History',
@@ -1337,6 +1339,16 @@ export default {
     showValues: 'Show Detected Code Values',
     showValuesDesc: 'Display recognized values below barcode boundaries',
     infoMessage: 'When multi-code mode is enabled, you can move the camera to scan multiple codes, then tap the View Results button at the bottom to see them all at once.',
+  },
+
+  // Result window auto-open settings
+  resultWindowSettings: {
+    title: 'Auto-Open Result Window',
+    enable: 'Auto-Open Result Window',
+    enableDesc: 'Automatically navigate to result screen when scanning QR code',
+    infoMessage: 'When disabled, scanned codes will be displayed with a border on screen, and you can tap the button at the bottom to open the result screen.',
+    openResultButton: 'Open Result',
+    scannedCode: 'Scanned Code',
   },
 
   // Batch scan settings (legacy compatibility)

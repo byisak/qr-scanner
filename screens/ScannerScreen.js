@@ -120,6 +120,8 @@ function ScannerScreen() {
   const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
+  const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
+  const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -140,6 +142,7 @@ function ScannerScreen() {
   const isProcessingMultiRef = useRef(false); // 다중 바코드 처리 중 플래그
   const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
   const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
+  const resultWindowAutoOpenRef = useRef(true); // 결과창 자동 열림 ref
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -182,6 +185,16 @@ function ScannerScreen() {
       setPendingMultiScanData(null);
     }
   }, [multiCodeModeEnabled]);
+
+  // resultWindowAutoOpen 상태를 ref에 동기화
+  useEffect(() => {
+    console.log(`[ScannerScreen] resultWindowAutoOpen changed: ${resultWindowAutoOpen}`);
+    resultWindowAutoOpenRef.current = resultWindowAutoOpen;
+    // 활성화 시 마지막 스캔 코드 초기화
+    if (resultWindowAutoOpen) {
+      setLastScannedCode(null);
+    }
+  }, [resultWindowAutoOpen]);
 
   // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
   useEffect(() => {
@@ -516,6 +529,10 @@ function ScannerScreen() {
           // 바코드 값 표시 설정 로드
           const showValues = await AsyncStorage.getItem('multiCodeShowValues');
           setShowBarcodeValues(showValues === null ? true : showValues === 'true');
+
+          // 결과창 자동 열림 설정 로드
+          const autoOpen = await AsyncStorage.getItem('resultWindowAutoOpen');
+          setResultWindowAutoOpen(autoOpen === null ? true : autoOpen === 'true');
 
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
@@ -1228,6 +1245,34 @@ function ScannerScreen() {
     }, 2000);
   }, [pendingMultiScanData, router]);
 
+  // 결과 창 열기 핸들러 (결과창 자동 열림 비활성화 시 사용)
+  const handleOpenResultWindow = useCallback(() => {
+    if (!lastScannedCode) return;
+
+    isNavigatingRef.current = true;
+    setIsActive(false);
+
+    router.push({
+      pathname: '/result',
+      params: {
+        code: lastScannedCode.code,
+        isDuplicate: lastScannedCode.isDuplicate ? 'true' : 'false',
+        scanCount: lastScannedCode.scanCount.toString(),
+        photoUri: lastScannedCode.photoUri || '',
+        type: lastScannedCode.type,
+        errorCorrectionLevel: lastScannedCode.errorCorrectionLevel || '',
+      }
+    });
+
+    // 마지막 스캔 코드 초기화
+    setLastScannedCode(null);
+  }, [lastScannedCode, router]);
+
+  // 결과 창 닫기 핸들러 (스캔 계속)
+  const handleCloseResultWindow = useCallback(() => {
+    setLastScannedCode(null);
+  }, []);
+
   // 다중 바코드 보류 데이터 닫기 핸들러
   const handleCloseMultiScan = useCallback(() => {
     setPendingMultiScanData(null);
@@ -1695,6 +1740,31 @@ function ScannerScreen() {
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
 
+          // 결과창 자동 열림이 비활성화된 경우: 테두리와 값 표시, 결과 화면으로 이동하지 않음
+          if (!resultWindowAutoOpenRef.current) {
+            // 마지막 스캔된 코드 저장 (UI에 표시하기 위해)
+            setLastScannedCode({
+              code: data,
+              type: normalizedType,
+              timestamp: Date.now(),
+              isDuplicate: historyResult.isDuplicate,
+              scanCount: historyResult.count,
+              photoUri: photoUri || null,
+              errorCorrectionLevel: detectedEcLevel || null,
+            });
+
+            // 카메라 다시 활성화
+            setIsActive(true);
+            // 스캔 재활성화 (계속 스캔 가능)
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+              isNavigatingRef.current = false;
+            }, 300);
+            startResetTimer(RESET_DELAYS.NORMAL);
+            return;
+          }
+
           // 팝업 모드: 결과 화면으로 이동
           router.push({
             pathname: '/result',
@@ -1966,8 +2036,8 @@ function ScannerScreen() {
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
-        selectCenterBarcode={!multiCodeModeEnabled}
-        showBarcodeValues={multiCodeModeEnabled && showBarcodeValues}
+        selectCenterBarcode={!multiCodeModeEnabled && resultWindowAutoOpen}
+        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || !resultWindowAutoOpen}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"
@@ -2275,6 +2345,35 @@ function ScannerScreen() {
           >
             <Ionicons name="close" size={20} color="#fff" />
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 */}
+      {lastScannedCode && !resultWindowAutoOpen && (
+        <View style={[styles.resultWindowButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
+          <View style={styles.scannedCodeInfo}>
+            <Text style={styles.scannedCodeLabel}>{t('resultWindowSettings.scannedCode')}</Text>
+            <Text style={styles.scannedCodeValue} numberOfLines={1}>{lastScannedCode.code}</Text>
+          </View>
+          <View style={styles.resultWindowButtonRow}>
+            <TouchableOpacity
+              style={styles.resultWindowButton}
+              onPress={handleOpenResultWindow}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="open-outline" size={20} color="#fff" />
+              <Text style={styles.resultWindowButtonText}>
+                {t('resultWindowSettings.openResultButton')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.resultWindowCloseButton}
+              onPress={handleCloseResultWindow}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -2676,6 +2775,60 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
+  },
+  // 결과창 자동 열림 비활성화 시 버튼 스타일
+  resultWindowButtonContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  scannedCodeInfo: {
+    marginBottom: 12,
+  },
+  scannedCodeLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  scannedCodeValue: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resultWindowButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  resultWindowButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 200, 83, 0.95)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  resultWindowButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  resultWindowCloseButton: {
+    backgroundColor: 'rgba(100, 100, 100, 0.95)',
+    padding: 14,
+    borderRadius: 12,
   },
 });
 

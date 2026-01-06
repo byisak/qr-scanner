@@ -278,6 +278,8 @@ export default {
     batchScanModeDesc: '여러 QR/바코드를 연속으로 스캔합니다',
     multiCodeMode: '여러 코드 인식 모드',
     multiCodeModeDesc: '여러 코드를 모아서 한번에 결과 확인',
+    resultWindowAutoOpen: '결과창 자동 열림',
+    resultWindowAutoOpenDesc: '스캔 시 결과 화면 자동 이동 설정',
     selectBarcodes: '인식할 바코드 선택',
     selectedCount: '개 바코드 타입 선택됨',
     exportHistory: '기록 내보내기',
@@ -1327,6 +1329,16 @@ export default {
     showValues: '인식된 코드 값 표시',
     showValuesDesc: '바코드 경계 아래에 인식된 값을 표시합니다',
     infoMessage: '여러 코드 인식 모드가 활성화되면 카메라를 움직여 여러 코드를 스캔한 후, 하단의 결과 보기 버튼을 눌러 한번에 확인할 수 있습니다.',
+  },
+
+  // 결과창 자동 열림 설정
+  resultWindowSettings: {
+    title: '결과창 자동 열림',
+    enable: '결과창 자동 열림',
+    enableDesc: 'QR 코드 스캔 시 자동으로 결과 화면으로 이동합니다',
+    infoMessage: '비활성화하면 스캔된 코드가 테두리와 함께 화면에 표시되고, 하단의 버튼을 눌러 결과 화면을 열 수 있습니다.',
+    openResultButton: '결과 창 열기',
+    scannedCode: '스캔된 코드',
   },
 
   // 배치 스캔 설정 (레거시 호환)
