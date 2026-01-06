@@ -1223,7 +1223,8 @@ function ScannerScreen() {
 
       barcodesData.forEach((barcode) => {
         const value = String(barcode.value || '').trim();
-        if (!value || value.length === 0) return;
+        // 빈 값, "null", "undefined" 문자열 필터링
+        if (!value || value.length === 0 || value === 'null' || value === 'undefined') return;
 
         const isDuplicate = scannedCodesRef.current.some(
           (existing) => existing.value === value
@@ -1239,8 +1240,12 @@ function ScannerScreen() {
         }
       });
 
-      // 상태 업데이트
-      const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
+      // 상태 업데이트 - 빈 값 엄격히 필터링
+      const validBarcodes = scannedCodesRef.current.filter(bc => {
+        if (!bc.value) return false;
+        const val = String(bc.value).trim();
+        return val.length > 0 && val !== 'null' && val !== 'undefined';
+      });
       setPendingMultiScanData({
         imageUri: null,
         barcodes: JSON.stringify(validBarcodes),

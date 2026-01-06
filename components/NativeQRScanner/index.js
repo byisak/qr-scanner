@@ -437,8 +437,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     const barcodes = barcodesData || [];
     setDetectedBarcodes(barcodes);
 
-    // 바코드 값 기반 키 생성 (변경 감지용)
-    const validBarcodes = barcodes.filter(bc => bc.value && bc.value.trim().length > 0);
+    // 바코드 값 기반 키 생성 (변경 감지용) - 빈 값 엄격히 필터링
+    const validBarcodes = barcodes.filter(bc => {
+      if (!bc.value) return false;
+      const value = String(bc.value).trim();
+      return value.length > 0 && value !== 'null' && value !== 'undefined';
+    });
     const barcodesKey = validBarcodes.map(bc => bc.value).sort().join('|');
 
     // 바코드가 변경된 경우에만 콜백 호출 (무한 루프 방지)
