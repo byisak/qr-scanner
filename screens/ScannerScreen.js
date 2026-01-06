@@ -2349,7 +2349,7 @@ function ScannerScreen() {
           >
             <Ionicons name="qr-code" size={20} color="#fff" />
             <Text style={styles.multiScanButtonText}>
-              {t('scanner.viewMultiResults').replace('{count}', (visibleHighlightsCount > 0 ? visibleHighlightsCount : pendingMultiScanData.count).toString())}
+              {t('scanner.viewMultiResults').replace('{count}', JSON.parse(pendingMultiScanData.barcodes || '[]').length.toString())}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
