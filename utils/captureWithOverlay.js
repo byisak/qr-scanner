@@ -75,31 +75,18 @@ export async function captureWithOverlay(imageUri, barcodes, screenWidth, screen
         strokePaint
       );
 
-      // 라벨 배경 및 텍스트
+      // 라벨 배경 (색상 인디케이터)
       if (barcode.value) {
-        const labelText = barcode.value.length > 30
-          ? barcode.value.substring(0, 30) + '...'
-          : barcode.value;
-
-        const fontSize = Math.max(20, Math.min(40, width / 10));
-        const labelPadding = 10;
-        const labelWidth = Math.min(width + 40, labelText.length * fontSize * 0.6 + labelPadding * 2);
-        const labelHeight = fontSize + labelPadding * 2;
+        const labelHeight = Math.max(30, height / 8);
         const labelY = y + height + 8;
 
         // 라벨 배경
         const labelBgPaint = Skia.Paint();
         labelBgPaint.setColor(Skia.Color(color));
         canvas.drawRRect(
-          Skia.RRectXY(Skia.XYWHRect(x, labelY, labelWidth, labelHeight), 6, 6),
+          Skia.RRectXY(Skia.XYWHRect(x, labelY, width, labelHeight), 6, 6),
           labelBgPaint
         );
-
-        // 라벨 텍스트
-        const font = Skia.Font(null, fontSize);
-        const textPaint = Skia.Paint();
-        textPaint.setColor(Skia.Color('white'));
-        canvas.drawText(labelText, x + labelPadding, labelY + fontSize + 2, textPaint, font);
       }
     }
 
