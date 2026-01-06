@@ -273,8 +273,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       onVisibleCountChange(newTracked.length);
     }
 
-    // 검증된 바코드만 콜백 (3회 이상 동일 값 감지된 경우)
-    // 모든 화면에 표시 중인 바코드를 colorIndex와 함께 전달
+    // 모든 화면에 표시 중인 바코드를 colorIndex, 위치 정보와 함께 전달
     if (onVerifiedBarcodesChange) {
       const allVisibleBarcodes = [];
       for (const highlight of newTracked) {
@@ -282,8 +281,20 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
           allVisibleBarcodes.push({
             value: highlight.value,
             voteCount: highlight.voteCount || 0,
-            colorIndex: highlight.colorIndex, // 라벨 색상 인덱스
+            colorIndex: highlight.colorIndex,
             type: 'qr',
+            // 바운더리 위치 정보 (화면 좌표)
+            bounds: {
+              x: highlight.origin.x,
+              y: highlight.origin.y,
+              width: highlight.size.width,
+              height: highlight.size.height,
+            },
+            // 화면 크기 (좌표 변환용)
+            screenSize: {
+              width: SCREEN_WIDTH,
+              height: SCREEN_HEIGHT,
+            },
           });
         }
       }

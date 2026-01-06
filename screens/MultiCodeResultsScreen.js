@@ -256,8 +256,59 @@ export default function MultiCodeResultsScreen() {
                 <Image
                   source={{ uri: capturedImageUri }}
                   style={styles.capturedImage}
-                  resizeMode="contain"
+                  resizeMode="cover"
                 />
+                {/* 바운더리 오버레이 */}
+                {codes.map((code, index) => {
+                  if (!code.bounds || !code.screenSize) return null;
+                  const containerWidth = SCREEN_WIDTH - 32;
+                  const containerHeight = containerWidth * (4 / 3); // aspectRatio 3/4의 역수
+
+                  // 화면 좌표를 이미지 컨테이너 좌표로 변환
+                  const scaleX = containerWidth / code.screenSize.width;
+                  const scaleY = containerHeight / code.screenSize.height;
+
+                  const x = code.bounds.x * scaleX;
+                  const y = code.bounds.y * scaleY;
+                  const width = code.bounds.width * scaleX;
+                  const height = code.bounds.height * scaleY;
+
+                  const colorIndex = code.colorIndex !== undefined ? code.colorIndex : index;
+                  const borderColor = LABEL_COLORS[colorIndex % LABEL_COLORS.length];
+
+                  return (
+                    <View key={`overlay-${index}`}>
+                      {/* 바운더리 박스 */}
+                      <View
+                        style={[
+                          styles.overlayBoundary,
+                          {
+                            left: x,
+                            top: y,
+                            width: width,
+                            height: height,
+                            borderColor: borderColor,
+                          },
+                        ]}
+                      />
+                      {/* 값 라벨 */}
+                      <View
+                        style={[
+                          styles.overlayLabel,
+                          {
+                            left: x,
+                            top: y + height + 4,
+                            backgroundColor: borderColor,
+                          },
+                        ]}
+                      >
+                        <Text style={styles.overlayLabelText} numberOfLines={1}>
+                          {code.value}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             ) : null
           }
@@ -410,5 +461,23 @@ const styles = StyleSheet.create({
   saveAllButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  overlayBoundary: {
+    position: 'absolute',
+    borderWidth: 2,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0, 255, 0, 0.15)',
+  },
+  overlayLabel: {
+    position: 'absolute',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    maxWidth: 150,
+  },
+  overlayLabelText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
 });
