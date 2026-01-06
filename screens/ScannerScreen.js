@@ -43,9 +43,6 @@ import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/a
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
-import * as ImageManipulator from 'expo-image-manipulator';
-import ViewShot from 'react-native-view-shot';
-import BarcodeOverlayImage from '../components/BarcodeOverlayImage';
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation';
@@ -126,7 +123,6 @@ function ScannerScreen() {
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
-  const [compositeCapture, setCompositeCapture] = useState(null); // 합성 캡쳐용 임시 데이터 { photoUri, barcodes }
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -148,7 +144,6 @@ function ScannerScreen() {
   const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
   const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
   const resultWindowAutoOpenRef = useRef(true); // 결과창 자동 열림 ref
-  const compositeViewShotRef = useRef(null); // 합성 이미지 캡쳐용 ViewShot ref
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -1269,82 +1264,13 @@ function ScannerScreen() {
 
     isNavigatingRef.current = true;
 
-    // 바코드 데이터 파싱
-    let barcodes = [];
-    try {
-      barcodes = JSON.parse(pendingMultiScanData.barcodes);
-    } catch (e) {
-      console.error('[ScannerScreen] Failed to parse barcodes:', e);
-    }
-
-    // 카메라로 직접 사진 촬영 (실제 바코드 이미지)
-    let capturedImageUri = null;
-    let photoWidth = 0;
-    let photoHeight = 0;
-    try {
-      if (cameraRef.current) {
-        const photo = await cameraRef.current.takePhoto({
-          qualityPrioritization: 'speed', // 속도 우선 (셔터 랙 감소)
-        });
-        if (photo?.uri) {
-          // EXIF 회전 정규화 - 휴대폰 방향에 관계없이 올바른 방향으로 표시
-          const normalizedImage = await ImageManipulator.manipulateAsync(
-            photo.uri.startsWith('file://') ? photo.uri : `file://${photo.uri}`,
-            [], // 빈 actions로 EXIF orientation 적용
-            { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
-          );
-          capturedImageUri = normalizedImage.uri;
-
-          // 사진 크기 가져오기 (좌표 변환용)
-          photoWidth = normalizedImage.width || photo.width || winWidth;
-          photoHeight = normalizedImage.height || photo.height || winHeight;
-
-          console.log('[ScannerScreen] Photo captured:', capturedImageUri, `${photoWidth}x${photoHeight}`);
-        }
-      }
-    } catch (error) {
-      console.error('[ScannerScreen] Photo capture failed:', error);
-    }
-
-    // 화면 크기 (바코드 좌표 기준)
-    const screenW = barcodes[0]?.screenSize?.width || winWidth;
-    const screenH = barcodes[0]?.screenSize?.height || winHeight;
-
-    // 합성 이미지 생성 (사진 + 오버레이)
-    let compositeImageUri = capturedImageUri;
-    if (capturedImageUri && barcodes.length > 0) {
-      try {
-        // 합성 캡쳐 상태 설정 (숨겨진 뷰에 렌더링)
-        setCompositeCapture({
-          photoUri: capturedImageUri,
-          barcodes,
-          photoWidth: photoWidth || winWidth,
-          photoHeight: photoHeight || winHeight,
-          screenWidth: screenW,
-          screenHeight: screenH,
-        });
-
-        // 렌더링 대기
-        await new Promise(resolve => setTimeout(resolve, 300));
-
-        // ViewShot으로 합성 이미지 캡쳐
-        if (compositeViewShotRef.current) {
-          compositeImageUri = await compositeViewShotRef.current.capture();
-          console.log('[ScannerScreen] Composite image captured:', compositeImageUri);
-        }
-      } catch (error) {
-        console.error('[ScannerScreen] Composite capture failed:', error);
-      } finally {
-        // 합성 캡쳐 상태 초기화
-        setCompositeCapture(null);
-      }
-    }
-
+    // 바코드 데이터만 전달 (이미지 캡쳐 생략 - 속도 개선)
+    // 결과 화면에서 바코드 목록만 표시
     router.push({
       pathname: '/multi-code-results',
       params: {
         detectedBarcodes: pendingMultiScanData.barcodes,
-        capturedImageUri: compositeImageUri || '',
+        capturedImageUri: '', // 이미지 캡쳐 생략
       }
     });
 
@@ -2544,27 +2470,6 @@ function ScannerScreen() {
           right: 0,
         }}
       />
-
-      {/* 합성 이미지 캡쳐용 숨겨진 뷰 (화면 밖에 렌더링) */}
-      {compositeCapture && (
-        <View style={styles.hiddenCompositeContainer}>
-          <ViewShot
-            ref={compositeViewShotRef}
-            options={{ format: 'jpg', quality: 0.9 }}
-          >
-            <BarcodeOverlayImage
-              imageUri={compositeCapture.photoUri}
-              barcodes={compositeCapture.barcodes}
-              photoWidth={compositeCapture.photoWidth}
-              photoHeight={compositeCapture.photoHeight}
-              screenWidth={compositeCapture.screenWidth}
-              screenHeight={compositeCapture.screenHeight}
-              containerWidth={winWidth}
-              showValues={true}
-            />
-          </ViewShot>
-        </View>
-      )}
     </View>
   );
 }
@@ -3008,11 +2913,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(100, 100, 100, 0.95)',
     padding: 14,
     borderRadius: 12,
-  },
-  hiddenCompositeContainer: {
-    position: 'absolute',
-    left: -9999,
-    top: 0,
   },
 });
 
