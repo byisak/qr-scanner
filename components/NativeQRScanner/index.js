@@ -75,7 +75,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
 };
 
 // 커스텀 하이라이트 컴포넌트 (객체 추적 알고리즘 적용)
-const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.5)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.5)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false, onVisibleCountChange }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
   // 추적 중인 하이라이트: id -> {x, y, width, height, value, lastSeen}
@@ -246,7 +246,12 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     });
 
     setTrackedHighlights(newTracked);
-  }, [highlights, barcodes, selectCenterOnly]);
+
+    // 화면에 표시되는 하이라이트 개수를 부모에게 알림
+    if (onVisibleCountChange) {
+      onVisibleCountChange(newTracked.length);
+    }
+  }, [highlights, barcodes, selectCenterOnly, onVisibleCountChange]);
 
   if (trackedHighlights.length === 0) return null;
 
@@ -296,6 +301,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   barcodeTypes = ['qr'],
   onCodeScanned,
   onMultipleCodesDetected, // 2개 이상 바코드 감지 시 콜백
+  onVisibleHighlightsChange, // 화면에 표시되는 하이라이트 개수 변경 시 콜백
   multiCodeThreshold = 2, // 다중 감지 기준 (기본 2개)
   selectCenterBarcode = true, // 여러 코드 감지 시 중앙에 가장 가까운 코드만 선택 (기본값: true)
   showBarcodeValues = true, // 바코드 경계 아래에 값 표시 여부 (기본값: true)
@@ -692,6 +698,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           fillColor={highlightFillColor}
           showBarcodeValues={showBarcodeValues}
           selectCenterOnly={selectCenterBarcode}
+          onVisibleCountChange={onVisibleHighlightsChange}
         />
       )}
     </View>

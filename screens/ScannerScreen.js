@@ -118,6 +118,7 @@ function ScannerScreen() {
   const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
   const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
   const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
+  const [visibleHighlightsCount, setVisibleHighlightsCount] = useState(0); // 화면에 표시되는 하이라이트 개수
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
@@ -1244,6 +1245,11 @@ function ScannerScreen() {
     }, 2000);
   }, [pendingMultiScanData, router]);
 
+  // 화면에 표시되는 하이라이트 개수 변경 핸들러
+  const handleVisibleHighlightsChange = useCallback((count) => {
+    setVisibleHighlightsCount(count);
+  }, []);
+
   // 결과 창 열기 핸들러 (결과창 자동 열림 비활성화 시 사용)
   const handleOpenResultWindow = useCallback(() => {
     if (!lastScannedCode) return;
@@ -2043,6 +2049,7 @@ function ScannerScreen() {
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
+        onVisibleHighlightsChange={handleVisibleHighlightsChange}
         selectCenterBarcode={!multiCodeModeEnabled}
         showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}
         style={StyleSheet.absoluteFillObject}
@@ -2342,7 +2349,7 @@ function ScannerScreen() {
           >
             <Ionicons name="qr-code" size={20} color="#fff" />
             <Text style={styles.multiScanButtonText}>
-              {t('scanner.viewMultiResults').replace('{count}', pendingMultiScanData.count.toString())}
+              {t('scanner.viewMultiResults').replace('{count}', (visibleHighlightsCount > 0 ? visibleHighlightsCount : pendingMultiScanData.count).toString())}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
