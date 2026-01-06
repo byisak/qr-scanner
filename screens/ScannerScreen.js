@@ -1279,9 +1279,13 @@ function ScannerScreen() {
 
     // 카메라로 직접 사진 촬영 (실제 바코드 이미지)
     let capturedImageUri = null;
+    let photoWidth = 0;
+    let photoHeight = 0;
     try {
       if (cameraRef.current) {
-        const photo = await cameraRef.current.takePhoto();
+        const photo = await cameraRef.current.takePhoto({
+          qualityPrioritization: 'speed', // 속도 우선 (셔터 랙 감소)
+        });
         if (photo?.uri) {
           // EXIF 회전 정규화 - 휴대폰 방향에 관계없이 올바른 방향으로 표시
           const normalizedImage = await ImageManipulator.manipulateAsync(
@@ -1290,19 +1294,35 @@ function ScannerScreen() {
             { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
           );
           capturedImageUri = normalizedImage.uri;
-          console.log('[ScannerScreen] Photo captured and normalized:', capturedImageUri);
+
+          // 사진 크기 가져오기 (좌표 변환용)
+          photoWidth = normalizedImage.width || photo.width || winWidth;
+          photoHeight = normalizedImage.height || photo.height || winHeight;
+
+          console.log('[ScannerScreen] Photo captured:', capturedImageUri, `${photoWidth}x${photoHeight}`);
         }
       }
     } catch (error) {
       console.error('[ScannerScreen] Photo capture failed:', error);
     }
 
+    // 화면 크기 (바코드 좌표 기준)
+    const screenW = barcodes[0]?.screenSize?.width || winWidth;
+    const screenH = barcodes[0]?.screenSize?.height || winHeight;
+
     // 합성 이미지 생성 (사진 + 오버레이)
     let compositeImageUri = capturedImageUri;
     if (capturedImageUri && barcodes.length > 0) {
       try {
         // 합성 캡쳐 상태 설정 (숨겨진 뷰에 렌더링)
-        setCompositeCapture({ photoUri: capturedImageUri, barcodes });
+        setCompositeCapture({
+          photoUri: capturedImageUri,
+          barcodes,
+          photoWidth: photoWidth || winWidth,
+          photoHeight: photoHeight || winHeight,
+          screenWidth: screenW,
+          screenHeight: screenH,
+        });
 
         // 렌더링 대기
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -2535,8 +2555,10 @@ function ScannerScreen() {
             <BarcodeOverlayImage
               imageUri={compositeCapture.photoUri}
               barcodes={compositeCapture.barcodes}
-              imageWidth={compositeCapture.barcodes[0]?.screenSize?.width || winWidth}
-              imageHeight={compositeCapture.barcodes[0]?.screenSize?.height || winHeight}
+              photoWidth={compositeCapture.photoWidth}
+              photoHeight={compositeCapture.photoHeight}
+              screenWidth={compositeCapture.screenWidth}
+              screenHeight={compositeCapture.screenHeight}
               containerWidth={winWidth}
               showValues={true}
             />

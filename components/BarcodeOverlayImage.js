@@ -1,5 +1,6 @@
 // components/BarcodeOverlayImage.js
 // 캡쳐된 이미지 위에 바코드 바운더리와 라벨을 오버레이로 그리는 컴포넌트
+// 화면 좌표 -> 사진 좌표 -> 디스플레이 좌표 변환 적용
 
 import React, { forwardRef } from 'react';
 import { View, Image, StyleSheet, Dimensions } from 'react-native';
@@ -19,18 +20,40 @@ const hexToRgba = (hex, alpha) => {
 const BarcodeOverlayImage = forwardRef(({
   imageUri,
   barcodes = [],
-  imageWidth,
-  imageHeight,
-  containerWidth = SCREEN_WIDTH - 32,
+  photoWidth,        // 실제 사진 해상도 (픽셀)
+  photoHeight,
+  screenWidth,       // 화면 프리뷰 크기 (포인트)
+  screenHeight,
+  containerWidth = SCREEN_WIDTH,  // 디스플레이 컨테이너 크기
   showValues = true,
 }, ref) => {
-  // 이미지 비율 계산
-  const imageAspectRatio = imageWidth / imageHeight;
-  const displayHeight = containerWidth / imageAspectRatio;
+  // 사진 비율에 맞는 디스플레이 높이 계산
+  const photoAspectRatio = photoWidth / photoHeight;
+  const displayHeight = containerWidth / photoAspectRatio;
 
-  // 스케일 팩터: 원본 이미지 좌표 -> 디스플레이 좌표
-  const scaleX = containerWidth / imageWidth;
-  const scaleY = displayHeight / imageHeight;
+  // 좌표 변환 스케일 팩터 계산
+  // 1단계: 화면 좌표 -> 사진 좌표 (scaleX = photoWidth / screenWidth)
+  // 2단계: 사진 좌표 -> 디스플레이 좌표 (scaleX = containerWidth / photoWidth)
+  // 합치면: displayX = screenX * (photoWidth / screenWidth) * (containerWidth / photoWidth)
+  //       = screenX * (containerWidth / screenWidth)
+  // 하지만 화면과 사진의 비율이 다를 수 있으므로 별도 계산 필요
+
+  // 화면 프리뷰와 사진의 비율 차이를 고려한 스케일링
+  const screenAspectRatio = screenWidth / screenHeight;
+
+  let scaleX, scaleY, offsetX = 0, offsetY = 0;
+
+  if (photoAspectRatio > screenAspectRatio) {
+    // 사진이 더 넓음 - 세로 기준 맞춤, 가로 크롭
+    scaleY = containerWidth / photoAspectRatio / screenHeight;
+    scaleX = scaleY; // 비율 유지
+    offsetX = (containerWidth - screenWidth * scaleX) / 2;
+  } else {
+    // 사진이 더 좁거나 같음 - 가로 기준 맞춤
+    scaleX = containerWidth / screenWidth;
+    scaleY = scaleX; // 비율 유지
+    offsetY = (displayHeight - screenHeight * scaleY) / 2;
+  }
 
   return (
     <View ref={ref} style={[styles.container, { width: containerWidth, height: displayHeight }]}>
@@ -52,20 +75,17 @@ const BarcodeOverlayImage = forwardRef(({
         style={styles.svgOverlay}
       >
         {barcodes.map((barcode, index) => {
-          if (!barcode.bounds || !barcode.screenSize) return null;
+          if (!barcode.bounds) return null;
 
           const colorIndex = barcode.colorIndex !== undefined ? barcode.colorIndex : index;
           const borderColor = LABEL_COLORS[colorIndex % LABEL_COLORS.length];
           const fillColor = hexToRgba(borderColor, 0.15);
 
           // 화면 좌표를 디스플레이 좌표로 변환
-          const displayScaleX = containerWidth / barcode.screenSize.width;
-          const displayScaleY = displayHeight / barcode.screenSize.height;
-
-          const x = barcode.bounds.x * displayScaleX;
-          const y = barcode.bounds.y * displayScaleY;
-          const width = barcode.bounds.width * displayScaleX;
-          const height = barcode.bounds.height * displayScaleY;
+          const x = barcode.bounds.x * scaleX + offsetX;
+          const y = barcode.bounds.y * scaleY + offsetY;
+          const width = barcode.bounds.width * scaleX;
+          const height = barcode.bounds.height * scaleY;
 
           // 라벨 텍스트 (최대 길이 제한)
           const maxTextLength = 25;
