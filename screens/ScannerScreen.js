@@ -43,7 +43,7 @@ import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/a
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
-import ViewShot from 'react-native-view-shot';
+import { captureScreen } from 'react-native-view-shot';
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation';
@@ -130,7 +130,6 @@ function ScannerScreen() {
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
   const cameraRef = useRef(null);
-  const viewShotRef = useRef(null); // 화면 캡쳐용 ViewShot ref
   const photoSaveEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지 (기본값: 켬)
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
   const scanSoundEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
@@ -1266,13 +1265,14 @@ function ScannerScreen() {
 
     isNavigatingRef.current = true;
 
-    // 화면 캡쳐 (바운더리와 라벨이 포함된 상태)
+    // 전체 화면 캡쳐 (네이티브 카메라 뷰 포함)
     let capturedImageUri = null;
     try {
-      if (viewShotRef.current) {
-        capturedImageUri = await viewShotRef.current.capture();
-        console.log('[ScannerScreen] Screen captured:', capturedImageUri);
-      }
+      capturedImageUri = await captureScreen({
+        format: 'jpg',
+        quality: 0.9,
+      });
+      console.log('[ScannerScreen] Screen captured:', capturedImageUri);
     } catch (error) {
       console.error('[ScannerScreen] Screen capture failed:', error);
     }
@@ -2118,32 +2118,25 @@ function ScannerScreen() {
 
   return (
     <View style={styles.container}>
-      {/* 화면 캡쳐를 위한 ViewShot 래퍼 */}
-      <ViewShot
-        ref={viewShotRef}
-        style={StyleSheet.absoluteFill}
-        options={{ format: 'jpg', quality: 0.9 }}
-      >
-        {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
-        {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
-        <NativeQRScanner
-          ref={cameraRef}
-          isActive={isActive}
-          facing={cameraFacing}
-          torch={torchOn ? 'on' : 'off'}
-          barcodeTypes={barcodeTypes}
-          onCodeScanned={handleBarCodeScanned}
-          onMultipleCodesDetected={handleMultipleCodesDetected}
-          onDetectedBarcodesChange={handleDetectedBarcodesChange}
-          onVerifiedBarcodesChange={handleVerifiedBarcodesChange}
-          onVisibleHighlightsChange={handleVisibleHighlightsChange}
-          selectCenterBarcode={!multiCodeModeEnabled}
-          showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}
-          style={StyleSheet.absoluteFillObject}
-          showHighlights={true}
-          highlightColor="lime"
-        />
-      </ViewShot>
+      {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
+      {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
+      <NativeQRScanner
+        ref={cameraRef}
+        isActive={isActive}
+        facing={cameraFacing}
+        torch={torchOn ? 'on' : 'off'}
+        barcodeTypes={barcodeTypes}
+        onCodeScanned={handleBarCodeScanned}
+        onMultipleCodesDetected={handleMultipleCodesDetected}
+        onDetectedBarcodesChange={handleDetectedBarcodesChange}
+        onVerifiedBarcodesChange={handleVerifiedBarcodesChange}
+        onVisibleHighlightsChange={handleVisibleHighlightsChange}
+        selectCenterBarcode={!multiCodeModeEnabled}
+        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}
+        style={StyleSheet.absoluteFillObject}
+        showHighlights={true}
+        highlightColor="lime"
+      />
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) */}
