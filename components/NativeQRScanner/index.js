@@ -143,89 +143,51 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       filteredHighlights = [highlights[closestIndex]];
     }
 
-    // 바코드 값을 위치에 매핑 (신뢰도 기반)
-    // 먼저 모든 바코드 값을 수집하여 위치별로 그룹화
-    const currentFrameValues = new Map(); // posKey -> value
-    barcodes.forEach((bc) => {
-      if (bc && bc.value && bc.frame) {
-        // 바코드 프레임의 중앙 위치 계산 (화면 좌표로 근사)
-        // 참고: bc.frame은 카메라 좌표이므로, 가장 가까운 하이라이트를 찾아야 함
-        let bestHighlight = null;
-        let minDist = Number.MAX_VALUE;
-
-        // 하이라이트 중에서 이 바코드와 가장 가까운 것 찾기 (인덱스 기반이 아닌 위치 기반)
-        filteredHighlights.forEach((h) => {
-          // 간단한 거리 비교 (정규화된 좌표로)
-          const hCenterX = (h.origin.x + h.size.width / 2) / SCREEN_WIDTH;
-          const hCenterY = (h.origin.y + h.size.height / 2) / SCREEN_HEIGHT;
-          const bcCenterX = (bc.frame.x + bc.frame.width / 2) / 1920; // 카메라 해상도 가정
-          const bcCenterY = (bc.frame.y + bc.frame.height / 2) / 1440;
-
-          const dist = Math.sqrt(Math.pow(hCenterX - bcCenterX, 2) + Math.pow(hCenterY - bcCenterY, 2));
-          if (dist < minDist && dist < 0.3) { // 30% 이내의 거리만 매칭
-            minDist = dist;
-            bestHighlight = h;
-          }
-        });
-
-        if (bestHighlight) {
-          const posKey = getPositionKey(bestHighlight.origin.x, bestHighlight.origin.y);
-          currentFrameValues.set(posKey, bc.value);
-        }
-      }
-    });
-
-    // 신뢰도 기반 값 업데이트
-    for (const [posKey, newValue] of currentFrameValues) {
-      const existing = valueMapRef.current.get(posKey);
-      if (existing) {
-        if (existing.value === newValue) {
-          // 같은 값 - 신뢰도 증가
-          existing.confidence = Math.min(existing.confidence + 2, 10);
-          existing.lastSeen = now;
-        } else {
-          // 다른 값 - 신뢰도에 따라 처리
-          if (existing.confidence <= 2) {
-            // 신뢰도 낮음 - 새 값으로 교체
-            valueMapRef.current.set(posKey, { value: newValue, confidence: 2, lastSeen: now });
-          } else {
-            // 신뢰도 높음 - 기존 값 유지, 신뢰도만 감소
-            existing.confidence -= 1;
-            existing.lastSeen = now;
-          }
-        }
-      } else {
-        // 새 위치 - 추가
-        valueMapRef.current.set(posKey, { value: newValue, confidence: 2, lastSeen: now });
-      }
-    }
-
-    // 오래된 캐시 정리
-    for (const [key, entry] of valueMapRef.current) {
-      if (now - entry.lastSeen > 3000) {
-        valueMapRef.current.delete(key);
-      }
-    }
-
-    // 하이라이트에 안정된 값 매칭
+    // 하이라이트에 값 매칭 (인덱스 기반 우선, 캐시 백업)
     const newTracked = filteredHighlights.map((h, idx) => {
       const posKey = getPositionKey(h.origin.x, h.origin.y);
 
-      // 캐시에서 값 찾기
-      let barcodeValue = null;
-      const cached = valueMapRef.current.get(posKey);
-      if (cached && cached.confidence >= 2) {
-        barcodeValue = cached.value;
-      }
+      // 1. 인덱스 기반으로 값 찾기 (가장 신뢰할 수 있음)
+      let barcodeValue = barcodes[idx]?.value || null;
 
-      // 못 찾으면 주변 위치에서 찾기
-      if (!barcodeValue) {
-        const nearbyKeys = getNearbyKeys(h.origin.x, h.origin.y);
-        for (const nearKey of nearbyKeys) {
-          const nearCached = valueMapRef.current.get(nearKey);
-          if (nearCached && nearCached.confidence >= 2) {
-            barcodeValue = nearCached.value;
-            break;
+      // 2. 값을 찾았으면 캐시 업데이트
+      if (barcodeValue) {
+        const existing = valueMapRef.current.get(posKey);
+        if (existing) {
+          if (existing.value === barcodeValue) {
+            existing.confidence = Math.min(existing.confidence + 1, 10);
+            existing.lastSeen = now;
+          } else {
+            // 다른 값이면 신뢰도에 따라 처리
+            if (existing.confidence <= 3) {
+              valueMapRef.current.set(posKey, { value: barcodeValue, confidence: 1, lastSeen: now });
+            } else {
+              existing.confidence -= 1;
+              // 기존 값 유지
+              barcodeValue = existing.value;
+            }
+          }
+        } else {
+          valueMapRef.current.set(posKey, { value: barcodeValue, confidence: 1, lastSeen: now });
+        }
+      } else {
+        // 3. 인덱스로 못 찾으면 캐시에서 찾기
+        const cached = valueMapRef.current.get(posKey);
+        if (cached) {
+          barcodeValue = cached.value;
+          cached.lastSeen = now;
+        }
+
+        // 4. 주변 위치에서 찾기
+        if (!barcodeValue) {
+          const nearbyKeys = getNearbyKeys(h.origin.x, h.origin.y);
+          for (const nearKey of nearbyKeys) {
+            const nearCached = valueMapRef.current.get(nearKey);
+            if (nearCached) {
+              barcodeValue = nearCached.value;
+              nearCached.lastSeen = now;
+              break;
+            }
           }
         }
       }
@@ -239,6 +201,13 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
         value: barcodeValue,
       };
     });
+
+    // 오래된 캐시 정리
+    for (const [key, entry] of valueMapRef.current) {
+      if (now - entry.lastSeen > 3000) {
+        valueMapRef.current.delete(key);
+      }
+    }
 
     setTrackedHighlights(newTracked);
   }, [highlights, barcodes, selectCenterOnly]);
