@@ -17,13 +17,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../contexts/ThemeContext';
-import { useTranslation } from '../contexts/LocaleContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { saveToHistory } from '../utils/history';
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
-  const { colors, fonts } = useTheme();
-  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const { t, fonts } = useLanguage();
   const params = useLocalSearchParams();
 
   const [codes, setCodes] = useState([]);
