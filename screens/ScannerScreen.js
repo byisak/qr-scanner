@@ -1663,6 +1663,32 @@ function ScannerScreen() {
           }
 
           // 일반 모드 (기존 로직)
+
+          // 결과창 자동 열림이 비활성화된 경우: 카메라 유지, 테두리와 값 표시
+          if (!resultWindowAutoOpenRef.current) {
+            // 히스토리 저장
+            const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
+
+            // 마지막 스캔된 코드 저장 (UI에 표시하기 위해)
+            setLastScannedCode({
+              code: data,
+              type: normalizedType,
+              timestamp: Date.now(),
+              isDuplicate: historyResult.isDuplicate,
+              scanCount: historyResult.count,
+              photoUri: photoUri || null,
+              errorCorrectionLevel: detectedEcLevel || null,
+            });
+
+            // 스캔 재활성화 (계속 스캔 가능) - 카메라는 활성 상태 유지
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 300);
+            startResetTimer(RESET_DELAYS.NORMAL);
+            return;
+          }
+
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
           // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
@@ -1739,31 +1765,6 @@ function ScannerScreen() {
 
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
-
-          // 결과창 자동 열림이 비활성화된 경우: 테두리와 값 표시, 결과 화면으로 이동하지 않음
-          if (!resultWindowAutoOpenRef.current) {
-            // 마지막 스캔된 코드 저장 (UI에 표시하기 위해)
-            setLastScannedCode({
-              code: data,
-              type: normalizedType,
-              timestamp: Date.now(),
-              isDuplicate: historyResult.isDuplicate,
-              scanCount: historyResult.count,
-              photoUri: photoUri || null,
-              errorCorrectionLevel: detectedEcLevel || null,
-            });
-
-            // 카메라 다시 활성화
-            setIsActive(true);
-            // 스캔 재활성화 (계속 스캔 가능)
-            setTimeout(() => {
-              isProcessingRef.current = false;
-              setCanScan(true);
-              isNavigatingRef.current = false;
-            }, 300);
-            startResetTimer(RESET_DELAYS.NORMAL);
-            return;
-          }
 
           // 팝업 모드: 결과 화면으로 이동
           router.push({
@@ -2036,8 +2037,8 @@ function ScannerScreen() {
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
-        selectCenterBarcode={!multiCodeModeEnabled && resultWindowAutoOpen}
-        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || !resultWindowAutoOpen}
+        selectCenterBarcode={!multiCodeModeEnabled}
+        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"
