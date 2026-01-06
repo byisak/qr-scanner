@@ -528,8 +528,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           return;
         }
 
-        // 하이라이트에 값 표시를 위해 모든 바코드 상태 업데이트 (인덱스 매칭용)
-        runOnJSUpdateBarcodes(allBarcodesData);
+        // 하이라이트에 값 표시를 위해 유효한 바코드만 상태 업데이트
+        runOnJSUpdateBarcodes(validBarcodesData);
 
         // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택 (여러 코드 인식 모드 OFF)
         if (selectCenterBarcodeShared.value) {
@@ -578,7 +578,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           return;
         }
 
-        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (필터링된 개수 전달)
+        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (유효한 바코드만 전달)
         runOnJSMultiCallback(validBarcodesData.length, validBarcodesData);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
