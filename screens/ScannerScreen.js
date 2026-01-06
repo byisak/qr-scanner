@@ -1180,7 +1180,9 @@ function ScannerScreen() {
         }
       });
 
-      // 새로운 코드가 추가되었을 때만 처리
+      // 새로운 코드가 추가되었을 때 햅틱 피드백 및 사진 캡처
+      let imageUri = pendingMultiScanData?.imageUri || null;
+
       if (newCodesAdded) {
         console.log(`[ScannerScreen] Accumulated unique codes: ${scannedCodesRef.current.length}`);
 
@@ -1190,8 +1192,6 @@ function ScannerScreen() {
         }
 
         // 첫 번째 감지 시에만 사진 캡처 (isProcessingMultiRef로 중복 방지)
-        let imageUri = pendingMultiScanData?.imageUri || null;
-
         if (!isProcessingMultiRef.current && !imageUri && cameraRef.current) {
           isProcessingMultiRef.current = true;
           try {
@@ -1209,16 +1209,16 @@ function ScannerScreen() {
             isProcessingMultiRef.current = false;
           }, 1500);
         }
-
-        // 누적된 바코드 데이터로 보류 데이터 업데이트 (빈 값 필터링)
-        const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
-        const accumulatedBarcodes = JSON.stringify(validBarcodes);
-        setPendingMultiScanData({
-          imageUri: imageUri,
-          barcodes: accumulatedBarcodes,
-          count: validBarcodes.length
-        });
       }
+
+      // 항상 버튼의 count를 화면 바운더리 개수와 일치하도록 업데이트
+      const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
+      const accumulatedBarcodes = JSON.stringify(validBarcodes);
+      setPendingMultiScanData({
+        imageUri: imageUri,
+        barcodes: accumulatedBarcodes,
+        count: count  // 화면에 표시되는 바운더리 개수와 일치하도록 전달받은 count 사용
+      });
     }
   }, [isActive, pendingMultiScanData?.imageUri]);
 
