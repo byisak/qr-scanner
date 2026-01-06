@@ -143,6 +143,9 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       filteredHighlights = [highlights[closestIndex]];
     }
 
+    // 위치 기반 키 중복 방지용 카운터
+    const keyCounter = new Map();
+
     // 하이라이트에 값 매칭 (인덱스 기반 우선, 캐시 백업)
     const newTracked = filteredHighlights.map((h, idx) => {
       const posKey = getPositionKey(h.origin.x, h.origin.y);
@@ -192,8 +195,10 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
         }
       }
 
-      // 안정적인 키 생성
-      const stableKey = `highlight-${idx}`;
+      // 위치 기반 키 생성 (중복 시 카운터 추가)
+      const count = keyCounter.get(posKey) || 0;
+      keyCounter.set(posKey, count + 1);
+      const stableKey = count === 0 ? `pos-${posKey}` : `pos-${posKey}-${count}`;
 
       return {
         ...h,
