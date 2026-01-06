@@ -43,7 +43,7 @@ import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/a
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
-import { captureScreen } from 'react-native-view-shot';
+// react-native-view-shot은 더 이상 사용하지 않음 - 카메라 takePhoto 사용
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation';
@@ -1265,16 +1265,18 @@ function ScannerScreen() {
 
     isNavigatingRef.current = true;
 
-    // 전체 화면 캡쳐 (네이티브 카메라 뷰 포함)
+    // 카메라로 직접 사진 촬영 (실제 바코드 이미지)
     let capturedImageUri = null;
     try {
-      capturedImageUri = await captureScreen({
-        format: 'jpg',
-        quality: 0.9,
-      });
-      console.log('[ScannerScreen] Screen captured:', capturedImageUri);
+      if (cameraRef.current) {
+        const photo = await cameraRef.current.takePhoto();
+        if (photo?.uri) {
+          capturedImageUri = photo.uri;
+          console.log('[ScannerScreen] Photo captured:', capturedImageUri);
+        }
+      }
     } catch (error) {
-      console.error('[ScannerScreen] Screen capture failed:', error);
+      console.error('[ScannerScreen] Photo capture failed:', error);
     }
 
     router.push({
