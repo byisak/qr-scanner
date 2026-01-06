@@ -20,6 +20,20 @@ import Animated, {
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+// 바코드 라벨 배경색 팔레트 (서로 구분되는 색상들)
+const LABEL_COLORS = [
+  '#E91E63', // 핑크
+  '#2196F3', // 파랑
+  '#4CAF50', // 초록
+  '#9C27B0', // 보라
+  '#FF5722', // 주황
+  '#00BCD4', // 청록
+  '#FFC107', // 노랑
+  '#795548', // 갈색
+  '#607D8B', // 청회색
+  '#3F51B5', // 인디고
+];
+
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
 const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor }) => {
   const x = useSharedValue(highlight.origin.x);
@@ -261,6 +275,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
         key: `track-${trackId}`,
         value: tracked?.bestValue || current.value,
         voteCount: tracked?.bestValueCount || 0,
+        colorIndex: trackId % LABEL_COLORS.length, // 각 바코드별 고유 색상
       };
     });
 
@@ -307,7 +322,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
           fillColor={fillColor}
           showValue={showValues}
           value={highlight.value}
-          labelBackgroundColor="orange"
+          labelBackgroundColor={LABEL_COLORS[highlight.colorIndex] || LABEL_COLORS[0]}
         />
       ))}
     </View>
