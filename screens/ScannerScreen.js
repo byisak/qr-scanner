@@ -44,6 +44,8 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 import * as ImageManipulator from 'expo-image-manipulator';
+import ViewShot from 'react-native-view-shot';
+import BarcodeOverlayImage from '../components/BarcodeOverlayImage';
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation';
@@ -124,6 +126,7 @@ function ScannerScreen() {
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
+  const [compositeCapture, setCompositeCapture] = useState(null); // 합성 캡쳐용 임시 데이터 { photoUri, barcodes }
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -145,6 +148,7 @@ function ScannerScreen() {
   const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
   const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
   const resultWindowAutoOpenRef = useRef(true); // 결과창 자동 열림 ref
+  const compositeViewShotRef = useRef(null); // 합성 이미지 캡쳐용 ViewShot ref
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -1265,6 +1269,14 @@ function ScannerScreen() {
 
     isNavigatingRef.current = true;
 
+    // 바코드 데이터 파싱
+    let barcodes = [];
+    try {
+      barcodes = JSON.parse(pendingMultiScanData.barcodes);
+    } catch (e) {
+      console.error('[ScannerScreen] Failed to parse barcodes:', e);
+    }
+
     // 카메라로 직접 사진 촬영 (실제 바코드 이미지)
     let capturedImageUri = null;
     try {
@@ -1285,11 +1297,34 @@ function ScannerScreen() {
       console.error('[ScannerScreen] Photo capture failed:', error);
     }
 
+    // 합성 이미지 생성 (사진 + 오버레이)
+    let compositeImageUri = capturedImageUri;
+    if (capturedImageUri && barcodes.length > 0) {
+      try {
+        // 합성 캡쳐 상태 설정 (숨겨진 뷰에 렌더링)
+        setCompositeCapture({ photoUri: capturedImageUri, barcodes });
+
+        // 렌더링 대기
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // ViewShot으로 합성 이미지 캡쳐
+        if (compositeViewShotRef.current) {
+          compositeImageUri = await compositeViewShotRef.current.capture();
+          console.log('[ScannerScreen] Composite image captured:', compositeImageUri);
+        }
+      } catch (error) {
+        console.error('[ScannerScreen] Composite capture failed:', error);
+      } finally {
+        // 합성 캡쳐 상태 초기화
+        setCompositeCapture(null);
+      }
+    }
+
     router.push({
       pathname: '/multi-code-results',
       params: {
         detectedBarcodes: pendingMultiScanData.barcodes,
-        capturedImageUri: capturedImageUri || '',
+        capturedImageUri: compositeImageUri || '',
       }
     });
 
@@ -2489,6 +2524,25 @@ function ScannerScreen() {
           right: 0,
         }}
       />
+
+      {/* 합성 이미지 캡쳐용 숨겨진 뷰 (화면 밖에 렌더링) */}
+      {compositeCapture && (
+        <View style={styles.hiddenCompositeContainer}>
+          <ViewShot
+            ref={compositeViewShotRef}
+            options={{ format: 'jpg', quality: 0.9 }}
+          >
+            <BarcodeOverlayImage
+              imageUri={compositeCapture.photoUri}
+              barcodes={compositeCapture.barcodes}
+              imageWidth={compositeCapture.barcodes[0]?.screenSize?.width || winWidth}
+              imageHeight={compositeCapture.barcodes[0]?.screenSize?.height || winHeight}
+              containerWidth={winWidth}
+              showValues={true}
+            />
+          </ViewShot>
+        </View>
+      )}
     </View>
   );
 }
@@ -2932,6 +2986,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(100, 100, 100, 0.95)',
     padding: 14,
     borderRadius: 12,
+  },
+  hiddenCompositeContainer: {
+    position: 'absolute',
+    left: -9999,
+    top: 0,
   },
 });
 
