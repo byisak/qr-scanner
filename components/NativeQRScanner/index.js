@@ -435,10 +435,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }, []);
 
   // 다중 바코드 감지 콜백 핸들러 (JS 스레드에서 실행)
-  const handleMultipleCodesDetected = useCallback((count, barcodesData) => {
-    console.log(`[NativeQRScanner] Multiple codes detected: ${count}`, barcodesData?.length);
-    if (onMultipleCodesDetectedRef.current) {
-      onMultipleCodesDetectedRef.current(count, barcodesData);
+  // barcodesDataJson: JSON 문자열로 전달받아 파싱 (Worklet 직렬화 문제 방지)
+  const handleMultipleCodesDetected = useCallback((count, barcodesDataJson) => {
+    try {
+      const barcodesData = JSON.parse(barcodesDataJson || '[]');
+      console.log(`[NativeQRScanner] Multiple codes detected: ${count}, parsed=${barcodesData?.length}`);
+      if (onMultipleCodesDetectedRef.current) {
+        onMultipleCodesDetectedRef.current(count, barcodesData);
+      }
+    } catch (e) {
+      console.error('[NativeQRScanner] Failed to parse barcodes:', e);
     }
   }, []);
 
@@ -562,8 +568,9 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           return;
         }
 
-        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (모든 바코드 전달)
-        runOnJSMultiCallback(allBarcodesData.length, allBarcodesData);
+        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (JSON 문자열로 전달)
+        const barcodesJson = JSON.stringify(allBarcodesData);
+        runOnJSMultiCallback(allBarcodesData.length, barcodesJson);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
@@ -579,7 +586,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
             type: barcode.type,
             frame: barcode.frame,
           }];
-          runOnJSMultiCallback(1, singleBarcodeData);
+          runOnJSMultiCallback(1, JSON.stringify(singleBarcodeData));
           return;
         }
       }
