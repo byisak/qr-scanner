@@ -78,6 +78,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
 const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
+  const valueByPositionRef = useRef(new Map()); // 위치별 값 캐싱
 
   // showBarcodeValues가 true이고 바코드가 있으면 값 표시
   const showValues = showBarcodeValues && barcodes.length > 0;
@@ -87,6 +88,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       // 하이라이트가 없으면 페이드아웃
       const timeout = setTimeout(() => {
         setTrackedHighlights([]);
+        valueByPositionRef.current.clear();
       }, 300);
       return () => clearTimeout(timeout);
     }
@@ -97,6 +99,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
     lastUpdateRef.current = now;
 
     let filteredHighlights = highlights;
+    let filteredBarcodes = barcodes;
 
     // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
     if (selectCenterOnly && highlights.length >= 2) {
@@ -119,14 +122,46 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       });
 
       filteredHighlights = [highlights[closestIndex]];
+      filteredBarcodes = barcodes[closestIndex] ? [barcodes[closestIndex]] : [];
     }
 
-    // 인덱스 기반으로 하이라이트와 바코드 매칭 (배열 순서 동일)
-    const newTracked = filteredHighlights.map((h, i) => {
-      // 인덱스로 바코드 값 가져오기
-      const barcodeValue = barcodes[i]?.value || null;
+    // 인덱스 기반으로 하이라이트-바코드 매칭 후 위치 캐시 업데이트
+    // (highlights와 barcodes는 같은 순서로 제공됨)
+    const minLen = Math.min(filteredHighlights.length, filteredBarcodes.length);
+    for (let i = 0; i < minLen; i++) {
+      const bc = filteredBarcodes[i];
+      const h = filteredHighlights[i];
+      if (bc && bc.value && h) {
+        // 하이라이트의 스크린 위치로 캐시 키 생성 (좌표계 일치)
+        const posKey = `${Math.round(h.origin.x / 30) * 30}-${Math.round(h.origin.y / 30) * 30}`;
+        valueByPositionRef.current.set(posKey, bc.value);
+      }
+    }
 
-      // 위치 기반 안정적인 키 생성
+    // 하이라이트에 값 매칭
+    const newTracked = filteredHighlights.map((h, idx) => {
+      // 하이라이트 위치로 키 생성
+      const posKey = `${Math.round(h.origin.x / 30) * 30}-${Math.round(h.origin.y / 30) * 30}`;
+
+      // 1. 우선 인덱스로 값 찾기 (가장 정확)
+      let barcodeValue = filteredBarcodes[idx]?.value || null;
+
+      // 2. 인덱스로 못 찾으면 위치 캐시에서 찾기
+      if (!barcodeValue) {
+        barcodeValue = valueByPositionRef.current.get(posKey) || null;
+      }
+
+      // 3. 못 찾으면 주변 위치에서 찾기
+      if (!barcodeValue) {
+        const offsets = [[-30, 0], [30, 0], [0, -30], [0, 30], [-30, -30], [30, 30], [-30, 30], [30, -30]];
+        for (const [dx, dy] of offsets) {
+          const nearKey = `${Math.round(h.origin.x / 30) * 30 + dx}-${Math.round(h.origin.y / 30) * 30 + dy}`;
+          barcodeValue = valueByPositionRef.current.get(nearKey);
+          if (barcodeValue) break;
+        }
+      }
+
+      // 안정적인 키 생성 (위치 기반)
       const stableKey = `pos-${Math.round(h.origin.x / 10) * 10}-${Math.round(h.origin.y / 10) * 10}`;
 
       return {
