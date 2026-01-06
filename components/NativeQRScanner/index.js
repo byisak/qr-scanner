@@ -21,7 +21,7 @@ import Animated, {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
-const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value }) => {
+const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor }) => {
   const x = useSharedValue(highlight.origin.x);
   const y = useSharedValue(highlight.origin.y);
   const width = useSharedValue(highlight.size.width);
@@ -63,7 +63,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
       <Animated.View style={animatedStyle} />
       {showValue && value && (
         <Animated.View style={labelStyle}>
-          <View style={styles.valueLabel}>
+          <View style={[styles.valueLabel, { backgroundColor: labelBackgroundColor || borderColor }]}>
             <Text style={styles.valueLabelText} numberOfLines={2}>
               {value}
             </Text>
@@ -74,21 +74,13 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
   );
 };
 
-// 두 프레임이 유사한지 확인 (위치 기반 매칭용)
-const isFrameSimilar = (frame1, frame2, threshold = 50) => {
-  if (!frame1 || !frame2) return false;
-  const dx = Math.abs(frame1.x - frame2.x);
-  const dy = Math.abs(frame1.y - frame2.y);
-  return dx < threshold && dy < threshold;
-};
-
 // 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
 const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
 
-  // 2개 이상이고 showBarcodeValues가 true일 때만 값 표시
-  const showValues = showBarcodeValues && barcodes.length >= 2;
+  // showBarcodeValues가 true이고 바코드가 있으면 값 표시
+  const showValues = showBarcodeValues && barcodes.length > 0;
 
   useEffect(() => {
     if (!highlights || highlights.length === 0) {
@@ -129,23 +121,10 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       filteredHighlights = [highlights[closestIndex]];
     }
 
-    // 위치 기반으로 하이라이트와 바코드 매칭
+    // 인덱스 기반으로 하이라이트와 바코드 매칭 (배열 순서 동일)
     const newTracked = filteredHighlights.map((h, i) => {
-      // 하이라이트 위치를 frame 형식으로 변환
-      const highlightFrame = {
-        x: h.origin.x,
-        y: h.origin.y,
-        width: h.size.width,
-        height: h.size.height,
-      };
-
-      // 위치가 유사한 바코드 찾기
-      const matchedBarcode = barcodes.find((bc) => {
-        if (!bc.frame) return false;
-        return isFrameSimilar(highlightFrame, bc.frame, 100);
-      });
-
-      const barcodeValue = matchedBarcode?.value || null;
+      // 인덱스로 바코드 값 가져오기
+      const barcodeValue = barcodes[i]?.value || null;
 
       // 위치 기반 안정적인 키 생성
       const stableKey = `pos-${Math.round(h.origin.x / 10) * 10}-${Math.round(h.origin.y / 10) * 10}`;
@@ -379,9 +358,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       if (barcodes.length >= multiCodeThreshold) {
         // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
         // value가 없을 경우 displayValue, rawValue, data 순으로 fallback
-        // 빈 값인 바코드는 필터링 (바운드리 박스 전환 시 발생하는 빈 값 방지)
-        const barcodesData = [];
+        const allBarcodesData = []; // 하이라이트 표시용 (모든 바코드)
+        const validBarcodesData = []; // 다중 코드 감지용 (유효한 바코드만)
         const barcodeDetails = [];
+
         for (let i = 0; i < barcodes.length; i++) {
           const barcode = barcodes[i];
           const rawValue = barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '';
@@ -391,9 +371,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           // 디버그: 각 바코드의 값 정보 기록
           barcodeDetails.push(`[${i}]: v="${value}" (raw="${barcode.value}")`);
 
-          // 빈 값이 아닌 경우에만 추가 (더 엄격한 체크)
+          // 하이라이트 표시용 - 모든 바코드 (인덱스 매칭용)
+          allBarcodesData.push({
+            value: value || null,
+            type: barcode.type,
+            frame: barcode.frame,
+          });
+
+          // 다중 코드 감지용 - 빈 값이 아닌 경우에만
           if (value && value.length > 0 && value !== 'undefined' && value !== 'null') {
-            barcodesData.push({
+            validBarcodesData.push({
               value: value,
               type: barcode.type,
               frame: barcode.frame,
@@ -402,15 +389,15 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         }
 
         // 디버그 로그: 필터링 전후 개수와 각 바코드의 값
-        runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails.join(' | '), barcodesData.length);
+        runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails.join(' | '), validBarcodesData.length);
 
         // 유효한 바코드가 없으면 무시
-        if (barcodesData.length === 0) {
+        if (validBarcodesData.length === 0) {
           return;
         }
 
-        // 하이라이트에 값 표시를 위해 항상 바코드 상태 업데이트 (모드와 상관없이)
-        runOnJSUpdateBarcodes(barcodesData);
+        // 하이라이트에 값 표시를 위해 모든 바코드 상태 업데이트 (인덱스 매칭용)
+        runOnJSUpdateBarcodes(allBarcodesData);
 
         // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택 (여러 코드 인식 모드 OFF)
         if (selectCenterBarcodeShared.value) {
@@ -421,12 +408,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           const centerY = frameHeight / 2;
 
           // 필터링된 바코드 중에서 중앙에 가장 가까운 것을 선택
-          let closestBarcode = barcodesData[0];
+          let closestBarcode = validBarcodesData[0];
           let closestOriginalBarcode = barcodes[0];
           let minDistance = Number.MAX_VALUE;
 
-          for (let i = 0; i < barcodesData.length; i++) {
-            const bc = barcodesData[i];
+          for (let i = 0; i < validBarcodesData.length; i++) {
+            const bc = validBarcodesData[i];
             if (bc.frame) {
               // 바코드 중앙 좌표
               const bcCenterX = bc.frame.x + bc.frame.width / 2;
@@ -460,7 +447,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         }
 
         // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (필터링된 개수 전달)
-        runOnJSMultiCallback(barcodesData.length, barcodesData);
+        runOnJSMultiCallback(validBarcodesData.length, validBarcodesData);
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
