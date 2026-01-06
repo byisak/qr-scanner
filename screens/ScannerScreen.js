@@ -43,7 +43,6 @@ import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/a
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
-import { captureWithOverlay } from '../utils/captureWithOverlay';
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation';
@@ -1272,56 +1271,16 @@ function ScannerScreen() {
   }, [isActive]);
 
   // 다중 바코드 결과 보기 핸들러
-  const handleViewMultiResults = useCallback(async () => {
+  const handleViewMultiResults = useCallback(() => {
     if (!pendingMultiScanData) return;
 
     isNavigatingRef.current = true;
 
-    // 바코드 데이터 파싱
-    let barcodes = [];
-    try {
-      const parsed = JSON.parse(pendingMultiScanData.barcodes);
-      // bounds가 유효한 바코드만 필터링 (안전 장치)
-      barcodes = parsed.filter(bc => {
-        const hasValue = bc.value && String(bc.value).trim().length > 0;
-        const hasBounds = bc.bounds && bc.bounds.x !== undefined && bc.bounds.y !== undefined;
-        return hasValue && hasBounds;
-      });
-      console.log(`[ScannerScreen] Filtered barcodes with bounds: ${barcodes.length}/${parsed.length}`);
-    } catch (e) {
-      console.error('[ScannerScreen] Failed to parse barcodes:', e);
-    }
-
-    // 사진 캡쳐 및 Skia 오버레이 합성
-    let compositeImageUri = '';
-    try {
-      if (cameraRef.current) {
-        const photo = await cameraRef.current.takePhoto({
-          qualityPrioritization: 'speed',
-        });
-        if (photo?.uri) {
-          const photoUri = photo.uri.startsWith('file://') ? photo.uri : `file://${photo.uri}`;
-
-          // Skia로 오버레이 합성
-          if (barcodes.length > 0) {
-            const screenW = barcodes[0]?.screenSize?.width || winWidth;
-            const screenH = barcodes[0]?.screenSize?.height || winHeight;
-            const composite = await captureWithOverlay(photoUri, barcodes, screenW, screenH);
-            compositeImageUri = composite || photoUri;
-          } else {
-            compositeImageUri = photoUri;
-          }
-        }
-      }
-    } catch (error) {
-      console.error('[ScannerScreen] Composite capture failed:', error);
-    }
-
+    // 결과 페이지로 바로 이동 (이미지 없이)
     router.push({
       pathname: '/multi-code-results',
       params: {
         detectedBarcodes: pendingMultiScanData.barcodes,
-        capturedImageUri: compositeImageUri,
       }
     });
 
@@ -1333,7 +1292,7 @@ function ScannerScreen() {
     setTimeout(() => {
       isNavigatingRef.current = false;
     }, 2000);
-  }, [pendingMultiScanData, router, winWidth, winHeight]);
+  }, [pendingMultiScanData, router]);
 
   // 화면에 표시되는 하이라이트 개수 변경 핸들러
   const handleVisibleHighlightsChange = useCallback((count) => {
