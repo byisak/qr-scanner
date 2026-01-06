@@ -46,7 +46,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
     borderWidth: 2,
     borderColor: borderColor,
     backgroundColor: fillColor,
-    borderRadius: 0,
+    borderRadius: 4,
     opacity: opacity.value,
   }));
 
