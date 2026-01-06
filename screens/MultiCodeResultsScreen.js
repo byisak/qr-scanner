@@ -22,17 +22,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Colors, LABEL_COLORS } from '../constants/Colors';
-import Svg, { Rect, Text as SvgText, G } from 'react-native-svg';
+import BarcodeOverlayImage from '../components/BarcodeOverlayImage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// hex 색상을 rgba로 변환
-const hexToRgba = (hex, alpha) => {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-};
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
@@ -44,6 +36,12 @@ export default function MultiCodeResultsScreen() {
   const [codes, setCodes] = useState([]);
   const [savedCodes, setSavedCodes] = useState(new Set());
   const [capturedImageUri, setCapturedImageUri] = useState(null);
+  const [photoMeta, setPhotoMeta] = useState({
+    photoWidth: 0,
+    photoHeight: 0,
+    screenWidth: SCREEN_WIDTH,
+    screenHeight: SCREEN_HEIGHT,
+  });
 
   useEffect(() => {
     // params에서 바코드 데이터 파싱
@@ -61,7 +59,15 @@ export default function MultiCodeResultsScreen() {
     if (params.capturedImageUri) {
       setCapturedImageUri(params.capturedImageUri);
     }
-  }, [params.detectedBarcodes, params.capturedImageUri]);
+
+    // 사진 메타데이터 설정
+    setPhotoMeta({
+      photoWidth: parseInt(params.photoWidth) || 0,
+      photoHeight: parseInt(params.photoHeight) || 0,
+      screenWidth: parseInt(params.screenWidth) || SCREEN_WIDTH,
+      screenHeight: parseInt(params.screenHeight) || SCREEN_HEIGHT,
+    });
+  }, [params.detectedBarcodes, params.capturedImageUri, params.photoWidth, params.photoHeight, params.screenWidth, params.screenHeight]);
 
   // 히스토리에 코드 저장
   const saveCodeToHistory = useCallback(async (codeValue, barcodeType = 'qr') => {
@@ -260,7 +266,20 @@ export default function MultiCodeResultsScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            capturedImageUri ? (
+            capturedImageUri && photoMeta.photoWidth > 0 ? (
+              <View style={styles.capturedImageWrapper}>
+                <BarcodeOverlayImage
+                  imageUri={capturedImageUri}
+                  barcodes={codes}
+                  photoWidth={photoMeta.photoWidth}
+                  photoHeight={photoMeta.photoHeight}
+                  screenWidth={photoMeta.screenWidth}
+                  screenHeight={photoMeta.screenHeight}
+                  containerWidth={SCREEN_WIDTH - 32}
+                  showValues={true}
+                />
+              </View>
+            ) : capturedImageUri ? (
               <View style={styles.capturedImageContainer}>
                 <Image
                   source={{ uri: capturedImageUri }}
@@ -320,6 +339,11 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 36,
+  },
+  capturedImageWrapper: {
+    marginBottom: 16,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   capturedImageContainer: {
     width: SCREEN_WIDTH - 32,

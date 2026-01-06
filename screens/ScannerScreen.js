@@ -1273,8 +1273,8 @@ function ScannerScreen() {
       console.error('[ScannerScreen] Failed to parse barcodes:', e);
     }
 
-    // 사진 캡쳐 및 오버레이 합성 (Skia 사용)
-    let compositeImageUri = '';
+    // 사진 캡쳐 및 메타데이터 수집
+    let captureResult = { uri: '', width: 0, height: 0, screenWidth: winWidth, screenHeight: winHeight };
     try {
       if (cameraRef.current) {
         const photo = await cameraRef.current.takePhoto({
@@ -1283,26 +1283,27 @@ function ScannerScreen() {
         if (photo?.uri) {
           const photoUri = photo.uri.startsWith('file://') ? photo.uri : `file://${photo.uri}`;
 
-          // Skia로 오버레이 합성
-          if (barcodes.length > 0) {
-            const screenW = barcodes[0]?.screenSize?.width || winWidth;
-            const screenH = barcodes[0]?.screenSize?.height || winHeight;
-            const composite = await captureWithOverlay(photoUri, barcodes, screenW, screenH);
-            compositeImageUri = composite || photoUri;
-          } else {
-            compositeImageUri = photoUri;
-          }
+          // 화면 크기 정보
+          const screenW = barcodes[0]?.screenSize?.width || winWidth;
+          const screenH = barcodes[0]?.screenSize?.height || winHeight;
+
+          // 이미지 처리 및 메타데이터 수집
+          captureResult = await captureWithOverlay(photoUri, barcodes, screenW, screenH);
         }
       }
     } catch (error) {
-      console.error('[ScannerScreen] Composite capture failed:', error);
+      console.error('[ScannerScreen] Capture failed:', error);
     }
 
     router.push({
       pathname: '/multi-code-results',
       params: {
         detectedBarcodes: pendingMultiScanData.barcodes,
-        capturedImageUri: compositeImageUri,
+        capturedImageUri: captureResult.uri,
+        photoWidth: captureResult.width?.toString() || '0',
+        photoHeight: captureResult.height?.toString() || '0',
+        screenWidth: captureResult.screenWidth?.toString() || winWidth.toString(),
+        screenHeight: captureResult.screenHeight?.toString() || winHeight.toString(),
       }
     });
 
