@@ -329,20 +329,15 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     onMultipleCodesDetectedRef.current = onMultipleCodesDetected;
   }, [onMultipleCodesDetected]);
 
+  // onDetectedBarcodesChange의 최신 참조를 유지하기 위한 ref
+  const onDetectedBarcodesChangeRef = useRef(onDetectedBarcodesChange);
+  useEffect(() => {
+    onDetectedBarcodesChangeRef.current = onDetectedBarcodesChange;
+  }, [onDetectedBarcodesChange]);
+
   // 현재 감지된 바코드 목록 (하이라이트에 값 표시용)
   const [detectedBarcodes, setDetectedBarcodes] = useState([]);
   const detectedBarcodesTimeoutRef = useRef(null);
-
-  // detectedBarcodes 변경 시 콜백 호출 (Worklet 직렬화 문제 우회)
-  useEffect(() => {
-    if (onDetectedBarcodesChange && detectedBarcodes.length > 0) {
-      // 유효한 바코드만 필터링
-      const validBarcodes = detectedBarcodes.filter(bc => bc.value && bc.value.trim().length > 0);
-      if (validBarcodes.length > 0) {
-        onDetectedBarcodesChange(validBarcodes);
-      }
-    }
-  }, [detectedBarcodes, onDetectedBarcodesChange]);
 
   // selectCenterBarcode를 worklet에서 사용하기 위한 shared value
   const selectCenterBarcodeShared = useSharedValue(selectCenterBarcode);
@@ -438,7 +433,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       clearTimeout(detectedBarcodesTimeoutRef.current);
     }
 
-    setDetectedBarcodes(barcodesData || []);
+    const barcodes = barcodesData || [];
+    setDetectedBarcodes(barcodes);
+
+    // 바코드 감지 콜백 호출 (Worklet 직렬화 우회 - React 상태에서 직접 호출)
+    if (onDetectedBarcodesChangeRef.current && barcodes.length > 0) {
+      const validBarcodes = barcodes.filter(bc => bc.value && bc.value.trim().length > 0);
+      if (validBarcodes.length > 0) {
+        onDetectedBarcodesChangeRef.current(validBarcodes);
+      }
+    }
 
     // 500ms 후 자동으로 클리어 (바코드가 화면에서 사라지면)
     detectedBarcodesTimeoutRef.current = setTimeout(() => {
