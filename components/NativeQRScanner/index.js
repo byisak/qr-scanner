@@ -109,42 +109,44 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     if (now - lastUpdateRef.current < 50) return;
     lastUpdateRef.current = now;
 
-    let filteredHighlights = highlights;
-    let filteredBarcodes = barcodes;
-
-    // barcodes가 있으면 유효한 바코드 기반으로 highlights 매칭
-    // 이렇게 하면 화면에 표시되는 바운더리 개수와 스캔된 코드 개수가 일치함
-    if (barcodes && barcodes.length > 0) {
-      // 유효한 값이 있는 바코드만 필터링
-      const validBarcodes = barcodes.filter(bc => {
-        if (bc && bc.value != null) {
-          const valueStr = String(bc.value).trim();
-          return valueStr.length > 0 && valueStr !== 'null' && valueStr !== 'undefined';
-        }
-        return false;
-      });
-
-      if (validBarcodes.length > 0 && validBarcodes.length < highlights.length) {
-        // validBarcodes의 frame과 가장 가까운 highlights를 매칭
-        filteredBarcodes = validBarcodes;
-        filteredHighlights = validBarcodes.map(bc => {
-          if (!bc.frame) return highlights[0];
-          let closest = highlights[0];
-          let minDist = Number.MAX_VALUE;
-          highlights.forEach(h => {
-            const dist = Math.sqrt(
-              Math.pow((h.origin.x + h.size.width/2) - (bc.frame.x + bc.frame.width/2), 2) +
-              Math.pow((h.origin.y + h.size.height/2) - (bc.frame.y + bc.frame.height/2), 2)
-            );
-            if (dist < minDist) {
-              minDist = dist;
-              closest = h;
-            }
-          });
-          return closest;
-        });
-      }
+    // barcodes가 없거나 비어있으면 바운더리 표시하지 않음
+    // 이렇게 하면 유효한 값이 파싱될 때까지 바운더리가 표시되지 않음
+    if (!barcodes || barcodes.length === 0) {
+      return;
     }
+
+    // 유효한 값이 있는 바코드만 필터링
+    const validBarcodes = barcodes.filter(bc => {
+      if (bc && bc.value != null) {
+        const valueStr = String(bc.value).trim();
+        return valueStr.length > 0 && valueStr !== 'null' && valueStr !== 'undefined';
+      }
+      return false;
+    });
+
+    // 유효한 바코드가 없으면 바운더리 표시하지 않음
+    if (validBarcodes.length === 0) {
+      return;
+    }
+
+    // validBarcodes의 frame과 가장 가까운 highlights를 매칭
+    const filteredBarcodes = validBarcodes;
+    const filteredHighlights = validBarcodes.map(bc => {
+      if (!bc.frame) return highlights[0];
+      let closest = highlights[0];
+      let minDist = Number.MAX_VALUE;
+      highlights.forEach(h => {
+        const dist = Math.sqrt(
+          Math.pow((h.origin.x + h.size.width/2) - (bc.frame.x + bc.frame.width/2), 2) +
+          Math.pow((h.origin.y + h.size.height/2) - (bc.frame.y + bc.frame.height/2), 2)
+        );
+        if (dist < minDist) {
+          minDist = dist;
+          closest = h;
+        }
+      });
+      return closest;
+    });
 
     // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
     if (selectCenterOnly && filteredHighlights.length >= 2) {
