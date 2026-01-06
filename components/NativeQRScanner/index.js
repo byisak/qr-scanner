@@ -274,25 +274,26 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     }
 
     // 검증된 바코드만 콜백 (3회 이상 동일 값 감지된 경우)
+    // 모든 화면에 표시 중인 바코드를 colorIndex와 함께 전달
     if (onVerifiedBarcodesChange) {
-      const verifiedBarcodes = [];
-      for (const [id, tracked] of trackedObjectsRef.current) {
-        if (tracked.bestValue && tracked.bestValueCount >= 3) {
-          verifiedBarcodes.push({
-            value: tracked.bestValue,
-            voteCount: tracked.bestValueCount,
-            colorIndex: id % LABEL_COLORS.length, // 라벨 색상 인덱스
-            type: 'qr', // TODO: 타입도 추적하면 좋음
+      const allVisibleBarcodes = [];
+      for (const highlight of newTracked) {
+        if (highlight.value) {
+          allVisibleBarcodes.push({
+            value: highlight.value,
+            voteCount: highlight.voteCount || 0,
+            colorIndex: highlight.colorIndex, // 라벨 색상 인덱스
+            type: 'qr',
           });
         }
       }
 
       // 변경된 경우에만 콜백 호출 (중복 방지)
-      if (verifiedBarcodes.length > 0) {
-        const verifiedKey = verifiedBarcodes.map(bc => `${bc.value}:${bc.voteCount}`).sort().join('|');
+      if (allVisibleBarcodes.length > 0) {
+        const verifiedKey = allVisibleBarcodes.map(bc => `${bc.value}:${bc.colorIndex}`).sort().join('|');
         if (verifiedKey !== lastVerifiedKeyRef.current) {
           lastVerifiedKeyRef.current = verifiedKey;
-          onVerifiedBarcodesChange(verifiedBarcodes);
+          onVerifiedBarcodesChange(allVisibleBarcodes);
         }
       }
     }
