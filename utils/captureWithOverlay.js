@@ -2,7 +2,7 @@
 // Skia를 사용하여 사진 위에 바코드 오버레이를 합성하는 유틸리티
 
 import { Skia } from '@shopify/react-native-skia';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { LABEL_COLORS } from '../constants/Colors';
 
 /**
