@@ -112,8 +112,30 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     let filteredHighlights = highlights;
     let filteredBarcodes = barcodes;
 
+    // 유효한 값이 있는 바코드만 필터링 (하이라이트와 바코드 개수 일치시킴)
+    // 이렇게 하면 화면에 표시되는 바운더리 개수와 스캔된 코드 개수가 일치함
+    // barcodes와 highlights 배열 길이가 같을 때만 필터링 적용 (동기화 문제 방지)
+    if (barcodes && barcodes.length > 0 && barcodes.length === highlights.length) {
+      const validIndices = [];
+      barcodes.forEach((bc, idx) => {
+        if (bc && bc.value != null) {
+          const valueStr = String(bc.value).trim();
+          // 빈 문자열, 'null', 'undefined' 제외
+          if (valueStr.length > 0 && valueStr !== 'null' && valueStr !== 'undefined') {
+            validIndices.push(idx);
+          }
+        }
+      });
+
+      // 유효한 인덱스만 필터링
+      if (validIndices.length < highlights.length) {
+        filteredHighlights = validIndices.map(idx => highlights[idx]).filter(Boolean);
+        filteredBarcodes = validIndices.map(idx => barcodes[idx]).filter(Boolean);
+      }
+    }
+
     // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
-    if (selectCenterOnly && highlights.length >= 2) {
+    if (selectCenterOnly && filteredHighlights.length >= 2) {
       const screenCenterX = SCREEN_WIDTH / 2;
       const screenCenterY = SCREEN_HEIGHT / 2;
 
