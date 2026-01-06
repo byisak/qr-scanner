@@ -17,37 +17,9 @@ import Animated, {
   withTiming,
   runOnJS,
 } from 'react-native-reanimated';
+import { LABEL_COLORS } from '../../constants/Colors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// 바코드 라벨 배경색 팔레트 (서로 구분되는 색상들 - 25가지)
-const LABEL_COLORS = [
-  '#E91E63', // 핑크
-  '#2196F3', // 파랑
-  '#4CAF50', // 초록
-  '#9C27B0', // 보라
-  '#FF5722', // 주황
-  '#00BCD4', // 청록
-  '#FFC107', // 노랑
-  '#795548', // 갈색
-  '#607D8B', // 청회색
-  '#3F51B5', // 인디고
-  '#F44336', // 빨강
-  '#009688', // 틸
-  '#673AB7', // 딥퍼플
-  '#8BC34A', // 라이트그린
-  '#FF9800', // 오렌지
-  '#03A9F4', // 라이트블루
-  '#CDDC39', // 라임
-  '#9E9E9E', // 그레이
-  '#E040FB', // 퍼플악센트
-  '#00E676', // 그린악센트
-  '#FF6F00', // 앰버다크
-  '#1A237E', // 인디고다크
-  '#B71C1C', // 레드다크
-  '#1B5E20', // 그린다크
-  '#4A148C', // 퍼플다크
-];
 
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
 const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor }) => {
@@ -309,6 +281,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
           verifiedBarcodes.push({
             value: tracked.bestValue,
             voteCount: tracked.bestValueCount,
+            colorIndex: id % LABEL_COLORS.length, // 라벨 색상 인덱스
             type: 'qr', // TODO: 타입도 추적하면 좋음
           });
         }

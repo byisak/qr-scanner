@@ -11,6 +11,8 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +21,9 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Colors } from '../constants/Colors';
+import { Colors, LABEL_COLORS } from '../constants/Colors';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
@@ -30,6 +34,7 @@ export default function MultiCodeResultsScreen() {
 
   const [codes, setCodes] = useState([]);
   const [savedCodes, setSavedCodes] = useState(new Set());
+  const [capturedImageUri, setCapturedImageUri] = useState(null);
 
   useEffect(() => {
     // params에서 바코드 데이터 파싱
@@ -42,7 +47,12 @@ export default function MultiCodeResultsScreen() {
         setCodes([]);
       }
     }
-  }, [params.detectedBarcodes]);
+
+    // 캡쳐 이미지 URI 설정
+    if (params.capturedImageUri) {
+      setCapturedImageUri(params.capturedImageUri);
+    }
+  }, [params.detectedBarcodes, params.capturedImageUri]);
 
   // 히스토리에 코드 저장
   const saveCodeToHistory = useCallback(async (codeValue, barcodeType = 'qr') => {
@@ -157,20 +167,27 @@ export default function MultiCodeResultsScreen() {
 
   const renderCodeItem = ({ item, index }) => {
     const isSaved = savedCodes.has(index);
+    // colorIndex가 있으면 사용, 없으면 index 기반
+    const colorIndex = item.colorIndex !== undefined ? item.colorIndex : index;
+    const indicatorColor = LABEL_COLORS[colorIndex % LABEL_COLORS.length];
 
     return (
       <View style={[styles.codeItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.codeContent}>
-          <Text style={[styles.codeValue, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={3}>
-            {item.value}
-          </Text>
-          <Text style={[styles.codeType, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-            {getTypeDisplayName(item.type)}
-          </Text>
+        <View style={styles.codeItemRow}>
+          {/* 색상 인디케이터 (캡쳐 이미지의 라벨 색상과 매칭) */}
+          <View style={[styles.colorIndicator, { backgroundColor: indicatorColor }]} />
+          <View style={styles.codeContent}>
+            <Text style={[styles.codeValue, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={3}>
+              {item.value}
+            </Text>
+            <Text style={[styles.codeType, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              {getTypeDisplayName(item.type)}
+            </Text>
+          </View>
         </View>
         <View style={styles.codeActions}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.surfaceSecondary }]}
+            style={[styles.actionButton, { backgroundColor: colors.surfaceSecondary || colors.inputBackground }]}
             onPress={() => handleCopy(item.value)}
             activeOpacity={0.7}
           >
@@ -233,6 +250,17 @@ export default function MultiCodeResultsScreen() {
           keyExtractor={(item, index) => `${item.value}-${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            capturedImageUri ? (
+              <View style={styles.capturedImageContainer}>
+                <Image
+                  source={{ uri: capturedImageUri }}
+                  style={styles.capturedImage}
+                  resizeMode="contain"
+                />
+              </View>
+            ) : null
+          }
         />
       )}
 
@@ -284,6 +312,18 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 36,
   },
+  capturedImageContainer: {
+    width: SCREEN_WIDTH - 32,
+    aspectRatio: 3 / 4,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
+    backgroundColor: '#000',
+  },
+  capturedImage: {
+    width: '100%',
+    height: '100%',
+  },
   listContent: {
     padding: 16,
     paddingBottom: 100,
@@ -294,8 +334,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
   },
-  codeContent: {
+  codeItemRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  colorIndicator: {
+    width: 8,
+    height: '100%',
+    minHeight: 40,
+    borderRadius: 4,
+    marginRight: 12,
+  },
+  codeContent: {
+    flex: 1,
   },
   codeValue: {
     fontSize: 16,
