@@ -1,5 +1,5 @@
 // screens/ImageAnalysisScreen.js - 이미지에서 바코드/QR코드 분석 화면 (WebView 기반)
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 분석 타임아웃 (30초)
 const ANALYSIS_TIMEOUT = 30000;
@@ -179,12 +180,23 @@ const getWebViewHTML = (zxingScript) => `
 function ImageAnalysisScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { imageUri } = params;
+  const { imageUri, detectedBarcodes: detectedBarcodesParam } = params;
   const { t } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = Dimensions.get('screen');
+
+  // 스캐너에서 감지된 바코드 파싱
+  const scannerDetectedBarcodes = useMemo(() => {
+    if (!detectedBarcodesParam) return [];
+    try {
+      return JSON.parse(detectedBarcodesParam);
+    } catch (e) {
+      console.error('Failed to parse detected barcodes:', e);
+      return [];
+    }
+  }, [detectedBarcodesParam]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -198,6 +210,7 @@ function ImageAnalysisScreen() {
   const [zxingScript, setZxingScript] = useState(null);
   const [savedCount, setSavedCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingHistory, setIsSavingHistory] = useState(false);
 
   const webViewRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -269,17 +282,25 @@ function ImageAnalysisScreen() {
           return;
         }
 
+        // 원본 이미지 크기 로그 (디버깅용)
+        console.log('[ImageAnalysis] Original image:', imageUri, 'size:', fileInfo.size ? `${(fileInfo.size / 1024).toFixed(1)}KB` : 'unknown');
+
         // EXIF 회전 정규화 - 빈 actions로 manipulateAsync 호출하면 EXIF orientation이 적용됨
-        console.log('Normalizing image orientation...');
+        // 바코드 인식률 향상을 위해 무압축 사용
+        console.log('Normalizing image orientation (high quality)...');
         const manipulatedImage = await ImageManipulator.manipulateAsync(
           imageUri,
           [], // 빈 actions - EXIF rotation만 적용
-          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+          { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
         );
 
         const normalizedUri = manipulatedImage.uri;
         setNormalizedImageUri(normalizedUri);
-        console.log('Image normalized:', manipulatedImage.width, 'x', manipulatedImage.height);
+
+        // 처리된 이미지 정보 로그
+        const processedInfo = await FileSystem.getInfoAsync(normalizedUri);
+        console.log('[ImageAnalysis] Processed image:', manipulatedImage.width, 'x', manipulatedImage.height,
+          'size:', processedInfo.size ? `${(processedInfo.size / 1024).toFixed(1)}KB` : 'unknown');
 
         // 정규화된 이미지 크기 사용
         const width = manipulatedImage.width;
@@ -527,6 +548,121 @@ function ImageAnalysisScreen() {
     }
   };
 
+  // 개별 바코드를 기록에 저장
+  const handleSaveToHistory = async (result, index) => {
+    try {
+      // 그룹별 히스토리 가져오기
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+
+      // 기본 그룹에 저장
+      if (!historyByGroup.default) {
+        historyByGroup.default = [];
+      }
+
+      // 바코드 타입 정규화
+      const normalizedType = result.format.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const historyItem = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        code: result.text,
+        timestamp: Date.now(),
+        url: null,
+        photoUri: null,
+        type: normalizedType,
+        ecLevel: null,
+        count: 1,
+      };
+
+      historyByGroup.default.unshift(historyItem);
+
+      // 최대 1000개까지만 저장
+      if (historyByGroup.default.length > 1000) {
+        historyByGroup.default = historyByGroup.default.slice(0, 1000);
+      }
+
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      Alert.alert(
+        t('imageAnalysis.historySaveSuccess'),
+        t('imageAnalysis.historySaveSuccessMessage', { number: index + 1 })
+      );
+    } catch (err) {
+      console.error('Save to history error:', err);
+      Alert.alert(t('common.error'), t('imageAnalysis.saveError'));
+    }
+  };
+
+  // 모든 바코드를 기록에 저장
+  const handleSaveAllToHistory = async () => {
+    if (results.length === 0) return;
+
+    try {
+      setIsSavingHistory(true);
+
+      // 그룹별 히스토리 가져오기
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+
+      if (!historyByGroup.default) {
+        historyByGroup.default = [];
+      }
+
+      let successCount = 0;
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+
+        // 바코드 타입 정규화
+        const normalizedType = result.format.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        const historyItem = {
+          id: `${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`,
+          code: result.text,
+          timestamp: Date.now() + i, // 순서 유지를 위해 약간의 시간 차이
+          url: null,
+          photoUri: null,
+          type: normalizedType,
+          ecLevel: null,
+          count: 1,
+        };
+
+        historyByGroup.default.unshift(historyItem);
+        successCount++;
+      }
+
+      // 최대 1000개까지만 저장
+      if (historyByGroup.default.length > 1000) {
+        historyByGroup.default = historyByGroup.default.slice(0, 1000);
+      }
+
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      setIsSavingHistory(false);
+
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      Alert.alert(
+        t('imageAnalysis.historyAllSaveSuccess'),
+        t('imageAnalysis.historyAllSaveSuccessMessage', { count: successCount })
+      );
+    } catch (err) {
+      console.error('Save all to history error:', err);
+      setIsSavingHistory(false);
+      Alert.alert(t('common.error'), t('imageAnalysis.saveError'));
+    }
+  };
+
   // 전체 JSON 다운로드 - ZXing WASM 원본 데이터 전체
   const handleDownloadAllJson = async () => {
     if (results.length === 0) return;
@@ -753,7 +889,74 @@ function ImageAnalysisScreen() {
           </View>
         </View>
 
-        {/* 결과 섹션 */}
+        {/* 스캐너에서 감지된 바코드 섹션 (상단에 먼저 표시) */}
+        {scannerDetectedBarcodes.length > 0 && (
+          <View style={styles.resultsSection}>
+            <View style={styles.resultsSectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('imageAnalysis.scannerDetected') || '스캐너 감지'} ({scannerDetectedBarcodes.length})
+              </Text>
+            </View>
+
+            <Text style={[styles.scannerDetectedInfo, { color: colors.textSecondary }]}>
+              {t('imageAnalysis.scannerDetectedDesc') || '실시간 스캐너에서 감지된 코드입니다'}
+            </Text>
+
+            {scannerDetectedBarcodes.map((barcode, index) => {
+              const color = getBarcodeColor(index);
+              return (
+                <View
+                  key={`scanner-${index}`}
+                  style={[styles.resultCard, { backgroundColor: colors.surface, borderLeftColor: color }]}
+                >
+                  <View style={styles.resultHeader}>
+                    <View style={[styles.resultIndex, { backgroundColor: color }]}>
+                      <Ionicons name="scan" size={12} color="#fff" />
+                    </View>
+                    <Text style={[styles.resultFormat, { color: colors.textSecondary }]}>
+                      {formatName(barcode.type)}
+                    </Text>
+                  </View>
+
+                  <Text style={[styles.resultText, { color: colors.text }]} numberOfLines={3}>
+                    {barcode.value}
+                  </Text>
+
+                  <View style={styles.resultActions}>
+                    {/* 복사 */}
+                    <TouchableOpacity
+                      style={[styles.resultIconButton, { backgroundColor: colors.border }]}
+                      onPress={() => handleCopyResult(barcode.value)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="copy-outline" size={20} color={colors.text} />
+                    </TouchableOpacity>
+
+                    {/* 열기 */}
+                    <TouchableOpacity
+                      style={[styles.resultIconButton, styles.primaryButton]}
+                      onPress={() => handleOpenResult({ text: barcode.value, format: barcode.type })}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="open-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+
+                    {/* 기록 저장 */}
+                    <TouchableOpacity
+                      style={[styles.resultIconButton, styles.historyButton]}
+                      onPress={() => handleSaveToHistory({ text: barcode.value, format: barcode.type }, index)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="bookmark-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* 이미지 분석 결과 섹션 */}
         <View style={styles.resultsSection}>
           <View style={styles.resultsSectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -763,18 +966,17 @@ function ImageAnalysisScreen() {
               <View style={styles.headerButtons}>
                 {/* JSON 다운로드 버튼 */}
                 <TouchableOpacity
-                  style={[styles.saveAllButton, { backgroundColor: '#2E7D32' }]}
+                  style={[styles.iconButton, { backgroundColor: '#2E7D32' }]}
                   onPress={handleDownloadAllJson}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="code-download-outline" size={16} color="#fff" />
-                  <Text style={styles.saveAllButtonText}>JSON</Text>
+                  <Ionicons name="code-download-outline" size={20} color="#fff" />
                 </TouchableOpacity>
 
-                {/* 모두 저장 버튼 */}
+                {/* 이미지 모두 저장 버튼 */}
                 {results.some(r => r.position) && (
                   <TouchableOpacity
-                    style={[styles.saveAllButton, { backgroundColor: colors.primary }]}
+                    style={[styles.iconButton, { backgroundColor: colors.primary }]}
                     onPress={handleSaveAllBarcodes}
                     activeOpacity={0.7}
                     disabled={isSaving}
@@ -782,13 +984,24 @@ function ImageAnalysisScreen() {
                     {isSaving ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <>
-                        <Ionicons name="download-outline" size={16} color="#fff" />
-                        <Text style={styles.saveAllButtonText}>{t('imageAnalysis.saveAll')}</Text>
-                      </>
+                      <Ionicons name="images-outline" size={20} color="#fff" />
                     )}
                   </TouchableOpacity>
                 )}
+
+                {/* 기록 모두 저장 버튼 */}
+                <TouchableOpacity
+                  style={[styles.iconButton, { backgroundColor: '#E67E22' }]}
+                  onPress={handleSaveAllToHistory}
+                  activeOpacity={0.7}
+                  disabled={isSavingHistory}
+                >
+                  {isSavingHistory ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="bookmarks-outline" size={20} color="#fff" />
+                  )}
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -813,7 +1026,7 @@ function ImageAnalysisScreen() {
           )}
 
           {results.map((result, index) => {
-            const color = getBarcodeColor(index);
+            const color = getBarcodeColor(index + scannerDetectedBarcodes.length);
             return (
               <View
                 key={result.id}
@@ -821,7 +1034,7 @@ function ImageAnalysisScreen() {
               >
                 <View style={styles.resultHeader}>
                   <View style={[styles.resultIndex, { backgroundColor: color }]}>
-                    <Text style={styles.resultIndexText}>{index + 1}</Text>
+                    <Text style={styles.resultIndexText}>{index + scannerDetectedBarcodes.length + 1}</Text>
                   </View>
                   <Text style={[styles.resultFormat, { color: colors.textSecondary }]}>
                     {formatName(result.format)}
@@ -833,47 +1046,51 @@ function ImageAnalysisScreen() {
                 </Text>
 
                 <View style={styles.resultActions}>
+                  {/* 복사 */}
                   <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: colors.border }]}
+                    style={[styles.resultIconButton, { backgroundColor: colors.border }]}
                     onPress={() => handleCopyResult(result.text)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="copy-outline" size={18} color={colors.text} />
-                    <Text style={[styles.actionButtonText, { color: colors.text }]}>
-                      {t('result.copy')}
-                    </Text>
+                    <Ionicons name="copy-outline" size={20} color={colors.text} />
                   </TouchableOpacity>
 
+                  {/* 이미지 저장 */}
                   {result.position && (
                     <TouchableOpacity
-                      style={[styles.actionButton, { backgroundColor: colors.border }]}
+                      style={[styles.resultIconButton, { backgroundColor: colors.border }]}
                       onPress={() => handleSaveBarcode(result, index)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="download-outline" size={18} color={colors.text} />
-                      <Text style={[styles.actionButtonText, { color: colors.text }]}>
-                        {t('result.save')}
-                      </Text>
+                      <Ionicons name="image-outline" size={20} color={colors.text} />
                     </TouchableOpacity>
                   )}
 
+                  {/* 열기 */}
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.primaryButton]}
+                    style={[styles.resultIconButton, styles.primaryButton]}
                     onPress={() => handleOpenResult(result)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="open-outline" size={18} color="#fff" />
-                    <Text style={[styles.actionButtonText, { color: '#fff' }]}>
-                      {t('result.open')}
-                    </Text>
+                    <Ionicons name="open-outline" size={20} color="#fff" />
                   </TouchableOpacity>
 
+                  {/* 기록 저장 */}
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.jsonButton]}
+                    style={[styles.resultIconButton, styles.historyButton]}
+                    onPress={() => handleSaveToHistory(result, index)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="bookmark-outline" size={20} color="#fff" />
+                  </TouchableOpacity>
+
+                  {/* JSON */}
+                  <TouchableOpacity
+                    style={[styles.resultIconButton, styles.jsonButton]}
                     onPress={() => handleDownloadSingleJson(result, index)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="code-slash-outline" size={18} color="#fff" />
+                    <Ionicons name="code-slash-outline" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1019,6 +1236,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
+  scannerDetectedInfo: {
+    fontSize: 13,
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1031,6 +1253,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     gap: 6,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   saveAllButtonText: {
     color: '#fff',
@@ -1116,13 +1345,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
+  resultIconButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   primaryButton: {
     backgroundColor: '#007AFF',
   },
   jsonButton: {
     backgroundColor: '#2E7D32',
-    flex: 0,
-    paddingHorizontal: 12,
+  },
+  historyButton: {
+    backgroundColor: '#E67E22',
   },
   actionButtonText: {
     fontSize: 14,

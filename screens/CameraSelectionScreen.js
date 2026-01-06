@@ -16,8 +16,8 @@ import { Colors } from '../constants/Colors';
 
 // 사용 가능한 카메라 타입 목록
 const CAMERA_TYPES = [
-  { key: 'back', name: '후면 카메라', desc: '기본 후면 카메라', icon: 'camera-outline' },
-  { key: 'front', name: '전면 카메라', desc: '셀카 카메라', icon: 'camera-reverse-outline' },
+  { key: 'back', nameKey: 'backCamera', descKey: 'backCameraDesc', icon: 'camera-outline' },
+  { key: 'front', nameKey: 'frontCamera', descKey: 'frontCameraDesc', icon: 'camera-reverse-outline' },
 ];
 
 export default function CameraSelectionScreen() {
@@ -62,14 +62,14 @@ export default function CameraSelectionScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.text }]}>카메라 선택</Text>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('cameraSelection.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
         <View style={s.section}>
-          <Text style={[s.info, { color: colors.textSecondary }]}>
-            QR 코드를 스캔할 때 사용할 카메라를 선택하세요
+          <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            {t('cameraSelection.description')}
           </Text>
 
           {CAMERA_TYPES.map((camera) => {
@@ -95,16 +95,16 @@ export default function CameraSelectionScreen() {
                 </View>
                 <View style={s.cameraInfo}>
                   <View style={s.cameraHeader}>
-                    <Text style={[s.cameraName, { color: isSelected ? colors.primary : colors.text }]}>
-                      {camera.name}
+                    <Text style={[s.cameraName, { color: isSelected ? colors.primary : colors.text, fontFamily: fonts.semiBold }]}>
+                      {t(`cameraSelection.${camera.nameKey}`)}
                     </Text>
                     {isSelected && (
                       <View style={[s.selectedBadge, { backgroundColor: colors.success }]}>
-                        <Text style={s.selectedBadgeText}>선택됨</Text>
+                        <Text style={[s.selectedBadgeText, { fontFamily: fonts.semiBold }]}>{t('cameraSelection.selected')}</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={[s.cameraDesc, { color: colors.textSecondary }]}>{camera.desc}</Text>
+                  <Text style={[s.cameraDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t(`cameraSelection.${camera.descKey}`)}</Text>
                 </View>
                 <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.borderLight }]}>
                   {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
@@ -115,8 +115,8 @@ export default function CameraSelectionScreen() {
 
           <View style={[s.noteBox, { backgroundColor: isDark ? 'rgba(255, 204, 0, 0.15)' : '#fff9e6' }]}>
             <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
-            <Text style={[s.noteText, { color: colors.textSecondary }]}>
-              일부 기기에서는 특정 카메라를 사용할 수 없을 수 있습니다.
+            <Text style={[s.noteText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('cameraSelection.note')}
             </Text>
           </View>
         </View>

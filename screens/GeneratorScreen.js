@@ -1735,9 +1735,15 @@ export default function GeneratorScreen() {
                     </LinearGradient>
                     <Text style={[
                       s.typeText,
-                      { color: isSelected ? '#fff' : colors.text }
+                      { color: isSelected ? '#fff' : colors.text, fontFamily: fonts.semiBold }
                     ]}>
                       {format.name}
+                    </Text>
+                    <Text style={[
+                      s.typeDesc,
+                      { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textTertiary, fontFamily: fonts.regular }
+                    ]} numberOfLines={1}>
+                      {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -1842,8 +1848,8 @@ export default function GeneratorScreen() {
                   <View style={s.barcodeHint}>
                     <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
                     <Text style={[s.barcodeHintText, { color: colors.textSecondary }]}>
-                      {selectedBarcodeInfo.description}
-                      {selectedBarcodeInfo.fixedLength ? ` (${selectedBarcodeInfo.fixedLength}자리)` : ''}
+                      {t(`barcodeSelection.${selectedBarcodeInfo.bcid}Desc`) || selectedBarcodeInfo.description}
+                      {selectedBarcodeInfo.fixedLength ? ` (${selectedBarcodeInfo.fixedLength}${t('generator.digits') || '자리'})` : ''}
                     </Text>
                   </View>
                 </View>
@@ -2535,8 +2541,8 @@ export default function GeneratorScreen() {
                         >
                           <Ionicons name={catInfo.icon || 'barcode-outline'} size={16} color="#fff" />
                         </LinearGradient>
-                        <Text style={[s.categoryTitle, { color: colors.textSecondary }]}>
-                          {catInfo.name || category} ({barcodes.length})
+                        <Text style={[s.categoryTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                          {t(`generator.barcodeCategories.${category}`) || catInfo.name || category} ({barcodes.length})
                         </Text>
                       </View>
                       <View style={s.categoryGrid}>
@@ -2619,9 +2625,9 @@ export default function GeneratorScreen() {
                               </Text>
                               <Text style={[
                                 s.modalBarcodeDesc,
-                                { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary }
+                                { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
                               ]} numberOfLines={2}>
-                                {format.description}
+                                {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
                               </Text>
                             </TouchableOpacity>
                           );
@@ -2942,6 +2948,11 @@ const s = StyleSheet.create({
   typeText: {
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  typeDesc: {
+    fontSize: 10,
+    marginTop: 2,
     letterSpacing: -0.2,
   },
   formSection: {

@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import AdBanner from '../components/AdBanner';
 import { parseQRContent, QR_CONTENT_TYPES, formatPhoneNumber } from '../utils/qrContentParser';
@@ -20,6 +21,7 @@ export default function ResultScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const { triggerSync } = useSync();
+  const { isBarcodeTypeLocked, getBarcodeFeatureId, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
   const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed } = params;
@@ -493,37 +495,53 @@ export default function ResultScreen() {
       });
     } else {
       // 바코드인 경우 바코드 모드로 전달
-      // barcodeType을 적절한 형식으로 매핑
+      // barcodeType을 bcid 형식으로 매핑 (GeneratorScreen에서 사용하는 형식)
       const formatMap = {
-        'code_128': 'CODE128',
-        'code128': 'CODE128',
-        'ean_13': 'EAN13',
-        'ean13': 'EAN13',
-        'ean_8': 'EAN8',
-        'ean8': 'EAN8',
-        'upc_a': 'UPC',
-        'upca': 'UPC',
-        'upc_e': 'UPCE',
-        'upce': 'UPCE',
-        'code_39': 'CODE39',
-        'code39': 'CODE39',
-        'itf': 'ITF',
-        'itf_14': 'ITF14',
-        'itf14': 'ITF14',
-        'codabar': 'codabar',
-        'qr': 'CODE128', // fallback
-        'qrcode': 'CODE128',
+        'code_128': 'code128',
+        'code128': 'code128',
+        'ean_13': 'ean13',
+        'ean13': 'ean13',
+        'ean_8': 'ean8',
+        'ean8': 'ean8',
+        'upc_a': 'upca',
+        'upca': 'upca',
+        'upc_e': 'upce',
+        'upce': 'upce',
+        'code_39': 'code39',
+        'code39': 'code39',
+        'itf': 'interleaved2of5',
+        'itf_14': 'itf14',
+        'itf14': 'itf14',
+        'codabar': 'rationalizedCodabar',
+        'datamatrix': 'datamatrix',
+        'qr': 'code128', // fallback
+        'qrcode': 'code128',
       };
-      const mappedFormat = formatMap[barcodeType.toLowerCase()] || 'CODE128';
+      const mappedFormat = formatMap[barcodeType.toLowerCase()] || 'code128';
 
-      router.push({
-        pathname: '/(tabs)/generator',
-        params: {
-          initialMode: 'barcode',
-          initialBarcodeFormat: mappedFormat,
-          initialBarcodeValue: displayText,
-        },
-      });
+      // 바코드 타입이 잠겨있는지 확인
+      const navigateToGenerator = () => {
+        router.push({
+          pathname: '/(tabs)/generator',
+          params: {
+            initialMode: 'barcode',
+            initialBarcodeFormat: mappedFormat,
+            initialBarcodeValue: displayText,
+          },
+        });
+      };
+
+      if (isBarcodeTypeLocked(mappedFormat)) {
+        const featureId = getBarcodeFeatureId(mappedFormat);
+        if (featureId) {
+          showUnlockAlert(featureId, navigateToGenerator);
+        } else {
+          // featureId가 없으면 바로 이동
+          navigateToGenerator();
+        }
+      } else {
+        navigateToGenerator();
+      }
     }
   };
 

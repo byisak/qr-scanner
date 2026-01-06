@@ -224,7 +224,12 @@ export default function ScanUrlSettingsScreen() {
   const ensureScanUrlGroup = async (urlItem) => {
     try {
       const groupsData = await AsyncStorage.getItem('scanGroups');
-      let groups = groupsData ? JSON.parse(groupsData) : [];
+      let groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
+
+      // 기본 그룹이 없으면 추가
+      if (!groups.find(g => g.id === 'default')) {
+        groups.unshift({ id: 'default', name: '기본 그룹', createdAt: Date.now() });
+      }
 
       // scanUrlId로 기존 그룹 검색 (이름이 아닌 ID로 구분)
       const existingGroup = groups.find(g => g.scanUrlId === urlItem.id && !g.isDeleted);

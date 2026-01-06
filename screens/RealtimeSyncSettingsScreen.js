@@ -120,6 +120,13 @@ export default function RealtimeSyncSettingsScreen() {
       const groupIds = new Set(groups.map(g => g.id));
       let hasNewGroups = false;
 
+      // 기본 그룹이 없으면 추가
+      if (!groups.find(g => g.id === 'default')) {
+        groups.unshift({ id: 'default', name: '기본 그룹', createdAt: Date.now() });
+        groupIds.add('default');
+        hasNewGroups = true;
+      }
+
       for (const session of sessions) {
         if (!groupIds.has(session.id)) {
           groups.push({
@@ -241,6 +248,12 @@ export default function RealtimeSyncSettingsScreen() {
         }
         return g;
       });
+
+      // 기본 그룹이 없으면 추가
+      if (!groups.find(g => g.id === 'default')) {
+        groups.unshift({ id: 'default', name: '기본 그룹', createdAt: Date.now() });
+        groupIds.add('default');
+      }
 
       // 모든 세션에 대한 그룹 추가 (로컬 + 서버 모두)
       for (const session of allSessions) {

@@ -2,7 +2,7 @@
 // @mgcrea/vision-camera-barcode-scanner 기반 네이티브 QR 스캐너 컴포넌트
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -18,8 +18,10 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
-const AnimatedHighlight = ({ highlight, borderColor, fillColor }) => {
+const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor }) => {
   const x = useSharedValue(highlight.origin.x);
   const y = useSharedValue(highlight.origin.y);
   const width = useSharedValue(highlight.size.width);
@@ -41,40 +43,210 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor }) => {
     top: y.value,
     width: width.value,
     height: height.value,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: borderColor,
     backgroundColor: fillColor,
-    borderRadius: 8,
+    borderRadius: 4,
     opacity: opacity.value,
   }));
 
-  return <Animated.View style={animatedStyle} />;
+  const labelStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: x.value,
+    top: y.value + height.value + 4,
+    maxWidth: Math.max(width.value, 200),
+    opacity: opacity.value,
+  }));
+
+  return (
+    <>
+      <Animated.View style={animatedStyle} />
+      {showValue && value && (
+        <Animated.View style={labelStyle}>
+          <View style={[styles.valueLabel, { backgroundColor: labelBackgroundColor || borderColor }]}>
+            <Text style={styles.valueLabelText} numberOfLines={2}>
+              {value}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
+    </>
+  );
 };
 
-// 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
-const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)' }) => {
+// 커스텀 하이라이트 컴포넌트 (객체 추적 알고리즘 적용)
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.5)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
+  // 추적 중인 하이라이트: id -> {x, y, width, height, value, lastSeen}
+  const trackedObjectsRef = useRef(new Map());
+  const nextIdRef = useRef(0);
+
+  // showBarcodeValues가 true이고 바코드가 있으면 값 표시
+  const showValues = showBarcodeValues && barcodes.length > 0;
+
+  // 두 하이라이트 간의 거리 계산
+  const getDistance = (h1, h2) => {
+    const cx1 = h1.x + h1.width / 2;
+    const cy1 = h1.y + h1.height / 2;
+    const cx2 = h2.x + h2.width / 2;
+    const cy2 = h2.y + h2.height / 2;
+    return Math.sqrt(Math.pow(cx1 - cx2, 2) + Math.pow(cy1 - cy2, 2));
+  };
 
   useEffect(() => {
+    const now = Date.now();
+
     if (!highlights || highlights.length === 0) {
-      // 하이라이트가 없으면 페이드아웃
       const timeout = setTimeout(() => {
         setTrackedHighlights([]);
+        trackedObjectsRef.current.clear();
       }, 300);
       return () => clearTimeout(timeout);
     }
 
-    // 너무 빠른 업데이트 방지 (60fps = 약 16ms)
-    const now = Date.now();
-    if (now - lastUpdateRef.current < 16) return;
+    // 너무 빠른 업데이트 방지
+    if (now - lastUpdateRef.current < 50) return;
     lastUpdateRef.current = now;
 
-    setTrackedHighlights(highlights.map((h, i) => ({
-      ...h,
-      key: `highlight-${i}`,
-    })));
-  }, [highlights]);
+    let filteredHighlights = highlights;
+    let filteredBarcodes = barcodes;
+
+    // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
+    if (selectCenterOnly && highlights.length >= 2) {
+      const screenCenterX = SCREEN_WIDTH / 2;
+      const screenCenterY = SCREEN_HEIGHT / 2;
+
+      let closestIndex = 0;
+      let minDistance = Number.MAX_VALUE;
+
+      highlights.forEach((h, i) => {
+        const hCenterX = h.origin.x + h.size.width / 2;
+        const hCenterY = h.origin.y + h.size.height / 2;
+        const distance = Math.sqrt(
+          Math.pow(hCenterX - screenCenterX, 2) + Math.pow(hCenterY - screenCenterY, 2)
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = i;
+        }
+      });
+
+      filteredHighlights = [highlights[closestIndex]];
+      filteredBarcodes = barcodes[closestIndex] ? [barcodes[closestIndex]] : [];
+    }
+
+    // 현재 프레임의 하이라이트를 표준 형식으로 변환
+    const currentHighlights = filteredHighlights.map((h, idx) => ({
+      x: h.origin.x,
+      y: h.origin.y,
+      width: h.size.width,
+      height: h.size.height,
+      value: filteredBarcodes[idx]?.value || null,
+      original: h,
+    }));
+
+    // 기존 추적 객체와 새 하이라이트 매칭 (Hungarian 알고리즘 대신 탐욕적 매칭)
+    const matched = new Set(); // 매칭된 새 하이라이트 인덱스
+    const matchedTracked = new Set(); // 매칭된 기존 추적 객체 ID
+    const MAX_DISTANCE = 100; // 매칭 최대 거리 (더 엄격하게)
+
+    // 거리 기반 매칭
+    const trackedEntries = Array.from(trackedObjectsRef.current.entries());
+
+    // 모든 가능한 매칭의 거리 계산
+    const matchCandidates = [];
+    trackedEntries.forEach(([id, tracked]) => {
+      currentHighlights.forEach((current, idx) => {
+        const dist = getDistance(tracked, current);
+        if (dist < MAX_DISTANCE) {
+          matchCandidates.push({ id, idx, dist, tracked, current });
+        }
+      });
+    });
+
+    // 거리 순으로 정렬하여 가까운 것부터 매칭
+    matchCandidates.sort((a, b) => a.dist - b.dist);
+
+    const matchResults = new Map(); // 새 하이라이트 인덱스 -> 추적 ID
+
+    for (const candidate of matchCandidates) {
+      if (matched.has(candidate.idx) || matchedTracked.has(candidate.id)) {
+        continue; // 이미 매칭됨
+      }
+
+      // 매칭 성공
+      matched.add(candidate.idx);
+      matchedTracked.add(candidate.id);
+      matchResults.set(candidate.idx, candidate.id);
+
+      // 추적 객체 업데이트
+      const tracked = trackedObjectsRef.current.get(candidate.id);
+      tracked.x = candidate.current.x;
+      tracked.y = candidate.current.y;
+      tracked.width = candidate.current.width;
+      tracked.height = candidate.current.height;
+      tracked.lastSeen = now;
+
+      // 값 업데이트 (매우 보수적으로 - 높은 신뢰도에서만 변경)
+      if (candidate.current.value) {
+        if (!tracked.value) {
+          // 값이 없으면 새 값 설정
+          tracked.value = candidate.current.value;
+          tracked.valueConfidence = 1;
+        } else if (tracked.value === candidate.current.value) {
+          // 같은 값이면 신뢰도 증가
+          tracked.valueConfidence = Math.min((tracked.valueConfidence || 0) + 2, 15);
+        } else {
+          // 다른 값이면 신뢰도 감소 (천천히)
+          tracked.valueConfidence = Math.max((tracked.valueConfidence || 0) - 0.5, 0);
+          // 신뢰도가 매우 낮을 때만 값 변경 (6 이하)
+          if (tracked.valueConfidence <= 1) {
+            tracked.value = candidate.current.value;
+            tracked.valueConfidence = 1;
+          }
+        }
+      }
+    }
+
+    // 매칭되지 않은 새 하이라이트에 새 ID 부여
+    currentHighlights.forEach((current, idx) => {
+      if (!matched.has(idx)) {
+        const newId = nextIdRef.current++;
+        trackedObjectsRef.current.set(newId, {
+          x: current.x,
+          y: current.y,
+          width: current.width,
+          height: current.height,
+          value: current.value,
+          valueConfidence: current.value ? 1 : 0,
+          lastSeen: now,
+        });
+        matchResults.set(idx, newId);
+      }
+    });
+
+    // 오래된 추적 객체 제거
+    for (const [id, tracked] of trackedObjectsRef.current) {
+      if (now - tracked.lastSeen > 500) {
+        trackedObjectsRef.current.delete(id);
+      }
+    }
+
+    // 최종 결과 생성
+    const newTracked = currentHighlights.map((current, idx) => {
+      const trackId = matchResults.get(idx);
+      const tracked = trackedObjectsRef.current.get(trackId);
+
+      return {
+        ...current.original,
+        key: `track-${trackId}`,
+        value: tracked?.value || current.value,
+      };
+    });
+
+    setTrackedHighlights(newTracked);
+  }, [highlights, barcodes, selectCenterOnly]);
 
   if (trackedHighlights.length === 0) return null;
 
@@ -86,13 +258,14 @@ const CustomHighlights = ({ highlights, borderColor = 'lime', fillColor = 'rgba(
           highlight={highlight}
           borderColor={borderColor}
           fillColor={fillColor}
+          showValue={showValues}
+          value={highlight.value}
+          labelBackgroundColor="orange"
         />
       ))}
     </View>
   );
 };
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // 바코드 타입 매핑 (expo-camera 타입 -> @mgcrea/vision-camera-barcode-scanner 타입)
 const BARCODE_TYPE_MAP = {
@@ -122,6 +295,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   facing = 'back',
   barcodeTypes = ['qr'],
   onCodeScanned,
+  onMultipleCodesDetected, // 2개 이상 바코드 감지 시 콜백
+  multiCodeThreshold = 2, // 다중 감지 기준 (기본 2개)
+  selectCenterBarcode = true, // 여러 코드 감지 시 중앙에 가장 가까운 코드만 선택 (기본값: true)
+  showBarcodeValues = true, // 바코드 경계 아래에 값 표시 여부 (기본값: true)
   onError,
   style,
   showHighlights = false, // 하이라이트 표시 여부 (기본값: false)
@@ -138,6 +315,23 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   useEffect(() => {
     onCodeScannedRef.current = onCodeScanned;
   }, [onCodeScanned]);
+
+  // onMultipleCodesDetected의 최신 참조를 유지하기 위한 ref
+  const onMultipleCodesDetectedRef = useRef(onMultipleCodesDetected);
+  useEffect(() => {
+    onMultipleCodesDetectedRef.current = onMultipleCodesDetected;
+  }, [onMultipleCodesDetected]);
+
+  // 현재 감지된 바코드 목록 (하이라이트에 값 표시용)
+  const [detectedBarcodes, setDetectedBarcodes] = useState([]);
+  const detectedBarcodesTimeoutRef = useRef(null);
+
+  // selectCenterBarcode를 worklet에서 사용하기 위한 shared value
+  const selectCenterBarcodeShared = useSharedValue(selectCenterBarcode);
+  useEffect(() => {
+    console.log(`[NativeQRScanner] selectCenterBarcode prop changed: ${selectCenterBarcode}`);
+    selectCenterBarcodeShared.value = selectCenterBarcode;
+  }, [selectCenterBarcode]);
 
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
@@ -219,6 +413,45 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // Worklets.createRunOnJS로 JS 스레드에서 실행할 함수 생성
   const runOnJSCallback = Worklets.createRunOnJS(handleBarcodeDetected);
 
+  // 감지된 바코드 상태 업데이트 (하이라이트에 값 표시용)
+  const updateDetectedBarcodes = useCallback((barcodesData) => {
+    // 기존 타임아웃 클리어
+    if (detectedBarcodesTimeoutRef.current) {
+      clearTimeout(detectedBarcodesTimeoutRef.current);
+    }
+
+    setDetectedBarcodes(barcodesData || []);
+
+    // 500ms 후 자동으로 클리어 (바코드가 화면에서 사라지면)
+    detectedBarcodesTimeoutRef.current = setTimeout(() => {
+      setDetectedBarcodes([]);
+    }, 500);
+  }, []);
+
+  // 다중 바코드 감지 콜백 핸들러 (JS 스레드에서 실행)
+  const handleMultipleCodesDetected = useCallback((count, barcodesData) => {
+    console.log(`[NativeQRScanner] Multiple codes detected: ${count}`, barcodesData?.length);
+    if (onMultipleCodesDetectedRef.current) {
+      onMultipleCodesDetectedRef.current(count, barcodesData);
+    }
+  }, []);
+
+  // 디버그 로그용 콜백 (Worklet에서 JS로 로그 전달)
+  const logBarcodeCount = useCallback((count, selectCenterValue, barcodeInfo, filteredCount) => {
+    if (count > 1) {
+      console.log(`[NativeQRScanner] Frame: raw=${count}, filtered=${filteredCount}, selectCenterBarcode: ${selectCenterValue}`);
+      // 각 바코드의 상세 정보 출력
+      if (barcodeInfo) {
+        console.log(`[NativeQRScanner] Barcodes detail: ${barcodeInfo}`);
+      }
+    }
+  }, []);
+
+  // 다중 바코드 감지용 Worklet 콜백
+  const runOnJSMultiCallback = Worklets.createRunOnJS(handleMultipleCodesDetected);
+  const runOnJSLogCallback = Worklets.createRunOnJS(logBarcodeCount);
+  const runOnJSUpdateBarcodes = Worklets.createRunOnJS(updateDetectedBarcodes);
+
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
     fps: 10,
@@ -229,6 +462,120 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       if (barcodes.length === 0) {
         return;
+      }
+
+      // 다중 바코드 감지 시 (multiCodeThreshold 이상)
+      if (barcodes.length >= multiCodeThreshold) {
+        // 바코드 데이터를 JS 스레드로 전달 (직렬화 가능한 형태로)
+        // value가 없을 경우 displayValue, rawValue, data 순으로 fallback
+        const allBarcodesData = []; // 하이라이트 표시용 (모든 바코드)
+        const validBarcodesData = []; // 다중 코드 감지용 (유효한 바코드만)
+        const barcodeDetails = [];
+
+        for (let i = 0; i < barcodes.length; i++) {
+          const barcode = barcodes[i];
+          const rawValue = barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '';
+          // 값을 문자열로 변환하고 공백 제거
+          const value = String(rawValue).trim();
+
+          // 디버그: 각 바코드의 값 정보 기록
+          barcodeDetails.push(`[${i}]: v="${value}" (raw="${barcode.value}")`);
+
+          // 하이라이트 표시용 - 모든 바코드 (인덱스 매칭용)
+          allBarcodesData.push({
+            value: value || null,
+            type: barcode.type,
+            frame: barcode.frame,
+          });
+
+          // 다중 코드 감지용 - 빈 값이 아닌 경우에만
+          if (value && value.length > 0 && value !== 'undefined' && value !== 'null') {
+            validBarcodesData.push({
+              value: value,
+              type: barcode.type,
+              frame: barcode.frame,
+            });
+          }
+        }
+
+        // 디버그 로그: 필터링 전후 개수와 각 바코드의 값
+        runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails.join(' | '), validBarcodesData.length);
+
+        // 유효한 바코드가 없으면 무시
+        if (validBarcodesData.length === 0) {
+          return;
+        }
+
+        // 하이라이트에 값 표시를 위해 모든 바코드 상태 업데이트 (인덱스 매칭용)
+        runOnJSUpdateBarcodes(allBarcodesData);
+
+        // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택 (여러 코드 인식 모드 OFF)
+        if (selectCenterBarcodeShared.value) {
+          // 프레임 중앙 좌표 계산
+          const frameWidth = frameDimensions?.width || 1920;
+          const frameHeight = frameDimensions?.height || 1440;
+          const centerX = frameWidth / 2;
+          const centerY = frameHeight / 2;
+
+          // 필터링된 바코드 중에서 중앙에 가장 가까운 것을 선택
+          let closestBarcode = validBarcodesData[0];
+          let closestOriginalBarcode = barcodes[0];
+          let minDistance = Number.MAX_VALUE;
+
+          for (let i = 0; i < validBarcodesData.length; i++) {
+            const bc = validBarcodesData[i];
+            if (bc.frame) {
+              // 바코드 중앙 좌표
+              const bcCenterX = bc.frame.x + bc.frame.width / 2;
+              const bcCenterY = bc.frame.y + bc.frame.height / 2;
+              // 거리 계산 (유클리드 거리)
+              const distance = Math.sqrt(
+                Math.pow(bcCenterX - centerX, 2) + Math.pow(bcCenterY - centerY, 2)
+              );
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestBarcode = bc;
+                // 원본 바코드에서 EC level 가져오기 위해 인덱스로 찾기
+                closestOriginalBarcode = barcodes.find(
+                  (b) => b.frame && b.frame.x === bc.frame.x && b.frame.y === bc.frame.y
+                ) || barcodes[0];
+              }
+            }
+          }
+
+          // 중앙에 가장 가까운 바코드로 단일 스캔 콜백 호출
+          const ecLevel = closestOriginalBarcode.errorCorrectionLevel || closestOriginalBarcode.native?.errorCorrectionLevel;
+          runOnJSCallback({
+            value: closestBarcode.value,
+            type: closestBarcode.type,
+            frame: closestBarcode.frame,
+            cornerPoints: closestOriginalBarcode.cornerPoints,
+            frameDimensions: frameDimensions,
+            errorCorrectionLevel: ecLevel,
+          });
+          return;
+        }
+
+        // 여러 코드 인식 모드 ON: 다중 감지 콜백 호출 (필터링된 개수 전달)
+        runOnJSMultiCallback(validBarcodesData.length, validBarcodesData);
+        return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
+      }
+
+      // 여러 코드 인식 모드 ON이고 1개만 감지된 경우에도 멀티 콜백 호출
+      if (!selectCenterBarcodeShared.value && barcodes.length === 1) {
+        const barcode = barcodes[0];
+        const rawValue = barcode.value || barcode.displayValue || barcode.rawValue || barcode.data || '';
+        const value = String(rawValue).trim();
+
+        if (value && value.length > 0 && value !== 'undefined' && value !== 'null') {
+          const singleBarcodeData = [{
+            value: value,
+            type: barcode.type,
+            frame: barcode.frame,
+          }];
+          runOnJSMultiCallback(1, singleBarcodeData);
+          return;
+        }
       }
 
       const barcode = barcodes[0];
@@ -340,8 +687,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       {showHighlights && (
         <CustomHighlights
           highlights={highlights}
+          barcodes={detectedBarcodes}
           borderColor={highlightColor}
           fillColor={highlightFillColor}
+          showBarcodeValues={showBarcodeValues}
+          selectCenterOnly={selectCenterBarcode}
         />
       )}
     </View>
@@ -385,6 +735,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  valueLabel: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  valueLabelText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

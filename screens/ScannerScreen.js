@@ -117,6 +117,9 @@ function ScannerScreen() {
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
   const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
   const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
+  const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
+  const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
+  const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -134,6 +137,9 @@ function ScannerScreen() {
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
   const scanResultModeRef = useRef('popup'); // 스캔 결과 표시 모드 ref
   const cleanupTimeoutRef = useRef(null); // cleanup 타이머 ref (경쟁 상태 방지)
+  const isProcessingMultiRef = useRef(false); // 다중 바코드 처리 중 플래그
+  const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
+  const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -165,6 +171,17 @@ function ScannerScreen() {
   useEffect(() => {
     scanResultModeRef.current = scanResultMode;
   }, [scanResultMode]);
+
+  // multiCodeModeEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    console.log(`[ScannerScreen] multiCodeModeEnabled changed: ${multiCodeModeEnabled}`);
+    multiCodeModeEnabledRef.current = multiCodeModeEnabled;
+    // 모드 비활성화 시 스캔된 코드 초기화
+    if (!multiCodeModeEnabled) {
+      scannedCodesRef.current = [];
+      setPendingMultiScanData(null);
+    }
+  }, [multiCodeModeEnabled]);
 
   // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
   useEffect(() => {
@@ -297,6 +314,11 @@ function ScannerScreen() {
         const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
         const isRealtimeSyncEnabled = realtimeSync === 'true';
 
+        // 기본 그룹 정의
+        const defaultGroup = { id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() };
+
+        let localizedGroups = [defaultGroup];
+
         if (groupsData) {
           const groups = JSON.parse(groupsData);
           // 삭제된 그룹 필터링, 실시간 서버전송이 꺼져있으면 세션 그룹도 필터링
@@ -307,25 +329,30 @@ function ScannerScreen() {
           });
 
           // 기본 그룹 이름을 현재 언어로 변환
-          const localizedGroups = filteredGroups.map(g => {
+          localizedGroups = filteredGroups.map(g => {
             if (g.id === 'default') {
               return { ...g, name: t('groupEdit.defaultGroup') };
             }
             return g;
           });
 
-          const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
-          if (currentGroup) {
-            setCurrentGroupName(currentGroup.name);
-          } else if (localizedGroups.length > 0) {
-            // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
-            setCurrentGroupId('default');
-            setCurrentGroupName(t('groupEdit.defaultGroup'));
-            await AsyncStorage.setItem('selectedGroupId', 'default');
+          // 기본 그룹이 없으면 추가
+          if (!localizedGroups.find(g => g.id === 'default')) {
+            localizedGroups.unshift(defaultGroup);
           }
-          // 사용 가능한 그룹 목록 설정
-          setAvailableGroups(localizedGroups);
         }
+
+        const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
+        if (currentGroup) {
+          setCurrentGroupName(currentGroup.name);
+        } else {
+          // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
+          setCurrentGroupId('default');
+          setCurrentGroupName(t('groupEdit.defaultGroup'));
+          await AsyncStorage.setItem('selectedGroupId', 'default');
+        }
+        // 사용 가능한 그룹 목록 설정
+        setAvailableGroups(localizedGroups);
 
         // 실시간 서버전송 설정 로드
         if (isRealtimeSyncEnabled) {
@@ -404,6 +431,9 @@ function ScannerScreen() {
       setCanScan(true); // 화면 복귀 시 스캔 허용
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
+      isProcessingMultiRef.current = false; // 다중 바코드 처리 플래그 리셋
+      scannedCodesRef.current = []; // 여러 코드 인식 모드 스캔 목록 리셋
+      setPendingMultiScanData(null); // 다중 바코드 보류 데이터 리셋
       setContinuousScanCount(0); // 연속 스캔 카운터 리셋
       resetAll();
 
@@ -478,12 +508,26 @@ function ScannerScreen() {
             setScanResultMode(resultMode);
           }
 
+          // 여러 코드 인식 모드 로드
+          const multiCodeMode = await AsyncStorage.getItem('multiCodeModeEnabled');
+          console.log(`[ScannerScreen] Loaded multiCodeModeEnabled from storage: "${multiCodeMode}" -> ${multiCodeMode === 'true'}`);
+          setMultiCodeModeEnabled(multiCodeMode === 'true');
+
+          // 바코드 값 표시 설정 로드
+          const showValues = await AsyncStorage.getItem('multiCodeShowValues');
+          setShowBarcodeValues(showValues === null ? true : showValues === 'true');
+
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
           setCurrentGroupId(selectedGroupId);
           const groupsData = await AsyncStorage.getItem('scanGroups');
           const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
           const isRealtimeSyncEnabled = realtimeSync === 'true';
+
+          // 기본 그룹 정의
+          const defaultGroup = { id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() };
+
+          let localizedGroups = [defaultGroup];
 
           if (groupsData) {
             const groups = JSON.parse(groupsData);
@@ -495,25 +539,30 @@ function ScannerScreen() {
             });
 
             // 기본 그룹 이름을 현재 언어로 변환
-            const localizedGroups = filteredGroups.map(g => {
+            localizedGroups = filteredGroups.map(g => {
               if (g.id === 'default') {
                 return { ...g, name: t('groupEdit.defaultGroup') };
               }
               return g;
             });
 
-            const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
-            if (currentGroup) {
-              setCurrentGroupName(currentGroup.name);
-            } else if (localizedGroups.length > 0) {
-              // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
-              setCurrentGroupId('default');
-              setCurrentGroupName(t('groupEdit.defaultGroup'));
-              await AsyncStorage.setItem('selectedGroupId', 'default');
+            // 기본 그룹이 없으면 추가
+            if (!localizedGroups.find(g => g.id === 'default')) {
+              localizedGroups.unshift(defaultGroup);
             }
-            // 사용 가능한 그룹 목록 설정
-            setAvailableGroups(localizedGroups);
           }
+
+          const currentGroup = localizedGroups.find(g => g.id === selectedGroupId);
+          if (currentGroup) {
+            setCurrentGroupName(currentGroup.name);
+          } else {
+            // 현재 선택된 그룹이 삭제되었으면 기본 그룹으로 변경
+            setCurrentGroupId('default');
+            setCurrentGroupName(t('groupEdit.defaultGroup'));
+            await AsyncStorage.setItem('selectedGroupId', 'default');
+          }
+          // 사용 가능한 그룹 목록 설정
+          setAvailableGroups(localizedGroups);
 
           // 실시간 서버전송 설정 로드
           if (isRealtimeSyncEnabled) {
@@ -1067,6 +1116,124 @@ function ScannerScreen() {
     startResetTimer(RESET_DELAYS.NORMAL);
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
+  // 다중 바코드 감지 핸들러 - 중복 제외하고 누적
+  const handleMultipleCodesDetected = useCallback(async (count, barcodesData) => {
+    console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
+
+    // 디버그: 각 바코드의 값 로그
+    if (barcodesData) {
+      barcodesData.forEach((bc, idx) => {
+        console.log(`[ScannerScreen] Barcode ${idx}: value="${bc.value}", type="${bc.type}"`);
+      });
+    }
+
+    // 네비게이션 중이거나 비활성화 상태면 무시
+    if (isNavigatingRef.current || !isActive) {
+      console.log('[ScannerScreen] Blocked by navigation or inactive');
+      return;
+    }
+
+    // 새로 감지된 바코드 중 중복되지 않은 것만 추가
+    if (barcodesData && barcodesData.length > 0) {
+      let newCodesAdded = false;
+
+      barcodesData.forEach((barcode) => {
+        // 값을 문자열로 변환하고 정리
+        const value = String(barcode.value || '').trim();
+
+        // 빈 값이면 무시 (더 엄격한 체크)
+        if (!value || value.length === 0) {
+          console.log(`[ScannerScreen] Skipping barcode with empty value (original: "${barcode.value}")`);
+          return;
+        }
+
+        const isDuplicate = scannedCodesRef.current.some(
+          (existing) => existing.value === value
+        );
+        if (!isDuplicate) {
+          scannedCodesRef.current.push({
+            value: value,
+            type: barcode.type,
+            frame: barcode.frame,
+          });
+          newCodesAdded = true;
+          console.log(`[ScannerScreen] Added new code (len=${value.length}): ${value}`);
+        } else {
+          console.log(`[ScannerScreen] Duplicate code: ${value}`);
+        }
+      });
+
+      // 새로운 코드가 추가되었을 때만 처리
+      if (newCodesAdded) {
+        console.log(`[ScannerScreen] Accumulated unique codes: ${scannedCodesRef.current.length}`);
+
+        // 햅틱 피드백 (새 코드 추가 시)
+        if (hapticEnabledRef.current) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+
+        // 첫 번째 감지 시에만 사진 캡처 (isProcessingMultiRef로 중복 방지)
+        let imageUri = pendingMultiScanData?.imageUri || null;
+
+        if (!isProcessingMultiRef.current && !imageUri && cameraRef.current) {
+          isProcessingMultiRef.current = true;
+          try {
+            const photo = await cameraRef.current.takePhoto();
+            if (photo && photo.uri) {
+              imageUri = photo.uri;
+              console.log('[ScannerScreen] Photo captured:', imageUri);
+            }
+          } catch (error) {
+            console.error('[ScannerScreen] Photo capture error:', error);
+          }
+
+          // 플래그 해제 (딜레이 후)
+          setTimeout(() => {
+            isProcessingMultiRef.current = false;
+          }, 1500);
+        }
+
+        // 누적된 바코드 데이터로 보류 데이터 업데이트 (빈 값 필터링)
+        const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
+        const accumulatedBarcodes = JSON.stringify(validBarcodes);
+        setPendingMultiScanData({
+          imageUri: imageUri,
+          barcodes: accumulatedBarcodes,
+          count: validBarcodes.length
+        });
+      }
+    }
+  }, [isActive, pendingMultiScanData?.imageUri]);
+
+  // 다중 바코드 결과 보기 핸들러
+  const handleViewMultiResults = useCallback(() => {
+    if (!pendingMultiScanData) return;
+
+    isNavigatingRef.current = true;
+    router.push({
+      pathname: '/image-analysis',
+      params: {
+        imageUri: pendingMultiScanData.imageUri || '',
+        detectedBarcodes: pendingMultiScanData.barcodes
+      }
+    });
+
+    // 보류 데이터 및 스캔된 코드 초기화
+    setPendingMultiScanData(null);
+    scannedCodesRef.current = [];
+
+    // 플래그 해제 (약간의 딜레이 후)
+    setTimeout(() => {
+      isNavigatingRef.current = false;
+    }, 2000);
+  }, [pendingMultiScanData, router]);
+
+  // 다중 바코드 보류 데이터 닫기 핸들러
+  const handleCloseMultiScan = useCallback(() => {
+    setPendingMultiScanData(null);
+    scannedCodesRef.current = [];
+  }, []);
+
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
@@ -1412,6 +1579,40 @@ function ScannerScreen() {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 500);
+            startResetTimer(RESET_DELAYS.NORMAL);
+            return;
+          }
+
+          // 여러 코드 인식 모드일 경우
+          if (multiCodeModeEnabledRef.current) {
+            // 이미 스캔된 코드인지 확인 (중복 방지)
+            const isDuplicateInSession = scannedCodesRef.current.some(item => item.code === data);
+            if (!isDuplicateInSession) {
+              // 새 코드 추가
+              scannedCodesRef.current = [...scannedCodesRef.current, {
+                code: data,
+                type: normalizedType,
+                timestamp: Date.now(),
+                errorCorrectionLevel: detectedEcLevel,
+              }];
+
+              // pendingMultiScanData 업데이트
+              setPendingMultiScanData({
+                imageUri: null,
+                barcodes: JSON.stringify(scannedCodesRef.current.map(item => ({
+                  value: item.code,
+                  type: item.type,
+                }))),
+                count: scannedCodesRef.current.length,
+                scannedCodes: scannedCodesRef.current,
+              });
+            }
+
+            // 스캔 재활성화 (계속 스캔 가능)
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 300);
             startResetTimer(RESET_DELAYS.NORMAL);
             return;
           }
@@ -1764,6 +1965,9 @@ function ScannerScreen() {
         torch={torchOn ? 'on' : 'off'}
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
+        onMultipleCodesDetected={handleMultipleCodesDetected}
+        selectCenterBarcode={!multiCodeModeEnabled}
+        showBarcodeValues={multiCodeModeEnabled && showBarcodeValues}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"
@@ -2050,6 +2254,29 @@ function ScannerScreen() {
         onSkip={handleConfirmSkip}
         bottomOffset={bottomOffset + 50}
       />
+
+      {/* 다중 바코드 감지 시 결과 보기 버튼 */}
+      {pendingMultiScanData && (
+        <View style={[styles.multiScanButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
+          <TouchableOpacity
+            style={styles.multiScanButton}
+            onPress={handleViewMultiResults}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="qr-code" size={20} color="#fff" />
+            <Text style={styles.multiScanButtonText}>
+              {t('scanner.viewMultiResults').replace('{count}', pendingMultiScanData.count.toString())}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.multiScanCloseButton}
+            onPress={handleCloseMultiScan}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="close" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 하단 배너 광고 - 탭바 바로 위 */}
       <AdBanner
@@ -2410,6 +2637,45 @@ const styles = StyleSheet.create({
   galleryFooterLoading: {
     paddingVertical: 20,
     alignItems: 'center',
+  },
+  multiScanButtonContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  multiScanButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.95)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  multiScanButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  multiScanCloseButton: {
+    backgroundColor: 'rgba(100, 100, 100, 0.95)',
+    padding: 14,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
 });
 

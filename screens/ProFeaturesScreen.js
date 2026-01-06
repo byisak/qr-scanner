@@ -338,8 +338,8 @@ export default function ProFeaturesScreen() {
           </View>
         </View>
 
-        {/* 광고 제거 버튼 */}
-        <TouchableOpacity
+        {/* 광고 제거 버튼 - TODO: 추후 프로버전 출시 시 주석 해제 */}
+        {/* <TouchableOpacity
           style={s.removeAdsButton}
           onPress={handleRemoveAds}
           activeOpacity={0.8}
@@ -355,7 +355,7 @@ export default function ProFeaturesScreen() {
               {t('proFeatures.removeAds') || '광고 제거하기'}
             </Text>
           </LinearGradient>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {/* 하단 여백 */}
         <View style={{ height: 40 }} />
