@@ -186,6 +186,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
           fillColor={fillColor}
           showValue={showValues}
           value={highlight.value}
+          labelBackgroundColor="orange"
         />
       ))}
     </View>
