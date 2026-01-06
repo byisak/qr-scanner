@@ -84,16 +84,17 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
   // showBarcodeValues가 true이고 바코드가 있으면 값 표시
   const showValues = showBarcodeValues && barcodes.length > 0;
 
-  // 위치 키 생성 함수 (더 넓은 그리드 사용)
+  // 위치 키 생성 함수 (큰 그리드로 안정성 향상)
+  const GRID_SIZE = 120;
   const getPositionKey = (x, y) => {
-    return `${Math.round(x / 60) * 60}-${Math.round(y / 60) * 60}`;
+    return `${Math.round(x / GRID_SIZE) * GRID_SIZE}-${Math.round(y / GRID_SIZE) * GRID_SIZE}`;
   };
 
   // 주변 위치 키들 찾기
   const getNearbyKeys = (x, y) => {
-    const baseX = Math.round(x / 60) * 60;
-    const baseY = Math.round(y / 60) * 60;
-    const offsets = [[0, 0], [-60, 0], [60, 0], [0, -60], [0, 60], [-60, -60], [60, 60], [-60, 60], [60, -60]];
+    const baseX = Math.round(x / GRID_SIZE) * GRID_SIZE;
+    const baseY = Math.round(y / GRID_SIZE) * GRID_SIZE;
+    const offsets = [[0, 0], [-GRID_SIZE, 0], [GRID_SIZE, 0], [0, -GRID_SIZE], [0, GRID_SIZE]];
     return offsets.map(([dx, dy]) => `${baseX + dx}-${baseY + dy}`);
   };
 
