@@ -1666,19 +1666,26 @@ function ScannerScreen() {
 
           // 결과창 자동 열림이 비활성화된 경우: 카메라 유지, 테두리와 값 표시
           if (!resultWindowAutoOpenRef.current) {
-            // 히스토리 저장
-            const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
-
-            // 마지막 스캔된 코드 저장 (UI에 표시하기 위해)
+            // 마지막 스캔된 코드 저장 (UI에 먼저 표시)
             setLastScannedCode({
               code: data,
               type: normalizedType,
               timestamp: Date.now(),
-              isDuplicate: historyResult.isDuplicate,
-              scanCount: historyResult.count,
+              isDuplicate: false,
+              scanCount: 1,
               photoUri: photoUri || null,
               errorCorrectionLevel: detectedEcLevel || null,
             });
+
+            // 히스토리 저장 (비동기, 기다리지 않음 - 애니메이션 블록 방지)
+            saveHistory(data, null, photoUri, normalizedType, detectedEcLevel).then(historyResult => {
+              // 히스토리 결과로 업데이트
+              setLastScannedCode(prev => prev ? {
+                ...prev,
+                isDuplicate: historyResult.isDuplicate,
+                scanCount: historyResult.count,
+              } : null);
+            }).catch(console.error);
 
             // 스캔 재활성화 (계속 스캔 가능) - 카메라는 활성 상태 유지
             setTimeout(() => {
