@@ -1135,7 +1135,7 @@ function ScannerScreen() {
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
   // 다중 바코드 감지 핸들러 - 중복 제외하고 누적
-  const handleMultipleCodesDetected = useCallback(async (count, barcodesData) => {
+  const handleMultipleCodesDetected = useCallback((count, barcodesData) => {
     console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
 
     // 디버그: 각 바코드의 값 로그
@@ -1181,9 +1181,18 @@ function ScannerScreen() {
         }
       });
 
-      // 새로운 코드가 추가되었을 때 햅틱 피드백 및 사진 캡처
-      let imageUri = pendingMultiScanData?.imageUri || null;
+      // 먼저 상태 업데이트 (동기적으로)
+      const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
+      const currentImageUri = pendingMultiScanData?.imageUri || null;
 
+      // 상태 즉시 업데이트
+      setPendingMultiScanData(prev => ({
+        imageUri: prev?.imageUri || null,
+        barcodes: JSON.stringify(validBarcodes),
+        count: validBarcodes.length
+      }));
+
+      // 새로운 코드가 추가되었을 때 햅틱 피드백 및 사진 캡처 (비동기)
       if (newCodesAdded) {
         console.log(`[ScannerScreen] Accumulated unique codes: ${scannedCodesRef.current.length}`);
 
@@ -1193,33 +1202,27 @@ function ScannerScreen() {
         }
 
         // 첫 번째 감지 시에만 사진 캡처 (isProcessingMultiRef로 중복 방지)
-        if (!isProcessingMultiRef.current && !imageUri && cameraRef.current) {
+        if (!isProcessingMultiRef.current && !currentImageUri && cameraRef.current) {
           isProcessingMultiRef.current = true;
-          try {
-            const photo = await cameraRef.current.takePhoto();
-            if (photo && photo.uri) {
-              imageUri = photo.uri;
-              console.log('[ScannerScreen] Photo captured:', imageUri);
-            }
-          } catch (error) {
-            console.error('[ScannerScreen] Photo capture error:', error);
-          }
 
-          // 플래그 해제 (딜레이 후)
-          setTimeout(() => {
-            isProcessingMultiRef.current = false;
-          }, 1500);
+          // 비동기 사진 캡처 (상태 업데이트와 분리)
+          cameraRef.current.takePhoto().then(photo => {
+            if (photo && photo.uri) {
+              console.log('[ScannerScreen] Photo captured:', photo.uri);
+              // 사진만 업데이트 (barcodes는 건드리지 않음)
+              setPendingMultiScanData(prev => prev ? { ...prev, imageUri: photo.uri } : null);
+            }
+          }).catch(error => {
+            console.error('[ScannerScreen] Photo capture error:', error);
+          }).finally(() => {
+            // 플래그 해제 (딜레이 후)
+            setTimeout(() => {
+              isProcessingMultiRef.current = false;
+            }, 1500);
+          });
         }
       }
-
-      // 항상 버튼의 count를 화면 바운더리 개수와 일치하도록 업데이트
-      const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
-      const accumulatedBarcodes = JSON.stringify(validBarcodes);
-      setPendingMultiScanData({
-        imageUri: imageUri,
-        barcodes: accumulatedBarcodes,
-        count: count  // 화면에 표시되는 바운더리 개수와 일치하도록 전달받은 count 사용
-      });
+      return; // 처리 완료
     }
   }, [isActive, pendingMultiScanData?.imageUri]);
 
