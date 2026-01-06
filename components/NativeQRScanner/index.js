@@ -43,10 +43,10 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
     top: y.value,
     width: width.value,
     height: height.value,
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: borderColor,
     backgroundColor: fillColor,
-    borderRadius: 8,
+    borderRadius: 0,
     opacity: opacity.value,
   }));
 
@@ -127,13 +127,20 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       filteredBarcodes = [barcodes[closestIndex]];
     }
 
-    // 바코드 값 기반으로 안정적인 키 생성
+    // 바코드 값 기반으로 안정적인 키 생성 (중복 값 처리)
+    const valueCountMap = new Map();
     const newTracked = filteredHighlights.map((h, i) => {
       const barcodeValue = filteredBarcodes[i]?.value || null;
-      // 값이 있으면 값 기반 키, 없으면 위치 기반 키
-      const stableKey = barcodeValue
-        ? `value-${barcodeValue}`
-        : `pos-${Math.round(h.origin.x)}-${Math.round(h.origin.y)}`;
+
+      // 같은 값이 여러 개 있을 수 있으므로 카운트 추가
+      let stableKey;
+      if (barcodeValue) {
+        const count = valueCountMap.get(barcodeValue) || 0;
+        valueCountMap.set(barcodeValue, count + 1);
+        stableKey = `value-${barcodeValue}-${count}`;
+      } else {
+        stableKey = `pos-${Math.round(h.origin.x)}-${Math.round(h.origin.y)}-${i}`;
+      }
 
       return {
         ...h,
