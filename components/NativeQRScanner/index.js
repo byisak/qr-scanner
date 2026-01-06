@@ -130,8 +130,8 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
     }
 
     // validBarcodes의 frame과 가장 가까운 highlights를 매칭
-    const filteredBarcodes = validBarcodes;
-    const filteredHighlights = validBarcodes.map(bc => {
+    let filteredBarcodes = validBarcodes;
+    let filteredHighlights = validBarcodes.map(bc => {
       if (!bc.frame) return highlights[0];
       let closest = highlights[0];
       let minDist = Number.MAX_VALUE;
