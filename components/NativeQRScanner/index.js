@@ -301,6 +301,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   barcodeTypes = ['qr'],
   onCodeScanned,
   onMultipleCodesDetected, // 2개 이상 바코드 감지 시 콜백
+  onDetectedBarcodesChange, // 감지된 바코드 목록 변경 시 콜백 (React 상태 기반, Worklet 우회)
   onVisibleHighlightsChange, // 화면에 표시되는 하이라이트 개수 변경 시 콜백
   multiCodeThreshold = 2, // 다중 감지 기준 (기본 2개)
   selectCenterBarcode = true, // 여러 코드 감지 시 중앙에 가장 가까운 코드만 선택 (기본값: true)
@@ -331,6 +332,17 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 현재 감지된 바코드 목록 (하이라이트에 값 표시용)
   const [detectedBarcodes, setDetectedBarcodes] = useState([]);
   const detectedBarcodesTimeoutRef = useRef(null);
+
+  // detectedBarcodes 변경 시 콜백 호출 (Worklet 직렬화 문제 우회)
+  useEffect(() => {
+    if (onDetectedBarcodesChange && detectedBarcodes.length > 0) {
+      // 유효한 바코드만 필터링
+      const validBarcodes = detectedBarcodes.filter(bc => bc.value && bc.value.trim().length > 0);
+      if (validBarcodes.length > 0) {
+        onDetectedBarcodesChange(validBarcodes);
+      }
+    }
+  }, [detectedBarcodes, onDetectedBarcodesChange]);
 
   // selectCenterBarcode를 worklet에서 사용하기 위한 shared value
   const selectCenterBarcodeShared = useSharedValue(selectCenterBarcode);

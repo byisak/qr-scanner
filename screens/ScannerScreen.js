@@ -1204,6 +1204,55 @@ function ScannerScreen() {
     }
   }, [isActive]);
 
+  // 감지된 바코드 변경 핸들러 (React 상태 기반 - Worklet 직렬화 우회)
+  const handleDetectedBarcodesChange = useCallback((barcodesData) => {
+    console.log(`[ScannerScreen] handleDetectedBarcodesChange: ${barcodesData?.length} barcodes`);
+
+    // 네비게이션 중이거나 비활성화 상태면 무시
+    if (isNavigatingRef.current || !isActive) {
+      return;
+    }
+
+    // 여러 코드 인식 모드가 아니면 무시
+    if (!multiCodeModeEnabledRef.current) {
+      return;
+    }
+
+    if (barcodesData && barcodesData.length > 0) {
+      let newCodesAdded = false;
+
+      barcodesData.forEach((barcode) => {
+        const value = String(barcode.value || '').trim();
+        if (!value || value.length === 0) return;
+
+        const isDuplicate = scannedCodesRef.current.some(
+          (existing) => existing.value === value
+        );
+        if (!isDuplicate) {
+          scannedCodesRef.current.push({
+            value: value,
+            type: barcode.type,
+            frame: barcode.frame,
+          });
+          newCodesAdded = true;
+          console.log(`[ScannerScreen] Added via state: ${value}`);
+        }
+      });
+
+      // 상태 업데이트
+      const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
+      setPendingMultiScanData({
+        imageUri: null,
+        barcodes: JSON.stringify(validBarcodes),
+        count: validBarcodes.length
+      });
+
+      if (newCodesAdded && hapticEnabledRef.current) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    }
+  }, [isActive]);
+
   // 다중 바코드 결과 보기 핸들러
   const handleViewMultiResults = useCallback(() => {
     if (!pendingMultiScanData) return;
@@ -2030,6 +2079,7 @@ function ScannerScreen() {
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
+        onDetectedBarcodesChange={handleDetectedBarcodesChange}
         onVisibleHighlightsChange={handleVisibleHighlightsChange}
         selectCenterBarcode={!multiCodeModeEnabled}
         showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}
