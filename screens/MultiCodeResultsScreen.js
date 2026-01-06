@@ -16,9 +16,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { saveToHistory } from '../utils/history';
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
@@ -42,19 +42,68 @@ export default function MultiCodeResultsScreen() {
     }
   }, [params.detectedBarcodes]);
 
+  // 히스토리에 코드 저장
+  const saveCodeToHistory = useCallback(async (codeValue, barcodeType = 'qr') => {
+    try {
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+
+      if (!historyByGroup.default) {
+        historyByGroup.default = [];
+      }
+
+      const currentHistory = historyByGroup.default;
+      const existingIndex = currentHistory.findIndex(item => item.code === codeValue);
+      const now = Date.now();
+
+      if (existingIndex !== -1) {
+        // 중복 - 기존 항목 업데이트
+        const existingItem = currentHistory[existingIndex];
+        const scanTimes = existingItem.scanTimes || [existingItem.timestamp];
+        scanTimes.push(now);
+
+        const updatedItem = {
+          ...existingItem,
+          timestamp: now,
+          count: (existingItem.count || 1) + 1,
+          scanTimes: scanTimes,
+          type: barcodeType,
+        };
+
+        currentHistory.splice(existingIndex, 1);
+        historyByGroup.default = [updatedItem, ...currentHistory].slice(0, 1000);
+      } else {
+        // 새 항목 추가
+        const record = {
+          code: codeValue,
+          timestamp: now,
+          count: 1,
+          scanTimes: [now],
+          type: barcodeType,
+        };
+        historyByGroup.default = [record, ...currentHistory].slice(0, 1000);
+      }
+
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+    } catch (error) {
+      console.error('Failed to save to history:', error);
+      throw error;
+    }
+  }, []);
+
   // 개별 코드 저장
   const handleSaveCode = useCallback(async (code, index) => {
     if (savedCodes.has(index)) return;
 
     try {
-      await saveToHistory(code.value, null, null, code.type);
+      await saveCodeToHistory(code.value, code.type);
       setSavedCodes(prev => new Set([...prev, index]));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error('Failed to save code:', error);
       Alert.alert('Error', 'Failed to save code');
     }
-  }, [savedCodes]);
+  }, [savedCodes, saveCodeToHistory]);
 
   // 모두 저장
   const handleSaveAll = useCallback(async () => {
@@ -65,7 +114,7 @@ export default function MultiCodeResultsScreen() {
 
       for (const idx of unsavedIndices) {
         const code = codes[idx];
-        await saveToHistory(code.value, null, null, code.type);
+        await saveCodeToHistory(code.value, code.type);
       }
 
       setSavedCodes(new Set(codes.map((_, idx) => idx)));
@@ -74,7 +123,7 @@ export default function MultiCodeResultsScreen() {
       console.error('Failed to save all codes:', error);
       Alert.alert('Error', 'Failed to save codes');
     }
-  }, [codes, savedCodes]);
+  }, [codes, savedCodes, saveCodeToHistory]);
 
   // 클립보드에 복사
   const handleCopy = useCallback(async (value) => {
