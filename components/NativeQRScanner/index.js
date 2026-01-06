@@ -74,11 +74,18 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
   );
 };
 
+// 두 프레임이 유사한지 확인 (위치 기반 매칭용)
+const isFrameSimilar = (frame1, frame2, threshold = 50) => {
+  if (!frame1 || !frame2) return false;
+  const dx = Math.abs(frame1.x - frame2.x);
+  const dy = Math.abs(frame1.y - frame2.y);
+  return dx < threshold && dy < threshold;
+};
+
 // 커스텀 하이라이트 컴포넌트 (애니메이션 적용)
 const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
-  const trackedByValueRef = useRef(new Map()); // 바코드 값 기반 추적
 
   // 2개 이상이고 showBarcodeValues가 true일 때만 값 표시
   const showValues = showBarcodeValues && barcodes.length >= 2;
@@ -88,7 +95,6 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       // 하이라이트가 없으면 페이드아웃
       const timeout = setTimeout(() => {
         setTrackedHighlights([]);
-        trackedByValueRef.current.clear();
       }, 300);
       return () => clearTimeout(timeout);
     }
@@ -99,7 +105,6 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
     lastUpdateRef.current = now;
 
     let filteredHighlights = highlights;
-    let filteredBarcodes = barcodes;
 
     // selectCenterOnly가 true이면 중앙에 가장 가까운 하이라이트만 선택
     if (selectCenterOnly && highlights.length >= 2) {
@@ -110,10 +115,8 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       let minDistance = Number.MAX_VALUE;
 
       highlights.forEach((h, i) => {
-        // 하이라이트 중앙 좌표 계산
         const hCenterX = h.origin.x + h.size.width / 2;
         const hCenterY = h.origin.y + h.size.height / 2;
-        // 화면 중앙과의 거리
         const distance = Math.sqrt(
           Math.pow(hCenterX - screenCenterX, 2) + Math.pow(hCenterY - screenCenterY, 2)
         );
@@ -124,23 +127,28 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'lime', fil
       });
 
       filteredHighlights = [highlights[closestIndex]];
-      filteredBarcodes = [barcodes[closestIndex]];
     }
 
-    // 바코드 값 기반으로 안정적인 키 생성 (중복 값 처리)
-    const valueCountMap = new Map();
+    // 위치 기반으로 하이라이트와 바코드 매칭
     const newTracked = filteredHighlights.map((h, i) => {
-      const barcodeValue = filteredBarcodes[i]?.value || null;
+      // 하이라이트 위치를 frame 형식으로 변환
+      const highlightFrame = {
+        x: h.origin.x,
+        y: h.origin.y,
+        width: h.size.width,
+        height: h.size.height,
+      };
 
-      // 같은 값이 여러 개 있을 수 있으므로 카운트 추가
-      let stableKey;
-      if (barcodeValue) {
-        const count = valueCountMap.get(barcodeValue) || 0;
-        valueCountMap.set(barcodeValue, count + 1);
-        stableKey = `value-${barcodeValue}-${count}`;
-      } else {
-        stableKey = `pos-${Math.round(h.origin.x)}-${Math.round(h.origin.y)}-${i}`;
-      }
+      // 위치가 유사한 바코드 찾기
+      const matchedBarcode = barcodes.find((bc) => {
+        if (!bc.frame) return false;
+        return isFrameSimilar(highlightFrame, bc.frame, 100);
+      });
+
+      const barcodeValue = matchedBarcode?.value || null;
+
+      // 위치 기반 안정적인 키 생성
+      const stableKey = `pos-${Math.round(h.origin.x / 10) * 10}-${Math.round(h.origin.y / 10) * 10}`;
 
       return {
         ...h,
