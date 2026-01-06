@@ -43,6 +43,7 @@ import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/a
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation';
@@ -1270,8 +1271,14 @@ function ScannerScreen() {
       if (cameraRef.current) {
         const photo = await cameraRef.current.takePhoto();
         if (photo?.uri) {
-          capturedImageUri = photo.uri;
-          console.log('[ScannerScreen] Photo captured:', capturedImageUri);
+          // EXIF 회전 정규화 - 휴대폰 방향에 관계없이 올바른 방향으로 표시
+          const normalizedImage = await ImageManipulator.manipulateAsync(
+            photo.uri.startsWith('file://') ? photo.uri : `file://${photo.uri}`,
+            [], // 빈 actions로 EXIF orientation 적용
+            { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          capturedImageUri = normalizedImage.uri;
+          console.log('[ScannerScreen] Photo captured and normalized:', capturedImageUri);
         }
       }
     } catch (error) {
