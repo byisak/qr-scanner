@@ -1228,9 +1228,8 @@ function ScannerScreen() {
 
     isNavigatingRef.current = true;
     router.push({
-      pathname: '/image-analysis',
+      pathname: '/multi-code-results',
       params: {
-        imageUri: pendingMultiScanData.imageUri || '',
         detectedBarcodes: pendingMultiScanData.barcodes
       }
     });

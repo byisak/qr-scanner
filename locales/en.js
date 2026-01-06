@@ -1341,6 +1341,18 @@ export default {
     infoMessage: 'When multi-code mode is enabled, you can move the camera to scan multiple codes, then tap the View Results button at the bottom to see them all at once.',
   },
 
+  // Multi-code results screen
+  multiCodeResults: {
+    title: 'Detected Codes',
+    noResults: 'No codes detected',
+    save: 'Save',
+    saved: 'Saved',
+    saveAll: 'Save All',
+    allSaved: 'All Saved',
+    codeType: 'Type',
+    close: 'Close',
+  },
+
   // Result window auto-open settings
   resultWindowSettings: {
     title: 'Auto-Open Result Window',

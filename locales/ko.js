@@ -1331,6 +1331,18 @@ export default {
     infoMessage: '여러 코드 인식 모드가 활성화되면 카메라를 움직여 여러 코드를 스캔한 후, 하단의 결과 보기 버튼을 눌러 한번에 확인할 수 있습니다.',
   },
 
+  // 여러 코드 결과 화면
+  multiCodeResults: {
+    title: '감지된 코드',
+    noResults: '감지된 코드가 없습니다',
+    save: '저장',
+    saved: '저장됨',
+    saveAll: '모두 저장',
+    allSaved: '모두 저장됨',
+    codeType: '타입',
+    close: '닫기',
+  },
+
   // 결과창 자동 열림 설정
   resultWindowSettings: {
     title: '결과창 자동 열림',
