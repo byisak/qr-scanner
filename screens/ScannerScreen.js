@@ -43,7 +43,7 @@ import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/a
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
-// react-native-view-shot은 더 이상 사용하지 않음 - 카메라 takePhoto 사용
+import { captureScreen } from 'react-native-view-shot';
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation';
@@ -124,6 +124,7 @@ function ScannerScreen() {
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
+  const [isCapturingScreen, setIsCapturingScreen] = useState(false); // 화면 캡쳐 중 (UI 숨김용)
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -1265,18 +1266,25 @@ function ScannerScreen() {
 
     isNavigatingRef.current = true;
 
-    // 카메라로 직접 사진 촬영 (실제 바코드 이미지)
+    // UI 숨기고 화면 캡쳐 (바운더리와 라벨이 포함된 상태)
     let capturedImageUri = null;
     try {
-      if (cameraRef.current) {
-        const photo = await cameraRef.current.takePhoto();
-        if (photo?.uri) {
-          capturedImageUri = photo.uri;
-          console.log('[ScannerScreen] Photo captured:', capturedImageUri);
-        }
-      }
+      // UI 숨김
+      setIsCapturingScreen(true);
+
+      // 약간의 딜레이 후 캡쳐 (UI가 숨겨질 시간 필요)
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      capturedImageUri = await captureScreen({
+        format: 'jpg',
+        quality: 0.9,
+      });
+      console.log('[ScannerScreen] Screen captured:', capturedImageUri);
     } catch (error) {
-      console.error('[ScannerScreen] Photo capture failed:', error);
+      console.error('[ScannerScreen] Screen capture failed:', error);
+    } finally {
+      // UI 다시 표시
+      setIsCapturingScreen(false);
     }
 
     router.push({
@@ -2140,6 +2148,8 @@ function ScannerScreen() {
         highlightColor="lime"
       />
 
+      {/* 화면 캡쳐 중에는 UI 숨김 */}
+      {!isCapturingScreen && (
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) */}
         <TouchableOpacity
@@ -2201,9 +2211,10 @@ function ScannerScreen() {
         {/* 스캔 로딩 애니메이션 */}
         <ScanAnimation isActive={isActive} />
       </View>
+      )}
 
       {/* 배치 스캔 컨트롤 패널 */}
-      {batchScanEnabled && batchScannedItems.length > 0 && (
+      {!isCapturingScreen && batchScanEnabled && batchScannedItems.length > 0 && (
         <BatchScanControls
           scannedCount={batchScannedItems.length}
           showScanCounter={showScanCounter}
@@ -2423,7 +2434,7 @@ function ScannerScreen() {
       />
 
       {/* 다중 바코드 감지 시 결과 보기 버튼 */}
-      {pendingMultiScanData && (
+      {!isCapturingScreen && pendingMultiScanData && (
         <View style={[styles.multiScanButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
           <TouchableOpacity
             style={styles.multiScanButton}
