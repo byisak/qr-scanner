@@ -11,8 +11,7 @@ import {
   SafeAreaView,
   StatusBar,
   Alert,
-  Image,
-  Dimensions,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,9 +20,8 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Colors, LABEL_COLORS } from '../constants/Colors';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import { Colors } from '../constants/Colors';
+import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
@@ -34,25 +32,34 @@ export default function MultiCodeResultsScreen() {
 
   const [codes, setCodes] = useState([]);
   const [savedCodes, setSavedCodes] = useState(new Set());
-  const [capturedImageUri, setCapturedImageUri] = useState(null);
+  const [showSaveToast, setShowSaveToast] = useState(false);
+  const [saveToastMessage, setSaveToastMessage] = useState('');
 
   useEffect(() => {
-    // params에서 바코드 데이터 파싱
+    // params에서 바코드 데이터 파싱 및 빈값 필터링
     if (params.detectedBarcodes) {
       try {
         const parsed = JSON.parse(params.detectedBarcodes);
-        setCodes(parsed || []);
+        // 빈값 필터링: value가 없거나 빈 문자열, "null", "undefined" 제외
+        const filtered = (parsed || []).filter(code => {
+          if (!code.value) return false;
+          const value = String(code.value).trim();
+          return value.length > 0 && value !== 'null' && value !== 'undefined';
+        });
+        setCodes(filtered);
       } catch (e) {
         console.error('Failed to parse barcodes:', e);
         setCodes([]);
       }
     }
+  }, [params.detectedBarcodes]);
 
-    // 캡쳐 이미지 URI 설정 (Skia로 오버레이가 이미 합성된 이미지)
-    if (params.capturedImageUri) {
-      setCapturedImageUri(params.capturedImageUri);
-    }
-  }, [params.detectedBarcodes, params.capturedImageUri]);
+  // 토스트 표시
+  const showToast = (message) => {
+    setSaveToastMessage(message);
+    setShowSaveToast(true);
+    setTimeout(() => setShowSaveToast(false), 2000);
+  };
 
   // 히스토리에 코드 저장
   const saveCodeToHistory = useCallback(async (codeValue, barcodeType = 'qr') => {
@@ -111,11 +118,12 @@ export default function MultiCodeResultsScreen() {
       await saveCodeToHistory(code.value, code.type);
       setSavedCodes(prev => new Set([...prev, index]));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast(t('multiCodeResults.codeSaved') || '저장됨');
     } catch (error) {
       console.error('Failed to save code:', error);
       Alert.alert('Error', 'Failed to save code');
     }
-  }, [savedCodes, saveCodeToHistory]);
+  }, [savedCodes, saveCodeToHistory, t]);
 
   // 모두 저장
   const handleSaveAll = useCallback(async () => {
@@ -124,6 +132,8 @@ export default function MultiCodeResultsScreen() {
         .map((_, idx) => idx)
         .filter(idx => !savedCodes.has(idx));
 
+      if (unsavedIndices.length === 0) return;
+
       for (const idx of unsavedIndices) {
         const code = codes[idx];
         await saveCodeToHistory(code.value, code.type);
@@ -131,88 +141,139 @@ export default function MultiCodeResultsScreen() {
 
       setSavedCodes(new Set(codes.map((_, idx) => idx)));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast(`${unsavedIndices.length}${t('multiCodeResults.codesSaved') || '개 코드 저장됨'}`);
     } catch (error) {
       console.error('Failed to save all codes:', error);
       Alert.alert('Error', 'Failed to save codes');
     }
-  }, [codes, savedCodes, saveCodeToHistory]);
+  }, [codes, savedCodes, saveCodeToHistory, t]);
 
   // 클립보드에 복사
   const handleCopy = useCallback(async (value) => {
     await Clipboard.setStringAsync(value);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, []);
+    showToast(t('common.copied') || '복사됨');
+  }, [t]);
 
   // 바코드 타입 표시 이름
   const getTypeDisplayName = (type) => {
     const typeMap = {
-      'qr': 'QR Code',
+      'qr': 'QR',
       'ean13': 'EAN-13',
       'ean8': 'EAN-8',
-      'code128': 'Code 128',
-      'code39': 'Code 39',
-      'code93': 'Code 93',
+      'code128': 'CODE128',
+      'code39': 'CODE39',
+      'code93': 'CODE93',
       'upce': 'UPC-E',
       'upca': 'UPC-A',
       'itf14': 'ITF-14',
-      'codabar': 'Codabar',
+      'codabar': 'CODABAR',
       'pdf417': 'PDF417',
-      'aztec': 'Aztec',
-      'datamatrix': 'Data Matrix',
+      'aztec': 'AZTEC',
+      'datamatrix': 'DATAMATRIX',
     };
-    return typeMap[type] || type || 'Unknown';
+    return typeMap[type] || type?.toUpperCase() || 'QR';
+  };
+
+  // 콘텐츠 타입 레이블
+  const getContentTypeLabel = (type) => {
+    const labels = {
+      [QR_CONTENT_TYPES.URL]: t('qrTypes.url') || 'URL',
+      [QR_CONTENT_TYPES.PHONE]: t('qrTypes.phone') || '전화',
+      [QR_CONTENT_TYPES.SMS]: t('qrTypes.sms') || 'SMS',
+      [QR_CONTENT_TYPES.EMAIL]: t('qrTypes.email') || '이메일',
+      [QR_CONTENT_TYPES.WIFI]: t('qrTypes.wifi') || 'WiFi',
+      [QR_CONTENT_TYPES.GEO]: t('qrTypes.location') || '위치',
+      [QR_CONTENT_TYPES.CONTACT]: t('qrTypes.contact') || '연락처',
+      [QR_CONTENT_TYPES.EVENT]: t('qrTypes.event') || '일정',
+      [QR_CONTENT_TYPES.TEXT]: t('qrTypes.text') || '텍스트',
+    };
+    return labels[type] || type;
   };
 
   const allSaved = codes.length > 0 && savedCodes.size === codes.length;
 
   const renderCodeItem = ({ item, index }) => {
     const isSaved = savedCodes.has(index);
-    // colorIndex가 있으면 사용, 없으면 index 기반
-    const colorIndex = item.colorIndex !== undefined ? item.colorIndex : index;
-    const indicatorColor = LABEL_COLORS[colorIndex % LABEL_COLORS.length];
+    const isQRCode = !item.type || item.type === 'qr' || item.type === 'qrcode';
+    const parsedContent = isQRCode ? parseQRContent(item.value) : null;
 
     return (
-      <View style={[styles.codeItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.codeItemRow}>
-          {/* 색상 인디케이터 (캡쳐 이미지의 라벨 색상과 매칭) */}
-          <View style={[styles.colorIndicator, { backgroundColor: indicatorColor }]} />
-          <View style={styles.codeContent}>
-            <Text style={[styles.codeValue, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={3}>
+      <TouchableOpacity
+        style={[styles.item, { backgroundColor: colors.surface }]}
+        onPress={() => handleCopy(item.value)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.itemContent}>
+          <View style={styles.itemInfo}>
+            {/* 1줄: 스캔값 */}
+            <Text style={[styles.codeValue, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={2}>
               {item.value}
             </Text>
-            <Text style={[styles.codeType, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-              {getTypeDisplayName(item.type)}
-            </Text>
+
+            {/* 2줄: 바코드타입, 콘텐츠타입 뱃지 */}
+            <View style={styles.badgeRow}>
+              {/* 바코드 타입 */}
+              <View style={[styles.badge, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons
+                  name={isQRCode ? 'qr-code' : 'barcode'}
+                  size={11}
+                  color={colors.primary}
+                />
+                <Text style={[styles.badgeText, { color: colors.primary }]}>
+                  {getTypeDisplayName(item.type)}
+                </Text>
+              </View>
+
+              {/* 콘텐츠 타입 (QR 코드이고 TEXT가 아닌 경우만) */}
+              {parsedContent && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+                <View style={[styles.badge, { backgroundColor: parsedContent.color + '15' }]}>
+                  <Ionicons name={parsedContent.icon} size={11} color={parsedContent.color} />
+                  <Text style={[styles.badgeText, { color: parsedContent.color }]}>
+                    {getContentTypeLabel(parsedContent.type)}
+                  </Text>
+                </View>
+              )}
+
+              {/* 저장됨 표시 */}
+              {isSaved && (
+                <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
+                  <Ionicons name="checkmark-circle" size={11} color={colors.success} />
+                  <Text style={[styles.badgeText, { color: colors.success }]}>
+                    {t('multiCodeResults.saved') || '저장됨'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* 액션 버튼들 */}
+          <View style={styles.itemActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.inputBackground }]}
+              onPress={() => handleCopy(item.value)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="copy-outline" size={20} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                { backgroundColor: isSaved ? colors.success : colors.primary }
+              ]}
+              onPress={() => handleSaveCode(item, index)}
+              disabled={isSaved}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={isSaved ? "checkmark" : "bookmark-outline"}
+                size={20}
+                color="#fff"
+              />
+            </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.codeActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.surfaceSecondary || colors.inputBackground }]}
-            onPress={() => handleCopy(item.value)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="copy-outline" size={20} color={colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              { backgroundColor: isSaved ? colors.success : colors.primary }
-            ]}
-            onPress={() => handleSaveCode(item, index)}
-            disabled={isSaved}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={isSaved ? "checkmark" : "bookmark-outline"}
-              size={18}
-              color="#fff"
-            />
-            <Text style={[styles.saveButtonText, { fontFamily: fonts.medium }]}>
-              {isSaved ? t('multiCodeResults.saved') : t('multiCodeResults.save')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -230,7 +291,7 @@ export default function MultiCodeResultsScreen() {
           <Ionicons name="close" size={28} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('multiCodeResults.title')} ({codes.length})
+          {t('multiCodeResults.title') || '감지된 코드'} ({codes.length})
         </Text>
         <View style={styles.placeholder} />
       </View>
@@ -240,7 +301,7 @@ export default function MultiCodeResultsScreen() {
         <View style={styles.emptyContainer}>
           <Ionicons name="qr-code-outline" size={64} color={colors.textTertiary} />
           <Text style={[styles.emptyText, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
-            {t('multiCodeResults.noResults')}
+            {t('multiCodeResults.noResults') || '감지된 코드가 없습니다'}
           </Text>
         </View>
       ) : (
@@ -250,17 +311,6 @@ export default function MultiCodeResultsScreen() {
           keyExtractor={(item, index) => `${item.value}-${index}`}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            capturedImageUri ? (
-              <View style={styles.capturedImageContainer}>
-                <Image
-                  source={{ uri: capturedImageUri }}
-                  style={styles.capturedImage}
-                  resizeMode="contain"
-                />
-              </View>
-            ) : null
-          }
         />
       )}
 
@@ -282,9 +332,21 @@ export default function MultiCodeResultsScreen() {
               color="#fff"
             />
             <Text style={[styles.saveAllButtonText, { fontFamily: fonts.semiBold }]}>
-              {allSaved ? t('multiCodeResults.allSaved') : t('multiCodeResults.saveAll')}
+              {allSaved
+                ? (t('multiCodeResults.allSaved') || '모두 저장됨')
+                : (t('multiCodeResults.saveAll') || '모두 저장')}
             </Text>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* 토스트 메시지 */}
+      {showSaveToast && (
+        <View style={[styles.toast, { backgroundColor: colors.text }]}>
+          <Ionicons name="checkmark-circle" size={20} color={colors.background} />
+          <Text style={[styles.toastText, { color: colors.background, fontFamily: fonts.medium }]}>
+            {saveToastMessage}
+          </Text>
         </View>
       )}
     </SafeAreaView>
@@ -312,55 +374,53 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 36,
   },
-  capturedImageContainer: {
-    width: SCREEN_WIDTH - 32,
-    aspectRatio: 3 / 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 16,
-    backgroundColor: '#000',
-  },
-  capturedImage: {
-    width: '100%',
-    height: '100%',
-  },
   listContent: {
     padding: 16,
     paddingBottom: 100,
   },
-  codeItem: {
-    borderRadius: 12,
+  item: {
+    marginBottom: 12,
     padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
+    borderRadius: 14,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  codeItemRow: {
+  itemContent: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
   },
-  colorIndicator: {
-    width: 8,
-    height: '100%',
-    minHeight: 40,
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  codeContent: {
+  itemInfo: {
     flex: 1,
   },
   codeValue: {
     fontSize: 16,
     lineHeight: 22,
-    marginBottom: 6,
   },
-  codeType: {
-    fontSize: 12,
-  },
-  codeActions: {
+  badgeRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  itemActions: {
+    flexDirection: 'row',
     gap: 8,
+    marginLeft: 12,
   },
   actionButton: {
     width: 40,
@@ -368,18 +428,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 6,
-  },
-  saveButtonText: {
-    color: '#fff',
-    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
@@ -396,7 +444,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    paddingBottom: 32,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     borderTopWidth: 1,
   },
   saveAllButton: {
@@ -410,5 +458,24 @@ const styles = StyleSheet.create({
   saveAllButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  toast: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 25,
+    gap: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  toastText: {
+    fontSize: 14,
   },
 });
