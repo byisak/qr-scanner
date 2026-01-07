@@ -731,6 +731,13 @@ export default {
     barcodeRotate: 'Rotate',
     barcodeCustomText: 'Display Text',
     barcodeCustomTextPlaceholder: 'Leave empty to show barcode value',
+    saveQuality: 'Save Quality',
+    // Barcode settings tabs
+    barcodeSettingsTabs: {
+      size: 'Size',
+      display: 'Display',
+      save: 'Save',
+    },
     // Barcode type modal
     addBarcode: 'More',
     selectBarcodeType: 'Select Barcode Type',

@@ -103,6 +103,7 @@ export default function GeneratorScreen() {
     customText: '',  // 바코드 아래 커스텀 텍스트
   });
   const [barcodeSettingsExpanded, setBarcodeSettingsExpanded] = useState(false);
+  const [barcodeSettingsTab, setBarcodeSettingsTab] = useState('size'); // 'size', 'display', 'save'
 
   // 고해상도 저장 설정 (0: 빠른저장, 1-4: 고해상도 레벨)
   const [highResLevel, setHighResLevel] = useState(0);
@@ -1996,236 +1997,267 @@ export default function GeneratorScreen() {
               </TouchableOpacity>
               {barcodeSettingsExpanded && (
               <View style={s.settingsContainer}>
-                {/* 크기 설정 그룹 */}
+                {/* 탭 버튼 */}
+                <View style={[s.settingsTabContainer, { backgroundColor: colors.background }]}>
+                  {[
+                    { id: 'size', icon: 'resize-outline', label: t('generator.barcodeSettingsTabs.size') || '크기' },
+                    { id: 'display', icon: 'text-outline', label: t('generator.barcodeSettingsTabs.display') || '표시' },
+                    { id: 'save', icon: 'save-outline', label: t('generator.barcodeSettingsTabs.save') || '저장' },
+                  ].map((tab) => (
+                    <TouchableOpacity
+                      key={tab.id}
+                      style={[
+                        s.settingsTab,
+                        barcodeSettingsTab === tab.id && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => setBarcodeSettingsTab(tab.id)}
+                    >
+                      <Ionicons
+                        name={tab.icon}
+                        size={16}
+                        color={barcodeSettingsTab === tab.id ? '#fff' : colors.textSecondary}
+                      />
+                      <Text style={[
+                        s.settingsTabText,
+                        { color: barcodeSettingsTab === tab.id ? '#fff' : colors.textSecondary }
+                      ]}>
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* 탭 내용 */}
                 <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
-                  {/* 바코드 너비 */}
-                  <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRowSpaced}>
-                      <View style={s.settingLabelRow}>
-                        <Ionicons name="resize-outline" size={18} color={colors.primary} />
-                        <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.barcodeWidth') || '너비'}
-                        </Text>
+                  {/* 크기 탭 */}
+                  {barcodeSettingsTab === 'size' && (
+                    <>
+                      <View style={s.settingItemVertical}>
+                        <View style={s.settingLabelRowSpaced}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeWidth') || '너비'}
+                            </Text>
+                          </View>
+                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.scale}x</Text>
+                        </View>
+                        <Slider
+                          style={s.slider}
+                          minimumValue={1}
+                          maximumValue={6}
+                          step={1}
+                          value={barcodeSettings.scale}
+                          onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
+                          minimumTrackTintColor={colors.primary}
+                          maximumTrackTintColor={colors.border}
+                          thumbTintColor={colors.primary}
+                        />
                       </View>
-                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.scale}x</Text>
-                    </View>
-                    <Slider
-                      style={s.slider}
-                      minimumValue={1}
-                      maximumValue={6}
-                      step={1}
-                      value={barcodeSettings.scale}
-                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
-                      minimumTrackTintColor={colors.primary}
-                      maximumTrackTintColor={colors.border}
-                      thumbTintColor={colors.primary}
-                    />
-                  </View>
 
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 바코드 높이 */}
-                  <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRowSpaced}>
-                      <View style={s.settingLabelRow}>
-                        <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
-                        <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.barcodeHeight') || '높이'}
-                        </Text>
+                      <View style={s.settingItemVertical}>
+                        <View style={s.settingLabelRowSpaced}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeHeight') || '높이'}
+                            </Text>
+                          </View>
+                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.height}</Text>
+                        </View>
+                        <Slider
+                          style={s.slider}
+                          minimumValue={50}
+                          maximumValue={150}
+                          step={10}
+                          value={barcodeSettings.height}
+                          onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
+                          minimumTrackTintColor={colors.primary}
+                          maximumTrackTintColor={colors.border}
+                          thumbTintColor={colors.primary}
+                        />
                       </View>
-                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.height}</Text>
-                    </View>
-                    <Slider
-                      style={s.slider}
-                      minimumValue={50}
-                      maximumValue={150}
-                      step={10}
-                      value={barcodeSettings.height}
-                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
-                      minimumTrackTintColor={colors.primary}
-                      maximumTrackTintColor={colors.border}
-                      thumbTintColor={colors.primary}
-                    />
-                  </View>
 
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 글자 크기 */}
-                  <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRowSpaced}>
-                      <View style={s.settingLabelRow}>
-                        <Ionicons name="text" size={18} color={colors.primary} />
-                        <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.barcodeFontSize') || '글자 크기'}
-                        </Text>
-                      </View>
-                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.fontSize}</Text>
-                    </View>
-                    <Slider
-                      style={s.slider}
-                      minimumValue={10}
-                      maximumValue={20}
-                      step={1}
-                      value={barcodeSettings.fontSize}
-                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
-                      minimumTrackTintColor={colors.primary}
-                      maximumTrackTintColor={colors.border}
-                      thumbTintColor={colors.primary}
-                    />
-                  </View>
-
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                  {/* 회전 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeRotate') || '회전'}
-                      </Text>
-                    </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[
-                        { value: 'N', label: '0°' },
-                        { value: 'R', label: '90°' },
-                        { value: 'I', label: '180°' },
-                        { value: 'L', label: '270°' },
-                      ].map((item) => (
-                        <TouchableOpacity
-                          key={`rotate-${item.value}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
-                            {item.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                  {/* 숫자 표시 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="text-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeShowText') || '숫자 표시'}
-                      </Text>
-                    </View>
-                    <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <TouchableOpacity
-                        style={[
-                          s.toggleButton,
-                          barcodeSettings.showText && { backgroundColor: colors.primary },
-                        ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
-                      >
-                        <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          s.toggleButton,
-                          !barcodeSettings.showText && { backgroundColor: colors.primary },
-                        ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
-                      >
-                        <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                  {/* 표시 텍스트 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="create-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeCustomText') || '표시 텍스트'}
-                      </Text>
-                    </View>
-                  </View>
-                  <TextInput
-                    style={[
-                      s.customTextInput,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      }
-                    ]}
-                    placeholder={t('generator.barcodeCustomTextPlaceholder') || '비워두면 바코드 값 표시'}
-                    placeholderTextColor={colors.textTertiary}
-                    value={barcodeSettings.customText}
-                    onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
-                  />
-
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                  {/* 저장 품질 (5단계) */}
-                  <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRowSpaced}>
-                      <View style={s.settingLabelRow}>
-                        <Ionicons name="image-outline" size={18} color={colors.primary} />
-                        <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.saveQuality') || '저장 품질'}
-                        </Text>
-                      </View>
-                      <Text style={[s.sliderValue, { color: colors.primary }]}>
-                        {HIGH_RES_LEVELS[highResLevel].label}
-                      </Text>
-                    </View>
-
-                    {/* 5단계 버튼 */}
-                    <View style={[s.qualityLevelContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {HIGH_RES_LEVELS.map((item) => (
-                        <TouchableOpacity
-                          key={`quality-${item.level}`}
-                          style={[
-                            s.qualityLevelBtn,
-                            highResLevel === item.level && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setHighResLevel(item.level)}
-                        >
-                          <Text style={[
-                            s.qualityLevelText,
-                            { color: highResLevel === item.level ? '#fff' : colors.text }
-                          ]}>
-                            {item.level === 0 ? '빠름' : item.level}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-
-                    {/* 선택된 레벨 정보 */}
-                    <View style={[s.qualityInfoRow, { backgroundColor: colors.background }]}>
-                      <View style={s.qualityInfoItem}>
-                        <Ionicons name="document-outline" size={14} color={colors.textSecondary} />
-                        <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
-                          {HIGH_RES_LEVELS[highResLevel].description}
-                        </Text>
-                      </View>
-                      <View style={s.qualityInfoItem}>
-                        <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
-                        <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
-                          {HIGH_RES_LEVELS[highResLevel].time}
-                        </Text>
-                      </View>
-                      {highResLevel > 0 && (
-                        <View style={s.qualityInfoItem}>
-                          <Ionicons name="resize-outline" size={14} color={colors.textSecondary} />
-                          <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
-                            ~{HIGH_RES_LEVELS[highResLevel].scale * 100}px
+                      <View style={s.settingItem}>
+                        <View style={s.settingLabelRow}>
+                          <Ionicons name="refresh-outline" size={18} color={colors.primary} />
+                          <Text style={[s.settingLabel, { color: colors.text }]}>
+                            {t('generator.barcodeRotate') || '회전'}
                           </Text>
                         </View>
-                      )}
+                        <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                          {[
+                            { value: 'N', label: '0°' },
+                            { value: 'R', label: '90°' },
+                            { value: 'I', label: '180°' },
+                            { value: 'L', label: '270°' },
+                          ].map((item) => (
+                            <TouchableOpacity
+                              key={`rotate-${item.value}`}
+                              style={[
+                                s.barcodeOptionBtn,
+                                barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
+                              ]}
+                              onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
+                            >
+                              <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
+                                {item.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    </>
+                  )}
+
+                  {/* 표시 탭 */}
+                  {barcodeSettingsTab === 'display' && (
+                    <>
+                      <View style={s.settingItem}>
+                        <View style={s.settingLabelRow}>
+                          <Ionicons name="text-outline" size={18} color={colors.primary} />
+                          <Text style={[s.settingLabel, { color: colors.text }]}>
+                            {t('generator.barcodeShowText') || '숫자 표시'}
+                          </Text>
+                        </View>
+                        <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                          <TouchableOpacity
+                            style={[
+                              s.toggleButton,
+                              barcodeSettings.showText && { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
+                          >
+                            <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              s.toggleButton,
+                              !barcodeSettings.showText && { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
+                          >
+                            <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                      <View style={s.settingItemVertical}>
+                        <View style={s.settingLabelRowSpaced}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="text" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeFontSize') || '글자 크기'}
+                            </Text>
+                          </View>
+                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.fontSize}</Text>
+                        </View>
+                        <Slider
+                          style={s.slider}
+                          minimumValue={10}
+                          maximumValue={20}
+                          step={1}
+                          value={barcodeSettings.fontSize}
+                          onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
+                          minimumTrackTintColor={colors.primary}
+                          maximumTrackTintColor={colors.border}
+                          thumbTintColor={colors.primary}
+                        />
+                      </View>
+
+                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                      <View style={s.settingItemVertical}>
+                        <View style={s.settingLabelRow}>
+                          <Ionicons name="create-outline" size={18} color={colors.primary} />
+                          <Text style={[s.settingLabel, { color: colors.text }]}>
+                            {t('generator.barcodeCustomText') || '표시 텍스트'}
+                          </Text>
+                        </View>
+                        <TextInput
+                          style={[
+                            s.customTextInput,
+                            {
+                              backgroundColor: colors.surface,
+                              borderColor: colors.border,
+                              color: colors.text,
+                              marginTop: 8,
+                            }
+                          ]}
+                          placeholder={t('generator.barcodeCustomTextPlaceholder') || '비워두면 바코드 값 표시'}
+                          placeholderTextColor={colors.textTertiary}
+                          value={barcodeSettings.customText}
+                          onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
+                        />
+                      </View>
+                    </>
+                  )}
+
+                  {/* 저장 탭 */}
+                  {barcodeSettingsTab === 'save' && (
+                    <View style={s.settingItemVertical}>
+                      <View style={s.settingLabelRowSpaced}>
+                        <View style={s.settingLabelRow}>
+                          <Ionicons name="image-outline" size={18} color={colors.primary} />
+                          <Text style={[s.settingLabel, { color: colors.text }]}>
+                            {t('generator.saveQuality') || '저장 품질'}
+                          </Text>
+                        </View>
+                        <Text style={[s.sliderValue, { color: colors.primary }]}>
+                          {HIGH_RES_LEVELS[highResLevel].label}
+                        </Text>
+                      </View>
+
+                      <View style={[s.qualityLevelContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        {HIGH_RES_LEVELS.map((item) => (
+                          <TouchableOpacity
+                            key={`quality-${item.level}`}
+                            style={[
+                              s.qualityLevelBtn,
+                              highResLevel === item.level && { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => setHighResLevel(item.level)}
+                          >
+                            <Text style={[
+                              s.qualityLevelText,
+                              { color: highResLevel === item.level ? '#fff' : colors.text }
+                            ]}>
+                              {item.level === 0 ? '빠름' : item.level}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <View style={[s.qualityInfoRow, { backgroundColor: colors.background }]}>
+                        <View style={s.qualityInfoItem}>
+                          <Ionicons name="document-outline" size={14} color={colors.textSecondary} />
+                          <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                            {HIGH_RES_LEVELS[highResLevel].description}
+                          </Text>
+                        </View>
+                        <View style={s.qualityInfoItem}>
+                          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                          <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                            {HIGH_RES_LEVELS[highResLevel].time}
+                          </Text>
+                        </View>
+                        {highResLevel > 0 && (
+                          <View style={s.qualityInfoItem}>
+                            <Ionicons name="resize-outline" size={14} color={colors.textSecondary} />
+                            <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                              ~{HIGH_RES_LEVELS[highResLevel].scale * 100}px
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  </View>
+                  )}
                 </View>
               </View>
               )}
@@ -3045,6 +3077,25 @@ const s = StyleSheet.create({
   },
   qualityInfoText: {
     fontSize: 12,
+  },
+  settingsTabContainer: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+  },
+  settingsTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  settingsTabText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   settingDivider: {
     height: 1,

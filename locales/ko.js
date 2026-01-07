@@ -720,6 +720,13 @@ export default {
     barcodeRotate: '회전',
     barcodeCustomText: '표시 텍스트',
     barcodeCustomTextPlaceholder: '비워두면 바코드 값 표시',
+    saveQuality: '저장 품질',
+    // 바코드 설정 탭
+    barcodeSettingsTabs: {
+      size: '크기',
+      display: '표시',
+      save: '저장',
+    },
     // 바코드 타입 모달
     addBarcode: '더보기',
     selectBarcodeType: '바코드 타입 선택',
