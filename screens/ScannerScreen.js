@@ -2170,12 +2170,12 @@ function ScannerScreen() {
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
-          <BlurView intensity={80} tint="light" style={styles.groupBadgeBlur}>
-            <Ionicons name="folder" size={16} color={colors.primary} />
-            <Text style={[styles.groupBadgeText, { color: colors.primary }]}>
+          <BlurView intensity={50} tint="light" style={styles.groupBadgeBlur}>
+            <Ionicons name="folder" size={16} color={colors.text} />
+            <Text style={[styles.groupBadgeText, { color: colors.text }]}>
               {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
             </Text>
-            <Ionicons name="chevron-down" size={16} color={colors.primary} style={{ marginLeft: 4 }} />
+            <Ionicons name="chevron-down" size={16} color={colors.text} style={{ marginLeft: 4 }} />
           </BlurView>
         </TouchableOpacity>
 
@@ -2296,8 +2296,8 @@ function ScannerScreen() {
       {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
       {realtimeSyncEnabled && !activeSessionId && (
         <View style={[styles.realtimeSyncGuide, { bottom: bottomOffset + 20 }]}>
-          <BlurView intensity={80} tint="light" style={styles.realtimeSyncGuideBlur}>
-            <Ionicons name="information-circle" size={20} color={colors.primary} />
+          <BlurView intensity={50} tint="light" style={styles.realtimeSyncGuideBlur}>
+            <Ionicons name="information-circle" size={20} color={colors.text} />
             <Text style={[styles.realtimeSyncGuideText, { color: colors.text }]}>
               {t('scanner.realtimeSyncGuide') || '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.'}
             </Text>
@@ -2317,7 +2317,7 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <BlurView intensity={80} tint="light" style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
+          <BlurView intensity={50} tint="light" style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Ionicons name="folder" size={24} color={colors.primary} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
@@ -2483,10 +2483,10 @@ function ScannerScreen() {
       {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
       {lastScannedCode && !resultWindowAutoOpen && (
         <View style={[styles.resultWindowButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
-          <BlurView intensity={80} tint="dark" style={styles.resultWindowButtonBlur}>
+          <BlurView intensity={50} tint="light" style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
-              <Text style={styles.scannedCodeLabel}>{t('resultWindowSettings.scannedCode')}</Text>
-              <Text style={styles.scannedCodeValue} numberOfLines={1}>{lastScannedCode.code}</Text>
+              <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{t('resultWindowSettings.scannedCode')}</Text>
+              <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1}>{lastScannedCode.code}</Text>
             </View>
             <View style={styles.resultWindowButtonRow}>
               <TouchableOpacity
@@ -2547,7 +2547,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   groupBadgeText: {
     fontSize: 15,
@@ -2635,7 +2635,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   realtimeSyncGuideContent: {
     flexDirection: 'row',
@@ -2783,7 +2783,7 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     maxHeight: '70%',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -2953,7 +2953,7 @@ const styles = StyleSheet.create({
   },
   resultWindowButtonBlur: {
     padding: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   scannedCodeInfo: {
     marginBottom: 12,
