@@ -335,6 +335,24 @@ export default function GeneratorScreen() {
   const barcodeSize = useRef(new Animated.Value(0)).current;
   const qrRef = useRef(null);
   const barcodeRef = useRef(null);
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  // 저장 중 스핀 애니메이션
+  useEffect(() => {
+    if (saveProgress.visible) {
+      const spin = Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        })
+      );
+      spin.start();
+      return () => spin.stop();
+    } else {
+      spinAnim.setValue(0);
+    }
+  }, [saveProgress.visible]);
 
   // QR 스타일 관련 상태
   const [useStyledQR, setUseStyledQR] = useState(true);
@@ -2517,24 +2535,28 @@ export default function GeneratorScreen() {
       >
         <View style={s.progressModalOverlay}>
           <View style={[s.progressModalContent, { backgroundColor: colors.surface }]}>
-            {/* 원형 프로그레스 */}
-            <View style={s.progressCircleContainer}>
-              <View style={[s.progressCircleBg, { borderColor: colors.border }]} />
-              <View
-                style={[
-                  s.progressCircle,
-                  {
-                    borderColor: colors.primary,
-                    transform: [{ rotate: `${(saveProgress.progress / 100) * 360}deg` }],
-                  },
-                ]}
-              />
-              <Text style={[s.progressText, { color: colors.text }]}>
-                {saveProgress.progress}%
-              </Text>
-            </View>
+            {/* 스핀 애니메이션 바코드 아이콘 */}
+            <Animated.View
+              style={[
+                s.progressIconContainer,
+                {
+                  backgroundColor: colors.primary + '15',
+                  transform: [{
+                    rotate: spinAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '360deg'],
+                    }),
+                  }],
+                },
+              ]}
+            >
+              <Ionicons name="barcode-outline" size={40} color={colors.primary} />
+            </Animated.View>
+            <Text style={[s.progressTitle, { color: colors.text }]}>
+              {t('generator.savingBarcode')}
+            </Text>
             <Text style={[s.progressMessage, { color: colors.textSecondary }]}>
-              {saveProgress.message}
+              {saveProgress.message || t('generator.pleaseWait')}
             </Text>
           </View>
         </View>
@@ -3564,33 +3586,18 @@ const s = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  progressCircleContainer: {
+  progressIconContainer: {
     width: 80,
     height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
-  progressCircleBg: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 6,
-    opacity: 0.2,
-  },
-  progressCircle: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 6,
-    borderRightColor: 'transparent',
-    borderBottomColor: 'transparent',
-  },
-  progressText: {
-    fontSize: 18,
-    fontWeight: '700',
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   progressMessage: {
     fontSize: 14,

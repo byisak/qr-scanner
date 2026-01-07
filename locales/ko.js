@@ -727,6 +727,9 @@ export default {
       display: '표시',
       save: '저장',
     },
+    // 저장 프로그레스
+    savingBarcode: '열심히 바코드 만드는 중...',
+    pleaseWait: '잠시만 기다려주세요',
     // 바코드 타입 모달
     addBarcode: '더보기',
     selectBarcodeType: '바코드 타입 선택',

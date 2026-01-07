@@ -738,6 +738,9 @@ export default {
       display: 'Display',
       save: 'Save',
     },
+    // Saving progress
+    savingBarcode: 'Creating barcode...',
+    pleaseWait: 'Please wait a moment',
     // Barcode type modal
     addBarcode: 'More',
     selectBarcodeType: 'Select Barcode Type',
