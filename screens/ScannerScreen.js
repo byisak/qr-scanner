@@ -2480,32 +2480,34 @@ function ScannerScreen() {
         );
       })()}
 
-      {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 */}
+      {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
       {lastScannedCode && !resultWindowAutoOpen && (
         <View style={[styles.resultWindowButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
-          <View style={styles.scannedCodeInfo}>
-            <Text style={styles.scannedCodeLabel}>{t('resultWindowSettings.scannedCode')}</Text>
-            <Text style={styles.scannedCodeValue} numberOfLines={1}>{lastScannedCode.code}</Text>
-          </View>
-          <View style={styles.resultWindowButtonRow}>
-            <TouchableOpacity
-              style={styles.resultWindowButton}
-              onPress={handleOpenResultWindow}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="open-outline" size={20} color="#fff" />
-              <Text style={styles.resultWindowButtonText}>
-                {t('resultWindowSettings.openResultButton')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.resultWindowCloseButton}
-              onPress={handleCloseResultWindow}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="close" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          <BlurView intensity={80} tint="dark" style={styles.resultWindowButtonBlur}>
+            <View style={styles.scannedCodeInfo}>
+              <Text style={styles.scannedCodeLabel}>{t('resultWindowSettings.scannedCode')}</Text>
+              <Text style={styles.scannedCodeValue} numberOfLines={1}>{lastScannedCode.code}</Text>
+            </View>
+            <View style={styles.resultWindowButtonRow}>
+              <TouchableOpacity
+                style={styles.resultWindowButton}
+                onPress={handleOpenResultWindow}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="open-outline" size={20} color="#fff" />
+                <Text style={styles.resultWindowButtonText}>
+                  {t('resultWindowSettings.openResultButton')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.resultWindowCloseButton}
+                onPress={handleCloseResultWindow}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </BlurView>
         </View>
       )}
 
@@ -2941,14 +2943,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 20,
     right: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    overflow: 'hidden',
     borderRadius: 16,
-    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
     elevation: 8,
+  },
+  resultWindowButtonBlur: {
+    padding: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   scannedCodeInfo: {
     marginBottom: 12,
