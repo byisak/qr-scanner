@@ -500,6 +500,54 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 비밀번호 변경
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      if (!user) {
+        return { success: false, error: 'Not logged in' };
+      }
+
+      // 개발 모드: 로컬에서 비밀번호 확인
+      if (DEV_MODE) {
+        const devAccount = DEV_ACCOUNTS.find(acc => acc.email === user.email);
+        if (devAccount) {
+          if (devAccount.password !== currentPassword) {
+            return { success: false, error: 'Current password is incorrect' };
+          }
+          // 개발 모드에서는 실제로 변경하지 않음 (메모리만)
+          devAccount.password = newPassword;
+          console.log('[Auth] 🔧 개발 모드: 비밀번호 변경 성공 (테스트 계정)');
+          return { success: true };
+        }
+      }
+
+      const token = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+
+      const response = await fetch(`${API_URL}/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Password change failed'
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Change password error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // 토큰 갱신
   const refreshAccessToken = async () => {
     try {
@@ -553,6 +601,7 @@ export const AuthProvider = ({ children }) => {
     loginWithGoogle,
     loginWithApple,
     updateProfile,
+    changePassword,
     withdraw,
     getToken,
     refreshAccessToken,
