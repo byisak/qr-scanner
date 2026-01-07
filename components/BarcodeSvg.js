@@ -1,6 +1,6 @@
 // components/BarcodeSvg.js - bwip-js 기반 바코드 생성 컴포넌트 (네이티브 방식)
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Image, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Image, ActivityIndicator, StyleSheet, PixelRatio } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import bwipjs from '@bwip-js/react-native';
 
@@ -143,6 +143,362 @@ export const BARCODE_CATEGORIES = {
   stacked: { name: '스택형', icon: 'layers-outline', gradient: ['#43e97b', '#38f9d7'] },
   automotive: { name: '자동차', icon: 'car-outline', gradient: ['#ff9a9e', '#fecfef'] },
   other: { name: '기타', icon: 'ellipsis-horizontal-outline', gradient: ['#c471f5', '#fa71cd'] },
+};
+
+/**
+ * 바코드 타입별 최적 설정 (GS1 규격 및 스캔 가능성 기반)
+ * - minScale: 스캔 가능한 최소 스케일 (모듈당 픽셀)
+ * - recommendedScale: 권장 스케일
+ * - defaultHeight: 기본 높이 (mm 단위, bwip-js 기준)
+ * - minHeight: 최소 높이 (mm)
+ * - fixedModules: 고정 모듈 수 (EAN/UPC 등)
+ * - modulesPerChar: 문자당 모듈 수
+ * - quietZoneMultiplier: Quiet Zone 배수
+ * - inkspread: 인쇄 시 잉크 번짐 보정값
+ */
+export const BARCODE_OPTIMAL_SETTINGS = {
+  // ===== 리테일 바코드 (좁은 바가 많음 - 높은 스케일 필요) =====
+  ean13: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 22.85,  // GS1 권장 (100% 기준)
+    minHeight: 18.28,      // GS1 최소 (80%)
+    fixedModules: 95,
+    quietZoneMultiplier: 11,
+    inkspread: 0.15,
+    guardwhitespace: true,
+  },
+  ean8: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 18.23,
+    minHeight: 14.58,
+    fixedModules: 67,
+    quietZoneMultiplier: 7,
+    inkspread: 0.15,
+    guardwhitespace: true,
+  },
+  ean5: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 21.9,
+    minHeight: 17.5,
+    fixedModules: 47,
+    quietZoneMultiplier: 5,
+    inkspread: 0.15,
+  },
+  ean2: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 21.9,
+    minHeight: 17.5,
+    fixedModules: 20,
+    quietZoneMultiplier: 5,
+    inkspread: 0.15,
+  },
+  upca: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 25.91,  // GS1 권장
+    minHeight: 20.73,
+    fixedModules: 95,
+    quietZoneMultiplier: 9,
+    inkspread: 0.15,
+    guardwhitespace: true,
+  },
+  upce: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 25.91,
+    minHeight: 20.73,
+    fixedModules: 51,
+    quietZoneMultiplier: 9,
+    inkspread: 0.15,
+    guardwhitespace: true,
+  },
+  isbn: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 22.85,
+    minHeight: 18.28,
+    fixedModules: 95,
+    quietZoneMultiplier: 11,
+    inkspread: 0.15,
+    guardwhitespace: true,
+  },
+
+  // ===== 산업용 바코드 =====
+  code128: {
+    minScale: 1,
+    recommendedScale: 2,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 11,
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  },
+  'gs1-128': {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 31.75,  // GS1 권장
+    minHeight: 12.7,
+    modulesPerChar: 11,
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  },
+  code39: {
+    minScale: 1,
+    recommendedScale: 2,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 13,  // 9 bars + 4 gaps
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  },
+  code93: {
+    minScale: 1,
+    recommendedScale: 2,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 9,
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  },
+
+  // ===== ITF 계열 =====
+  interleaved2of5: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 9,  // 2문자당 18 모듈
+    quietZoneMultiplier: 10,
+    inkspread: 0.15,
+    bearerbars: true,
+  },
+  itf14: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 32,  // GS1 권장 (물류용)
+    minHeight: 12.7,
+    fixedModules: 142,
+    quietZoneMultiplier: 10,
+    inkspread: 0.15,
+    bearerbars: true,
+  },
+
+  // ===== 의료/제약 =====
+  pharmacode: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 8,
+    minHeight: 5,
+    modulesPerChar: 2,
+    quietZoneMultiplier: 5,
+    inkspread: 0.1,
+  },
+  code32: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 13,
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  },
+
+  // ===== 특수 바코드 =====
+  rationalizedCodabar: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 12,
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  },
+  msi: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 12,
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  },
+
+  // ===== 우편 바코드 =====
+  postnet: {
+    minScale: 3,
+    recommendedScale: 4,
+    defaultHeight: 3.175,  // 짧은 바
+    minHeight: 3.175,
+    modulesPerChar: 5,
+    quietZoneMultiplier: 5,
+    inkspread: 0.05,
+  },
+
+  // ===== 2D 바코드 =====
+  qrcode: {
+    minScale: 3,
+    recommendedScale: 5,
+    defaultHeight: null,  // 자동 계산
+    minHeight: null,
+    eclevel: 'M',
+  },
+  datamatrix: {
+    minScale: 3,
+    recommendedScale: 5,
+    defaultHeight: null,
+    minHeight: null,
+  },
+  pdf417: {
+    minScale: 2,
+    recommendedScale: 3,
+    defaultHeight: null,
+    minHeight: null,
+    columns: 3,
+  },
+  azteccode: {
+    minScale: 3,
+    recommendedScale: 5,
+    defaultHeight: null,
+    minHeight: null,
+  },
+
+  // ===== 기본값 =====
+  default: {
+    minScale: 2,
+    recommendedScale: 2,
+    defaultHeight: 15,
+    minHeight: 10,
+    modulesPerChar: 11,
+    quietZoneMultiplier: 10,
+    inkspread: 0.1,
+  }
+};
+
+/**
+ * 바코드 타입별 고정 모듈 수 반환
+ */
+const getFixedModules = (bcid) => {
+  const settings = BARCODE_OPTIMAL_SETTINGS[bcid];
+  if (settings?.fixedModules) return settings.fixedModules;
+  return null;
+};
+
+/**
+ * 문자당 모듈 수 반환
+ */
+const getModulesPerChar = (bcid) => {
+  const settings = BARCODE_OPTIMAL_SETTINGS[bcid];
+  if (settings?.modulesPerChar) return settings.modulesPerChar;
+  return BARCODE_OPTIMAL_SETTINGS.default.modulesPerChar;
+};
+
+/**
+ * 바코드 값과 타입에 따른 최적 스케일 계산
+ * @param {string} bcid - 바코드 타입
+ * @param {string} value - 바코드 값
+ * @param {number} maxWidth - 최대 허용 너비 (픽셀)
+ * @returns {object} - { scale, height, padding, options }
+ */
+export const calculateOptimalSettings = (bcid, value, maxWidth = 280) => {
+  const settings = BARCODE_OPTIMAL_SETTINGS[bcid] || BARCODE_OPTIMAL_SETTINGS.default;
+  const valueLength = value?.length || 10;
+
+  // 총 모듈 수 계산
+  const fixedModules = getFixedModules(bcid);
+  const totalModules = fixedModules || (valueLength * getModulesPerChar(bcid));
+  const quietZone = settings.quietZoneMultiplier || 10;
+
+  // 최적 스케일 계산
+  let scale = settings.recommendedScale;
+  const estimatedWidth = (totalModules + quietZone * 2) * scale;
+
+  if (estimatedWidth > maxWidth) {
+    // maxWidth에 맞게 축소, 하지만 minScale 이상 유지
+    const calculatedScale = Math.floor(maxWidth / (totalModules + quietZone * 2));
+    scale = Math.max(calculatedScale, settings.minScale);
+  }
+
+  return {
+    scale,
+    height: settings.defaultHeight || 15,
+    minHeight: settings.minHeight || 10,
+    padding: Math.ceil(quietZone * scale / 2),
+    inkspread: settings.inkspread || 0,
+    guardwhitespace: settings.guardwhitespace || false,
+    bearerbars: settings.bearerbars || false,
+  };
+};
+
+/**
+ * 저장/공유용 고해상도 바코드 생성
+ * @param {object} options - 바코드 옵션 (bcid, text 필수)
+ * @returns {Promise<string>} - base64 데이터 URL
+ */
+export const generateHighResBarcode = async (options) => {
+  const pixelRatio = PixelRatio.get();
+  const saveMultiplier = Math.max(pixelRatio, 3); // 최소 3배
+
+  const settings = BARCODE_OPTIMAL_SETTINGS[options.bcid] || BARCODE_OPTIMAL_SETTINGS.default;
+
+  const highResOptions = {
+    bcid: options.bcid,
+    text: String(options.text),
+    scale: Math.max((options.scale || settings.recommendedScale) * saveMultiplier, 6),
+    height: (options.height || settings.defaultHeight || 15) * 1.5,
+    includetext: options.includetext !== false,
+    textxalign: 'center',
+    textsize: (options.textsize || 14) * 1.5,
+    backgroundcolor: (options.backgroundcolor || 'ffffff').replace('#', ''),
+    barcolor: (options.barcolor || '000000').replace('#', ''),
+    paddingwidth: 30,
+    paddingheight: 20,
+    rotate: options.rotate || 'N',
+  };
+
+  // 선택적 옵션 추가
+  if (options.alttext) {
+    highResOptions.alttext = options.alttext;
+  }
+  if (settings.guardwhitespace) {
+    highResOptions.guardwhitespace = true;
+  }
+
+  try {
+    const result = await bwipjs.toDataURL(highResOptions);
+
+    if (typeof result === 'string') {
+      return result;
+    } else if (result && typeof result === 'object') {
+      const dataUrl = result.uri || result.data || result.dataURL || result.base64;
+      if (result.base64 && !dataUrl.startsWith('data:')) {
+        return `data:image/png;base64,${result.base64}`;
+      }
+      return dataUrl;
+    }
+    throw new Error('Invalid result from bwipjs');
+  } catch (error) {
+    console.error('High-res barcode generation failed:', error);
+    throw error;
+  }
+};
+
+/**
+ * 스케일 경고 체크
+ * @param {string} bcid - 바코드 타입
+ * @param {number} scale - 현재 스케일
+ * @returns {string|null} - 경고 메시지 키 또는 null
+ */
+export const checkScaleWarning = (bcid, scale) => {
+  const settings = BARCODE_OPTIMAL_SETTINGS[bcid] || BARCODE_OPTIMAL_SETTINGS.default;
+
+  if (scale < settings.minScale) {
+    return 'scaleTooLow'; // 스캔 불가능할 수 있음
+  }
+  return null;
 };
 
 /**
@@ -387,12 +743,23 @@ export default function BarcodeSvg({
     setError(null);
 
     try {
+      // 타입별 최적 설정 가져오기
+      const optimalSettings = BARCODE_OPTIMAL_SETTINGS[bcid] || BARCODE_OPTIMAL_SETTINGS.default;
+
+      // 스케일 결정: 사용자 지정값과 최소값 중 큰 값 사용
+      const effectiveScale = Math.max(width, optimalSettings.minScale);
+
+      // 높이 결정: 사용자 지정값 또는 타입별 기본값 사용
+      const effectiveHeight = height > 0
+        ? Math.max(height / 10, optimalSettings.minHeight || 8)
+        : optimalSettings.defaultHeight || 15;
+
       // 네이티브 bwip-js로 바코드 생성
       const options = {
         bcid: bcid,
         text: String(processedValue),
-        scale: width,
-        height: Math.max(height / 10, 8),
+        scale: effectiveScale,
+        height: effectiveHeight,
         includetext: displayValue,
         textxalign: 'center',
         textsize: fontSize,
@@ -403,6 +770,14 @@ export default function BarcodeSvg({
         paddingheight: margin,
         rotate: rotate,
       };
+
+      // 타입별 추가 옵션
+      if (optimalSettings.guardwhitespace) {
+        options.guardwhitespace = true;
+      }
+      if (optimalSettings.inkspread && optimalSettings.inkspread > 0) {
+        options.inkspread = optimalSettings.inkspread;
+      }
 
       // 커스텀 텍스트가 있으면 alttext 옵션 추가
       if (alttext && alttext.trim()) {
@@ -439,16 +814,24 @@ export default function BarcodeSvg({
       // 성공 시 에러 콜백 호출 (null)
       if (onError) onError(null);
 
-      // 이미지 크기 계산 (예상값 기반)
-      const estimatedWidth = Math.min(processedValue.length * width * 11 + margin * 2, 400);
-      const estimatedHeight = height + (displayValue ? fontSize + textMargin : 0) + margin * 2;
+      // 이미지 크기 계산 (타입별 설정 기반)
+      const fixedModules = optimalSettings.fixedModules;
+      const modulesPerChar = optimalSettings.modulesPerChar || 11;
+      const totalModules = fixedModules || (processedValue.length * modulesPerChar);
+      const quietZone = optimalSettings.quietZoneMultiplier || 10;
+
+      const estimatedWidth = Math.min(
+        (totalModules + quietZone * 2) * effectiveScale + margin * 2,
+        400
+      );
+      const estimatedHeight = effectiveHeight * 2.835 + (displayValue ? fontSize + textMargin : 0) + margin * 2;
 
       // maxWidth 기준으로 자동 스케일링
       if (estimatedWidth > maxWidth) {
-        const scale = maxWidth / estimatedWidth;
+        const scaleRatio = maxWidth / estimatedWidth;
         setScaledDimensions({
           width: maxWidth,
-          height: Math.round(estimatedHeight * scale),
+          height: Math.round(estimatedHeight * scaleRatio),
         });
       } else {
         setScaledDimensions({

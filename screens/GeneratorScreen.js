@@ -42,7 +42,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
 import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
-import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
+import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -93,11 +93,11 @@ export default function GeneratorScreen() {
   const [barcodeValue, setBarcodeValue] = useState(params.initialBarcodeValue || '');
   const [barcodeError, setBarcodeError] = useState(null);
 
-  // 바코드 스타일 설정
+  // 바코드 스타일 설정 (기본값 개선: 스캔 가능성 향상)
   const [barcodeSettings, setBarcodeSettings] = useState({
-    scale: 2,        // 바코드 너비 스케일 (1-9)
-    height: 80,      // 바코드 높이 (40-120)
-    fontSize: 14,    // 텍스트 크기 (10-20)
+    scale: 3,        // 바코드 너비 스케일 (1-6) - 기본값 상향
+    height: 100,     // 바코드 높이 (50-150) - 기본값 상향
+    fontSize: 14,    // 텍스트 크기 (10-24)
     showText: true,  // 텍스트 표시 여부
     rotate: 'N',     // 회전: N(0°), R(90°), I(180°), L(270°)
     customText: '',  // 바코드 아래 커스텀 텍스트
@@ -951,11 +951,35 @@ export default function GeneratorScreen() {
       let uri;
 
       if (isBarcode) {
-        // 바코드 캡처
-        uri = await captureRef(barcodeRef, {
-          format: 'png',
-          quality: 1,
-        });
+        // 고해상도 바코드 생성 시도
+        try {
+          const highResData = await generateHighResBarcode({
+            bcid: selectedBarcodeFormat,
+            text: finalBarcodeValue,
+            scale: barcodeSettings.scale,
+            height: barcodeSettings.height,
+            includetext: barcodeSettings.showText,
+            textsize: barcodeSettings.fontSize,
+            rotate: barcodeSettings.rotate,
+            alttext: barcodeSettings.customText || undefined,
+            backgroundcolor: 'ffffff',
+            barcolor: '000000',
+          });
+
+          // base64를 파일로 저장
+          const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
+          const fileUri = FileSystem.cacheDirectory + `barcode-share-${Date.now()}.png`;
+          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+            encoding: 'base64',
+          });
+          uri = fileUri;
+        } catch (highResError) {
+          console.warn('High-res barcode generation failed, falling back to captureRef:', highResError);
+          uri = await captureRef(barcodeRef, {
+            format: 'png',
+            quality: 1,
+          });
+        }
       } else {
         // QR 코드 캡처
         const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
@@ -1008,11 +1032,37 @@ export default function GeneratorScreen() {
       let uri;
 
       if (isBarcode) {
-        // 바코드 캡처
-        uri = await captureRef(barcodeRef, {
-          format: 'png',
-          quality: 1,
-        });
+        // 고해상도 바코드 생성 시도
+        try {
+          const highResData = await generateHighResBarcode({
+            bcid: selectedBarcodeFormat,
+            text: finalBarcodeValue,
+            scale: barcodeSettings.scale,
+            height: barcodeSettings.height,
+            includetext: barcodeSettings.showText,
+            textsize: barcodeSettings.fontSize,
+            rotate: barcodeSettings.rotate,
+            alttext: barcodeSettings.customText || undefined,
+            backgroundcolor: 'ffffff',
+            barcolor: '000000',
+          });
+
+          // base64를 파일로 저장
+          const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
+          const fileUri = FileSystem.cacheDirectory + `barcode-hires-${Date.now()}.png`;
+          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+            encoding: 'base64',
+          });
+          uri = fileUri;
+          console.log('High-res barcode saved successfully');
+        } catch (highResError) {
+          console.warn('High-res barcode generation failed, falling back to captureRef:', highResError);
+          // 실패 시 기존 captureRef 방식 사용
+          uri = await captureRef(barcodeRef, {
+            format: 'png',
+            quality: 1,
+          });
+        }
       } else {
         // QR 코드 캡처
         const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
@@ -1897,7 +1947,7 @@ export default function GeneratorScreen() {
                     <Slider
                       style={s.slider}
                       minimumValue={1}
-                      maximumValue={9}
+                      maximumValue={6}
                       step={1}
                       value={barcodeSettings.scale}
                       onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
@@ -1922,8 +1972,8 @@ export default function GeneratorScreen() {
                     </View>
                     <Slider
                       style={s.slider}
-                      minimumValue={40}
-                      maximumValue={120}
+                      minimumValue={50}
+                      maximumValue={150}
                       step={10}
                       value={barcodeSettings.height}
                       onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
