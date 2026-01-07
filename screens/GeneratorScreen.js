@@ -41,6 +41,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
+import QRFrameRenderer from '../components/QRFrameRenderer';
 import QRStylePicker, { QR_STYLE_PRESETS, QR_FRAMES } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
@@ -2320,30 +2321,35 @@ export default function GeneratorScreen() {
                   ]}
                   collapsable={false}
                 >
-                  <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
-                    {useStyledQR ? (
-                      <StyledQRCode
-                        value={qrData}
-                        size={240}
-                        qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
-                        onCapture={(base64) => setCapturedQRBase64(base64)}
-                      />
-                    ) : (
-                      <QRCode
-                        value={qrData}
-                        size={240}
-                        backgroundColor="white"
-                        color="black"
-                      />
-                    )}
-                    {/* 프레임 선택 표시 */}
-                    {selectedFrame && (
-                      <View style={[s.frameIndicator, { backgroundColor: colors.primary }]}>
-                        <Ionicons name="albums" size={12} color="#fff" />
-                        <Text style={s.frameIndicatorText}>{selectedFrame.nameKo || selectedFrame.name}</Text>
-                      </View>
-                    )}
-                  </View>
+                  {selectedFrame ? (
+                    // 프레임이 선택된 경우 - QRFrameRenderer 사용
+                    <QRFrameRenderer
+                      frame={selectedFrame}
+                      qrValue={qrData}
+                      qrStyle={qrStyle}
+                      size={288}
+                      onCapture={(base64) => setCapturedQRBase64(base64)}
+                    />
+                  ) : (
+                    // 프레임이 없는 경우 - 기존 방식
+                    <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
+                      {useStyledQR ? (
+                        <StyledQRCode
+                          value={qrData}
+                          size={240}
+                          qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
+                          onCapture={(base64) => setCapturedQRBase64(base64)}
+                        />
+                      ) : (
+                        <QRCode
+                          value={qrData}
+                          size={240}
+                          backgroundColor="white"
+                          color="black"
+                        />
+                      )}
+                    </View>
+                  )}
                 </Animated.View>
               ) : (
                 <View style={s.emptyState}>
