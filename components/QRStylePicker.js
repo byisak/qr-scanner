@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Rect, G, Defs, ClipPath } from 'react-native-svg';
+import { SvgXml } from 'react-native-svg';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
@@ -22,7 +23,7 @@ import { Colors } from '../constants/Colors';
 import { FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
-import QRFrameRenderer from './QRFrameRenderer';
+import QRFrameRenderer, { FRAME_SVG_DATA } from './QRFrameRenderer';
 
 // QR 프레임 프리셋
 const QR_FRAMES = [
@@ -472,13 +473,21 @@ export default function QRStylePicker({
                 </View>
               ) : (
                 <View style={styles.framePreviewContent}>
-                  {/* 프레임 미리보기 - 심플한 아이콘으로 표시 */}
-                  <View style={[styles.frameThumbnail, { borderColor: frame.previewColor || '#000' }]}>
-                    <View style={[styles.frameQrPlaceholder, { backgroundColor: frame.previewColor || '#000' }]} />
-                    <Text style={[styles.frameLabel, { color: frame.previewColor || '#000' }]}>
-                      {frame.id === 'scan-me' ? 'SCAN ME!' : frame.name}
-                    </Text>
-                  </View>
+                  {/* 프레임 미리보기 - 실제 SVG 사용 */}
+                  {FRAME_SVG_DATA[frame.id] ? (
+                    <SvgXml
+                      xml={FRAME_SVG_DATA[frame.id]}
+                      width={90}
+                      height={90}
+                    />
+                  ) : (
+                    <View style={[styles.frameThumbnail, { borderColor: frame.previewColor || '#000' }]}>
+                      <View style={[styles.frameQrPlaceholder, { backgroundColor: frame.previewColor || '#000' }]} />
+                      <Text style={[styles.frameLabel, { color: frame.previewColor || '#000' }]}>
+                        {frame.name}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
             </View>
