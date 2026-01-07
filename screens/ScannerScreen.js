@@ -2433,7 +2433,16 @@ function ScannerScreen() {
       />
 
       {/* 다중 바코드 감지 시 결과 보기 버튼 */}
-      {pendingMultiScanData && (
+      {pendingMultiScanData && (() => {
+        // 유효한 코드만 필터링하여 개수 계산 (결과 페이지와 동일한 필터링)
+        const parsedBarcodes = JSON.parse(pendingMultiScanData.barcodes || '[]');
+        const validCount = parsedBarcodes.filter(code => {
+          if (!code.value) return false;
+          const value = String(code.value).trim();
+          return value.length > 0 && value !== 'null' && value !== 'undefined';
+        }).length;
+        if (validCount === 0) return null;
+        return (
         <View style={[styles.multiScanButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
           <TouchableOpacity
             style={styles.multiScanButton}
@@ -2442,7 +2451,7 @@ function ScannerScreen() {
           >
             <Ionicons name="qr-code" size={20} color="#fff" />
             <Text style={styles.multiScanButtonText}>
-              {t('scanner.viewMultiResults').replace('{count}', JSON.parse(pendingMultiScanData.barcodes || '[]').length.toString())}
+              {t('scanner.viewMultiResults').replace('{count}', validCount.toString())}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -2453,7 +2462,8 @@ function ScannerScreen() {
             <Ionicons name="close" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
-      )}
+        );
+      })()}
 
       {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 */}
       {lastScannedCode && !resultWindowAutoOpen && (

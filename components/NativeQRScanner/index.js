@@ -150,6 +150,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       width: h.size.width,
       height: h.size.height,
       value: filteredBarcodes[idx]?.value || null,
+      type: filteredBarcodes[idx]?.type || 'qr', // 바코드 타입 추가
       original: h,
     }));
 
@@ -193,6 +194,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
       tracked.y = candidate.current.y;
       tracked.width = candidate.current.width;
       tracked.height = candidate.current.height;
+      tracked.type = candidate.current.type; // 바코드 타입 업데이트
       tracked.lastSeen = now;
 
       // 투표 기반 값 업데이트 - 각 값의 출현 횟수 카운트
@@ -239,6 +241,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
           y: current.y,
           width: current.width,
           height: current.height,
+          type: current.type, // 바코드 타입 저장
           valueCounts: valueCounts,
           bestValue: validValue,
           bestValueCount: validValue ? 1 : 0,
@@ -264,6 +267,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
         ...current.original,
         key: `track-${trackId}`,
         value: tracked?.bestValue || current.value,
+        type: tracked?.type || current.type || 'qr', // 바코드 타입
         voteCount: tracked?.bestValueCount || 0,
         colorIndex: trackId % LABEL_COLORS.length, // 각 바코드별 고유 색상
       };
@@ -286,7 +290,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
             value: highlight.value,
             voteCount: highlight.voteCount || 0,
             colorIndex: highlight.colorIndex,
-            type: 'qr',
+            type: highlight.type || 'qr', // 실제 바코드 타입 사용
             // 바운더리 위치 정보 (화면 좌표)
             bounds: {
               x: highlight.origin.x,
