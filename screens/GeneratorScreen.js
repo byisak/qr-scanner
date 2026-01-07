@@ -1066,15 +1066,22 @@ export default function GeneratorScreen() {
         // 고해상도 레벨에 따라 처리
         if (highResLevel > 0) {
           const levelConfig = HIGH_RES_LEVELS[highResLevel];
-          setSaveProgress({ visible: true, progress: 10, message: `${levelConfig.label} 품질로 생성 중...` });
+          setSaveProgress({ visible: true, progress: 5, message: `${levelConfig.label} 품질로 생성 중...` });
+
+          // 점진적 프로그레스 애니메이션
+          let currentProgress = 5;
+          const progressInterval = setInterval(() => {
+            currentProgress += 2;
+            if (currentProgress < 85) {
+              setSaveProgress(prev => ({ ...prev, progress: currentProgress }));
+            }
+          }, 100);
 
           try {
-            setSaveProgress(prev => ({ ...prev, progress: 30 }));
-
             const highResData = await generateHighResBarcode({
               bcid: selectedBarcodeFormat,
               text: finalBarcodeValue,
-              scale: levelConfig.scale, // 레벨별 스케일 적용
+              scale: levelConfig.scale,
               height: barcodeSettings.height,
               includetext: barcodeSettings.showText,
               textsize: barcodeSettings.fontSize,
@@ -1084,7 +1091,8 @@ export default function GeneratorScreen() {
               barcolor: '000000',
             });
 
-            setSaveProgress(prev => ({ ...prev, progress: 60, message: '갤러리에 저장 중...' }));
+            clearInterval(progressInterval);
+            setSaveProgress(prev => ({ ...prev, progress: 70, message: '갤러리에 저장 중...' }));
 
             if (highResData.startsWith('file:')) {
               uri = highResData;
@@ -1094,6 +1102,9 @@ export default function GeneratorScreen() {
                 ? FileSystem.cacheDirectory
                 : FileSystem.cacheDirectory + '/';
               const fileUri = cacheDir + `barcode-hires-${Date.now()}.png`;
+
+              setSaveProgress(prev => ({ ...prev, progress: 80 }));
+
               await FileSystem.writeAsStringAsync(fileUri, base64Data, {
                 encoding: FileSystem.EncodingType.Base64,
               });
@@ -1104,6 +1115,7 @@ export default function GeneratorScreen() {
 
             setSaveProgress(prev => ({ ...prev, progress: 90 }));
           } catch (highResError) {
+            clearInterval(progressInterval);
             setSaveProgress({ visible: false, progress: 0, message: '' });
             throw highResError;
           }
