@@ -966,28 +966,45 @@ export default function GeneratorScreen() {
             barcolor: '000000',
           });
 
-          // base64를 파일로 저장
-          const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
-          const fileUri = FileSystem.cacheDirectory + `barcode-share-${Date.now()}.png`;
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: 'base64',
-          });
-          uri = fileUri;
+          // highResData가 이미 file URI인 경우
+          if (highResData.startsWith('file:')) {
+            uri = highResData;
+          } else if (highResData.startsWith('data:')) {
+            // base64를 파일로 저장
+            const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
+            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+              ? FileSystem.cacheDirectory
+              : FileSystem.cacheDirectory + '/';
+            const fileUri = cacheDir + `barcode-share-${Date.now()}.png`;
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            uri = fileUri;
+          } else {
+            throw new Error('Invalid highResData format');
+          }
         } catch (highResError) {
-          console.warn('High-res barcode generation failed, falling back to captureRef:', highResError);
-          uri = await captureRef(barcodeRef, {
-            format: 'png',
-            quality: 1,
-          });
+          console.warn('High-res barcode generation failed, falling back to captureRef:', highResError.message);
+          if (barcodeRef.current) {
+            uri = await captureRef(barcodeRef, {
+              format: 'png',
+              quality: 1,
+            });
+          } else {
+            throw new Error('Both high-res generation and captureRef failed');
+          }
         }
       } else {
         // QR 코드 캡처
         const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
         if (useStyledQR && qrBase64) {
           const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-          const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
+          const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+            ? FileSystem.cacheDirectory
+            : FileSystem.cacheDirectory + '/';
+          const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
           await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: 'base64',
+            encoding: FileSystem.EncodingType.Base64,
           });
           uri = fileUri;
         } else {
@@ -1034,6 +1051,13 @@ export default function GeneratorScreen() {
       if (isBarcode) {
         // 고해상도 바코드 생성 시도
         try {
+          console.log('Attempting high-res barcode generation:', {
+            bcid: selectedBarcodeFormat,
+            text: finalBarcodeValue,
+            scale: barcodeSettings.scale,
+            height: barcodeSettings.height,
+          });
+
           const highResData = await generateHighResBarcode({
             bcid: selectedBarcodeFormat,
             text: finalBarcodeValue,
@@ -1047,30 +1071,54 @@ export default function GeneratorScreen() {
             barcolor: '000000',
           });
 
-          // base64를 파일로 저장
-          const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
-          const fileUri = FileSystem.cacheDirectory + `barcode-hires-${Date.now()}.png`;
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: 'base64',
-          });
-          uri = fileUri;
-          console.log('High-res barcode saved successfully');
+          console.log('High-res barcode generated, data type:', typeof highResData, 'length:', highResData?.length);
+
+          // highResData가 이미 file URI인 경우
+          if (highResData.startsWith('file:')) {
+            uri = highResData;
+            console.log('Using file URI directly:', uri);
+          } else if (highResData.startsWith('data:')) {
+            // base64를 파일로 저장
+            const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
+            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+              ? FileSystem.cacheDirectory
+              : FileSystem.cacheDirectory + '/';
+            const fileUri = cacheDir + `barcode-hires-${Date.now()}.png`;
+
+            console.log('Writing base64 to file:', fileUri, 'base64 length:', base64Data.length);
+
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            uri = fileUri;
+            console.log('High-res barcode saved to cache');
+          } else {
+            throw new Error('Invalid highResData format: ' + highResData.substring(0, 50));
+          }
         } catch (highResError) {
-          console.warn('High-res barcode generation failed, falling back to captureRef:', highResError);
+          console.warn('High-res barcode generation failed, falling back to captureRef:', highResError.message);
           // 실패 시 기존 captureRef 방식 사용
-          uri = await captureRef(barcodeRef, {
-            format: 'png',
-            quality: 1,
-          });
+          if (barcodeRef.current) {
+            uri = await captureRef(barcodeRef, {
+              format: 'png',
+              quality: 1,
+            });
+            console.log('Fallback captureRef succeeded:', uri);
+          } else {
+            throw new Error('Both high-res generation and captureRef failed: barcodeRef is null');
+          }
         }
       } else {
         // QR 코드 캡처
         const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
         if (useStyledQR && qrBase64) {
           const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-          const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
+          const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+            ? FileSystem.cacheDirectory
+            : FileSystem.cacheDirectory + '/';
+          const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
           await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: 'base64',
+            encoding: FileSystem.EncodingType.Base64,
           });
           uri = fileUri;
         } else {
@@ -1081,6 +1129,7 @@ export default function GeneratorScreen() {
         }
       }
 
+      console.log('Saving to gallery, uri:', uri);
       await MediaLibrary.saveToLibraryAsync(uri);
 
       Alert.alert(
