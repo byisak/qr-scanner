@@ -11,6 +11,7 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -273,7 +274,10 @@ export default function ProfileSettingsScreen() {
           resetPasswordFields();
         }}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             {/* 모달 헤더 */}
             <View style={styles.modalHeader}>
@@ -379,7 +383,7 @@ export default function ProfileSettingsScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
