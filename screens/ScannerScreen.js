@@ -1179,6 +1179,18 @@ function ScannerScreen() {
           });
           newCodesAdded = true;
           console.log(`[ScannerScreen] Added new code (len=${value.length}): ${value}`);
+
+          // 실시간 서버전송이 활성화되어 있으면 새 코드 추가 시 웹소켓으로 데이터 전송
+          if (realtimeSyncEnabled && activeSessionId) {
+            const success = websocketClient.sendScanData({
+              code: value,
+              timestamp: Date.now(),
+            }, activeSessionId);
+            if (success) {
+              setShowSendMessage(true);
+              setTimeout(() => setShowSendMessage(false), 1000);
+            }
+          }
         } else {
           // 기존 코드의 bounds 업데이트 (위치가 변경될 수 있으므로)
           const existing = scannedCodesRef.current.find(item => item.value === value);
@@ -1211,7 +1223,7 @@ function ScannerScreen() {
       }
       return; // 처리 완료
     }
-  }, [isActive]);
+  }, [isActive, realtimeSyncEnabled, activeSessionId]);
 
   // 감지된 바코드 변경 핸들러 (React 상태 기반 - Worklet 직렬화 우회)
   const handleDetectedBarcodesChange = useCallback((barcodesData) => {
@@ -2133,6 +2145,7 @@ function ScannerScreen() {
       {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
       {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
       <NativeQRScanner
+        key={multiCodeModeEnabled ? 'multi-code-mode' : 'single-code-mode'}
         ref={cameraRef}
         isActive={isActive}
         facing={cameraFacing}
