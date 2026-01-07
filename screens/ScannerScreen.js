@@ -2164,17 +2164,19 @@ function ScannerScreen() {
       />
 
       <View style={styles.overlay} pointerEvents="box-none">
-        {/* 현재 그룹 표시 (클릭 가능) */}
+        {/* 현재 그룹 표시 (클릭 가능) - 글래스모피즘 효과 */}
         <TouchableOpacity
           style={[styles.groupBadge, { top: topOffset }]}
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Ionicons name="folder" size={16} color="#fff" />
-          <Text style={styles.groupBadgeText}>
-            {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
-          </Text>
-          <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
+          <BlurView intensity={80} tint="light" style={styles.groupBadgeBlur}>
+            <Ionicons name="folder" size={16} color={colors.primary} />
+            <Text style={[styles.groupBadgeText, { color: colors.primary }]}>
+              {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={colors.primary} style={{ marginLeft: 4 }} />
+          </BlurView>
         </TouchableOpacity>
 
         {/* 배치 모드 활성 표시 */}
@@ -2291,19 +2293,19 @@ function ScannerScreen() {
         )}
       </TouchableOpacity>
 
-      {/* 실시간 서버 전송 안내 메시지 */}
+      {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
       {realtimeSyncEnabled && !activeSessionId && (
         <View style={[styles.realtimeSyncGuide, { bottom: bottomOffset + 20 }]}>
-          <View style={styles.realtimeSyncGuideContent}>
-            <Ionicons name="information-circle" size={20} color="#fff" />
-            <Text style={styles.realtimeSyncGuideText}>
+          <BlurView intensity={80} tint="light" style={styles.realtimeSyncGuideBlur}>
+            <Ionicons name="information-circle" size={20} color={colors.primary} />
+            <Text style={[styles.realtimeSyncGuideText, { color: colors.text }]}>
               {t('scanner.realtimeSyncGuide') || '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.'}
             </Text>
-          </View>
+          </BlurView>
         </View>
       )}
 
-      {/* 그룹 선택 모달 */}
+      {/* 그룹 선택 모달 - 글래스모피즘 효과 */}
       <Modal
         visible={groupModalVisible}
         transparent={true}
@@ -2315,7 +2317,7 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
+          <BlurView intensity={80} tint="light" style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Ionicons name="folder" size={24} color={colors.primary} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
@@ -2332,8 +2334,8 @@ function ScannerScreen() {
                   key={group.id}
                   style={[
                     styles.groupItem,
-                    { backgroundColor: colors.inputBackground },
-                    currentGroupId === group.id && [styles.groupItemActive, { borderColor: colors.primary }]
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)' },
+                    currentGroupId === group.id && [styles.groupItemActive, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(0,122,255,0.2)' : 'rgba(0,122,255,0.1)' }]
                   ]}
                   onPress={() => handleSelectGroup(group.id, group.name, group.isCloudSync, group.isScanUrlGroup, group.scanUrlId)}
                   activeOpacity={0.7}
@@ -2359,7 +2361,7 @@ function ScannerScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+          </BlurView>
         </TouchableOpacity>
       </Modal>
 
@@ -2530,20 +2532,22 @@ const styles = StyleSheet.create({
   groupBadge: {
     position: 'absolute',
     // top은 인라인 스타일로 동적 설정
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    overflow: 'hidden',
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 5,
   },
+  groupBadgeBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
   groupBadgeText: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 6,
@@ -2616,6 +2620,20 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     // bottom은 인라인 스타일로 동적 설정
+    overflow: 'hidden',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  realtimeSyncGuideBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   realtimeSyncGuideContent: {
     flexDirection: 'row',
@@ -2631,7 +2649,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   realtimeSyncGuideText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 10,
@@ -2756,6 +2773,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
+    elevation: 5,
+  },
+  modalContentBlur: {
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
     elevation: 5,
   },
   modalHeader: {
