@@ -2623,6 +2623,8 @@ const styles = StyleSheet.create({
     // bottom은 인라인 스타일로 동적 설정
     overflow: 'hidden',
     borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 100, 100, 0.7)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
