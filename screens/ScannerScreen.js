@@ -45,7 +45,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 
 // 분리된 컴포넌트
-import ScanAnimation from '../components/ScanAnimation';
+// import ScanAnimation from '../components/ScanAnimation'; // 주석처리: 노란색 코너 애니메이션과 로고
 import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
 import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
@@ -2223,8 +2223,9 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 스캔 로딩 애니메이션 */}
+        {/* 스캔 로딩 애니메이션 - 주석처리
         <ScanAnimation isActive={isActive} />
+        */}
       </View>
 
       {/* 배치 스캔 컨트롤 패널 */}
