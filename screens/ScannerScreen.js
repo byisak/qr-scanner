@@ -2170,12 +2170,12 @@ function ScannerScreen() {
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
-          <BlurView intensity={50} tint="light" style={styles.groupBadgeBlur}>
-            <Ionicons name="folder" size={16} color={colors.text} />
-            <Text style={[styles.groupBadgeText, { color: colors.text }]}>
+          <BlurView intensity={80} tint="light" style={styles.groupBadgeBlur}>
+            <Ionicons name="folder" size={16} color="rgba(255,255,255,0.95)" />
+            <Text style={[styles.groupBadgeText, { color: 'rgba(255,255,255,0.95)' }]}>
               {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
             </Text>
-            <Ionicons name="chevron-down" size={16} color={colors.text} style={{ marginLeft: 4 }} />
+            <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.95)" style={{ marginLeft: 4 }} />
           </BlurView>
         </TouchableOpacity>
 
@@ -2296,9 +2296,9 @@ function ScannerScreen() {
       {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
       {realtimeSyncEnabled && !activeSessionId && (
         <View style={[styles.realtimeSyncGuide, { bottom: bottomOffset + 20 }]}>
-          <BlurView intensity={50} tint="light" style={styles.realtimeSyncGuideBlur}>
-            <Ionicons name="information-circle" size={20} color={colors.text} />
-            <Text style={[styles.realtimeSyncGuideText, { color: colors.text }]}>
+          <BlurView intensity={80} tint="light" style={styles.realtimeSyncGuideBlur}>
+            <Ionicons name="information-circle" size={20} color="rgba(255,255,255,0.95)" />
+            <Text style={[styles.realtimeSyncGuideText, { color: 'rgba(255,255,255,0.95)' }]}>
               {t('scanner.realtimeSyncGuide') || '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.'}
             </Text>
           </BlurView>
@@ -2547,7 +2547,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   groupBadgeText: {
     fontSize: 15,
@@ -2635,7 +2634,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
   },
   realtimeSyncGuideContent: {
     flexDirection: 'row',
