@@ -501,7 +501,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 비밀번호 변경
-  const changePassword = async (currentPassword, newPassword) => {
+  const changePassword = async (currentPassword, newPassword, confirmPassword) => {
     try {
       if (!user) {
         return { success: false, error: 'Not logged in' };
@@ -512,7 +512,7 @@ export const AuthProvider = ({ children }) => {
         const devAccount = DEV_ACCOUNTS.find(acc => acc.email === user.email);
         if (devAccount) {
           if (devAccount.password !== currentPassword) {
-            return { success: false, error: 'Current password is incorrect' };
+            return { success: false, error: 'Current password is incorrect', errorCode: 'AUTH_INVALID_CREDENTIALS' };
           }
           // 개발 모드에서는 실제로 변경하지 않음 (메모리만)
           devAccount.password = newPassword;
@@ -532,7 +532,7 @@ export const AuthProvider = ({ children }) => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
       });
 
       // JSON 파싱 에러 처리
@@ -547,7 +547,8 @@ export const AuthProvider = ({ children }) => {
       if (!response.ok) {
         return {
           success: false,
-          error: data.error?.message || data.message || 'Password change failed'
+          error: data.error?.message || data.message || 'Password change failed',
+          errorCode: data.error?.code || null
         };
       }
 

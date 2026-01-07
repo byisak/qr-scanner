@@ -62,6 +62,23 @@ export default function ProfileSettingsScreen() {
     setShowConfirmPassword(false);
   };
 
+  // 비밀번호 유효성 검사 함수
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      return { valid: false, message: t('auth.errorPasswordMin8') || '비밀번호는 최소 8자 이상이어야 합니다.' };
+    }
+    if (password.length > 100) {
+      return { valid: false, message: t('auth.errorPasswordMax100') || '비밀번호는 100자를 초과할 수 없습니다.' };
+    }
+    if (!/[A-Za-z]/.test(password)) {
+      return { valid: false, message: t('auth.errorPasswordLetter') || '비밀번호에 영문자를 포함해야 합니다.' };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { valid: false, message: t('auth.errorPasswordNumber') || '비밀번호에 숫자를 포함해야 합니다.' };
+    }
+    return { valid: true, message: null };
+  };
+
   const handleChangePassword = async () => {
     // 유효성 검사
     if (!currentPassword) {
@@ -72,10 +89,14 @@ export default function ProfileSettingsScreen() {
       Alert.alert(t('settings.error'), t('auth.errorNewPasswordRequired') || '새 비밀번호를 입력해주세요');
       return;
     }
-    if (newPassword.length < 6) {
-      Alert.alert(t('settings.error'), t('auth.errorPasswordLength') || '비밀번호는 6자 이상이어야 합니다');
+
+    // 새 비밀번호 강도 검사
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
+      Alert.alert(t('settings.error'), validation.message);
       return;
     }
+
     if (newPassword !== confirmPassword) {
       Alert.alert(t('settings.error'), t('auth.errorPasswordMismatch') || '새 비밀번호가 일치하지 않습니다');
       return;
@@ -86,15 +107,33 @@ export default function ProfileSettingsScreen() {
     }
 
     setIsChangingPassword(true);
-    const result = await changePassword(currentPassword, newPassword);
+    const result = await changePassword(currentPassword, newPassword, confirmPassword);
     setIsChangingPassword(false);
 
     if (result.success) {
       setPasswordModalVisible(false);
       resetPasswordFields();
-      Alert.alert(t('settings.success'), t('auth.passwordChangeSuccess') || '비밀번호가 변경되었습니다');
+      // 성공 시 로그아웃 후 로그인 화면으로 이동
+      Alert.alert(
+        t('settings.success'),
+        t('auth.passwordChangeSuccessRelogin') || '비밀번호가 변경되었습니다. 다시 로그인해주세요.',
+        [
+          {
+            text: t('common.confirm'),
+            onPress: async () => {
+              await logout();
+              router.replace('/');
+            },
+          },
+        ]
+      );
     } else {
-      Alert.alert(t('settings.error'), result.error || t('auth.passwordChangeFailed') || '비밀번호 변경에 실패했습니다');
+      // 에러 코드별 처리
+      let errorMessage = result.error || t('auth.passwordChangeFailed') || '비밀번호 변경에 실패했습니다';
+      if (result.errorCode === 'AUTH_INVALID_CREDENTIALS') {
+        errorMessage = t('auth.errorCurrentPasswordWrong') || '현재 비밀번호가 올바르지 않습니다.';
+      }
+      Alert.alert(t('settings.error'), errorMessage);
     }
   };
 
