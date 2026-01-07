@@ -525,8 +525,13 @@ export const AuthProvider = ({ children }) => {
       }
 
       const token = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+      const requestUrl = `${API_URL}/change-password`;
 
-      const response = await fetch(`${API_URL}/change-password`, {
+      console.log('[Auth] ===== 비밀번호 변경 요청 =====');
+      console.log('[Auth] URL:', requestUrl);
+      console.log('[Auth] Method: PUT');
+
+      const response = await fetch(requestUrl, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -535,13 +540,25 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
       });
 
+      console.log('[Auth] 응답 상태:', response.status, response.statusText);
+
       // JSON 파싱 에러 처리
       let data;
+      const contentType = response.headers.get('content-type');
+      console.log('[Auth] Content-Type:', contentType);
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('[Auth] 비-JSON 응답:', textResponse.substring(0, 200));
+        return { success: false, error: '서버 응답 오류. 잠시 후 다시 시도해주세요.' };
+      }
+
       try {
         data = await response.json();
+        console.log('[Auth] 응답 데이터:', JSON.stringify(data, null, 2));
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
-        return { success: false, error: 'Server error. Please try again later.' };
+        return { success: false, error: '서버 응답 파싱 오류.' };
       }
 
       if (!response.ok) {
