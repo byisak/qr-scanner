@@ -2297,7 +2297,7 @@ function ScannerScreen() {
       {realtimeSyncEnabled && !activeSessionId && (
         <View style={[styles.realtimeSyncGuide, { bottom: bottomOffset + 20 }]}>
           <BlurView intensity={80} tint="light" style={styles.realtimeSyncGuideBlur}>
-            <Ionicons name="information-circle" size={20} color="rgba(255,255,255,0.95)" />
+            <Ionicons name="information-circle" size={20} color="rgba(255, 130, 130, 0.95)" />
             <Text style={[styles.realtimeSyncGuideText, { color: 'rgba(255,255,255,0.95)' }]}>
               {t('scanner.realtimeSyncGuide') || '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.'}
             </Text>
@@ -2623,8 +2623,6 @@ const styles = StyleSheet.create({
     // bottom은 인라인 스타일로 동적 설정
     overflow: 'hidden',
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 100, 100, 0.3)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
