@@ -104,9 +104,18 @@ export default function GeneratorScreen() {
   });
   const [barcodeSettingsExpanded, setBarcodeSettingsExpanded] = useState(false);
 
-  // 고해상도 저장 설정
-  const [highResSave, setHighResSave] = useState(false);
+  // 고해상도 저장 설정 (0: 빠른저장, 1-4: 고해상도 레벨)
+  const [highResLevel, setHighResLevel] = useState(0);
   const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '' });
+
+  // 고해상도 레벨별 설정
+  const HIGH_RES_LEVELS = [
+    { level: 0, label: '빠름', scale: 0, description: '화면 캡처', time: '즉시' },
+    { level: 1, label: '보통', scale: 4, description: '일반 인쇄', time: '~1초' },
+    { level: 2, label: '고급', scale: 6, description: '고품질', time: '~2초' },
+    { level: 3, label: '최고', scale: 8, description: '최고 품질', time: '~3초' },
+    { level: 4, label: '인쇄', scale: 12, description: '대형 인쇄', time: '~5초' },
+  ];
 
   // 바코드 타입 즐겨찾기 및 모달
   const [favoriteBarcodes, setFavoriteBarcodes] = useState([]); // bcid 목록
@@ -1053,9 +1062,10 @@ export default function GeneratorScreen() {
       let uri;
 
       if (isBarcode) {
-        // 고해상도 저장이 활성화된 경우
-        if (highResSave) {
-          setSaveProgress({ visible: true, progress: 10, message: t('generator.generatingHighRes') || '고해상도 생성 중...' });
+        // 고해상도 레벨에 따라 처리
+        if (highResLevel > 0) {
+          const levelConfig = HIGH_RES_LEVELS[highResLevel];
+          setSaveProgress({ visible: true, progress: 10, message: `${levelConfig.label} 품질로 생성 중...` });
 
           try {
             setSaveProgress(prev => ({ ...prev, progress: 30 }));
@@ -1063,7 +1073,7 @@ export default function GeneratorScreen() {
             const highResData = await generateHighResBarcode({
               bcid: selectedBarcodeFormat,
               text: finalBarcodeValue,
-              scale: barcodeSettings.scale,
+              scale: levelConfig.scale, // 레벨별 스케일 적용
               height: barcodeSettings.height,
               includetext: barcodeSettings.showText,
               textsize: barcodeSettings.fontSize,
@@ -1073,7 +1083,7 @@ export default function GeneratorScreen() {
               barcolor: '000000',
             });
 
-            setSaveProgress(prev => ({ ...prev, progress: 60, message: t('generator.savingToGallery') || '갤러리에 저장 중...' }));
+            setSaveProgress(prev => ({ ...prev, progress: 60, message: '갤러리에 저장 중...' }));
 
             if (highResData.startsWith('file:')) {
               uri = highResData;
@@ -1097,7 +1107,7 @@ export default function GeneratorScreen() {
             throw highResError;
           }
         } else {
-          // 일반 저장 (captureRef 사용 - 빠름)
+          // 빠른 저장 (captureRef 사용)
           if (barcodeRef.current) {
             uri = await captureRef(barcodeRef, {
               format: 'png',
@@ -1130,7 +1140,7 @@ export default function GeneratorScreen() {
 
       await MediaLibrary.saveToLibraryAsync(uri);
 
-      if (highResSave && isBarcode) {
+      if (highResLevel > 0 && isBarcode) {
         setSaveProgress(prev => ({ ...prev, progress: 100 }));
         setTimeout(() => {
           setSaveProgress({ visible: false, progress: 0, message: '' });
@@ -2157,38 +2167,63 @@ export default function GeneratorScreen() {
 
                   <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 고해상도 저장 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="image-outline" size={18} color={colors.primary} />
-                      <View style={{ flex: 1 }}>
+                  {/* 저장 품질 (5단계) */}
+                  <View style={s.settingItemVertical}>
+                    <View style={s.settingLabelRowSpaced}>
+                      <View style={s.settingLabelRow}>
+                        <Ionicons name="image-outline" size={18} color={colors.primary} />
                         <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.highResSave') || '고해상도 저장'}
-                        </Text>
-                        <Text style={[s.settingHint, { color: colors.textTertiary }]}>
-                          {t('generator.highResSaveHint') || '품질↑ 저장시간↑'}
+                          {t('generator.saveQuality') || '저장 품질'}
                         </Text>
                       </View>
+                      <Text style={[s.sliderValue, { color: colors.primary }]}>
+                        {HIGH_RES_LEVELS[highResLevel].label}
+                      </Text>
                     </View>
-                    <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <TouchableOpacity
-                        style={[
-                          s.toggleButton,
-                          highResSave && { backgroundColor: colors.primary },
-                        ]}
-                        onPress={() => setHighResSave(true)}
-                      >
-                        <Text style={[s.toggleText, { color: highResSave ? '#fff' : colors.text }]}>ON</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          s.toggleButton,
-                          !highResSave && { backgroundColor: colors.primary },
-                        ]}
-                        onPress={() => setHighResSave(false)}
-                      >
-                        <Text style={[s.toggleText, { color: !highResSave ? '#fff' : colors.text }]}>OFF</Text>
-                      </TouchableOpacity>
+
+                    {/* 5단계 버튼 */}
+                    <View style={[s.qualityLevelContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {HIGH_RES_LEVELS.map((item) => (
+                        <TouchableOpacity
+                          key={`quality-${item.level}`}
+                          style={[
+                            s.qualityLevelBtn,
+                            highResLevel === item.level && { backgroundColor: colors.primary },
+                          ]}
+                          onPress={() => setHighResLevel(item.level)}
+                        >
+                          <Text style={[
+                            s.qualityLevelText,
+                            { color: highResLevel === item.level ? '#fff' : colors.text }
+                          ]}>
+                            {item.level === 0 ? '빠름' : item.level}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* 선택된 레벨 정보 */}
+                    <View style={[s.qualityInfoRow, { backgroundColor: colors.background }]}>
+                      <View style={s.qualityInfoItem}>
+                        <Ionicons name="document-outline" size={14} color={colors.textSecondary} />
+                        <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                          {HIGH_RES_LEVELS[highResLevel].description}
+                        </Text>
+                      </View>
+                      <View style={s.qualityInfoItem}>
+                        <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                        <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                          {HIGH_RES_LEVELS[highResLevel].time}
+                        </Text>
+                      </View>
+                      {highResLevel > 0 && (
+                        <View style={s.qualityInfoItem}>
+                          <Ionicons name="resize-outline" size={14} color={colors.textSecondary} />
+                          <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                            ~{HIGH_RES_LEVELS[highResLevel].scale * 100}px
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -2977,6 +3012,39 @@ const s = StyleSheet.create({
   settingHint: {
     fontSize: 11,
     marginTop: 2,
+  },
+  qualityLevelContainer: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  qualityLevelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qualityLevelText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  qualityInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  qualityInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  qualityInfoText: {
+    fontSize: 12,
   },
   settingDivider: {
     height: 1,

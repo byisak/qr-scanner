@@ -449,9 +449,12 @@ export const generateHighResBarcode = async (options) => {
   const userHeight = options.height || 100;
   const effectiveHeight = userHeight > 50 ? userHeight / 10 : userHeight;
 
-  // 저장용 스케일: 미리보기보다 2배 정도만 (너무 높으면 느려짐)
-  const baseScale = options.scale || settings.recommendedScale;
-  const saveScale = Math.min(Math.max(baseScale * 2, 4), 8); // 4~8 범위로 제한
+  // 스케일: 전달된 값을 직접 사용 (레벨별 스케일)
+  const saveScale = options.scale || 6;
+
+  // 스케일에 따른 패딩 조정
+  const paddingWidth = Math.max(10, Math.round(saveScale * 2));
+  const paddingHeight = Math.max(8, Math.round(saveScale * 1.5));
 
   const highResOptions = {
     bcid: options.bcid,
@@ -460,11 +463,11 @@ export const generateHighResBarcode = async (options) => {
     height: Math.max(effectiveHeight, settings.defaultHeight || 15),
     includetext: options.includetext !== false,
     textxalign: 'center',
-    textsize: options.textsize || 14,
+    textsize: Math.max(options.textsize || 14, saveScale),
     backgroundcolor: (options.backgroundcolor || 'ffffff').replace('#', ''),
     barcolor: (options.barcolor || '000000').replace('#', ''),
-    paddingwidth: 20,
-    paddingheight: 15,
+    paddingwidth: paddingWidth,
+    paddingheight: paddingHeight,
     rotate: options.rotate || 'N',
   };
 
