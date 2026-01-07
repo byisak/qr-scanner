@@ -1836,12 +1836,12 @@ export default function GeneratorScreen() {
             >
               {displayedBarcodeTypes.map((format) => {
                 const isSelected = selectedBarcodeFormat === format.bcid;
-                const catInfo = BARCODE_CATEGORIES[format.category] || {};
                 return (
                   <TouchableOpacity
                     key={format.bcid}
                     style={[
                       s.typeButton,
+                      s.typeButtonNoIcon,
                       {
                         backgroundColor: isSelected ? colors.primary : colors.surface,
                         borderColor: isSelected ? colors.primary : colors.border,
@@ -1850,18 +1850,8 @@ export default function GeneratorScreen() {
                     onPress={() => handleBarcodeFormatSelect(format.bcid)}
                     activeOpacity={0.7}
                   >
-                    <LinearGradient
-                      colors={isSelected ? ['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)'] : (catInfo.gradient || ['#667eea', '#764ba2'])}
-                      style={s.typeIconContainer}
-                    >
-                      <Ionicons
-                        name={catInfo.icon || 'barcode-outline'}
-                        size={22}
-                        color="#fff"
-                      />
-                    </LinearGradient>
                     <Text style={[
-                      s.typeText,
+                      s.typeTextMain,
                       { color: isSelected ? '#fff' : colors.text, fontFamily: fonts.semiBold }
                     ]}>
                       {format.name}
@@ -2793,15 +2783,12 @@ export default function GeneratorScreen() {
                   const catInfo = BARCODE_CATEGORIES[category] || {};
                   return (
                     <View key={category} style={s.categorySection}>
-                      <View style={s.categoryHeader}>
-                        <LinearGradient
-                          colors={catInfo.gradient || ['#667eea', '#764ba2']}
-                          style={s.categoryIcon}
-                        >
-                          <Ionicons name={catInfo.icon || 'barcode-outline'} size={16} color="#fff" />
-                        </LinearGradient>
-                        <Text style={[s.categoryTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                          {t(`generator.barcodeCategories.${category}`) || catInfo.name || category} ({barcodes.length})
+                      <View style={s.categoryHeaderNoIcon}>
+                        <Text style={[s.categoryTitleMain, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                          {t(`generator.barcodeCategories.${category}`) || catInfo.name || category}
+                        </Text>
+                        <Text style={[s.categoryCount, { color: colors.textSecondary }]}>
+                          {barcodes.length}
                         </Text>
                       </View>
                       <View style={s.categoryGrid}>
@@ -2866,28 +2853,20 @@ export default function GeneratorScreen() {
                                 )}
                               </TouchableOpacity>
 
-                              <LinearGradient
-                                colors={catInfo.gradient || ['#667eea', '#764ba2']}
-                                style={[s.modalIconGradient, isBarcodeLocked && { opacity: 0.5 }]}
-                              >
-                                <Ionicons
-                                  name={catInfo.icon || 'barcode-outline'}
-                                  size={22}
-                                  color="#fff"
-                                />
-                              </LinearGradient>
-                              <Text style={[
-                                s.modalBarcodeTitle,
-                                { color: isSelected ? '#fff' : isBarcodeLocked ? colors.textTertiary : colors.text }
-                              ]} numberOfLines={1}>
-                                {format.name}
-                              </Text>
-                              <Text style={[
-                                s.modalBarcodeDesc,
-                                { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
-                              ]} numberOfLines={2}>
-                                {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
-                              </Text>
+                              <View style={s.modalBarcodeTextContainer}>
+                                <Text style={[
+                                  s.modalBarcodeTitleMain,
+                                  { color: isSelected ? '#fff' : isBarcodeLocked ? colors.textTertiary : colors.text, fontFamily: fonts.semiBold }
+                                ]} numberOfLines={1}>
+                                  {format.name}
+                                </Text>
+                                <Text style={[
+                                  s.modalBarcodeDescSmall,
+                                  { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
+                                ]} numberOfLines={2}>
+                                  {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
+                                </Text>
+                              </View>
                             </TouchableOpacity>
                           );
                         })}
@@ -3269,6 +3248,18 @@ const s = StyleSheet.create({
     fontSize: 10,
     marginTop: 2,
     letterSpacing: -0.2,
+  },
+  typeButtonNoIcon: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    minWidth: 80,
+    gap: 4,
+  },
+  typeTextMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    textAlign: 'center',
   },
   formSection: {
     marginHorizontal: 20,
@@ -3680,6 +3671,21 @@ const s = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.2,
   },
+  categoryHeaderNoIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  categoryTitleMain: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  categoryCount: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -3715,6 +3721,23 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   modalBarcodeDesc: {
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  modalBarcodeTextContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+  },
+  modalBarcodeTitleMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  modalBarcodeDescSmall: {
     fontSize: 11,
     textAlign: 'center',
     lineHeight: 14,
