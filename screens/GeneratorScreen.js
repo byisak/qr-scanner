@@ -2182,31 +2182,35 @@ export default function GeneratorScreen() {
                         />
                       </View>
 
-                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                      <View style={s.settingItemVertical}>
-                        <View style={s.settingLabelRow}>
-                          <Ionicons name="create-outline" size={18} color={colors.primary} />
-                          <Text style={[s.settingLabel, { color: colors.text }]}>
-                            {t('generator.barcodeCustomText') || '표시 텍스트'}
-                          </Text>
+                      {/* 숫자 표시 OFF일 때만 표시 텍스트 입력 표시 */}
+                      {!barcodeSettings.showText && (
+                        <>
+                          <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                          <View style={s.settingItemVertical}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="create-outline" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeCustomText') || '표시 텍스트'}
+                            </Text>
+                          </View>
+                          <TextInput
+                            style={[
+                              s.customTextInput,
+                              {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.border,
+                                color: colors.text,
+                                marginTop: 8,
+                              }
+                            ]}
+                            placeholder={t('generator.barcodeCustomTextPlaceholder') || '비워두면 바코드 값 표시'}
+                            placeholderTextColor={colors.textTertiary}
+                            value={barcodeSettings.customText}
+                            onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
+                          />
                         </View>
-                        <TextInput
-                          style={[
-                            s.customTextInput,
-                            {
-                              backgroundColor: colors.surface,
-                              borderColor: colors.border,
-                              color: colors.text,
-                              marginTop: 8,
-                            }
-                          ]}
-                          placeholder={t('generator.barcodeCustomTextPlaceholder') || '비워두면 바코드 값 표시'}
-                          placeholderTextColor={colors.textTertiary}
-                          value={barcodeSettings.customText}
-                          onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
-                        />
-                      </View>
+                        </>
+                      )}
                     </>
                   )}
 
