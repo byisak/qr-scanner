@@ -961,7 +961,7 @@ export default function RealtimeSyncSettingsScreen() {
             )}
           </View>
 
-          {/* 구독 플랜 안내 */}
+          {/* 구독 플랜 안내 - 임시 주석 처리
           <View style={[styles.section, { backgroundColor: colors.surface, marginTop: 16 }]}>
             <View style={styles.planHeader}>
               <Ionicons name="diamond-outline" size={24} color={colors.primary} />
@@ -973,7 +973,6 @@ export default function RealtimeSyncSettingsScreen() {
               {t('settings.subscriptionPlansDesc')}
             </Text>
 
-            {/* 무료 플랜 안내 박스 */}
             <View style={[styles.freePlanBox, { backgroundColor: colors.success + '15' }]}>
               <Ionicons name="gift-outline" size={20} color={colors.success} />
               <Text style={[styles.freePlanText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
@@ -981,9 +980,7 @@ export default function RealtimeSyncSettingsScreen() {
               </Text>
             </View>
 
-            {/* 플랜 비교 테이블 */}
             <View style={styles.planTableContainer}>
-              {/* 테이블 헤더 */}
               <View style={[styles.planTableRow, styles.planTableHeader, { borderBottomColor: colors.borderLight }]}>
                 <View style={[styles.planTableCell, styles.planTableLabelCell]}>
                   <Text style={[styles.planTableHeaderText, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
@@ -1002,7 +999,6 @@ export default function RealtimeSyncSettingsScreen() {
                 </View>
               </View>
 
-              {/* 세션 수 */}
               <View style={[styles.planTableRow, { borderBottomColor: colors.borderLight }]}>
                 <View style={[styles.planTableCell, styles.planTableLabelCell]}>
                   <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
@@ -1021,7 +1017,6 @@ export default function RealtimeSyncSettingsScreen() {
                 </View>
               </View>
 
-              {/* 일일 전송 */}
               <View style={[styles.planTableRow, { borderBottomColor: colors.borderLight }]}>
                 <View style={[styles.planTableCell, styles.planTableLabelCell]}>
                   <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
@@ -1040,7 +1035,6 @@ export default function RealtimeSyncSettingsScreen() {
                 </View>
               </View>
 
-              {/* 데이터 보관 */}
               <View style={[styles.planTableRow, { borderBottomColor: colors.borderLight }]}>
                 <View style={[styles.planTableCell, styles.planTableLabelCell]}>
                   <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
@@ -1059,7 +1053,6 @@ export default function RealtimeSyncSettingsScreen() {
                 </View>
               </View>
 
-              {/* 가격 */}
               <View style={[styles.planTableRow, styles.planTableFooter]}>
                 <View style={[styles.planTableCell, styles.planTableLabelCell]}>
                   <Text style={[styles.planTableLabel, { color: colors.text, fontFamily: fonts.medium }]}>
@@ -1086,6 +1079,7 @@ export default function RealtimeSyncSettingsScreen() {
               </View>
             </View>
           </View>
+          */}
         </ScrollView>
       </TouchableWithoutFeedback>
       )}
