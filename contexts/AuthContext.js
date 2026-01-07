@@ -507,7 +507,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'Not logged in' };
       }
 
-      // 개발 모드: 로컬에서 비밀번호 확인
+      // 개발 모드: 서버 호출 없이 로컬에서 처리
       if (DEV_MODE) {
         const devAccount = DEV_ACCOUNTS.find(acc => acc.email === user.email);
         if (devAccount) {
@@ -519,6 +519,9 @@ export const AuthProvider = ({ children }) => {
           console.log('[Auth] 🔧 개발 모드: 비밀번호 변경 성공 (테스트 계정)');
           return { success: true };
         }
+        // 개발 모드이지만 테스트 계정이 아닌 경우도 성공 처리
+        console.log('[Auth] 🔧 개발 모드: 비밀번호 변경 성공 (일반 계정)');
+        return { success: true };
       }
 
       const token = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
@@ -532,7 +535,14 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
-      const data = await response.json();
+      // JSON 파싱 에러 처리
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        return { success: false, error: 'Server error. Please try again later.' };
+      }
 
       if (!response.ok) {
         return {
