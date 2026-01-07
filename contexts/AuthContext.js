@@ -15,7 +15,7 @@ const API_URL = `${config.serverUrl}/api/auth`;
 // ============================================================
 // 🔧 개발 모드 설정 (배포 시 false로 변경)
 // ============================================================
-const DEV_MODE = true; // 배포 시 false로 변경하거나 이 블록 주석 처리
+const DEV_MODE = false; // 실제 백엔드 API 사용
 
 // 개발용 테스트 계정 (DEV_MODE가 true일 때만 사용됨)
 const DEV_ACCOUNTS = [
