@@ -14,7 +14,9 @@ import {
   Image,
   ActivityIndicator,
   Linking,
+  ActionSheetIOS,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 // Vision Camera 사용 (네이티브 ZXing 기반으로 인식률 향상)
 import { Camera } from 'react-native-vision-camera';
 import { NativeQRScanner, useNativeCamera } from '../components/NativeQRScanner';
@@ -1758,6 +1760,32 @@ function ScannerScreen() {
     setBatchScannedItems([]);
   }, []);
 
+  // 네이티브 드롭다운으로 그룹 선택 표시
+  const showGroupPicker = useCallback(() => {
+    if (Platform.OS === 'ios') {
+      // iOS: ActionSheetIOS 사용
+      const options = [...displayGroups.map(g => g.name), t('common.cancel')];
+      const cancelButtonIndex = options.length - 1;
+
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          cancelButtonIndex,
+          title: t('groupEdit.selectGroup'),
+        },
+        (buttonIndex) => {
+          if (buttonIndex !== cancelButtonIndex && buttonIndex < displayGroups.length) {
+            const selectedGroup = displayGroups[buttonIndex];
+            handleSelectGroup(selectedGroup.id, selectedGroup.name, selectedGroup.isCloudSync, selectedGroup.isScanUrlGroup, selectedGroup.scanUrlId);
+          }
+        }
+      );
+    } else {
+      // Android: 기존 모달 사용 (Picker 모달로 변경)
+      setGroupModalVisible(true);
+    }
+  }, [displayGroups, t]);
+
   // 그룹 선택 핸들러
   const handleSelectGroup = useCallback(async (groupId, groupName, isCloudSync = false, isScanUrlGroup = false, scanUrlId = null) => {
     try {
@@ -1977,7 +2005,7 @@ function ScannerScreen() {
         {/* 현재 그룹 표시 (클릭 가능) */}
         <TouchableOpacity
           style={[styles.groupBadge, { top: topOffset }]}
-          onPress={() => setGroupModalVisible(true)}
+          onPress={showGroupPicker}
           activeOpacity={0.8}
         >
           <Ionicons name="folder" size={16} color="#fff" />
@@ -2113,7 +2141,7 @@ function ScannerScreen() {
         </View>
       )}
 
-      {/* 그룹 선택 모달 */}
+      {/* 그룹 선택 모달 (Android용 네이티브 Picker) */}
       <Modal
         visible={groupModalVisible}
         transparent={true}
@@ -2125,7 +2153,7 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
+          <View style={[styles.pickerModalContent, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Ionicons name="folder" size={24} color={colors.primary} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
@@ -2136,39 +2164,26 @@ function ScannerScreen() {
                 <Ionicons name="close" size={24} color={colors.textTertiary} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.groupList}>
+            <Picker
+              selectedValue={currentGroupId}
+              onValueChange={(itemValue) => {
+                const selectedGroup = displayGroups.find(g => g.id === itemValue);
+                if (selectedGroup) {
+                  handleSelectGroup(selectedGroup.id, selectedGroup.name, selectedGroup.isCloudSync, selectedGroup.isScanUrlGroup, selectedGroup.scanUrlId);
+                }
+              }}
+              style={{ color: colors.text }}
+              dropdownIconColor={colors.text}
+            >
               {displayGroups.map((group) => (
-                <TouchableOpacity
+                <Picker.Item
                   key={group.id}
-                  style={[
-                    styles.groupItem,
-                    { backgroundColor: colors.inputBackground },
-                    currentGroupId === group.id && [styles.groupItemActive, { borderColor: colors.primary }]
-                  ]}
-                  onPress={() => handleSelectGroup(group.id, group.name, group.isCloudSync, group.isScanUrlGroup, group.scanUrlId)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.groupItemContent}>
-                    {group.isCloudSync && (
-                      <Ionicons name="cloud" size={18} color={colors.primary} style={{ marginRight: 8 }} />
-                    )}
-                    {group.isScanUrlGroup && (
-                      <Ionicons name="link" size={18} color={colors.success} style={{ marginRight: 8 }} />
-                    )}
-                    <Text style={[
-                      styles.groupItemText,
-                      { color: colors.text },
-                      currentGroupId === group.id && { color: colors.primary }
-                    ]}>
-                      {group.name}
-                    </Text>
-                  </View>
-                  {currentGroupId === group.id && (
-                    <Ionicons name="checkmark" size={24} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
+                  label={`${group.isCloudSync ? '☁️ ' : ''}${group.isScanUrlGroup ? '🔗 ' : ''}${group.name}`}
+                  value={group.id}
+                  color={colors.text}
+                />
               ))}
-            </ScrollView>
+            </Picker>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -2528,6 +2543,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 5,
+  },
+  pickerModalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+    paddingBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
