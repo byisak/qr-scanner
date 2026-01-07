@@ -1067,6 +1067,9 @@ export default function GeneratorScreen() {
       return;
     }
 
+    // 저장 모달 즉시 표시
+    setSaveProgress({ visible: true, progress: 0, message: '' });
+
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -1074,6 +1077,7 @@ export default function GeneratorScreen() {
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
+        setSaveProgress({ visible: false, progress: 0, message: '' });
         Alert.alert(t('common.error'), 'Permission to access media library is required');
         return;
       }
@@ -1083,19 +1087,8 @@ export default function GeneratorScreen() {
       if (isBarcode) {
         // 고해상도 레벨에 따라 처리
         if (highResLevel > 0) {
-          const levelConfig = HIGH_RES_LEVELS[highResLevel];
-          setSaveProgress({ visible: true, progress: 5, message: `${levelConfig.label} 품질로 생성 중...` });
-
-          // 점진적 프로그레스 애니메이션
-          let currentProgress = 5;
-          const progressInterval = setInterval(() => {
-            currentProgress += 2;
-            if (currentProgress < 85) {
-              setSaveProgress(prev => ({ ...prev, progress: currentProgress }));
-            }
-          }, 100);
-
           try {
+            const levelConfig = HIGH_RES_LEVELS[highResLevel];
             const highResData = await generateHighResBarcode({
               bcid: selectedBarcodeFormat,
               text: finalBarcodeValue,
@@ -1109,9 +1102,6 @@ export default function GeneratorScreen() {
               barcolor: '000000',
             });
 
-            clearInterval(progressInterval);
-            setSaveProgress(prev => ({ ...prev, progress: 70, message: '갤러리에 저장 중...' }));
-
             if (highResData.startsWith('file:')) {
               uri = highResData;
             } else if (highResData.startsWith('data:')) {
@@ -1121,8 +1111,6 @@ export default function GeneratorScreen() {
                 : FileSystem.cacheDirectory + '/';
               const fileUri = cacheDir + `barcode-hires-${Date.now()}.png`;
 
-              setSaveProgress(prev => ({ ...prev, progress: 80 }));
-
               await FileSystem.writeAsStringAsync(fileUri, base64Data, {
                 encoding: FileSystem.EncodingType.Base64,
               });
@@ -1130,10 +1118,7 @@ export default function GeneratorScreen() {
             } else {
               throw new Error('Invalid highResData format');
             }
-
-            setSaveProgress(prev => ({ ...prev, progress: 90 }));
           } catch (highResError) {
-            clearInterval(progressInterval);
             setSaveProgress({ visible: false, progress: 0, message: '' });
             throw highResError;
           }
@@ -1171,12 +1156,8 @@ export default function GeneratorScreen() {
 
       await MediaLibrary.saveToLibraryAsync(uri);
 
-      if (highResLevel > 0 && isBarcode) {
-        setSaveProgress(prev => ({ ...prev, progress: 100 }));
-        setTimeout(() => {
-          setSaveProgress({ visible: false, progress: 0, message: '' });
-        }, 300);
-      }
+      // 프로그레스 모달 닫기
+      setSaveProgress({ visible: false, progress: 0, message: '' });
 
       Alert.alert(
         '✓ ' + t('generator.saveSuccess'),
