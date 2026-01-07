@@ -41,7 +41,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode from '../components/StyledQRCode';
-import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
+import QRStylePicker, { QR_STYLE_PRESETS, QR_FRAMES } from '../components/QRStylePicker';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -361,6 +361,7 @@ export default function GeneratorScreen() {
   const [capturedQRBase64, setCapturedQRBase64] = useState(null);
   const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
   const [logoImage, setLogoImage] = useState(null); // 로고 이미지 base64
+  const [selectedFrame, setSelectedFrame] = useState(null); // 선택된 QR 프레임
 
   // Form data for each type
   const [formData, setFormData] = useState({
@@ -2335,6 +2336,13 @@ export default function GeneratorScreen() {
                         color="black"
                       />
                     )}
+                    {/* 프레임 선택 표시 */}
+                    {selectedFrame && (
+                      <View style={[s.frameIndicator, { backgroundColor: colors.primary }]}>
+                        <Ionicons name="albums" size={12} color="#fff" />
+                        <Text style={s.frameIndicatorText}>{selectedFrame.nameKo || selectedFrame.name}</Text>
+                      </View>
+                    )}
                   </View>
                 </Animated.View>
               ) : (
@@ -2547,6 +2555,8 @@ export default function GeneratorScreen() {
         logoImage={logoImage}
         onPickLogo={handlePickLogo}
         onRemoveLogo={handleRemoveLogo}
+        selectedFrame={selectedFrame}
+        onFrameChange={setSelectedFrame}
       />
 
       {/* QR 타입 순서 변경 모달 */}
@@ -3418,6 +3428,23 @@ const s = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
+    position: 'relative',
+  },
+  frameIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  frameIndicatorText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
