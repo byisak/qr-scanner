@@ -104,6 +104,10 @@ export default function GeneratorScreen() {
   });
   const [barcodeSettingsExpanded, setBarcodeSettingsExpanded] = useState(false);
 
+  // 고해상도 저장 설정
+  const [highResSave, setHighResSave] = useState(false);
+  const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '' });
+
   // 바코드 타입 즐겨찾기 및 모달
   const [favoriteBarcodes, setFavoriteBarcodes] = useState([]); // bcid 목록
   const [hiddenDefaults, setHiddenDefaults] = useState([]); // 숨긴 기본 바코드
@@ -1049,38 +1053,51 @@ export default function GeneratorScreen() {
       let uri;
 
       if (isBarcode) {
-        // 고해상도 바코드 생성 시도
-        try {
-          const highResData = await generateHighResBarcode({
-            bcid: selectedBarcodeFormat,
-            text: finalBarcodeValue,
-            scale: barcodeSettings.scale,
-            height: barcodeSettings.height,
-            includetext: barcodeSettings.showText,
-            textsize: barcodeSettings.fontSize,
-            rotate: barcodeSettings.rotate,
-            alttext: barcodeSettings.customText || undefined,
-            backgroundcolor: 'ffffff',
-            barcolor: '000000',
-          });
+        // 고해상도 저장이 활성화된 경우
+        if (highResSave) {
+          setSaveProgress({ visible: true, progress: 10, message: t('generator.generatingHighRes') || '고해상도 생성 중...' });
 
-          if (highResData.startsWith('file:')) {
-            uri = highResData;
-          } else if (highResData.startsWith('data:')) {
-            const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
-            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
-              ? FileSystem.cacheDirectory
-              : FileSystem.cacheDirectory + '/';
-            const fileUri = cacheDir + `barcode-hires-${Date.now()}.png`;
-            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-              encoding: FileSystem.EncodingType.Base64,
+          try {
+            setSaveProgress(prev => ({ ...prev, progress: 30 }));
+
+            const highResData = await generateHighResBarcode({
+              bcid: selectedBarcodeFormat,
+              text: finalBarcodeValue,
+              scale: barcodeSettings.scale,
+              height: barcodeSettings.height,
+              includetext: barcodeSettings.showText,
+              textsize: barcodeSettings.fontSize,
+              rotate: barcodeSettings.rotate,
+              alttext: barcodeSettings.customText || undefined,
+              backgroundcolor: 'ffffff',
+              barcolor: '000000',
             });
-            uri = fileUri;
-          } else {
-            throw new Error('Invalid highResData format');
+
+            setSaveProgress(prev => ({ ...prev, progress: 60, message: t('generator.savingToGallery') || '갤러리에 저장 중...' }));
+
+            if (highResData.startsWith('file:')) {
+              uri = highResData;
+            } else if (highResData.startsWith('data:')) {
+              const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
+              const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+                ? FileSystem.cacheDirectory
+                : FileSystem.cacheDirectory + '/';
+              const fileUri = cacheDir + `barcode-hires-${Date.now()}.png`;
+              await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              uri = fileUri;
+            } else {
+              throw new Error('Invalid highResData format');
+            }
+
+            setSaveProgress(prev => ({ ...prev, progress: 90 }));
+          } catch (highResError) {
+            setSaveProgress({ visible: false, progress: 0, message: '' });
+            throw highResError;
           }
-        } catch (highResError) {
-          // 실패 시 기존 captureRef 방식 사용
+        } else {
+          // 일반 저장 (captureRef 사용 - 빠름)
           if (barcodeRef.current) {
             uri = await captureRef(barcodeRef, {
               format: 'png',
@@ -1113,12 +1130,20 @@ export default function GeneratorScreen() {
 
       await MediaLibrary.saveToLibraryAsync(uri);
 
+      if (highResSave && isBarcode) {
+        setSaveProgress(prev => ({ ...prev, progress: 100 }));
+        setTimeout(() => {
+          setSaveProgress({ visible: false, progress: 0, message: '' });
+        }, 300);
+      }
+
       Alert.alert(
         '✓ ' + t('generator.saveSuccess'),
         t('generator.saveSuccessMessage')
       );
     } catch (error) {
       console.error('Error saving code:', error);
+      setSaveProgress({ visible: false, progress: 0, message: '' });
       Alert.alert(
         t('generator.saveError'),
         t('generator.saveErrorMessage')
@@ -2129,6 +2154,43 @@ export default function GeneratorScreen() {
                     value={barcodeSettings.customText}
                     onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
                   />
+
+                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+
+                  {/* 고해상도 저장 */}
+                  <View style={s.settingItem}>
+                    <View style={s.settingLabelRow}>
+                      <Ionicons name="image-outline" size={18} color={colors.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.settingLabel, { color: colors.text }]}>
+                          {t('generator.highResSave') || '고해상도 저장'}
+                        </Text>
+                        <Text style={[s.settingHint, { color: colors.textTertiary }]}>
+                          {t('generator.highResSaveHint') || '품질↑ 저장시간↑'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <TouchableOpacity
+                        style={[
+                          s.toggleButton,
+                          highResSave && { backgroundColor: colors.primary },
+                        ]}
+                        onPress={() => setHighResSave(true)}
+                      >
+                        <Text style={[s.toggleText, { color: highResSave ? '#fff' : colors.text }]}>ON</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          s.toggleButton,
+                          !highResSave && { backgroundColor: colors.primary },
+                        ]}
+                        onPress={() => setHighResSave(false)}
+                      >
+                        <Text style={[s.toggleText, { color: !highResSave ? '#fff' : colors.text }]}>OFF</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
               </View>
               )}
@@ -2367,6 +2429,37 @@ export default function GeneratorScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* 고해상도 저장 프로그레스 모달 */}
+      <Modal
+        visible={saveProgress.visible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={s.progressModalOverlay}>
+          <View style={[s.progressModalContent, { backgroundColor: colors.surface }]}>
+            {/* 원형 프로그레스 */}
+            <View style={s.progressCircleContainer}>
+              <View style={[s.progressCircleBg, { borderColor: colors.border }]} />
+              <View
+                style={[
+                  s.progressCircle,
+                  {
+                    borderColor: colors.primary,
+                    transform: [{ rotate: `${(saveProgress.progress / 100) * 360}deg` }],
+                  },
+                ]}
+              />
+              <Text style={[s.progressText, { color: colors.text }]}>
+                {saveProgress.progress}%
+              </Text>
+            </View>
+            <Text style={[s.progressMessage, { color: colors.textSecondary }]}>
+              {saveProgress.message}
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
       {/* QR Style Picker Modal */}
       <QRStylePicker
@@ -2881,6 +2974,10 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  settingHint: {
+    fontSize: 11,
+    marginTop: 2,
+  },
   settingDivider: {
     height: 1,
     marginVertical: 14,
@@ -3317,6 +3414,56 @@ const s = StyleSheet.create({
     maxHeight: '92%',
     minHeight: '80%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+  },
+  // 프로그레스 모달 스타일
+  progressModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressModalContent: {
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    minWidth: 180,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  progressCircleContainer: {
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  progressCircleBg: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 6,
+    opacity: 0.2,
+  },
+  progressCircle: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 6,
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  progressText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  progressMessage: {
+    fontSize: 14,
+    textAlign: 'center',
   },
   modalHeader: {
     flexDirection: 'row',
