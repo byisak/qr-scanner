@@ -443,28 +443,28 @@ export const generateHighResBarcode = async (options) => {
     throw new Error('Missing required options: bcid and text are required');
   }
 
-  const pixelRatio = PixelRatio.get();
-  const saveMultiplier = Math.max(pixelRatio, 3); // 최소 3배
-
   const settings = BARCODE_OPTIMAL_SETTINGS[options.bcid] || BARCODE_OPTIMAL_SETTINGS.default;
 
   // height 값이 픽셀 단위로 전달될 수 있으므로 mm 단위로 변환
-  // bwip-js height는 mm 단위, 사용자 설정은 보통 더 큰 값
   const userHeight = options.height || 100;
-  const effectiveHeight = userHeight > 50 ? userHeight / 10 : userHeight; // 50 이상이면 픽셀로 간주
+  const effectiveHeight = userHeight > 50 ? userHeight / 10 : userHeight;
+
+  // 저장용 스케일: 미리보기보다 2배 정도만 (너무 높으면 느려짐)
+  const baseScale = options.scale || settings.recommendedScale;
+  const saveScale = Math.min(Math.max(baseScale * 2, 4), 8); // 4~8 범위로 제한
 
   const highResOptions = {
     bcid: options.bcid,
     text: String(options.text),
-    scale: Math.max((options.scale || settings.recommendedScale) * saveMultiplier, 6),
-    height: Math.max(effectiveHeight * 1.5, settings.defaultHeight || 15),
+    scale: saveScale,
+    height: Math.max(effectiveHeight, settings.defaultHeight || 15),
     includetext: options.includetext !== false,
     textxalign: 'center',
-    textsize: (options.textsize || 14) * 1.5,
+    textsize: options.textsize || 14,
     backgroundcolor: (options.backgroundcolor || 'ffffff').replace('#', ''),
     barcolor: (options.barcolor || '000000').replace('#', ''),
-    paddingwidth: 30,
-    paddingheight: 20,
+    paddingwidth: 20,
+    paddingheight: 15,
     rotate: options.rotate || 'N',
   };
 
@@ -476,21 +476,15 @@ export const generateHighResBarcode = async (options) => {
     highResOptions.guardwhitespace = true;
   }
 
-  console.log('generateHighResBarcode options:', JSON.stringify(highResOptions));
-
   try {
     const result = await bwipjs.toDataURL(highResOptions);
-
-    console.log('generateHighResBarcode result type:', typeof result);
 
     // 결과 타입에 따라 처리
     let dataUrl = null;
 
     if (typeof result === 'string') {
-      // 문자열인 경우 그대로 사용
       dataUrl = result;
     } else if (result && typeof result === 'object') {
-      // 객체인 경우 다양한 속성 확인
       if (result.uri) {
         dataUrl = result.uri;
       } else if (result.data) {
@@ -498,7 +492,6 @@ export const generateHighResBarcode = async (options) => {
       } else if (result.dataURL) {
         dataUrl = result.dataURL;
       } else if (result.base64) {
-        // base64가 data: 접두사 없이 온 경우
         dataUrl = result.base64.startsWith('data:')
           ? result.base64
           : `data:image/png;base64,${result.base64}`;
@@ -506,20 +499,16 @@ export const generateHighResBarcode = async (options) => {
     }
 
     if (!dataUrl) {
-      console.error('generateHighResBarcode: No valid dataUrl extracted from result:', result);
-      throw new Error('Invalid result from bwipjs: no dataUrl extracted');
+      throw new Error('Invalid result from bwipjs');
     }
 
-    // 데이터 URL 검증
     if (!dataUrl.startsWith('data:') && !dataUrl.startsWith('file:')) {
-      console.error('generateHighResBarcode: Invalid dataUrl format:', dataUrl.substring(0, 100));
       throw new Error('Invalid dataUrl format');
     }
 
-    console.log('generateHighResBarcode success, dataUrl length:', dataUrl.length);
     return dataUrl;
   } catch (error) {
-    console.error('High-res barcode generation failed:', error.message, error);
+    console.warn('High-res barcode generation failed:', error.message);
     throw error;
   }
 };
