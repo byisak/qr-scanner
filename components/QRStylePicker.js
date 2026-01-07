@@ -22,6 +22,7 @@ import { Colors } from '../constants/Colors';
 import { FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
+import QRFrameRenderer from './QRFrameRenderer';
 
 // QR 프레임 프리셋
 const QR_FRAMES = [
@@ -943,14 +944,26 @@ export default function QRStylePicker({
 
         {/* Live Preview */}
         <View style={[styles.previewContainer, { backgroundColor: colors.surface }]}>
-          <View style={[styles.previewWrapper, { backgroundColor: tempStyle.backgroundColor || '#ffffff' }]}>
-            <StyledQRCode
+          {tempFrame ? (
+            // 프레임이 선택된 경우 - QRFrameRenderer 사용
+            <QRFrameRenderer
               key={previewKey}
-              value={previewValue}
-              size={140}
-              qrStyle={{ ...tempStyle, width: undefined, height: undefined }}
+              frame={tempFrame}
+              qrValue={previewValue}
+              qrStyle={tempStyle}
+              size={180}
             />
-          </View>
+          ) : (
+            // 프레임이 없는 경우 - 기존 방식
+            <View style={[styles.previewWrapper, { backgroundColor: tempStyle.backgroundColor || '#ffffff' }]}>
+              <StyledQRCode
+                key={previewKey}
+                value={previewValue}
+                size={140}
+                qrStyle={{ ...tempStyle, width: undefined, height: undefined }}
+              />
+            </View>
+          )}
           {(tempStyle.width || tempStyle.height) && (
             <Text style={[styles.sizeIndicator, { color: colors.textSecondary }]}>
               {t('generator.qrStyle.actualSize')}: {tempStyle.width || 300} × {tempStyle.height || 300}px
