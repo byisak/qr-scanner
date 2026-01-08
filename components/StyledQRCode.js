@@ -134,12 +134,9 @@ export default function StyledQRCode({
           #qr-container {
             width: ${actualWidth}px;
             height: ${actualHeight}px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
           }
           #qr-container canvas {
-            border-radius: 0;
+            display: block;
           }
         </style>
       </head>
