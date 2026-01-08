@@ -3867,15 +3867,13 @@ const s = StyleSheet.create({
   },
   // QR 스타일 설정 인라인 스타일
   qrSettingsTabScroll: {
-    marginBottom: 12,
   },
   qrSettingsTabScrollContent: {
-    padding: 8,
     gap: 8,
   },
   qrSettingsTabWrapper: {
     borderRadius: 12,
-    padding: 4,
+    padding: 8,
     marginBottom: 12,
     borderWidth: 1,
   },
