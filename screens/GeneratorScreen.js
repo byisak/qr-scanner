@@ -2724,13 +2724,15 @@ export default function GeneratorScreen() {
                 >
                   {selectedFrame ? (
                     // 프레임이 선택된 경우 - QRFrameRenderer 사용
-                    <QRFrameRenderer
-                      frame={selectedFrame}
-                      qrValue={qrData}
-                      qrStyle={qrStyle}
-                      size={320}
-                      onCapture={(base64) => setCapturedQRBase64(base64)}
-                    />
+                    <View style={s.frameContainer}>
+                      <QRFrameRenderer
+                        frame={selectedFrame}
+                        qrValue={qrData}
+                        qrStyle={qrStyle}
+                        size={300}
+                        onCapture={(base64) => setCapturedQRBase64(base64)}
+                      />
+                    </View>
                   ) : (
                     // 프레임이 없는 경우 - 기존 방식
                     <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
@@ -3894,14 +3896,18 @@ const s = StyleSheet.create({
   },
   qrContainer: {
     borderRadius: 16,
-    padding: 16,
+    padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 280,
+    minHeight: 300,
   },
   qrWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  frameContainer: {
+    padding: 12,
+    backgroundColor: 'transparent',
   },
   qrBackground: {
     backgroundColor: 'white',
