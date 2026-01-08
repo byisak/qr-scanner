@@ -1044,21 +1044,8 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const targetSize = QR_RES_LEVELS[qrResLevel].size;
-
-        if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 크기 변경 후 캡처
-          setQrCaptureSize(targetSize);
-          await new Promise(resolve => setTimeout(resolve, 800));
-
-          uri = await captureRef(qrRef, {
-            format: 'png',
-            quality: 1,
-          });
-
-          setQrCaptureSize(340);
-        } else if (selectedFrame) {
-          // 프레임만 (빠른 저장)
+        if (selectedFrame) {
+          // 프레임 있음 - 단순 캡처
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
@@ -1180,23 +1167,8 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const targetSize = QR_RES_LEVELS[qrResLevel].size;
-
-        if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 크기 변경 후 캡처
-          setQrCaptureSize(targetSize);
-          // 충분한 렌더링 대기 시간
-          await new Promise(resolve => setTimeout(resolve, 800));
-
-          uri = await captureRef(qrRef, {
-            format: 'png',
-            quality: 1,
-          });
-
-          // 원래 크기로 복원
-          setQrCaptureSize(340);
-        } else if (selectedFrame) {
-          // 프레임만 (빠른 저장)
+        if (selectedFrame) {
+          // 프레임 있음 - 단순 캡처 (동적 크기 변경 제거)
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
@@ -2816,7 +2788,7 @@ export default function GeneratorScreen() {
                         frame={selectedFrame}
                         qrValue={qrData}
                         qrStyle={qrStyle}
-                        size={qrCaptureSize}
+                        size={340}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
                       />
                     </View>
@@ -4014,8 +3986,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   frameContainer: {
-    padding: 24,
-    paddingBottom: 32,
+    padding: 4,
     backgroundColor: 'transparent',
   },
   qrBackground: {
