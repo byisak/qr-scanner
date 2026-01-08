@@ -1044,13 +1044,14 @@ export default function GeneratorScreen() {
       } else {
         // QR 코드 캡처
         const qrScale = QR_RES_LEVELS[qrResLevel].scale;
+        const targetSize = QR_RES_LEVELS[qrResLevel].size;
 
         if (selectedFrame || qrResLevel > 0) {
           // 프레임이 선택된 경우 또는 고해상도 - 전체 뷰 캡처
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
+            width: targetSize,
           });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
@@ -1163,14 +1164,16 @@ export default function GeneratorScreen() {
       } else {
         // QR 코드 캡처
         const qrScale = QR_RES_LEVELS[qrResLevel].scale;
-        console.log('QR Save - Level:', qrResLevel, 'Scale:', qrScale, 'Frame:', selectedFrame?.id);
+        const targetSize = QR_RES_LEVELS[qrResLevel].size;
+        console.log('QR Save - Level:', qrResLevel, 'Scale:', qrScale, 'Size:', targetSize, 'Frame:', selectedFrame?.id);
 
         if (selectedFrame || qrResLevel > 0) {
           // 프레임이 선택된 경우 또는 고해상도 저장 - 전체 뷰 캡처
+          // pixelRatio 대신 width로 명시적 크기 지정
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
+            width: targetSize,
           });
           console.log('QR Save - URI:', uri);
         } else {
