@@ -86,40 +86,24 @@ export default function QRFrameRenderer({
 
   const qrAreaWidth = qrPosition.width * scale;
   const qrAreaHeight = qrPosition.height * scale;
-  // QR 코드 크기를 영역의 98%로 조정
-  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight) * 0.98);
+
+  // QR 코드를 프레임 뒤에 배치하므로 영역보다 약간 크게 (105%)
+  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight) * 1.05);
   const qrX = Math.floor(qrPosition.x * scale + (qrAreaWidth - qrSize) / 2);
   const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
 
-  // SVG에 배경색 rect 추가 (viewBox 좌표계 기준)
-  // viewBox는 "205 155 292 395"이므로 실제 SVG 좌표로 변환
-  const bgColor = qrStyle?.backgroundColor || '#ffffff';
-  const bgRectX = 205 + qrPosition.x; // viewBox origin + position
-  const bgRectY = 155 + qrPosition.y;
-  const bgRect = `<rect x="${bgRectX}" y="${bgRectY}" width="${qrPosition.width}" height="${qrPosition.height}" fill="${bgColor}"/>`;
-
-  // 배경 rect를 다크 프레임 path 뒤, 흰색 텍스트 path 앞에 삽입
-  // (첫 번째 #FFFFFF path 바로 앞에 삽입)
-  const modifiedSvg = frameSvg.replace(/<path fill="#FFFFFF"/, `${bgRect}<path fill="#FFFFFF"`);
-
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
-      {/* 프레임 SVG (배경색 rect 포함) */}
-      <SvgXml
-        xml={modifiedSvg}
-        width={frameWidth}
-        height={frameHeight}
-        style={styles.frameSvg}
-      />
-      {/* QR 코드 (프레임 위에 배치) */}
+      {/* QR 코드 (프레임 뒤에 배치 - 배경색 포함) */}
       <View
         style={[
-          styles.qrOverlay,
+          styles.qrBehind,
           {
             left: qrX,
             top: qrY,
             width: qrSize,
             height: qrSize,
+            backgroundColor: qrStyle?.backgroundColor || '#ffffff',
           },
         ]}
       >
@@ -130,6 +114,14 @@ export default function QRFrameRenderer({
           onCapture={onCapture}
         />
       </View>
+      {/* 프레임 SVG (QR 코드 위에 배치) */}
+      <SvgXml
+        xml={frameSvg}
+        width={frameWidth}
+        height={frameHeight}
+        style={styles.frameSvg}
+        pointerEvents="none"
+      />
     </View>
   );
 }
@@ -155,9 +147,8 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  qrOverlay: {
+  qrBehind: {
     position: 'absolute',
-    backgroundColor: 'transparent',
     overflow: 'hidden',
   },
 });
