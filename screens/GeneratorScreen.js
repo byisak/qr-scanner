@@ -40,9 +40,11 @@ import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import StyledQRCode from '../components/StyledQRCode';
-import QRFrameRenderer from '../components/QRFrameRenderer';
-import QRStylePicker, { QR_STYLE_PRESETS, QR_FRAMES } from '../components/QRStylePicker';
+import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from '../components/StyledQRCode';
+import QRFrameRenderer, { FRAME_SVG_DATA } from '../components/QRFrameRenderer';
+import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
+import { SvgXml } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
@@ -358,11 +360,12 @@ export default function GeneratorScreen() {
   // QR 스타일 관련 상태
   const [useStyledQR, setUseStyledQR] = useState(true);
   const [qrStyle, setQrStyle] = useState(QR_STYLE_PRESETS[0].style);
-  const [stylePickerVisible, setStylePickerVisible] = useState(false);
   const [capturedQRBase64, setCapturedQRBase64] = useState(null);
   const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
   const [logoImage, setLogoImage] = useState(null); // 로고 이미지 base64
   const [selectedFrame, setSelectedFrame] = useState(null); // 선택된 QR 프레임
+  const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
+  const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
 
   // Form data for each type
   const [formData, setFormData] = useState({
@@ -2272,6 +2275,398 @@ export default function GeneratorScreen() {
           </>
         )}
 
+        {/* QR 스타일 설정 - QR 모드일 때만 */}
+        {codeMode === 'qr' && (
+          <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={s.formHeaderCollapsible}
+              onPress={() => setQrSettingsExpanded(!qrSettingsExpanded)}
+              activeOpacity={0.7}
+            >
+              <View style={s.formHeaderLeft}>
+                <Ionicons
+                  name="color-palette-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text style={[s.formTitle, { color: colors.text }]}>
+                  {t('generator.qrStyle.title') || 'QR 스타일'}
+                </Text>
+              </View>
+              <Ionicons
+                name={qrSettingsExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {qrSettingsExpanded && (
+            <View style={s.settingsContainer}>
+              {/* 탭 버튼 */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={s.qrSettingsTabScroll}
+                contentContainerStyle={s.qrSettingsTabScrollContent}
+              >
+                {[
+                  { id: 'frames', icon: 'albums-outline', label: t('generator.qrStyle.frame') || '프레임' },
+                  { id: 'presets', icon: 'color-palette-outline', label: t('generator.qrStyle.presets') || '프리셋' },
+                  { id: 'dots', icon: 'grid-outline', label: t('generator.qrStyle.dots') || '도트' },
+                  { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
+                  { id: 'background', icon: 'image-outline', label: t('generator.qrStyle.background') || '배경' },
+                  { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
+                ].map((tab) => (
+                  <TouchableOpacity
+                    key={tab.id}
+                    style={[
+                      s.settingsTab,
+                      qrSettingsTab === tab.id && { backgroundColor: colors.primary },
+                    ]}
+                    onPress={() => setQrSettingsTab(tab.id)}
+                  >
+                    <Ionicons
+                      name={tab.icon}
+                      size={16}
+                      color={qrSettingsTab === tab.id ? '#fff' : colors.textSecondary}
+                    />
+                    <Text style={[
+                      s.settingsTabText,
+                      { color: qrSettingsTab === tab.id ? '#fff' : colors.textSecondary }
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* 프레임 탭 */}
+              {qrSettingsTab === 'frames' && (
+                <View style={s.qrStyleGrid}>
+                  {QR_FRAMES.map((frame) => {
+                    const isSelected = selectedFrame?.id === frame.id || (!selectedFrame && frame.id === 'none');
+                    return (
+                      <TouchableOpacity
+                        key={frame.id}
+                        style={[
+                          s.qrStyleItem,
+                          {
+                            backgroundColor: colors.inputBackground,
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            borderWidth: isSelected ? 2 : 1,
+                          },
+                        ]}
+                        onPress={() => setSelectedFrame(frame.id === 'none' ? null : frame)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[s.qrStylePreview, { backgroundColor: '#fff' }]}>
+                          {frame.id === 'none' ? (
+                            <Ionicons name="close-circle-outline" size={36} color={colors.textTertiary} />
+                          ) : (
+                            FRAME_SVG_DATA[frame.id] ? (
+                              <SvgXml
+                                xml={FRAME_SVG_DATA[frame.id]}
+                                width={70}
+                                height={70}
+                              />
+                            ) : (
+                              <View style={[s.framePlaceholder, { borderColor: frame.previewColor || '#000' }]}>
+                                <Text style={{ fontSize: 8 }}>{frame.name}</Text>
+                              </View>
+                            )
+                          )}
+                        </View>
+                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
+                          {language === 'ko' ? frame.nameKo : frame.name}
+                        </Text>
+                        {isSelected && (
+                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
+                            <Ionicons name="checkmark" size={12} color="#fff" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* 프리셋 탭 */}
+              {qrSettingsTab === 'presets' && (
+                <View style={s.qrStyleGrid}>
+                  {QR_STYLE_PRESETS.map((preset) => {
+                    const isSelected = JSON.stringify(qrStyle) === JSON.stringify(preset.style);
+                    return (
+                      <TouchableOpacity
+                        key={preset.id}
+                        style={[
+                          s.qrStyleItem,
+                          {
+                            backgroundColor: colors.inputBackground,
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            borderWidth: isSelected ? 2 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, ...preset.style }))}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[s.qrStylePreview, { backgroundColor: preset.style.backgroundColor || '#fff' }]}>
+                          <View style={s.presetDotsContainer}>
+                            {[...Array(9)].map((_, i) => (
+                              <View
+                                key={i}
+                                style={[
+                                  s.presetDot,
+                                  {
+                                    backgroundColor: preset.style.dotGradient
+                                      ? preset.style.dotGradient.colorStops[0].color
+                                      : preset.style.dotColor,
+                                    borderRadius: preset.style.dotType === 'dots' || preset.style.dotType === 'rounded' ? 3 : 0,
+                                  },
+                                ]}
+                              />
+                            ))}
+                          </View>
+                        </View>
+                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
+                          {language === 'ko' ? preset.nameKo : preset.name}
+                        </Text>
+                        {isSelected && (
+                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
+                            <Ionicons name="checkmark" size={12} color="#fff" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* 도트 탭 */}
+              {qrSettingsTab === 'dots' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.dotType') || '도트 타입'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {DOT_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrStyle.dotType === type ? colors.primary : colors.inputBackground,
+                            borderColor: qrStyle.dotType === type ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, dotType: type }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrStyle.dotType === type ? '#fff' : colors.text }]}>
+                          {type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.dotColor') || '도트 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.map((presetColor) => (
+                      <TouchableOpacity
+                        key={presetColor}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.dotColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.dotColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, dotColor: presetColor, dotGradient: null }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 코너 탭 */}
+              {qrSettingsTab === 'corners' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.cornerSquareType') || '코너 스퀘어 타입'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {CORNER_SQUARE_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrStyle.cornerSquareType === type ? colors.primary : colors.inputBackground,
+                            borderColor: qrStyle.cornerSquareType === type ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareType: type }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrStyle.cornerSquareType === type ? '#fff' : colors.text }]}>
+                          {type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
+                      <TouchableOpacity
+                        key={`cs-${presetColor}`}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.cornerSquareColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.cornerSquareColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareColor: presetColor }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.cornerDotType') || '코너 도트 타입'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {CORNER_DOT_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrStyle.cornerDotType === type ? colors.primary : colors.inputBackground,
+                            borderColor: qrStyle.cornerDotType === type ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerDotType: type }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrStyle.cornerDotType === type ? '#fff' : colors.text }]}>
+                          {type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
+                      <TouchableOpacity
+                        key={`cd-${presetColor}`}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.cornerDotColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.cornerDotColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerDotColor: presetColor }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 배경 탭 */}
+              {qrSettingsTab === 'background' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.backgroundColor') || '배경 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.map((presetColor) => (
+                      <TouchableOpacity
+                        key={presetColor}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.backgroundColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.backgroundColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, backgroundColor: presetColor }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 설정 탭 */}
+              {qrSettingsTab === 'settings' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.margin') || '여백'}
+                  </Text>
+                  <View style={s.stepperRow}>
+                    <TouchableOpacity
+                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.max(0, (prev.margin || 10) - 5) }))}
+                    >
+                      <Ionicons name="remove" size={20} color={colors.text} />
+                    </TouchableOpacity>
+                    <Text style={[s.stepperValue, { color: colors.text }]}>{qrStyle.margin || 10}px</Text>
+                    <TouchableOpacity
+                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.min(50, (prev.margin || 10) + 5) }))}
+                    >
+                      <Ionicons name="add" size={20} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.errorCorrection') || '오류 수정'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {['L', 'M', 'Q', 'H'].map((level) => (
+                      <TouchableOpacity
+                        key={level}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.inputBackground,
+                            borderColor: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.border,
+                            flex: 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, errorCorrectionLevel: level }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? '#fff' : colors.text }]}>
+                          {level}
+                        </Text>
+                        <Text style={[s.qrOptionSubtext, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
+                          {level === 'L' ? '7%' : level === 'M' ? '15%' : level === 'Q' ? '25%' : '30%'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+            )}
+          </View>
+        )}
+
         {/* QR Code Preview - QR 모드일 때만 */}
         {codeMode === 'qr' && (
           <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
@@ -2286,18 +2681,6 @@ export default function GeneratorScreen() {
                   {t('generator.qrPreview')}
                 </Text>
               </View>
-              {hasData && (
-                <TouchableOpacity
-                  style={[s.styleButton, { backgroundColor: colors.primary }]}
-                  onPress={() => setStylePickerVisible(true)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="color-palette-outline" size={16} color="#fff" />
-                  <Text style={s.styleButtonText}>
-                    {t('generator.qrStyle.customize') || '스타일'}
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             <View style={[s.qrContainer, { borderColor: colors.border }]}>
@@ -2379,38 +2762,6 @@ export default function GeneratorScreen() {
                   qrStyle={qrStyle}
                   onCapture={(base64) => setFullSizeQRBase64(base64)}
                 />
-              </View>
-            )}
-
-            {/* Style Mode Toggle */}
-            {hasData && (
-              <View style={s.styleModeContainer}>
-                <TouchableOpacity
-                  style={[
-                    s.styleModeButton,
-                    !useStyledQR && { backgroundColor: colors.primary },
-                    useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
-                  ]}
-                  onPress={() => setUseStyledQR(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.styleModeText, { color: !useStyledQR ? '#fff' : colors.text }]}>
-                    {t('generator.qrStyle.basic') || '기본'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    s.styleModeButton,
-                    useStyledQR && { backgroundColor: colors.primary },
-                    !useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
-                  ]}
-                  onPress={() => setUseStyledQR(true)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.styleModeText, { color: useStyledQR ? '#fff' : colors.text }]}>
-                    {t('generator.qrStyle.styled') || '스타일'}
-                  </Text>
-                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -2550,20 +2901,6 @@ export default function GeneratorScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* QR Style Picker Modal */}
-      <QRStylePicker
-        visible={stylePickerVisible}
-        onClose={() => setStylePickerVisible(false)}
-        currentStyle={qrStyle}
-        onStyleChange={setQrStyle}
-        previewValue={qrData || 'QR PREVIEW'}
-        logoImage={logoImage}
-        onPickLogo={handlePickLogo}
-        onRemoveLogo={handleRemoveLogo}
-        selectedFrame={selectedFrame}
-        onFrameChange={setSelectedFrame}
-      />
 
       {/* QR 타입 순서 변경 모달 */}
       <Modal
@@ -3413,6 +3750,129 @@ const s = StyleSheet.create({
   styleModeText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  // QR 스타일 설정 인라인 스타일
+  qrSettingsTabScroll: {
+    marginBottom: 12,
+  },
+  qrSettingsTabScrollContent: {
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  qrStyleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  qrStyleItem: {
+    width: '30%',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  qrStylePreview: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  qrStyleName: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  qrStyleCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  framePlaceholder: {
+    width: 60,
+    height: 60,
+    borderWidth: 2,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  presetDotsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 3,
+  },
+  presetDot: {
+    width: 10,
+    height: 10,
+  },
+  qrOptionSection: {
+    gap: 8,
+  },
+  qrOptionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  qrOptionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  qrOptionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  qrOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  qrOptionSubtext: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'flex-start',
+  },
+  colorButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  stepperBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'center',
   },
   qrContainer: {
     borderRadius: 16,
