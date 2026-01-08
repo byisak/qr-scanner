@@ -88,7 +88,7 @@ export default function QRFrameRenderer({
   const qrAreaWidth = qrPosition.width * scale;
   const qrAreaHeight = qrPosition.height * scale;
   // QR 코드 크기를 영역에 맞게 조정 (SVG에 내부 패딩 적용됨)
-  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight) * 0.80);
+  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight));
   const qrX = Math.floor(qrPosition.x * scale + (qrAreaWidth - qrSize) / 2);
   const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
 
