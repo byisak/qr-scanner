@@ -13,6 +13,7 @@ import {
   Image,
   Modal,
   Dimensions,
+  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -1048,14 +1049,19 @@ export default function GeneratorScreen() {
         const targetSize = QR_RES_LEVELS[qrResLevel].size;
 
         if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: onLayout 콜백으로 렌더링 완료 대기
+          // 프레임 + 고해상도: 여러 단계로 렌더링 완료 대기
           const layoutPromise = new Promise(resolve => {
             qrLayoutResolveRef.current = resolve;
           });
 
           setQrCaptureSize(targetSize);
           await layoutPromise;
-          await new Promise(r => setTimeout(r, 100));
+          await new Promise(resolve => {
+            InteractionManager.runAfterInteractions(() => resolve());
+          });
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(r => setTimeout(r, 500));
 
           uri = await captureRef(qrRef, {
             format: 'png',
@@ -1189,14 +1195,27 @@ export default function GeneratorScreen() {
         const targetSize = QR_RES_LEVELS[qrResLevel].size;
 
         if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: onLayout 콜백으로 렌더링 완료 대기
+          // 프레임 + 고해상도: 여러 단계로 렌더링 완료 대기
           const layoutPromise = new Promise(resolve => {
             qrLayoutResolveRef.current = resolve;
           });
 
           setQrCaptureSize(targetSize);
-          await layoutPromise; // onLayout 콜백 대기
-          await new Promise(r => setTimeout(r, 100)); // SVG 렌더링 추가 대기
+
+          // 1. onLayout 콜백 대기
+          await layoutPromise;
+
+          // 2. InteractionManager로 모든 상호작용 완료 대기
+          await new Promise(resolve => {
+            InteractionManager.runAfterInteractions(() => resolve());
+          });
+
+          // 3. requestAnimationFrame으로 다음 프레임 대기
+          await new Promise(resolve => requestAnimationFrame(resolve));
+          await new Promise(resolve => requestAnimationFrame(resolve));
+
+          // 4. 추가 대기 (SVG 렌더링)
+          await new Promise(r => setTimeout(r, 500));
 
           uri = await captureRef(qrRef, {
             format: 'png',
