@@ -86,8 +86,8 @@ export default function QRFrameRenderer({
 
   const qrAreaWidth = qrPosition.width * scale;
   const qrAreaHeight = qrPosition.height * scale;
-  // QR 코드 크기를 영역에 맞게 조정 (여백 최소화)
-  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight) * 0.92);
+  // QR 코드 크기를 영역에 맞게 조정 (프레임과 겹치지 않도록 여백 확보)
+  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight) * 0.85);
   const qrX = Math.floor(qrPosition.x * scale + (qrAreaWidth - qrSize) / 2);
   const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
 
