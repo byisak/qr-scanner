@@ -368,8 +368,7 @@ export default function GeneratorScreen() {
   const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
-  const [qrCaptureSize, setQrCaptureSize] = useState(340); // QR 캡처 시 동적 크기
-  const qrLayoutResolveRef = useRef(null); // onLayout 완료 콜백
+  const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
 
   // QR 고해상도 레벨별 설정
   const QR_RES_LEVELS = [
@@ -1046,29 +1045,12 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const targetSize = QR_RES_LEVELS[qrResLevel].size;
-
         if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 여러 단계로 렌더링 완료 대기
-          const layoutPromise = new Promise(resolve => {
-            qrLayoutResolveRef.current = resolve;
-          });
-
-          setQrCaptureSize(targetSize);
-          await layoutPromise;
-          await new Promise(resolve => {
-            InteractionManager.runAfterInteractions(() => resolve());
-          });
-          await new Promise(resolve => requestAnimationFrame(resolve));
-          await new Promise(resolve => requestAnimationFrame(resolve));
-          await new Promise(r => setTimeout(r, 500));
-
-          uri = await captureRef(qrRef, {
+          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+          uri = await captureRef(highResQrRef, {
             format: 'png',
             quality: 1,
           });
-
-          setQrCaptureSize(340);
         } else if (selectedFrame) {
           // 프레임만 (빠른 저장)
           uri = await captureRef(qrRef, {
@@ -1192,37 +1174,12 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const targetSize = QR_RES_LEVELS[qrResLevel].size;
-
         if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 여러 단계로 렌더링 완료 대기
-          const layoutPromise = new Promise(resolve => {
-            qrLayoutResolveRef.current = resolve;
-          });
-
-          setQrCaptureSize(targetSize);
-
-          // 1. onLayout 콜백 대기
-          await layoutPromise;
-
-          // 2. InteractionManager로 모든 상호작용 완료 대기
-          await new Promise(resolve => {
-            InteractionManager.runAfterInteractions(() => resolve());
-          });
-
-          // 3. requestAnimationFrame으로 다음 프레임 대기
-          await new Promise(resolve => requestAnimationFrame(resolve));
-          await new Promise(resolve => requestAnimationFrame(resolve));
-
-          // 4. 추가 대기 (SVG 렌더링)
-          await new Promise(r => setTimeout(r, 500));
-
-          uri = await captureRef(qrRef, {
+          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+          uri = await captureRef(highResQrRef, {
             format: 'png',
             quality: 1,
           });
-
-          setQrCaptureSize(340);
         } else if (selectedFrame) {
           // 프레임만 (빠른 저장)
           uri = await captureRef(qrRef, {
@@ -2844,14 +2801,8 @@ export default function GeneratorScreen() {
                         frame={selectedFrame}
                         qrValue={qrData}
                         qrStyle={qrStyle}
-                        size={qrCaptureSize}
+                        size={340}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
-                        onLayout={() => {
-                          if (qrLayoutResolveRef.current) {
-                            qrLayoutResolveRef.current();
-                            qrLayoutResolveRef.current = null;
-                          }
-                        }}
                       />
                     </View>
                   ) : (
@@ -3373,6 +3324,30 @@ export default function GeneratorScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 오프스크린 고해상도 캡처용 뷰 */}
+      {selectedFrame && hasData && qrResLevel > 0 && (
+        <View style={s.offscreenContainer}>
+          <ScrollView
+            contentContainerStyle={{ width: QR_RES_LEVELS[qrResLevel].size, height: QR_RES_LEVELS[qrResLevel].size }}
+            showsVerticalScrollIndicator={false}
+            showsHorizontalScrollIndicator={false}
+          >
+            <View
+              ref={highResQrRef}
+              collapsable={false}
+              style={{ width: QR_RES_LEVELS[qrResLevel].size, height: QR_RES_LEVELS[qrResLevel].size, backgroundColor: 'white' }}
+            >
+              <QRFrameRenderer
+                frame={selectedFrame}
+                qrValue={qrData}
+                qrStyle={qrStyle}
+                size={QR_RES_LEVELS[qrResLevel].size}
+              />
+            </View>
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 }
@@ -3380,6 +3355,14 @@ export default function GeneratorScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  offscreenContainer: {
+    position: 'absolute',
+    left: -10000,
+    top: 0,
+    width: 1800,
+    height: 1800,
+    zIndex: -1,
   },
   statusBarGradient: {
     position: 'absolute',
