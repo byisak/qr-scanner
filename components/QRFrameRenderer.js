@@ -94,7 +94,7 @@ export default function QRFrameRenderer({
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
-      {/* QR 코드 (프레임 뒤에 배치 - 배경색 포함) */}
+      {/* 1. 배경색 (가장 뒤) */}
       <View
         style={[
           styles.qrBehind,
@@ -106,15 +106,27 @@ export default function QRFrameRenderer({
             backgroundColor: qrStyle?.backgroundColor || '#ffffff',
           },
         ]}
+      />
+      {/* 2. QR 코드 (투명 배경) */}
+      <View
+        style={[
+          styles.qrBehind,
+          {
+            left: qrX,
+            top: qrY,
+            width: qrSize,
+            height: qrSize,
+          },
+        ]}
       >
         <StyledQRCode
           value={qrValue}
           size={qrSize}
-          qrStyle={{ ...qrStyle, width: undefined, height: undefined, margin: 0 }}
+          qrStyle={{ ...qrStyle, backgroundColor: 'transparent', width: undefined, height: undefined, margin: 0 }}
           onCapture={onCapture}
         />
       </View>
-      {/* 프레임 SVG (QR 코드 위에 배치) */}
+      {/* 3. 프레임 SVG (가장 위) */}
       <SvgXml
         xml={frameSvg}
         width={frameWidth}
