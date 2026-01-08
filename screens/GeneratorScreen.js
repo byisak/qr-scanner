@@ -1050,7 +1050,8 @@ export default function GeneratorScreen() {
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            ...(qrScale > 1 && { pixelRatio: qrScale }),
+            pixelRatio: qrScale,
+            snapshotContentContainer: true,
           });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
@@ -1169,7 +1170,8 @@ export default function GeneratorScreen() {
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            ...(qrScale > 1 && { pixelRatio: qrScale }),
+            pixelRatio: qrScale,
+            snapshotContentContainer: true,
           });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
@@ -3976,8 +3978,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   frameContainer: {
-    padding: 16,
-    paddingBottom: 20,
+    padding: 20,
+    paddingBottom: 28,
     backgroundColor: 'transparent',
   },
   qrBackground: {
