@@ -90,8 +90,8 @@ export default function QRFrameRenderer({
   const bgX = Math.floor(qrPosition.x * scale);
   const bgY = Math.floor(qrPosition.y * scale);
 
-  // QR 코드는 내부 영역 중앙에 정사각형으로 배치
-  const qrSize = Math.floor(Math.min(bgAreaWidth, bgAreaHeight) * 0.95);
+  // QR 코드는 내부 영역 중앙에 정사각형으로 배치 (88%로 패딩 확보)
+  const qrSize = Math.floor(Math.min(bgAreaWidth, bgAreaHeight) * 0.88);
   const qrX = bgX + Math.floor((bgAreaWidth - qrSize) / 2);
   const qrY = bgY + Math.floor((bgAreaHeight - qrSize) / 2);
 
