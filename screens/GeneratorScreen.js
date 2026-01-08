@@ -368,6 +368,7 @@ export default function GeneratorScreen() {
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
   const [qrCaptureSize, setQrCaptureSize] = useState(340); // QR 캡처 시 동적 크기
+  const qrLayoutResolveRef = useRef(null); // onLayout 완료 콜백
 
   // QR 고해상도 레벨별 설정
   const QR_RES_LEVELS = [
@@ -1044,8 +1045,26 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame) {
-          // 프레임 있음 - 단순 캡처
+        const targetSize = QR_RES_LEVELS[qrResLevel].size;
+
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: onLayout 콜백으로 렌더링 완료 대기
+          const layoutPromise = new Promise(resolve => {
+            qrLayoutResolveRef.current = resolve;
+          });
+
+          setQrCaptureSize(targetSize);
+          await layoutPromise;
+          await new Promise(r => setTimeout(r, 100));
+
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+          });
+
+          setQrCaptureSize(340);
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
@@ -1167,8 +1186,26 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame) {
-          // 프레임 있음 - 단순 캡처 (동적 크기 변경 제거)
+        const targetSize = QR_RES_LEVELS[qrResLevel].size;
+
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: onLayout 콜백으로 렌더링 완료 대기
+          const layoutPromise = new Promise(resolve => {
+            qrLayoutResolveRef.current = resolve;
+          });
+
+          setQrCaptureSize(targetSize);
+          await layoutPromise; // onLayout 콜백 대기
+          await new Promise(r => setTimeout(r, 100)); // SVG 렌더링 추가 대기
+
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+          });
+
+          setQrCaptureSize(340);
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
@@ -2788,8 +2825,14 @@ export default function GeneratorScreen() {
                         frame={selectedFrame}
                         qrValue={qrData}
                         qrStyle={qrStyle}
-                        size={340}
+                        size={qrCaptureSize}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
+                        onLayout={() => {
+                          if (qrLayoutResolveRef.current) {
+                            qrLayoutResolveRef.current();
+                            qrLayoutResolveRef.current = null;
+                          }
+                        }}
                       />
                     </View>
                   ) : (

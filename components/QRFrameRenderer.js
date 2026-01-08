@@ -35,11 +35,12 @@ export default function QRFrameRenderer({
   qrStyle,
   size = 280,
   onCapture,
+  onLayout,
 }) {
   if (!frame || !frame.id || frame.id === 'none') {
     // 프레임이 없으면 QR 코드만 렌더링
     return (
-      <View style={[styles.container, { width: size, height: size }]}>
+      <View style={[styles.container, { width: size, height: size }]} onLayout={onLayout}>
         <View style={[styles.qrWrapper, { backgroundColor: qrStyle?.backgroundColor || '#fff' }]}>
           <StyledQRCode
             value={qrValue}
@@ -58,7 +59,7 @@ export default function QRFrameRenderer({
   if (!frameSvg || !qrPosition) {
     // 프레임 데이터가 없으면 QR 코드만 렌더링
     return (
-      <View style={[styles.container, { width: size, height: size }]}>
+      <View style={[styles.container, { width: size, height: size }]} onLayout={onLayout}>
         <View style={[styles.qrWrapper, { backgroundColor: qrStyle?.backgroundColor || '#fff' }]}>
           <StyledQRCode
             value={qrValue}
@@ -81,7 +82,7 @@ export default function QRFrameRenderer({
   const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
 
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
+    <View style={[styles.container, { width: size, height: size }]} onLayout={onLayout}>
       {/* 프레임 SVG */}
       <SvgXml
         xml={frameSvg}
