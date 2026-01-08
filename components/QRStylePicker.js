@@ -45,6 +45,15 @@ const QR_FRAMES = [
     // 미리보기용 간단한 설명
     previewColor: '#020203',
   },
+  {
+    id: 'scan-me-label',
+    name: 'Scan Me Label',
+    nameKo: 'Scan Me 라벨',
+    fileName: 'frame-scan-me-label.svg',
+    viewBox: '0 0 700 700',
+    qrPosition: { x: 198, y: 160, size: 305 },
+    previewColor: '#020203',
+  },
 ];
 
 
