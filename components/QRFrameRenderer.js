@@ -21,11 +21,11 @@ const FRAME_SVG_DATA = {
 </svg>`,
 };
 
-// QR 코드 위치 정보 (크롭된 viewBox 기준) - 흰색 영역
+// QR 코드 위치 정보 (크롭된 viewBox 기준)
 // viewBox "205 155 292 395" 기준으로 좌표 변환: x-205, y-155
-// 내부 패딩 15px 적용
+// SVG path 분석: 내부 투명 영역 실제 좌표
 const FRAME_QR_POSITIONS = {
-  'scan-me': { x: 22, y: 112, width: 247, height: 253, viewBoxWidth: 292, viewBoxHeight: 395 },
+  'scan-me': { x: 7, y: 97, width: 277, height: 284, viewBoxWidth: 292, viewBoxHeight: 395 },
 };
 
 /**
