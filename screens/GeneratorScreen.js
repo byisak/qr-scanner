@@ -3330,7 +3330,7 @@ export default function GeneratorScreen() {
         <View
           ref={highResQrRef}
           collapsable={false}
-          style={[s.offscreenContainer, { width: QR_RES_LEVELS[qrResLevel].size, height: QR_RES_LEVELS[qrResLevel].size }]}
+          style={s.offscreenContainer}
         >
           <QRFrameRenderer
             frame={selectedFrame}
