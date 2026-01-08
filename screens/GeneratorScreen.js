@@ -2779,7 +2779,7 @@ export default function GeneratorScreen() {
                         frame={selectedFrame}
                         qrValue={qrData}
                         qrStyle={qrStyle}
-                        size={300}
+                        size={340}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
                       />
                     </View>
@@ -2789,7 +2789,7 @@ export default function GeneratorScreen() {
                       {useStyledQR ? (
                         <StyledQRCode
                           value={qrData}
-                          size={240}
+                          size={260}
                           qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
                           onCapture={(base64) => setCapturedQRBase64(base64)}
                         />

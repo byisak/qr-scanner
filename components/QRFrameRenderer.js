@@ -75,9 +75,10 @@ export default function QRFrameRenderer({
   const scale = size / 700;
   const qrAreaWidth = qrPosition.width * scale;
   const qrAreaHeight = qrPosition.height * scale;
-  const qrSize = Math.min(qrAreaWidth, qrAreaHeight) * 0.85;
-  const qrX = qrPosition.x * scale + (qrAreaWidth - qrSize) / 2;
-  const qrY = qrPosition.y * scale + (qrAreaHeight - qrSize) / 2;
+  // QR 코드 크기를 영역에 맞게 조정 (여백 최소화)
+  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight) * 0.92);
+  const qrX = Math.floor(qrPosition.x * scale + (qrAreaWidth - qrSize) / 2);
+  const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -103,7 +104,7 @@ export default function QRFrameRenderer({
         <StyledQRCode
           value={qrValue}
           size={qrSize}
-          qrStyle={{ ...qrStyle, width: undefined, height: undefined, margin: 0, backgroundColor: '#FFFFFF' }}
+          qrStyle={{ ...qrStyle, width: undefined, height: undefined, margin: 0, backgroundColor: 'transparent' }}
           onCapture={onCapture}
         />
       </View>
@@ -136,6 +137,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
 });
