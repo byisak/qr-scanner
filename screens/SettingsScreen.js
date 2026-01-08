@@ -48,6 +48,7 @@ export default function SettingsScreen() {
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 기본값: 끔
   const [continuousScanEnabled, setContinuousScanEnabled] = useState(false);
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
+  const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
@@ -303,6 +304,11 @@ export default function SettingsScreen() {
           // 여러 코드 인식 모드 설정 로드
           const mcm = await AsyncStorage.getItem('multiCodeModeEnabled');
           setMultiCodeModeEnabled(mcm === 'true');
+
+          // 결과창 자동 열림 설정 로드
+          const rwa = await AsyncStorage.getItem('resultWindowAutoOpen');
+          // null이면 기본값 true 유지
+          setResultWindowAutoOpen(rwa === null ? true : rwa === 'true');
 
           // 제품 검색 자동 실행 설정 로드
           const pas = await AsyncStorage.getItem('productAutoSearch');
@@ -593,6 +599,24 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
+
+          {/* 결과창 자동 열림 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/result-window-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.resultWindowAutoOpen')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.resultWindowAutoOpenDesc')}</Text>
+            </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: resultWindowAutoOpen ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {resultWindowAutoOpen ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
           </TouchableOpacity>
 
         </View>

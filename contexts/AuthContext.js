@@ -15,7 +15,7 @@ const API_URL = `${config.serverUrl}/api/auth`;
 // ============================================================
 // 🔧 개발 모드 설정 (배포 시 false로 변경)
 // ============================================================
-const DEV_MODE = true; // 배포 시 false로 변경하거나 이 블록 주석 처리
+const DEV_MODE = false; // 실제 백엔드 API 사용
 
 // 개발용 테스트 계정 (DEV_MODE가 true일 때만 사용됨)
 const DEV_ACCOUNTS = [
@@ -500,6 +500,82 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // 비밀번호 변경
+  const changePassword = async (currentPassword, newPassword, confirmPassword) => {
+    try {
+      if (!user) {
+        return { success: false, error: 'Not logged in' };
+      }
+
+      // 개발 모드: 서버 호출 없이 로컬에서 처리
+      if (DEV_MODE) {
+        const devAccount = DEV_ACCOUNTS.find(acc => acc.email === user.email);
+        if (devAccount) {
+          if (devAccount.password !== currentPassword) {
+            return { success: false, error: 'Current password is incorrect', errorCode: 'AUTH_INVALID_CREDENTIALS' };
+          }
+          // 개발 모드에서는 실제로 변경하지 않음 (메모리만)
+          devAccount.password = newPassword;
+          console.log('[Auth] 🔧 개발 모드: 비밀번호 변경 성공 (테스트 계정)');
+          return { success: true };
+        }
+        // 개발 모드이지만 테스트 계정이 아닌 경우도 성공 처리
+        console.log('[Auth] 🔧 개발 모드: 비밀번호 변경 성공 (일반 계정)');
+        return { success: true };
+      }
+
+      const token = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+      const requestUrl = `${API_URL}/change-password`;
+
+      console.log('[Auth] ===== 비밀번호 변경 요청 =====');
+      console.log('[Auth] URL:', requestUrl);
+      console.log('[Auth] Method: PUT');
+
+      const response = await fetch(requestUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+      });
+
+      console.log('[Auth] 응답 상태:', response.status, response.statusText);
+
+      // JSON 파싱 에러 처리
+      let data;
+      const contentType = response.headers.get('content-type');
+      console.log('[Auth] Content-Type:', contentType);
+
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('[Auth] 비-JSON 응답:', textResponse.substring(0, 200));
+        return { success: false, error: '서버 응답 오류. 잠시 후 다시 시도해주세요.' };
+      }
+
+      try {
+        data = await response.json();
+        console.log('[Auth] 응답 데이터:', JSON.stringify(data, null, 2));
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        return { success: false, error: '서버 응답 파싱 오류.' };
+      }
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: data.error?.message || data.message || 'Password change failed',
+          errorCode: data.error?.code || null
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Change password error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // 토큰 갱신
   const refreshAccessToken = async () => {
     try {
@@ -553,6 +629,7 @@ export const AuthProvider = ({ children }) => {
     loginWithGoogle,
     loginWithApple,
     updateProfile,
+    changePassword,
     withdraw,
     getToken,
     refreshAccessToken,

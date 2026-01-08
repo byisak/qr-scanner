@@ -13,6 +13,7 @@ import {
   Image,
   Modal,
   Dimensions,
+  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -40,9 +41,12 @@ import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import StyledQRCode from '../components/StyledQRCode';
-import QRStylePicker, { QR_STYLE_PRESETS } from '../components/QRStylePicker';
-import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES } from '../components/BarcodeSvg';
+import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from '../components/StyledQRCode';
+import QRFrameRenderer, { FRAME_SVG_DATA } from '../components/QRFrameRenderer';
+import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
+import { SvgXml } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
+import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -73,7 +77,7 @@ const QR_TYPES = [
 ];
 
 export default function GeneratorScreen() {
-  const { t, fonts } = useLanguage();
+  const { t, fonts, language } = useLanguage();
   const { isDark } = useTheme();
   const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
@@ -93,16 +97,30 @@ export default function GeneratorScreen() {
   const [barcodeValue, setBarcodeValue] = useState(params.initialBarcodeValue || '');
   const [barcodeError, setBarcodeError] = useState(null);
 
-  // 바코드 스타일 설정
+  // 바코드 스타일 설정 (기본값 개선: 스캔 가능성 향상)
   const [barcodeSettings, setBarcodeSettings] = useState({
-    scale: 2,        // 바코드 너비 스케일 (1-9)
-    height: 80,      // 바코드 높이 (40-120)
-    fontSize: 14,    // 텍스트 크기 (10-20)
+    scale: 3,        // 바코드 너비 스케일 (1-6) - 기본값 상향
+    height: 100,     // 바코드 높이 (50-150) - 기본값 상향
+    fontSize: 14,    // 텍스트 크기 (10-24)
     showText: true,  // 텍스트 표시 여부
     rotate: 'N',     // 회전: N(0°), R(90°), I(180°), L(270°)
     customText: '',  // 바코드 아래 커스텀 텍스트
   });
   const [barcodeSettingsExpanded, setBarcodeSettingsExpanded] = useState(false);
+  const [barcodeSettingsTab, setBarcodeSettingsTab] = useState('size'); // 'size', 'display', 'save'
+
+  // 고해상도 저장 설정 (0: 빠른저장, 1-4: 고해상도 레벨)
+  const [highResLevel, setHighResLevel] = useState(0);
+  const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '', type: 'qr' });
+
+  // 고해상도 레벨별 설정
+  const HIGH_RES_LEVELS = [
+    { level: 0, label: '빠름', scale: 0, description: '화면 캡처', time: '즉시' },
+    { level: 1, label: '보통', scale: 4, description: '일반 인쇄', time: '~1초' },
+    { level: 2, label: '고급', scale: 6, description: '고품질', time: '~2초' },
+    { level: 3, label: '최고', scale: 8, description: '최고 품질', time: '~3초' },
+    { level: 4, label: '인쇄', scale: 12, description: '대형 인쇄', time: '~5초' },
+  ];
 
   // 바코드 타입 즐겨찾기 및 모달
   const [favoriteBarcodes, setFavoriteBarcodes] = useState([]); // bcid 목록
@@ -321,14 +339,45 @@ export default function GeneratorScreen() {
   const barcodeSize = useRef(new Animated.Value(0)).current;
   const qrRef = useRef(null);
   const barcodeRef = useRef(null);
+  const spinAnim = useRef(new Animated.Value(0)).current;
+
+  // 저장 중 스핀 애니메이션
+  useEffect(() => {
+    if (saveProgress.visible) {
+      const spin = Animated.loop(
+        Animated.timing(spinAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        })
+      );
+      spin.start();
+      return () => spin.stop();
+    } else {
+      spinAnim.setValue(0);
+    }
+  }, [saveProgress.visible]);
 
   // QR 스타일 관련 상태
   const [useStyledQR, setUseStyledQR] = useState(true);
   const [qrStyle, setQrStyle] = useState(QR_STYLE_PRESETS[0].style);
-  const [stylePickerVisible, setStylePickerVisible] = useState(false);
   const [capturedQRBase64, setCapturedQRBase64] = useState(null);
   const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
   const [logoImage, setLogoImage] = useState(null); // 로고 이미지 base64
+  const [selectedFrame, setSelectedFrame] = useState(null); // 선택된 QR 프레임
+  const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
+  const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
+  const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
+  const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
+
+  // QR 고해상도 레벨별 설정
+  const QR_RES_LEVELS = [
+    { level: 0, label: '빠름', scale: 1, description: '화면 캡처', time: '즉시', size: 300 },
+    { level: 1, label: '보통', scale: 2, description: '일반 용도', time: '~1초', size: 600 },
+    { level: 2, label: '고급', scale: 3, description: '고품질', time: '~2초', size: 900 },
+    { level: 3, label: '최고', scale: 4, description: '최고 품질', time: '~3초', size: 1200 },
+    { level: 4, label: '인쇄', scale: 6, description: '대형 인쇄', time: '~5초', size: 1800 },
+  ];
 
   // Form data for each type
   const [formData, setFormData] = useState({
@@ -951,26 +1000,89 @@ export default function GeneratorScreen() {
       let uri;
 
       if (isBarcode) {
-        // 바코드 캡처
-        uri = await captureRef(barcodeRef, {
-          format: 'png',
-          quality: 1,
-        });
+        // 고해상도 바코드 생성 시도
+        try {
+          const highResData = await generateHighResBarcode({
+            bcid: selectedBarcodeFormat,
+            text: finalBarcodeValue,
+            scale: barcodeSettings.scale,
+            height: barcodeSettings.height,
+            includetext: barcodeSettings.showText,
+            textsize: barcodeSettings.fontSize,
+            rotate: barcodeSettings.rotate,
+            alttext: barcodeSettings.customText || undefined,
+            backgroundcolor: 'ffffff',
+            barcolor: '000000',
+          });
+
+          // highResData가 이미 file URI인 경우
+          if (highResData.startsWith('file:')) {
+            uri = highResData;
+          } else if (highResData.startsWith('data:')) {
+            // base64를 파일로 저장
+            const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
+            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+              ? FileSystem.cacheDirectory
+              : FileSystem.cacheDirectory + '/';
+            const fileUri = cacheDir + `barcode-share-${Date.now()}.png`;
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            uri = fileUri;
+          } else {
+            throw new Error('Invalid highResData format');
+          }
+        } catch (highResError) {
+          console.warn('High-res barcode generation failed, falling back to captureRef:', highResError.message);
+          if (barcodeRef.current) {
+            uri = await captureRef(barcodeRef, {
+              format: 'png',
+              quality: 1,
+            });
+          } else {
+            throw new Error('Both high-res generation and captureRef failed');
+          }
+        }
       } else {
         // QR 코드 캡처
-        const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
-        if (useStyledQR && qrBase64) {
-          const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-          const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: 'base64',
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+          uri = await captureRef(highResQrRef, {
+            format: 'png',
+            quality: 1,
           });
-          uri = fileUri;
-        } else {
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
+        } else if (qrResLevel > 0) {
+          // 프레임 없이 고해상도
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+            pixelRatio: QR_RES_LEVELS[qrResLevel].scale,
+          });
+        } else {
+          // 프레임이 없고 빠른 저장 - 기존 방식
+          const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+          if (useStyledQR && qrBase64) {
+            const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
+            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+              ? FileSystem.cacheDirectory
+              : FileSystem.cacheDirectory + '/';
+            const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            uri = fileUri;
+          } else {
+            uri = await captureRef(qrRef, {
+              format: 'png',
+              quality: 1,
+            });
+          }
         }
       }
 
@@ -994,6 +1106,9 @@ export default function GeneratorScreen() {
       return;
     }
 
+    // 저장 모달 즉시 표시 (바코드/QR 구분)
+    setSaveProgress({ visible: true, progress: 0, message: '', type: isBarcode ? 'barcode' : 'qr' });
+
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -1001,6 +1116,7 @@ export default function GeneratorScreen() {
     try {
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
+        setSaveProgress({ visible: false, progress: 0, message: '' });
         Alert.alert(t('common.error'), 'Permission to access media library is required');
         return;
       }
@@ -1008,30 +1124,101 @@ export default function GeneratorScreen() {
       let uri;
 
       if (isBarcode) {
-        // 바코드 캡처
-        uri = await captureRef(barcodeRef, {
-          format: 'png',
-          quality: 1,
-        });
+        // 고해상도 레벨에 따라 처리
+        if (highResLevel > 0) {
+          try {
+            const levelConfig = HIGH_RES_LEVELS[highResLevel];
+            const highResData = await generateHighResBarcode({
+              bcid: selectedBarcodeFormat,
+              text: finalBarcodeValue,
+              scale: levelConfig.scale,
+              height: barcodeSettings.height,
+              includetext: barcodeSettings.showText,
+              textsize: barcodeSettings.fontSize,
+              rotate: barcodeSettings.rotate,
+              alttext: barcodeSettings.customText || undefined,
+              backgroundcolor: 'ffffff',
+              barcolor: '000000',
+            });
+
+            if (highResData.startsWith('file:')) {
+              uri = highResData;
+            } else if (highResData.startsWith('data:')) {
+              const base64Data = highResData.replace(/^data:image\/\w+;base64,/, '');
+              const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+                ? FileSystem.cacheDirectory
+                : FileSystem.cacheDirectory + '/';
+              const fileUri = cacheDir + `barcode-hires-${Date.now()}.png`;
+
+              await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+                encoding: FileSystem.EncodingType.Base64,
+              });
+              uri = fileUri;
+            } else {
+              throw new Error('Invalid highResData format');
+            }
+          } catch (highResError) {
+            setSaveProgress({ visible: false, progress: 0, message: '' });
+            throw highResError;
+          }
+        } else {
+          // 빠른 저장 (captureRef 사용)
+          if (barcodeRef.current) {
+            uri = await captureRef(barcodeRef, {
+              format: 'png',
+              quality: 1,
+            });
+          } else {
+            throw new Error('Barcode save failed');
+          }
+        }
       } else {
         // QR 코드 캡처
-        const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
-        if (useStyledQR && qrBase64) {
-          const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-          const fileUri = FileSystem.cacheDirectory + 'qr-styled-' + Date.now() + '.png';
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: 'base64',
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+          uri = await captureRef(highResQrRef, {
+            format: 'png',
+            quality: 1,
           });
-          uri = fileUri;
-        } else {
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
+        } else if (qrResLevel > 0) {
+          // 프레임 없이 고해상도 - pixelRatio 사용
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+            pixelRatio: QR_RES_LEVELS[qrResLevel].scale,
+          });
+        } else {
+          // 프레임이 없고 빠른 저장 - 기존 방식
+          const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+          if (useStyledQR && qrBase64) {
+            const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
+            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+              ? FileSystem.cacheDirectory
+              : FileSystem.cacheDirectory + '/';
+            const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            uri = fileUri;
+          } else {
+            uri = await captureRef(qrRef, {
+              format: 'png',
+              quality: 1,
+            });
+          }
         }
       }
 
       await MediaLibrary.saveToLibraryAsync(uri);
+
+      // 프로그레스 모달 닫기
+      setSaveProgress({ visible: false, progress: 0, message: '' });
 
       Alert.alert(
         '✓ ' + t('generator.saveSuccess'),
@@ -1039,6 +1226,7 @@ export default function GeneratorScreen() {
       );
     } catch (error) {
       console.error('Error saving code:', error);
+      setSaveProgress({ visible: false, progress: 0, message: '' });
       Alert.alert(
         t('generator.saveError'),
         t('generator.saveErrorMessage')
@@ -1709,12 +1897,12 @@ export default function GeneratorScreen() {
             >
               {displayedBarcodeTypes.map((format) => {
                 const isSelected = selectedBarcodeFormat === format.bcid;
-                const catInfo = BARCODE_CATEGORIES[format.category] || {};
                 return (
                   <TouchableOpacity
                     key={format.bcid}
                     style={[
                       s.typeButton,
+                      s.typeButtonNoIcon,
                       {
                         backgroundColor: isSelected ? colors.primary : colors.surface,
                         borderColor: isSelected ? colors.primary : colors.border,
@@ -1723,18 +1911,8 @@ export default function GeneratorScreen() {
                     onPress={() => handleBarcodeFormatSelect(format.bcid)}
                     activeOpacity={0.7}
                   >
-                    <LinearGradient
-                      colors={isSelected ? ['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)'] : (catInfo.gradient || ['#667eea', '#764ba2'])}
-                      style={s.typeIconContainer}
-                    >
-                      <Ionicons
-                        name={catInfo.icon || 'barcode-outline'}
-                        size={22}
-                        color="#fff"
-                      />
-                    </LinearGradient>
                     <Text style={[
-                      s.typeText,
+                      s.typeTextMain,
                       { color: isSelected ? '#fff' : colors.text, fontFamily: fonts.semiBold }
                     ]}>
                       {format.name}
@@ -1881,179 +2059,702 @@ export default function GeneratorScreen() {
               </TouchableOpacity>
               {barcodeSettingsExpanded && (
               <View style={s.settingsContainer}>
-                {/* 크기 설정 그룹 */}
+                {/* 탭 버튼 */}
+                <View style={[s.settingsTabContainer, { backgroundColor: colors.background }]}>
+                  {[
+                    { id: 'size', icon: 'resize-outline', label: t('generator.barcodeSettingsTabs.size') || '크기' },
+                    { id: 'display', icon: 'text-outline', label: t('generator.barcodeSettingsTabs.display') || '표시' },
+                    { id: 'save', icon: 'save-outline', label: t('generator.barcodeSettingsTabs.save') || '저장' },
+                  ].map((tab) => (
+                    <TouchableOpacity
+                      key={tab.id}
+                      style={[
+                        s.settingsTab,
+                        barcodeSettingsTab === tab.id && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => setBarcodeSettingsTab(tab.id)}
+                    >
+                      <Ionicons
+                        name={tab.icon}
+                        size={16}
+                        color={barcodeSettingsTab === tab.id ? '#fff' : colors.textSecondary}
+                      />
+                      <Text style={[
+                        s.settingsTabText,
+                        { color: barcodeSettingsTab === tab.id ? '#fff' : colors.textSecondary }
+                      ]}>
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* 탭 내용 */}
                 <View style={[s.settingGroup, { backgroundColor: colors.background }]}>
-                  {/* 바코드 너비 */}
-                  <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRowSpaced}>
-                      <View style={s.settingLabelRow}>
-                        <Ionicons name="resize-outline" size={18} color={colors.primary} />
-                        <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.barcodeWidth') || '너비'}
-                        </Text>
+                  {/* 크기 탭 */}
+                  {barcodeSettingsTab === 'size' && (
+                    <>
+                      <View style={s.settingItemVertical}>
+                        <View style={s.settingLabelRowSpaced}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeWidth') || '너비'}
+                            </Text>
+                          </View>
+                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.scale}x</Text>
+                        </View>
+                        <Slider
+                          style={s.slider}
+                          minimumValue={1}
+                          maximumValue={6}
+                          step={1}
+                          value={barcodeSettings.scale}
+                          onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
+                          minimumTrackTintColor={colors.primary}
+                          maximumTrackTintColor={colors.border}
+                          thumbTintColor={colors.primary}
+                        />
                       </View>
-                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.scale}x</Text>
-                    </View>
-                    <Slider
-                      style={s.slider}
-                      minimumValue={1}
-                      maximumValue={9}
-                      step={1}
-                      value={barcodeSettings.scale}
-                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, scale: val }))}
-                      minimumTrackTintColor={colors.primary}
-                      maximumTrackTintColor={colors.border}
-                      thumbTintColor={colors.primary}
-                    />
-                  </View>
 
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 바코드 높이 */}
-                  <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRowSpaced}>
-                      <View style={s.settingLabelRow}>
-                        <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
-                        <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.barcodeHeight') || '높이'}
-                        </Text>
+                      <View style={s.settingItemVertical}>
+                        <View style={s.settingLabelRowSpaced}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeHeight') || '높이'}
+                            </Text>
+                          </View>
+                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.height}</Text>
+                        </View>
+                        <Slider
+                          style={s.slider}
+                          minimumValue={50}
+                          maximumValue={150}
+                          step={10}
+                          value={barcodeSettings.height}
+                          onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
+                          minimumTrackTintColor={colors.primary}
+                          maximumTrackTintColor={colors.border}
+                          thumbTintColor={colors.primary}
+                        />
                       </View>
-                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.height}</Text>
-                    </View>
-                    <Slider
-                      style={s.slider}
-                      minimumValue={40}
-                      maximumValue={120}
-                      step={10}
-                      value={barcodeSettings.height}
-                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, height: val }))}
-                      minimumTrackTintColor={colors.primary}
-                      maximumTrackTintColor={colors.border}
-                      thumbTintColor={colors.primary}
-                    />
-                  </View>
 
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  {/* 글자 크기 */}
-                  <View style={s.settingItemVertical}>
-                    <View style={s.settingLabelRowSpaced}>
-                      <View style={s.settingLabelRow}>
-                        <Ionicons name="text" size={18} color={colors.primary} />
-                        <Text style={[s.settingLabel, { color: colors.text }]}>
-                          {t('generator.barcodeFontSize') || '글자 크기'}
-                        </Text>
-                      </View>
-                      <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.fontSize}</Text>
-                    </View>
-                    <Slider
-                      style={s.slider}
-                      minimumValue={10}
-                      maximumValue={20}
-                      step={1}
-                      value={barcodeSettings.fontSize}
-                      onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
-                      minimumTrackTintColor={colors.primary}
-                      maximumTrackTintColor={colors.border}
-                      thumbTintColor={colors.primary}
-                    />
-                  </View>
-
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
-
-                  {/* 회전 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeRotate') || '회전'}
-                      </Text>
-                    </View>
-                    <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      {[
-                        { value: 'N', label: '0°' },
-                        { value: 'R', label: '90°' },
-                        { value: 'I', label: '180°' },
-                        { value: 'L', label: '270°' },
-                      ].map((item) => (
-                        <TouchableOpacity
-                          key={`rotate-${item.value}`}
-                          style={[
-                            s.barcodeOptionBtn,
-                            barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
-                          ]}
-                          onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
-                        >
-                          <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
-                            {item.label}
+                      <View style={s.settingItem}>
+                        <View style={s.settingLabelRow}>
+                          <Ionicons name="refresh-outline" size={18} color={colors.primary} />
+                          <Text style={[s.settingLabel, { color: colors.text }]}>
+                            {t('generator.barcodeRotate') || '회전'}
                           </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
+                        </View>
+                        <View style={[s.barcodeOptionControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                          {[
+                            { value: 'N', label: '0°' },
+                            { value: 'R', label: '90°' },
+                            { value: 'I', label: '180°' },
+                            { value: 'L', label: '270°' },
+                          ].map((item) => (
+                            <TouchableOpacity
+                              key={`rotate-${item.value}`}
+                              style={[
+                                s.barcodeOptionBtn,
+                                barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
+                              ]}
+                              onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
+                            >
+                              <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
+                                {item.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    </>
+                  )}
 
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                  {/* 표시 탭 */}
+                  {barcodeSettingsTab === 'display' && (
+                    <>
+                      <View style={s.settingItem}>
+                        <View style={s.settingLabelRow}>
+                          <Ionicons name="text-outline" size={18} color={colors.primary} />
+                          <Text style={[s.settingLabel, { color: colors.text }]}>
+                            {t('generator.barcodeShowText') || '숫자 표시'}
+                          </Text>
+                        </View>
+                        <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                          <TouchableOpacity
+                            style={[
+                              s.toggleButton,
+                              barcodeSettings.showText && { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
+                          >
+                            <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              s.toggleButton,
+                              !barcodeSettings.showText && { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
+                          >
+                            <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
 
-                  {/* 숫자 표시 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="text-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeShowText') || '숫자 표시'}
-                      </Text>
-                    </View>
-                    <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                      <TouchableOpacity
-                        style={[
-                          s.toggleButton,
-                          barcodeSettings.showText && { backgroundColor: colors.primary },
-                        ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
-                      >
-                        <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[
-                          s.toggleButton,
-                          !barcodeSettings.showText && { backgroundColor: colors.primary },
-                        ]}
-                        onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
-                      >
-                        <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                      <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
 
-                  <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                      <View style={s.settingItemVertical}>
+                        <View style={s.settingLabelRowSpaced}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="text" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeFontSize') || '글자 크기'}
+                            </Text>
+                          </View>
+                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.fontSize}</Text>
+                        </View>
+                        <Slider
+                          style={s.slider}
+                          minimumValue={10}
+                          maximumValue={20}
+                          step={1}
+                          value={barcodeSettings.fontSize}
+                          onValueChange={(val) => setBarcodeSettings((prev) => ({ ...prev, fontSize: val }))}
+                          minimumTrackTintColor={colors.primary}
+                          maximumTrackTintColor={colors.border}
+                          thumbTintColor={colors.primary}
+                        />
+                      </View>
 
-                  {/* 표시 텍스트 */}
-                  <View style={s.settingItem}>
-                    <View style={s.settingLabelRow}>
-                      <Ionicons name="create-outline" size={18} color={colors.primary} />
-                      <Text style={[s.settingLabel, { color: colors.text }]}>
-                        {t('generator.barcodeCustomText') || '표시 텍스트'}
-                      </Text>
+                      {/* 숫자 표시 OFF일 때만 표시 텍스트 입력 표시 */}
+                      {!barcodeSettings.showText && (
+                        <>
+                          <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
+                          <View style={s.settingItemVertical}>
+                          <View style={s.settingLabelRow}>
+                            <Ionicons name="create-outline" size={18} color={colors.primary} />
+                            <Text style={[s.settingLabel, { color: colors.text }]}>
+                              {t('generator.barcodeCustomText') || '표시 텍스트'}
+                            </Text>
+                          </View>
+                          <TextInput
+                            style={[
+                              s.customTextInput,
+                              {
+                                backgroundColor: colors.surface,
+                                borderColor: colors.border,
+                                color: colors.text,
+                                marginTop: 8,
+                              }
+                            ]}
+                            placeholder={t('generator.barcodeCustomTextPlaceholder') || '비워두면 바코드 값 표시'}
+                            placeholderTextColor={colors.textTertiary}
+                            value={barcodeSettings.customText}
+                            onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
+                          />
+                        </View>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* 저장 탭 */}
+                  {barcodeSettingsTab === 'save' && (
+                    <View style={s.settingItemVertical}>
+                      <View style={s.settingLabelRowSpaced}>
+                        <View style={s.settingLabelRow}>
+                          <Ionicons name="image-outline" size={18} color={colors.primary} />
+                          <Text style={[s.settingLabel, { color: colors.text }]}>
+                            {t('generator.saveQuality') || '저장 품질'}
+                          </Text>
+                        </View>
+                        <Text style={[s.sliderValue, { color: colors.primary }]}>
+                          {HIGH_RES_LEVELS[highResLevel].label}
+                        </Text>
+                      </View>
+
+                      <View style={[s.qualityLevelContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        {HIGH_RES_LEVELS.map((item) => (
+                          <TouchableOpacity
+                            key={`quality-${item.level}`}
+                            style={[
+                              s.qualityLevelBtn,
+                              highResLevel === item.level && { backgroundColor: colors.primary },
+                            ]}
+                            onPress={() => setHighResLevel(item.level)}
+                          >
+                            <Text style={[
+                              s.qualityLevelText,
+                              { color: highResLevel === item.level ? '#fff' : colors.text }
+                            ]}>
+                              {item.level === 0 ? '빠름' : item.level}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <View style={[s.qualityInfoRow, { backgroundColor: colors.background }]}>
+                        <View style={s.qualityInfoItem}>
+                          <Ionicons name="document-outline" size={14} color={colors.textSecondary} />
+                          <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                            {HIGH_RES_LEVELS[highResLevel].description}
+                          </Text>
+                        </View>
+                        <View style={s.qualityInfoItem}>
+                          <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                          <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                            {HIGH_RES_LEVELS[highResLevel].time}
+                          </Text>
+                        </View>
+                        {highResLevel > 0 && (
+                          <View style={s.qualityInfoItem}>
+                            <Ionicons name="resize-outline" size={14} color={colors.textSecondary} />
+                            <Text style={[s.qualityInfoText, { color: colors.textSecondary }]}>
+                              ~{HIGH_RES_LEVELS[highResLevel].scale * 100}px
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                  <TextInput
-                    style={[
-                      s.customTextInput,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      }
-                    ]}
-                    placeholder={t('generator.barcodeCustomTextPlaceholder') || '비워두면 바코드 값 표시'}
-                    placeholderTextColor={colors.textTertiary}
-                    value={barcodeSettings.customText}
-                    onChangeText={(text) => setBarcodeSettings((prev) => ({ ...prev, customText: text }))}
-                  />
+                  )}
                 </View>
               </View>
               )}
             </View>
           </>
+        )}
+
+        {/* QR 스타일 설정 - QR 모드일 때만 */}
+        {codeMode === 'qr' && (
+          <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+            <TouchableOpacity
+              style={s.formHeaderCollapsible}
+              onPress={() => setQrSettingsExpanded(!qrSettingsExpanded)}
+              activeOpacity={0.7}
+            >
+              <View style={s.formHeaderLeft}>
+                <Ionicons
+                  name="color-palette-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text style={[s.formTitle, { color: colors.text }]}>
+                  {t('generator.qrStyle.title') || 'QR 스타일'}
+                </Text>
+              </View>
+              <Ionicons
+                name={qrSettingsExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {qrSettingsExpanded && (
+            <View style={s.settingsContainer}>
+              {/* 탭 버튼 */}
+              <View style={[s.qrSettingsTabWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={s.qrSettingsTabScroll}
+                  contentContainerStyle={s.qrSettingsTabScrollContent}
+                >
+                  {[
+                    { id: 'frames', icon: 'albums-outline', label: t('generator.qrStyle.frame') || '프레임' },
+                    { id: 'presets', icon: 'color-palette-outline', label: t('generator.qrStyle.presets') || '프리셋' },
+                    { id: 'dots', icon: 'grid-outline', label: t('generator.qrStyle.dots') || '도트' },
+                    { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
+                    { id: 'background', icon: 'image-outline', label: t('generator.qrStyle.background') || '배경' },
+                    { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
+                  ].map((tab) => (
+                    <TouchableOpacity
+                      key={tab.id}
+                      style={[
+                        s.qrSettingsTab,
+                        qrSettingsTab === tab.id && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => setQrSettingsTab(tab.id)}
+                  >
+                    <Ionicons
+                      name={tab.icon}
+                      size={16}
+                      color={qrSettingsTab === tab.id ? '#fff' : colors.textSecondary}
+                    />
+                    <Text style={[
+                      s.settingsTabText,
+                      { color: qrSettingsTab === tab.id ? '#fff' : colors.textSecondary }
+                    ]}>
+                      {tab.label}
+                    </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* 프레임 탭 */}
+              {qrSettingsTab === 'frames' && (
+                <View style={s.qrStyleGrid}>
+                  {QR_FRAMES.map((frame) => {
+                    const isSelected = selectedFrame?.id === frame.id || (!selectedFrame && frame.id === 'none');
+                    return (
+                      <TouchableOpacity
+                        key={frame.id}
+                        style={[
+                          s.qrStyleItem,
+                          {
+                            backgroundColor: colors.inputBackground,
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            borderWidth: isSelected ? 2 : 1,
+                          },
+                        ]}
+                        onPress={() => setSelectedFrame(frame.id === 'none' ? null : frame)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[s.qrStylePreview, { backgroundColor: '#fff' }]}>
+                          {frame.id === 'none' ? (
+                            <Ionicons name="close-circle-outline" size={36} color={colors.textTertiary} />
+                          ) : (
+                            FRAME_SVG_DATA[frame.id] ? (
+                              <SvgXml
+                                xml={FRAME_SVG_DATA[frame.id]}
+                                width={70}
+                                height={70}
+                              />
+                            ) : (
+                              <View style={[s.framePlaceholder, { borderColor: frame.previewColor || '#000' }]}>
+                                <Text style={{ fontSize: 8 }}>{frame.name}</Text>
+                              </View>
+                            )
+                          )}
+                        </View>
+                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
+                          {language === 'ko' ? frame.nameKo : frame.name}
+                        </Text>
+                        {isSelected && (
+                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
+                            <Ionicons name="checkmark" size={12} color="#fff" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* 프리셋 탭 */}
+              {qrSettingsTab === 'presets' && (
+                <View style={s.qrStyleGrid}>
+                  {QR_STYLE_PRESETS.map((preset) => {
+                    const isSelected = JSON.stringify(qrStyle) === JSON.stringify(preset.style);
+                    return (
+                      <TouchableOpacity
+                        key={preset.id}
+                        style={[
+                          s.qrStyleItem,
+                          {
+                            backgroundColor: colors.inputBackground,
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            borderWidth: isSelected ? 2 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, ...preset.style }))}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[s.qrStylePreview, { backgroundColor: preset.style.backgroundColor || '#fff' }]}>
+                          <View style={s.presetDotsContainer}>
+                            {[...Array(9)].map((_, i) => (
+                              <View
+                                key={i}
+                                style={[
+                                  s.presetDot,
+                                  {
+                                    backgroundColor: preset.style.dotGradient
+                                      ? preset.style.dotGradient.colorStops[0].color
+                                      : preset.style.dotColor,
+                                    borderRadius: preset.style.dotType === 'dots' || preset.style.dotType === 'rounded' ? 3 : 0,
+                                  },
+                                ]}
+                              />
+                            ))}
+                          </View>
+                        </View>
+                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
+                          {language === 'ko' ? preset.nameKo : preset.name}
+                        </Text>
+                        {isSelected && (
+                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
+                            <Ionicons name="checkmark" size={12} color="#fff" />
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* 도트 탭 */}
+              {qrSettingsTab === 'dots' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.dotType') || '도트 타입'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {DOT_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrStyle.dotType === type ? colors.primary : colors.inputBackground,
+                            borderColor: qrStyle.dotType === type ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, dotType: type }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrStyle.dotType === type ? '#fff' : colors.text }]}>
+                          {type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.dotColor') || '도트 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.map((presetColor) => (
+                      <TouchableOpacity
+                        key={presetColor}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.dotColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.dotColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, dotColor: presetColor, dotGradient: null }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 코너 탭 */}
+              {qrSettingsTab === 'corners' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.cornerSquareType') || '코너 스퀘어 타입'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {CORNER_SQUARE_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrStyle.cornerSquareType === type ? colors.primary : colors.inputBackground,
+                            borderColor: qrStyle.cornerSquareType === type ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareType: type }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrStyle.cornerSquareType === type ? '#fff' : colors.text }]}>
+                          {type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
+                      <TouchableOpacity
+                        key={`cs-${presetColor}`}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.cornerSquareColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.cornerSquareColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareColor: presetColor }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.cornerDotType') || '코너 도트 타입'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {CORNER_DOT_TYPES.map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrStyle.cornerDotType === type ? colors.primary : colors.inputBackground,
+                            borderColor: qrStyle.cornerDotType === type ? colors.primary : colors.border,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerDotType: type }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrStyle.cornerDotType === type ? '#fff' : colors.text }]}>
+                          {type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
+                      <TouchableOpacity
+                        key={`cd-${presetColor}`}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.cornerDotColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.cornerDotColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, cornerDotColor: presetColor }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 배경 탭 */}
+              {qrSettingsTab === 'background' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.backgroundColor') || '배경 색상'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {COLOR_PRESETS.map((presetColor) => (
+                      <TouchableOpacity
+                        key={presetColor}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: qrStyle.backgroundColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: qrStyle.backgroundColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, backgroundColor: presetColor }))}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* 설정 탭 */}
+              {qrSettingsTab === 'settings' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.margin') || '여백'}
+                  </Text>
+                  <View style={s.stepperRow}>
+                    <TouchableOpacity
+                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.max(0, (prev.margin || 10) - 5) }))}
+                    >
+                      <Ionicons name="remove" size={20} color={colors.text} />
+                    </TouchableOpacity>
+                    <Text style={[s.stepperValue, { color: colors.text }]}>{qrStyle.margin || 10}px</Text>
+                    <TouchableOpacity
+                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.min(50, (prev.margin || 10) + 5) }))}
+                    >
+                      <Ionicons name="add" size={20} color={colors.text} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.qrStyle.errorCorrection') || '오류 수정'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {['L', 'M', 'Q', 'H'].map((level) => (
+                      <TouchableOpacity
+                        key={level}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.inputBackground,
+                            borderColor: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.border,
+                            flex: 1,
+                          },
+                        ]}
+                        onPress={() => setQrStyle(prev => ({ ...prev, errorCorrectionLevel: level }))}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? '#fff' : colors.text }]}>
+                          {level}
+                        </Text>
+                        <Text style={[s.qrOptionSubtext, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
+                          {level === 'L' ? '7%' : level === 'M' ? '15%' : level === 'Q' ? '25%' : '30%'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* 저장 품질 설정 */}
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.saveQuality') || '저장 품질'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {QR_RES_LEVELS.map((item) => (
+                      <TouchableOpacity
+                        key={item.level}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrResLevel === item.level ? colors.primary : colors.inputBackground,
+                            borderColor: qrResLevel === item.level ? colors.primary : colors.border,
+                            flex: 1,
+                          },
+                        ]}
+                        onPress={() => setQrResLevel(item.level)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrResLevel === item.level ? '#fff' : colors.text }]}>
+                          {item.label}
+                        </Text>
+                        <Text style={[s.qrOptionSubtext, { color: qrResLevel === item.level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
+                          {item.time}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={[s.qrSettingHint, { color: colors.textTertiary }]}>
+                    {QR_RES_LEVELS[qrResLevel].description} (~{QR_RES_LEVELS[qrResLevel].size}px)
+                  </Text>
+                </View>
+              )}
+            </View>
+            )}
+          </View>
         )}
 
         {/* QR Code Preview - QR 모드일 때만 */}
@@ -2070,18 +2771,6 @@ export default function GeneratorScreen() {
                   {t('generator.qrPreview')}
                 </Text>
               </View>
-              {hasData && (
-                <TouchableOpacity
-                  style={[s.styleButton, { backgroundColor: colors.primary }]}
-                  onPress={() => setStylePickerVisible(true)}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="color-palette-outline" size={16} color="#fff" />
-                  <Text style={s.styleButtonText}>
-                    {t('generator.qrStyle.customize') || '스타일'}
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
 
             <View style={[s.qrContainer, { borderColor: colors.border }]}>
@@ -2105,23 +2794,37 @@ export default function GeneratorScreen() {
                   ]}
                   collapsable={false}
                 >
-                  <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
-                    {useStyledQR ? (
-                      <StyledQRCode
-                        value={qrData}
-                        size={240}
-                        qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
+                  {selectedFrame ? (
+                    // 프레임이 선택된 경우 - QRFrameRenderer 사용
+                    <View style={s.frameContainer}>
+                      <QRFrameRenderer
+                        frame={selectedFrame}
+                        qrValue={qrData}
+                        qrStyle={qrStyle}
+                        size={340}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
                       />
-                    ) : (
-                      <QRCode
-                        value={qrData}
-                        size={240}
-                        backgroundColor="white"
-                        color="black"
-                      />
-                    )}
-                  </View>
+                    </View>
+                  ) : (
+                    // 프레임이 없는 경우 - 기존 방식
+                    <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
+                      {useStyledQR ? (
+                        <StyledQRCode
+                          value={qrData}
+                          size={260}
+                          qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
+                          onCapture={(base64) => setCapturedQRBase64(base64)}
+                        />
+                      ) : (
+                        <QRCode
+                          value={qrData}
+                          size={240}
+                          backgroundColor="white"
+                          color="black"
+                        />
+                      )}
+                    </View>
+                  )}
                 </Animated.View>
               ) : (
                 <View style={s.emptyState}>
@@ -2151,38 +2854,6 @@ export default function GeneratorScreen() {
                   qrStyle={qrStyle}
                   onCapture={(base64) => setFullSizeQRBase64(base64)}
                 />
-              </View>
-            )}
-
-            {/* Style Mode Toggle */}
-            {hasData && (
-              <View style={s.styleModeContainer}>
-                <TouchableOpacity
-                  style={[
-                    s.styleModeButton,
-                    !useStyledQR && { backgroundColor: colors.primary },
-                    useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
-                  ]}
-                  onPress={() => setUseStyledQR(false)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.styleModeText, { color: !useStyledQR ? '#fff' : colors.text }]}>
-                    {t('generator.qrStyle.basic') || '기본'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    s.styleModeButton,
-                    useStyledQR && { backgroundColor: colors.primary },
-                    !useStyledQR && { backgroundColor: colors.inputBackground, borderColor: colors.border, borderWidth: 1 },
-                  ]}
-                  onPress={() => setUseStyledQR(true)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[s.styleModeText, { color: useStyledQR ? '#fff' : colors.text }]}>
-                    {t('generator.qrStyle.styled') || '스타일'}
-                  </Text>
-                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -2288,17 +2959,40 @@ export default function GeneratorScreen() {
         )}
       </ScrollView>
 
-      {/* QR Style Picker Modal */}
-      <QRStylePicker
-        visible={stylePickerVisible}
-        onClose={() => setStylePickerVisible(false)}
-        currentStyle={qrStyle}
-        onStyleChange={setQrStyle}
-        previewValue={qrData || 'QR PREVIEW'}
-        logoImage={logoImage}
-        onPickLogo={handlePickLogo}
-        onRemoveLogo={handleRemoveLogo}
-      />
+      {/* 고해상도 저장 프로그레스 모달 */}
+      <Modal
+        visible={saveProgress.visible}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={s.progressModalOverlay}>
+          <View style={[s.progressModalContent, { backgroundColor: colors.surface }]}>
+            {/* 스핀 애니메이션 바코드 아이콘 */}
+            <Animated.View
+              style={[
+                s.progressIconContainer,
+                {
+                  backgroundColor: colors.primary + '15',
+                  transform: [{
+                    rotate: spinAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '360deg'],
+                    }),
+                  }],
+                },
+              ]}
+            >
+              <Ionicons name={saveProgress.type === 'barcode' ? 'barcode-outline' : 'qr-code-outline'} size={40} color={colors.primary} />
+            </Animated.View>
+            <Text style={[s.progressTitle, { color: colors.text }]}>
+              {saveProgress.type === 'barcode' ? t('generator.savingBarcode') : t('generator.savingQRCode')}
+            </Text>
+            <Text style={[s.progressMessage, { color: colors.textSecondary }]}>
+              {saveProgress.message || t('generator.pleaseWait')}
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
       {/* QR 타입 순서 변경 모달 */}
       <Modal
@@ -2534,15 +3228,12 @@ export default function GeneratorScreen() {
                   const catInfo = BARCODE_CATEGORIES[category] || {};
                   return (
                     <View key={category} style={s.categorySection}>
-                      <View style={s.categoryHeader}>
-                        <LinearGradient
-                          colors={catInfo.gradient || ['#667eea', '#764ba2']}
-                          style={s.categoryIcon}
-                        >
-                          <Ionicons name={catInfo.icon || 'barcode-outline'} size={16} color="#fff" />
-                        </LinearGradient>
-                        <Text style={[s.categoryTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                          {t(`generator.barcodeCategories.${category}`) || catInfo.name || category} ({barcodes.length})
+                      <View style={s.categoryHeaderNoIcon}>
+                        <Text style={[s.categoryTitleMain, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                          {t(`generator.barcodeCategories.${category}`) || catInfo.name || category}
+                        </Text>
+                        <Text style={[s.categoryCount, { color: colors.textSecondary }]}>
+                          {barcodes.length}
                         </Text>
                       </View>
                       <View style={s.categoryGrid}>
@@ -2607,28 +3298,20 @@ export default function GeneratorScreen() {
                                 )}
                               </TouchableOpacity>
 
-                              <LinearGradient
-                                colors={catInfo.gradient || ['#667eea', '#764ba2']}
-                                style={[s.modalIconGradient, isBarcodeLocked && { opacity: 0.5 }]}
-                              >
-                                <Ionicons
-                                  name={catInfo.icon || 'barcode-outline'}
-                                  size={22}
-                                  color="#fff"
-                                />
-                              </LinearGradient>
-                              <Text style={[
-                                s.modalBarcodeTitle,
-                                { color: isSelected ? '#fff' : isBarcodeLocked ? colors.textTertiary : colors.text }
-                              ]} numberOfLines={1}>
-                                {format.name}
-                              </Text>
-                              <Text style={[
-                                s.modalBarcodeDesc,
-                                { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
-                              ]} numberOfLines={2}>
-                                {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
-                              </Text>
+                              <View style={s.modalBarcodeTextContainer}>
+                                <Text style={[
+                                  s.modalBarcodeTitleMain,
+                                  { color: isSelected ? '#fff' : isBarcodeLocked ? colors.textTertiary : colors.text, fontFamily: fonts.semiBold }
+                                ]} numberOfLines={1}>
+                                  {format.name}
+                                </Text>
+                                <Text style={[
+                                  s.modalBarcodeDescSmall,
+                                  { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
+                                ]} numberOfLines={2}>
+                                  {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
+                                </Text>
+                              </View>
                             </TouchableOpacity>
                           );
                         })}
@@ -2641,6 +3324,22 @@ export default function GeneratorScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* 오프스크린 고해상도 캡처용 뷰 */}
+      {selectedFrame && hasData && qrResLevel > 0 && (
+        <View
+          ref={highResQrRef}
+          collapsable={false}
+          style={s.offscreenContainer}
+        >
+          <QRFrameRenderer
+            frame={selectedFrame}
+            qrValue={qrData}
+            qrStyle={qrStyle}
+            size={QR_RES_LEVELS[qrResLevel].size}
+          />
+        </View>
+      )}
     </View>
   );
 }
@@ -2648,6 +3347,12 @@ export default function GeneratorScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  offscreenContainer: {
+    position: 'absolute',
+    left: -10000,
+    top: 0,
+    backgroundColor: 'white',
   },
   statusBarGradient: {
     position: 'absolute',
@@ -2799,6 +3504,62 @@ const s = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  settingHint: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  qualityLevelContainer: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  qualityLevelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qualityLevelText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  qualityInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  qualityInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  qualityInfoText: {
+    fontSize: 12,
+  },
+  settingsTabContainer: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+  },
+  settingsTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  settingsTabText: {
+    fontSize: 13,
     fontWeight: '600',
   },
   settingDivider: {
@@ -2955,6 +3716,18 @@ const s = StyleSheet.create({
     marginTop: 2,
     letterSpacing: -0.2,
   },
+  typeButtonNoIcon: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    minWidth: 80,
+    gap: 4,
+  },
+  typeTextMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
   formSection: {
     marginHorizontal: 20,
     borderRadius: 20,
@@ -3092,16 +3865,161 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  qrContainer: {
-    borderRadius: 16,
-    padding: 16,
+  // QR 스타일 설정 인라인 스타일
+  qrSettingsTabScroll: {
+  },
+  qrSettingsTabScrollContent: {
+    gap: 8,
+  },
+  qrSettingsTabWrapper: {
+    borderRadius: 12,
+    padding: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  qrSettingsTab: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 280,
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  qrSettingHint: {
+    fontSize: 12,
+    marginTop: 8,
+  },
+  qrStyleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  qrStyleItem: {
+    width: '30%',
+    borderRadius: 12,
+    padding: 10,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  qrStylePreview: {
+    width: 70,
+    height: 70,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  qrStyleName: {
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  qrStyleCheck: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  framePlaceholder: {
+    width: 60,
+    height: 60,
+    borderWidth: 2,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  presetDotsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 3,
+  },
+  presetDot: {
+    width: 10,
+    height: 10,
+  },
+  qrOptionSection: {
+    gap: 8,
+  },
+  qrOptionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  qrOptionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  qrOptionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  qrOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  qrOptionSubtext: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'flex-start',
+  },
+  colorButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  stepperBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepperValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    minWidth: 60,
+    textAlign: 'center',
+  },
+  qrContainer: {
+    borderRadius: 16,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 400,
+    overflow: 'visible',
   },
   qrWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  frameContainer: {
+    padding: 4,
+    backgroundColor: 'transparent',
   },
   qrBackground: {
     backgroundColor: 'white',
@@ -3112,6 +4030,23 @@ const s = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
+    position: 'relative',
+  },
+  frameIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  frameIndicatorText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
@@ -3238,6 +4173,41 @@ const s = StyleSheet.create({
     minHeight: '80%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 24,
   },
+  // 프로그레스 모달 스타일
+  progressModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressModalContent: {
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    minWidth: 180,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  progressIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  progressTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  progressMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3330,6 +4300,21 @@ const s = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.2,
   },
+  categoryHeaderNoIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 8,
+  },
+  categoryTitleMain: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  categoryCount: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -3365,6 +4350,23 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   modalBarcodeDesc: {
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+  modalBarcodeTextContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 8,
+  },
+  modalBarcodeTitleMain: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  modalBarcodeDescSmall: {
     fontSize: 11,
     textAlign: 'center',
     lineHeight: 14,

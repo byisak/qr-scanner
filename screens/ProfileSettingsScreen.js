@@ -9,6 +9,9 @@ import {
   Alert,
   TextInput,
   Platform,
+  Modal,
+  ActivityIndicator,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -21,11 +24,21 @@ export default function ProfileSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { user, logout, withdraw, updateProfile } = useAuth();
+  const { user, logout, withdraw, updateProfile, changePassword } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [nickname, setNickname] = useState(user?.name || '');
+
+  // 비밀번호 변경 관련 상태
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSaveNickname = async () => {
     if (!nickname.trim()) {
@@ -37,6 +50,90 @@ export default function ProfileSettingsScreen() {
     if (result.success) {
       setIsEditingNickname(false);
       Alert.alert(t('settings.success'), t('auth.profileUpdateSuccess'));
+    }
+  };
+
+  const resetPasswordFields = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
+    setShowConfirmPassword(false);
+  };
+
+  // 비밀번호 유효성 검사 함수
+  const validatePassword = (password) => {
+    if (password.length < 8) {
+      return { valid: false, message: t('auth.errorPasswordMin8') || '비밀번호는 최소 8자 이상이어야 합니다.' };
+    }
+    if (password.length > 100) {
+      return { valid: false, message: t('auth.errorPasswordMax100') || '비밀번호는 100자를 초과할 수 없습니다.' };
+    }
+    if (!/[A-Za-z]/.test(password)) {
+      return { valid: false, message: t('auth.errorPasswordLetter') || '비밀번호에 영문자를 포함해야 합니다.' };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { valid: false, message: t('auth.errorPasswordNumber') || '비밀번호에 숫자를 포함해야 합니다.' };
+    }
+    return { valid: true, message: null };
+  };
+
+  const handleChangePassword = async () => {
+    // 유효성 검사
+    if (!currentPassword) {
+      Alert.alert(t('settings.error'), t('auth.errorCurrentPasswordRequired') || '현재 비밀번호를 입력해주세요');
+      return;
+    }
+    if (!newPassword) {
+      Alert.alert(t('settings.error'), t('auth.errorNewPasswordRequired') || '새 비밀번호를 입력해주세요');
+      return;
+    }
+
+    // 새 비밀번호 강도 검사
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
+      Alert.alert(t('settings.error'), validation.message);
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      Alert.alert(t('settings.error'), t('auth.errorPasswordMismatch') || '새 비밀번호가 일치하지 않습니다');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      Alert.alert(t('settings.error'), t('auth.errorSamePassword') || '현재 비밀번호와 다른 비밀번호를 입력해주세요');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const result = await changePassword(currentPassword, newPassword, confirmPassword);
+    setIsChangingPassword(false);
+
+    if (result.success) {
+      setPasswordModalVisible(false);
+      resetPasswordFields();
+      // 성공 시 로그아웃 후 로그인 화면으로 이동
+      Alert.alert(
+        t('settings.success'),
+        t('auth.passwordChangeSuccessRelogin') || '비밀번호가 변경되었습니다. 다시 로그인해주세요.',
+        [
+          {
+            text: t('common.confirm'),
+            onPress: async () => {
+              await logout();
+              router.replace('/');
+            },
+          },
+        ]
+      );
+    } else {
+      // 에러 코드별 처리
+      let errorMessage = result.error || t('auth.passwordChangeFailed') || '비밀번호 변경에 실패했습니다';
+      if (result.errorCode === 'AUTH_INVALID_CREDENTIALS') {
+        errorMessage = t('auth.errorCurrentPasswordWrong') || '현재 비밀번호가 올바르지 않습니다.';
+      }
+      Alert.alert(t('settings.error'), errorMessage);
     }
   };
 
@@ -170,7 +267,7 @@ export default function ProfileSettingsScreen() {
           {user?.provider === 'email' && (
             <TouchableOpacity
               style={[styles.menuItem, { borderBottomColor: colors.borderLight }]}
-              onPress={() => Alert.alert(t('auth.changePassword'), '준비 중입니다')}
+              onPress={() => setPasswordModalVisible(true)}
               activeOpacity={0.7}
             >
               <Text style={[styles.menuText, { color: colors.text, fontFamily: fonts.medium }]}>
@@ -205,6 +302,128 @@ export default function ProfileSettingsScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* 비밀번호 변경 모달 */}
+      <Modal
+        visible={passwordModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setPasswordModalVisible(false);
+          resetPasswordFields();
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            {/* 모달 헤더 */}
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+                {t('auth.changePassword')}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setPasswordModalVisible(false);
+                  resetPasswordFields();
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {/* 현재 비밀번호 */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+                {t('auth.currentPassword') || '현재 비밀번호'}
+              </Text>
+              <View style={[styles.passwordInputWrapper, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                <TextInput
+                  style={[styles.passwordInput, { color: colors.text, fontFamily: fonts.regular }]}
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  secureTextEntry={!showCurrentPassword}
+                  placeholder={t('auth.enterCurrentPassword') || '현재 비밀번호 입력'}
+                  placeholderTextColor={colors.textTertiary}
+                />
+                <TouchableOpacity onPress={() => setShowCurrentPassword(!showCurrentPassword)}>
+                  <Ionicons
+                    name={showCurrentPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 새 비밀번호 */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+                {t('auth.newPassword') || '새 비밀번호'}
+              </Text>
+              <View style={[styles.passwordInputWrapper, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                <TextInput
+                  style={[styles.passwordInput, { color: colors.text, fontFamily: fonts.regular }]}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  secureTextEntry={!showNewPassword}
+                  placeholder={t('auth.enterNewPassword') || '새 비밀번호 입력 (6자 이상)'}
+                  placeholderTextColor={colors.textTertiary}
+                />
+                <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                  <Ionicons
+                    name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 비밀번호 확인 */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+                {t('auth.confirmNewPassword') || '새 비밀번호 확인'}
+              </Text>
+              <View style={[styles.passwordInputWrapper, { borderColor: colors.border, backgroundColor: colors.background }]}>
+                <TextInput
+                  style={[styles.passwordInput, { color: colors.text, fontFamily: fonts.regular }]}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  placeholder={t('auth.enterConfirmPassword') || '새 비밀번호 다시 입력'}
+                  placeholderTextColor={colors.textTertiary}
+                />
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  <Ionicons
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={22}
+                    color={colors.textSecondary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 변경 버튼 */}
+            <TouchableOpacity
+              style={[styles.changeButton, isChangingPassword && styles.changeButtonDisabled]}
+              onPress={handleChangePassword}
+              disabled={isChangingPassword}
+              activeOpacity={0.8}
+            >
+              {isChangingPassword ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={[styles.changeButtonText, { fontFamily: fonts.semiBold }]}>
+                  {t('auth.changePassword')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -323,5 +542,66 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 16,
+  },
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  passwordInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 10,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingRight: 8,
+  },
+  changeButton: {
+    backgroundColor: '#E67E22',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  changeButtonDisabled: {
+    opacity: 0.7,
+  },
+  changeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

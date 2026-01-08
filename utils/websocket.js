@@ -18,6 +18,13 @@ class WebSocketClient {
 
   // 서버에 연결
   connect(serverUrl) {
+    // 이미 같은 서버에 연결되어 있으면 재연결하지 않음
+    if (this.socket && this.serverUrl === serverUrl && this.isConnected) {
+      console.log('WebSocket already connected to:', serverUrl);
+      return this.socket;
+    }
+
+    // 다른 서버로 변경하거나 재연결이 필요한 경우에만 disconnect
     if (this.socket) {
       this.disconnect();
     }

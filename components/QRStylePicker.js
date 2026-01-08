@@ -14,7 +14,8 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Path, Rect, G, Defs, ClipPath } from 'react-native-svg';
+import { SvgXml } from 'react-native-svg';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
@@ -22,6 +23,39 @@ import { Colors } from '../constants/Colors';
 import { FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
+import QRFrameRenderer, { FRAME_SVG_DATA } from './QRFrameRenderer';
+
+// QR 프레임 프리셋
+const QR_FRAMES = [
+  {
+    id: 'none',
+    name: 'No Frame',
+    nameKo: '프레임 없음',
+    preview: null,
+  },
+  {
+    id: 'scan-me',
+    name: 'Scan Me',
+    nameKo: 'Scan Me',
+    // 프레임 파일 경로 (assets/qr-frames/ 폴더 기준)
+    fileName: 'frame-scan-me.svg',
+    // SVG viewBox 기준 QR코드 배치 위치 (700x700 viewBox 기준)
+    viewBox: '0 0 700 700',
+    qrPosition: { x: 247, y: 291, size: 206 },
+    // 미리보기용 간단한 설명
+    previewColor: '#020203',
+  },
+  {
+    id: 'scan-me-label',
+    name: 'Scan Me Label',
+    nameKo: 'Scan Me 라벨',
+    fileName: 'frame-scan-me-label.svg',
+    viewBox: '0 0 700 700',
+    qrPosition: { x: 198, y: 160, size: 305 },
+    previewColor: '#020203',
+  },
+];
+
 
 // 프리셋 색상 팔레트
 const COLOR_PRESETS = [
@@ -164,7 +198,7 @@ const QR_STYLE_PRESETS = [
   },
 ];
 
-export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS };
+export { QR_STYLE_PRESETS, COLOR_PRESETS, GRADIENT_PRESETS, QR_FRAMES };
 
 // 색상 선택 컴포넌트
 function ColorPickerSection({ label, color, onColorChange, useGradient, gradient, onGradientChange, onGradientToggle, colors, showGradientOption = true, t }) {
@@ -311,6 +345,8 @@ export default function QRStylePicker({
   logoImage,
   onPickLogo,
   onRemoveLogo,
+  selectedFrame = null,
+  onFrameChange,
 }) {
   const { t, language } = useLanguage();
   const { isDark } = useTheme();
@@ -319,20 +355,25 @@ export default function QRStylePicker({
 
   const [activeTab, setActiveTab] = useState('presets');
   const [tempStyle, setTempStyle] = useState(currentStyle);
+  const [tempFrame, setTempFrame] = useState(selectedFrame);
   const [previewKey, setPreviewKey] = useState(0);
 
   useEffect(() => {
     setPreviewKey(prev => prev + 1);
-  }, [tempStyle]);
+  }, [tempStyle, tempFrame]);
 
   useEffect(() => {
     if (visible) {
       setTempStyle(currentStyle);
+      setTempFrame(selectedFrame);
     }
-  }, [visible, currentStyle]);
+  }, [visible, currentStyle, selectedFrame]);
 
   const handleApply = () => {
     onStyleChange(tempStyle);
+    if (onFrameChange) {
+      onFrameChange(tempFrame);
+    }
     onClose();
   };
 
@@ -410,6 +451,63 @@ export default function QRStylePicker({
             <Text style={[styles.presetName, { color: isStyleLocked ? colors.textTertiary : colors.text }]}>
               {language === 'ko' ? preset.nameKo : preset.name}
             </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+
+  const renderFrames = () => (
+    <View style={styles.frameGrid}>
+      {QR_FRAMES.map((frame) => {
+        const isSelected = tempFrame?.id === frame.id || (!tempFrame && frame.id === 'none');
+        return (
+          <TouchableOpacity
+            key={frame.id}
+            style={[
+              styles.frameItem,
+              {
+                backgroundColor: colors.inputBackground,
+                borderColor: isSelected ? colors.primary : colors.border,
+                borderWidth: isSelected ? 2 : 1,
+              },
+            ]}
+            onPress={() => setTempFrame(frame.id === 'none' ? null : frame)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.framePreview, { backgroundColor: '#fff' }]}>
+              {frame.id === 'none' ? (
+                <View style={styles.noFramePreview}>
+                  <Ionicons name="close-circle-outline" size={40} color={colors.textTertiary} />
+                </View>
+              ) : (
+                <View style={styles.framePreviewContent}>
+                  {/* 프레임 미리보기 - 실제 SVG 사용 */}
+                  {FRAME_SVG_DATA[frame.id] ? (
+                    <SvgXml
+                      xml={FRAME_SVG_DATA[frame.id]}
+                      width={90}
+                      height={90}
+                    />
+                  ) : (
+                    <View style={[styles.frameThumbnail, { borderColor: frame.previewColor || '#000' }]}>
+                      <View style={[styles.frameQrPlaceholder, { backgroundColor: frame.previewColor || '#000' }]} />
+                      <Text style={[styles.frameLabel, { color: frame.previewColor || '#000' }]}>
+                        {frame.name}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+            <Text style={[styles.frameName, { color: colors.text }]}>
+              {language === 'ko' ? frame.nameKo : frame.name}
+            </Text>
+            {isSelected && (
+              <View style={[styles.frameSelectedBadge, { backgroundColor: colors.primary }]}>
+                <Ionicons name="checkmark" size={12} color="#fff" />
+              </View>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -835,6 +933,7 @@ export default function QRStylePicker({
   );
 
   const tabs = [
+    { id: 'frames', label: t('generator.qrStyle.frame'), icon: 'albums-outline' },
     { id: 'presets', label: t('generator.qrStyle.presets'), icon: 'color-palette-outline' },
     { id: 'dots', label: t('generator.qrStyle.dots'), icon: 'grid-outline' },
     { id: 'corners', label: t('generator.qrStyle.corners'), icon: 'scan-outline' },
@@ -863,14 +962,26 @@ export default function QRStylePicker({
 
         {/* Live Preview */}
         <View style={[styles.previewContainer, { backgroundColor: colors.surface }]}>
-          <View style={[styles.previewWrapper, { backgroundColor: tempStyle.backgroundColor || '#ffffff' }]}>
-            <StyledQRCode
+          {tempFrame ? (
+            // 프레임이 선택된 경우 - QRFrameRenderer 사용
+            <QRFrameRenderer
               key={previewKey}
-              value={previewValue}
-              size={140}
-              qrStyle={{ ...tempStyle, width: undefined, height: undefined }}
+              frame={tempFrame}
+              qrValue={previewValue}
+              qrStyle={tempStyle}
+              size={180}
             />
-          </View>
+          ) : (
+            // 프레임이 없는 경우 - 기존 방식
+            <View style={[styles.previewWrapper, { backgroundColor: tempStyle.backgroundColor || '#ffffff' }]}>
+              <StyledQRCode
+                key={previewKey}
+                value={previewValue}
+                size={140}
+                qrStyle={{ ...tempStyle, width: undefined, height: undefined }}
+              />
+            </View>
+          )}
           {(tempStyle.width || tempStyle.height) && (
             <Text style={[styles.sizeIndicator, { color: colors.textSecondary }]}>
               {t('generator.qrStyle.actualSize')}: {tempStyle.width || 300} × {tempStyle.height || 300}px
@@ -918,6 +1029,7 @@ export default function QRStylePicker({
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
+          {activeTab === 'frames' && renderFrames()}
           {activeTab === 'presets' && renderPresets()}
           {activeTab === 'dots' && renderDotOptions()}
           {activeTab === 'corners' && renderCornerOptions()}
@@ -1036,6 +1148,74 @@ const styles = StyleSheet.create({
   presetName: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  // Frame styles
+  frameGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  frameItem: {
+    width: '47%',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  framePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
+  noFramePreview: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+  },
+  framePreviewContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+  },
+  frameThumbnail: {
+    width: 80,
+    height: 90,
+    borderWidth: 2,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 6,
+  },
+  frameQrPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+  },
+  frameLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  frameName: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  frameSelectedBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   lockOverlay: {
     position: 'absolute',

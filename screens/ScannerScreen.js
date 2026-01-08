@@ -45,7 +45,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
 
 // 분리된 컴포넌트
-import ScanAnimation from '../components/ScanAnimation';
+import ScanAnimation from '../components/ScanAnimation'; // 플러스 표시만 활성화
 import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
 import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
@@ -118,8 +118,11 @@ function ScannerScreen() {
   const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
   const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
   const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
+  const [visibleHighlightsCount, setVisibleHighlightsCount] = useState(0); // 화면에 표시되는 하이라이트 개수
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
+  const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
+  const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -140,6 +143,7 @@ function ScannerScreen() {
   const isProcessingMultiRef = useRef(false); // 다중 바코드 처리 중 플래그
   const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
   const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
+  const resultWindowAutoOpenRef = useRef(true); // 결과창 자동 열림 ref
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -182,6 +186,16 @@ function ScannerScreen() {
       setPendingMultiScanData(null);
     }
   }, [multiCodeModeEnabled]);
+
+  // resultWindowAutoOpen 상태를 ref에 동기화
+  useEffect(() => {
+    console.log(`[ScannerScreen] resultWindowAutoOpen changed: ${resultWindowAutoOpen}`);
+    resultWindowAutoOpenRef.current = resultWindowAutoOpen;
+    // 활성화 시 마지막 스캔 코드 초기화
+    if (resultWindowAutoOpen) {
+      setLastScannedCode(null);
+    }
+  }, [resultWindowAutoOpen]);
 
   // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
   useEffect(() => {
@@ -516,6 +530,10 @@ function ScannerScreen() {
           // 바코드 값 표시 설정 로드
           const showValues = await AsyncStorage.getItem('multiCodeShowValues');
           setShowBarcodeValues(showValues === null ? true : showValues === 'true');
+
+          // 결과창 자동 열림 설정 로드
+          const autoOpen = await AsyncStorage.getItem('resultWindowAutoOpen');
+          setResultWindowAutoOpen(autoOpen === null ? true : autoOpen === 'true');
 
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
@@ -1117,7 +1135,7 @@ function ScannerScreen() {
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
   // 다중 바코드 감지 핸들러 - 중복 제외하고 누적
-  const handleMultipleCodesDetected = useCallback(async (count, barcodesData) => {
+  const handleMultipleCodesDetected = useCallback((count, barcodesData) => {
     console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
 
     // 디버그: 각 바코드의 값 로그
@@ -1155,15 +1173,46 @@ function ScannerScreen() {
             value: value,
             type: barcode.type,
             frame: barcode.frame,
+            bounds: barcode.bounds || barcode.frame, // bounds가 있으면 사용, 없으면 frame
+            screenSize: barcode.screenSize,
+            colorIndex: barcode.colorIndex,
           });
           newCodesAdded = true;
           console.log(`[ScannerScreen] Added new code (len=${value.length}): ${value}`);
+
+          // 실시간 서버전송이 활성화되어 있으면 새 코드 추가 시 웹소켓으로 데이터 전송
+          if (realtimeSyncEnabled && activeSessionId) {
+            const success = websocketClient.sendScanData({
+              code: value,
+              timestamp: Date.now(),
+            }, activeSessionId);
+            if (success) {
+              setShowSendMessage(true);
+              setTimeout(() => setShowSendMessage(false), 1000);
+            }
+          }
         } else {
-          console.log(`[ScannerScreen] Duplicate code: ${value}`);
+          // 기존 코드의 bounds 업데이트 (위치가 변경될 수 있으므로)
+          const existing = scannedCodesRef.current.find(item => item.value === value);
+          if (existing && (barcode.bounds || barcode.frame)) {
+            existing.bounds = barcode.bounds || barcode.frame;
+            existing.screenSize = barcode.screenSize;
+            existing.colorIndex = barcode.colorIndex;
+          }
         }
       });
 
-      // 새로운 코드가 추가되었을 때만 처리
+      // 먼저 상태 업데이트 (동기적으로)
+      const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
+
+      // 상태 즉시 업데이트
+      setPendingMultiScanData({
+        imageUri: null,
+        barcodes: JSON.stringify(validBarcodes),
+        count: validBarcodes.length
+      });
+
+      // 새로운 코드가 추가되었을 때 햅틱 피드백
       if (newCodesAdded) {
         console.log(`[ScannerScreen] Accumulated unique codes: ${scannedCodesRef.current.length}`);
 
@@ -1171,50 +1220,79 @@ function ScannerScreen() {
         if (hapticEnabledRef.current) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
+      }
+      return; // 처리 완료
+    }
+  }, [isActive, realtimeSyncEnabled, activeSessionId]);
 
-        // 첫 번째 감지 시에만 사진 캡처 (isProcessingMultiRef로 중복 방지)
-        let imageUri = pendingMultiScanData?.imageUri || null;
+  // 감지된 바코드 변경 핸들러 (React 상태 기반 - Worklet 직렬화 우회)
+  const handleDetectedBarcodesChange = useCallback((barcodesData) => {
+    console.log(`[ScannerScreen] handleDetectedBarcodesChange: ${barcodesData?.length} barcodes`);
 
-        if (!isProcessingMultiRef.current && !imageUri && cameraRef.current) {
-          isProcessingMultiRef.current = true;
-          try {
-            const photo = await cameraRef.current.takePhoto();
-            if (photo && photo.uri) {
-              imageUri = photo.uri;
-              console.log('[ScannerScreen] Photo captured:', imageUri);
-            }
-          } catch (error) {
-            console.error('[ScannerScreen] Photo capture error:', error);
+    // 네비게이션 중이거나 비활성화 상태면 무시
+    if (isNavigatingRef.current || !isActive) {
+      return;
+    }
+
+    // 여러 코드 인식 모드가 아니면 무시
+    if (!multiCodeModeEnabledRef.current) {
+      return;
+    }
+
+    if (barcodesData && barcodesData.length > 0) {
+      let newCodesAdded = false;
+
+      barcodesData.forEach((barcode) => {
+        const value = String(barcode.value || '').trim();
+        // 빈 값, "null", "undefined" 문자열 필터링
+        if (!value || value.length === 0 || value === 'null' || value === 'undefined') return;
+
+        const isDuplicate = scannedCodesRef.current.some(
+          (existing) => existing.value === value
+        );
+        if (!isDuplicate) {
+          scannedCodesRef.current.push({
+            value: value,
+            type: barcode.type,
+            frame: barcode.frame,
+            bounds: barcode.bounds || barcode.frame,
+            screenSize: barcode.screenSize,
+            colorIndex: barcode.colorIndex,
+          });
+          newCodesAdded = true;
+          console.log(`[ScannerScreen] Added via state: ${value}`);
+        } else {
+          // 기존 코드의 bounds 업데이트
+          const existing = scannedCodesRef.current.find(item => item.value === value);
+          if (existing && (barcode.bounds || barcode.frame)) {
+            existing.bounds = barcode.bounds || barcode.frame;
+            existing.screenSize = barcode.screenSize;
+            existing.colorIndex = barcode.colorIndex;
           }
-
-          // 플래그 해제 (딜레이 후)
-          setTimeout(() => {
-            isProcessingMultiRef.current = false;
-          }, 1500);
         }
+      });
 
-        // 누적된 바코드 데이터로 보류 데이터 업데이트 (빈 값 필터링)
-        const validBarcodes = scannedCodesRef.current.filter(bc => bc.value && bc.value.trim().length > 0);
-        const accumulatedBarcodes = JSON.stringify(validBarcodes);
-        setPendingMultiScanData({
-          imageUri: imageUri,
-          barcodes: accumulatedBarcodes,
-          count: validBarcodes.length
-        });
+      // 참고: setPendingMultiScanData는 handleVerifiedBarcodesChange에서만 호출
+      // handleDetectedBarcodesChange에서는 scannedCodesRef에만 축적하고,
+      // bounds가 보장된 handleVerifiedBarcodesChange에서 pendingMultiScanData를 설정함
+
+      if (newCodesAdded && hapticEnabledRef.current) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     }
-  }, [isActive, pendingMultiScanData?.imageUri]);
+  }, [isActive]);
 
   // 다중 바코드 결과 보기 핸들러
   const handleViewMultiResults = useCallback(() => {
     if (!pendingMultiScanData) return;
 
     isNavigatingRef.current = true;
+
+    // 결과 페이지로 바로 이동 (이미지 없이)
     router.push({
-      pathname: '/image-analysis',
+      pathname: '/multi-code-results',
       params: {
-        imageUri: pendingMultiScanData.imageUri || '',
-        detectedBarcodes: pendingMultiScanData.barcodes
+        detectedBarcodes: pendingMultiScanData.barcodes,
       }
     });
 
@@ -1227,6 +1305,81 @@ function ScannerScreen() {
       isNavigatingRef.current = false;
     }, 2000);
   }, [pendingMultiScanData, router]);
+
+  // 화면에 표시되는 하이라이트 개수 변경 핸들러
+  const handleVisibleHighlightsChange = useCallback((count) => {
+    setVisibleHighlightsCount(count);
+  }, []);
+
+  // 검증된 바코드 변경 핸들러 (투표 기반 - 각 바운더리가 검증한 값)
+  const handleVerifiedBarcodesChange = useCallback((verifiedBarcodes) => {
+    // 네비게이션 중이거나 비활성화 상태면 무시
+    if (isNavigatingRef.current || !isActive) return;
+    // 여러 코드 인식 모드가 아니면 무시
+    if (!multiCodeModeEnabledRef.current) return;
+
+    console.log(`[ScannerScreen] Verified barcodes: ${verifiedBarcodes?.length}`);
+
+    if (verifiedBarcodes && verifiedBarcodes.length > 0) {
+      // scannedCodesRef에 있는 바코드의 bounds 업데이트
+      verifiedBarcodes.forEach(bc => {
+        if (bc.value && bc.bounds) {
+          const existing = scannedCodesRef.current.find(item => item.value === bc.value);
+          if (existing) {
+            // bounds와 screenSize 업데이트
+            existing.bounds = bc.bounds;
+            existing.screenSize = bc.screenSize;
+            existing.colorIndex = bc.colorIndex;
+          }
+        }
+      });
+
+      // 검증된 바코드로 pendingMultiScanData 업데이트
+      // 중복 제거 (같은 값이 여러 바운더리에서 나올 수 있음)
+      const uniqueValues = new Map();
+      verifiedBarcodes.forEach(bc => {
+        if (bc.value && !uniqueValues.has(bc.value)) {
+          uniqueValues.set(bc.value, bc);
+        }
+      });
+
+      const uniqueBarcodes = Array.from(uniqueValues.values());
+
+      setPendingMultiScanData({
+        imageUri: null,
+        barcodes: JSON.stringify(uniqueBarcodes),
+        count: uniqueBarcodes.length
+      });
+    }
+  }, [isActive]);
+
+  // 결과 창 열기 핸들러 (결과창 자동 열림 비활성화 시 사용)
+  const handleOpenResultWindow = useCallback(() => {
+    if (!lastScannedCode) return;
+
+    isNavigatingRef.current = true;
+    setIsActive(false);
+
+    router.push({
+      pathname: '/result',
+      params: {
+        code: lastScannedCode.code,
+        isDuplicate: lastScannedCode.isDuplicate ? 'true' : 'false',
+        scanCount: lastScannedCode.scanCount.toString(),
+        photoUri: lastScannedCode.photoUri || '',
+        type: lastScannedCode.type,
+        errorCorrectionLevel: lastScannedCode.errorCorrectionLevel || '',
+      }
+    });
+
+    // 마지막 스캔 코드 초기화
+    setLastScannedCode(null);
+  }, [lastScannedCode, router]);
+
+  // 결과 창 닫기 핸들러 (스캔 계속)
+  const handleCloseResultWindow = useCallback(() => {
+    setLastScannedCode(null);
+  }, []);
 
   // 다중 바코드 보류 데이터 닫기 핸들러
   const handleCloseMultiScan = useCallback(() => {
@@ -1618,6 +1771,39 @@ function ScannerScreen() {
           }
 
           // 일반 모드 (기존 로직)
+
+          // 결과창 자동 열림이 비활성화된 경우: 카메라 유지, 테두리와 값 표시
+          if (!resultWindowAutoOpenRef.current) {
+            // 마지막 스캔된 코드 저장 (UI에 먼저 표시)
+            setLastScannedCode({
+              code: data,
+              type: normalizedType,
+              timestamp: Date.now(),
+              isDuplicate: false,
+              scanCount: 1,
+              photoUri: photoUri || null,
+              errorCorrectionLevel: detectedEcLevel || null,
+            });
+
+            // 히스토리 저장 (비동기, 기다리지 않음 - 애니메이션 블록 방지)
+            saveHistory(data, null, photoUri, normalizedType, detectedEcLevel).then(historyResult => {
+              // 히스토리 결과로 업데이트
+              setLastScannedCode(prev => prev ? {
+                ...prev,
+                isDuplicate: historyResult.isDuplicate,
+                scanCount: historyResult.count,
+              } : null);
+            }).catch(console.error);
+
+            // 스캔 재활성화 (계속 스캔 가능) - 카메라는 활성 상태 유지
+            setTimeout(() => {
+              isProcessingRef.current = false;
+              setCanScan(true);
+            }, 300);
+            startResetTimer(RESET_DELAYS.NORMAL);
+            return;
+          }
+
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
           // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
@@ -1959,6 +2145,7 @@ function ScannerScreen() {
       {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
       {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
       <NativeQRScanner
+        key={multiCodeModeEnabled ? 'multi-code-mode' : 'single-code-mode'}
         ref={cameraRef}
         isActive={isActive}
         facing={cameraFacing}
@@ -1966,25 +2153,30 @@ function ScannerScreen() {
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
+        onDetectedBarcodesChange={handleDetectedBarcodesChange}
+        onVerifiedBarcodesChange={handleVerifiedBarcodesChange}
+        onVisibleHighlightsChange={handleVisibleHighlightsChange}
         selectCenterBarcode={!multiCodeModeEnabled}
-        showBarcodeValues={multiCodeModeEnabled && showBarcodeValues}
+        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"
       />
 
       <View style={styles.overlay} pointerEvents="box-none">
-        {/* 현재 그룹 표시 (클릭 가능) */}
+        {/* 현재 그룹 표시 (클릭 가능) - 글래스모피즘 효과 */}
         <TouchableOpacity
           style={[styles.groupBadge, { top: topOffset }]}
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
-          <Ionicons name="folder" size={16} color="#fff" />
-          <Text style={styles.groupBadgeText}>
-            {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
-          </Text>
-          <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
+          <BlurView intensity={80} tint="light" style={styles.groupBadgeBlur}>
+            <Ionicons name="folder" size={16} color="rgba(255,255,255,0.95)" />
+            <Text style={[styles.groupBadgeText, { color: 'rgba(255,255,255,0.95)' }]}>
+              {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.95)" style={{ marginLeft: 4 }} />
+          </BlurView>
         </TouchableOpacity>
 
         {/* 배치 모드 활성 표시 */}
@@ -2031,7 +2223,7 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 스캔 로딩 애니메이션 */}
+        {/* 중앙 플러스 표시 */}
         <ScanAnimation isActive={isActive} />
       </View>
 
@@ -2101,19 +2293,19 @@ function ScannerScreen() {
         )}
       </TouchableOpacity>
 
-      {/* 실시간 서버 전송 안내 메시지 */}
+      {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
       {realtimeSyncEnabled && !activeSessionId && (
         <View style={[styles.realtimeSyncGuide, { bottom: bottomOffset + 20 }]}>
-          <View style={styles.realtimeSyncGuideContent}>
-            <Ionicons name="information-circle" size={20} color="#fff" />
-            <Text style={styles.realtimeSyncGuideText}>
+          <BlurView intensity={80} tint="light" style={styles.realtimeSyncGuideBlur}>
+            <Ionicons name="information-circle" size={20} color="rgba(255, 130, 130, 0.95)" />
+            <Text style={[styles.realtimeSyncGuideText, { color: 'rgba(255,255,255,0.95)' }]}>
               {t('scanner.realtimeSyncGuide') || '실시간 서버 전송이 켜져 있습니다.\n저장할 서버 전송 그룹을 상단에서 선택해주세요.'}
             </Text>
-          </View>
+          </BlurView>
         </View>
       )}
 
-      {/* 그룹 선택 모달 */}
+      {/* 그룹 선택 모달 - 글래스모피즘 효과 */}
       <Modal
         visible={groupModalVisible}
         transparent={true}
@@ -2125,7 +2317,7 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]} onStartShouldSetResponder={() => true}>
+          <BlurView intensity={50} tint="light" style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Ionicons name="folder" size={24} color={colors.primary} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
@@ -2142,8 +2334,8 @@ function ScannerScreen() {
                   key={group.id}
                   style={[
                     styles.groupItem,
-                    { backgroundColor: colors.inputBackground },
-                    currentGroupId === group.id && [styles.groupItemActive, { borderColor: colors.primary }]
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)' },
+                    currentGroupId === group.id && [styles.groupItemActive, { borderColor: colors.primary, backgroundColor: isDark ? 'rgba(0,122,255,0.2)' : 'rgba(0,122,255,0.1)' }]
                   ]}
                   onPress={() => handleSelectGroup(group.id, group.name, group.isCloudSync, group.isScanUrlGroup, group.scanUrlId)}
                   activeOpacity={0.7}
@@ -2169,7 +2361,7 @@ function ScannerScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+          </BlurView>
         </TouchableOpacity>
       </Modal>
 
@@ -2256,7 +2448,16 @@ function ScannerScreen() {
       />
 
       {/* 다중 바코드 감지 시 결과 보기 버튼 */}
-      {pendingMultiScanData && (
+      {pendingMultiScanData && (() => {
+        // 유효한 코드만 필터링하여 개수 계산 (결과 페이지와 동일한 필터링)
+        const parsedBarcodes = JSON.parse(pendingMultiScanData.barcodes || '[]');
+        const validCount = parsedBarcodes.filter(code => {
+          if (!code.value) return false;
+          const value = String(code.value).trim();
+          return value.length > 0 && value !== 'null' && value !== 'undefined';
+        }).length;
+        if (validCount === 0) return null;
+        return (
         <View style={[styles.multiScanButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
           <TouchableOpacity
             style={styles.multiScanButton}
@@ -2265,7 +2466,7 @@ function ScannerScreen() {
           >
             <Ionicons name="qr-code" size={20} color="#fff" />
             <Text style={styles.multiScanButtonText}>
-              {t('scanner.viewMultiResults').replace('{count}', pendingMultiScanData.count.toString())}
+              {t('scanner.viewMultiResults').replace('{count}', validCount.toString())}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -2275,6 +2476,38 @@ function ScannerScreen() {
           >
             <Ionicons name="close" size={20} color="#fff" />
           </TouchableOpacity>
+        </View>
+        );
+      })()}
+
+      {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
+      {lastScannedCode && !resultWindowAutoOpen && (
+        <View style={[styles.resultWindowButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
+          <BlurView intensity={50} tint="light" style={styles.resultWindowButtonBlur}>
+            <View style={styles.scannedCodeInfo}>
+              <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{t('resultWindowSettings.scannedCode')}</Text>
+              <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1}>{lastScannedCode.code}</Text>
+            </View>
+            <View style={styles.resultWindowButtonRow}>
+              <TouchableOpacity
+                style={styles.resultWindowButton}
+                onPress={handleOpenResultWindow}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="open-outline" size={20} color="#fff" />
+                <Text style={styles.resultWindowButtonText}>
+                  {t('resultWindowSettings.openResultButton')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.resultWindowCloseButton}
+                onPress={handleCloseResultWindow}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </BlurView>
         </View>
       )}
 
@@ -2301,20 +2534,21 @@ const styles = StyleSheet.create({
   groupBadge: {
     position: 'absolute',
     // top은 인라인 스타일로 동적 설정
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    overflow: 'hidden',
     borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
     elevation: 5,
   },
+  groupBadgeBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
   groupBadgeText: {
-    color: '#fff',
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 6,
@@ -2387,6 +2621,19 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     // bottom은 인라인 스타일로 동적 설정
+    overflow: 'hidden',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  realtimeSyncGuideBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   realtimeSyncGuideContent: {
     flexDirection: 'row',
@@ -2402,7 +2649,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   realtimeSyncGuideText: {
-    color: '#fff',
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 10,
@@ -2527,6 +2773,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
+    elevation: 5,
+  },
+  modalContentBlur: {
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
     elevation: 5,
   },
   modalHeader: {
@@ -2676,6 +2935,63 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
+  },
+  // 결과창 자동 열림 비활성화 시 버튼 스타일
+  resultWindowButtonContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    overflow: 'hidden',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  resultWindowButtonBlur: {
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+  },
+  scannedCodeInfo: {
+    marginBottom: 12,
+  },
+  scannedCodeLabel: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  scannedCodeValue: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  resultWindowButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  resultWindowButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0, 200, 83, 0.95)',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  resultWindowButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  resultWindowCloseButton: {
+    backgroundColor: 'rgba(100, 100, 100, 0.95)',
+    padding: 14,
+    borderRadius: 12,
   },
 });
 

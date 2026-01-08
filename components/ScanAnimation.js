@@ -115,7 +115,7 @@ export default function ScanAnimation({ isActive }) {
 
   return (
     <View style={styles.container} pointerEvents="none">
-      {/* Step 1: QR 아이콘 */}
+      {/* Step 1: QR 아이콘 - 주석처리
       <Animated.View style={[styles.qrIconContainer, { opacity: qrIconOpacity }]}>
         <Ionicons
           name="qr-code"
@@ -123,10 +123,10 @@ export default function ScanAnimation({ isActive }) {
           color="rgba(255, 255, 255, 0.9)"
         />
       </Animated.View>
+      */}
 
-      {/* Step 1-2: 코너 사각형 (위치 이동 애니메이션) */}
+      {/* Step 1-2: 코너 사각형 (위치 이동 애니메이션) - 주석처리
       <View style={styles.cornerContainer}>
-        {/* 좌상단 코너 */}
         <Animated.View
           style={[
             styles.corner,
@@ -150,7 +150,6 @@ export default function ScanAnimation({ isActive }) {
           <View style={[styles.cornerLine, { width: CORNER_LINE_WIDTH, height: CORNER_SIZE, top: 0, left: 0 }]} />
         </Animated.View>
 
-        {/* 우상단 코너 */}
         <Animated.View
           style={[
             styles.corner,
@@ -174,7 +173,6 @@ export default function ScanAnimation({ isActive }) {
           <View style={[styles.cornerLine, { width: CORNER_LINE_WIDTH, height: CORNER_SIZE, top: 0, right: 0 }]} />
         </Animated.View>
 
-        {/* 좌하단 코너 */}
         <Animated.View
           style={[
             styles.corner,
@@ -198,7 +196,6 @@ export default function ScanAnimation({ isActive }) {
           <View style={[styles.cornerLine, { width: CORNER_LINE_WIDTH, height: CORNER_SIZE, bottom: 0, left: 0 }]} />
         </Animated.View>
 
-        {/* 우하단 코너 */}
         <Animated.View
           style={[
             styles.corner,
@@ -222,18 +219,20 @@ export default function ScanAnimation({ isActive }) {
           <View style={[styles.cornerLine, { width: CORNER_LINE_WIDTH, height: CORNER_SIZE, bottom: 0, right: 0 }]} />
         </Animated.View>
       </View>
+      */}
 
-      {/* Step 1: 안내 텍스트 */}
+      {/* Step 1: 안내 텍스트 - 주석처리
       <Animated.View style={[styles.guideTextContainer, { opacity: guideTextOpacity }]}>
         <Text style={styles.guideText}>{t('scanner.guideText')}</Text>
       </Animated.View>
+      */}
 
-      {/* Step 3: 중앙 십자가 (최종 상태) */}
-      <Animated.View style={[styles.centerTarget, { opacity: crosshairOpacity }]}>
+      {/* Step 3: 중앙 십자가 (플러스 표시) - 항상 표시 */}
+      <View style={styles.centerTarget}>
         <View style={styles.targetLineHorizontal} />
         <View style={styles.targetLineVertical} />
         <View style={styles.targetCenter} />
-      </Animated.View>
+      </View>
     </View>
   );
 }
