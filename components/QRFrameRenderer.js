@@ -147,8 +147,7 @@ const styles = StyleSheet.create({
   },
   qrOverlay: {
     position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: 'transparent',
+    overflow: 'hidden',
   },
 });
