@@ -2982,7 +2982,7 @@ export default function GeneratorScreen() {
                 },
               ]}
             >
-              <Ionicons name="barcode-outline" size={40} color={colors.primary} />
+              <Ionicons name="qr-code-outline" size={40} color={colors.primary} />
             </Animated.View>
             <Text style={[s.progressTitle, { color: colors.text }]}>
               {t('generator.savingBarcode')}
@@ -3870,8 +3870,7 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   qrSettingsTabScrollContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    padding: 8,
     gap: 8,
   },
   qrSettingsTabWrapper: {
