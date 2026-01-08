@@ -91,28 +91,21 @@ export default function QRFrameRenderer({
   const qrX = Math.floor(qrPosition.x * scale + (qrAreaWidth - qrSize) / 2);
   const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
 
-  // 프레임 내부 영역 위치 (배경색용)
-  const innerAreaX = Math.floor(qrPosition.x * scale);
-  const innerAreaY = Math.floor(qrPosition.y * scale);
+  // SVG에 배경색 rect 추가 (viewBox 좌표계 기준)
+  // viewBox는 "205 155 292 395"이므로 실제 SVG 좌표로 변환
+  const bgColor = qrStyle?.backgroundColor || '#ffffff';
+  const bgRectX = 205 + qrPosition.x; // viewBox origin + position
+  const bgRectY = 155 + qrPosition.y;
+  const bgRect = `<rect x="${bgRectX}" y="${bgRectY}" width="${qrPosition.width}" height="${qrPosition.height}" fill="${bgColor}"/>`;
+
+  // SVG 시작 태그 바로 뒤에 배경 rect 삽입
+  const modifiedSvg = frameSvg.replace(/<svg([^>]*)>/, `<svg$1>${bgRect}`);
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
-      {/* 프레임 내부 배경색 */}
-      <View
-        style={[
-          styles.innerBackground,
-          {
-            left: innerAreaX,
-            top: innerAreaY,
-            width: Math.floor(qrAreaWidth),
-            height: Math.floor(qrAreaHeight),
-            backgroundColor: qrStyle?.backgroundColor || '#ffffff',
-          },
-        ]}
-      />
-      {/* 프레임 SVG */}
+      {/* 프레임 SVG (배경색 rect 포함) */}
       <SvgXml
-        xml={frameSvg}
+        xml={modifiedSvg}
         width={frameWidth}
         height={frameHeight}
         style={styles.frameSvg}
@@ -151,9 +144,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-  },
-  innerBackground: {
-    position: 'absolute',
   },
   qrWrapper: {
     padding: 24,
