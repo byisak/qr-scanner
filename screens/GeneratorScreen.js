@@ -3327,25 +3327,17 @@ export default function GeneratorScreen() {
 
       {/* 오프스크린 고해상도 캡처용 뷰 */}
       {selectedFrame && hasData && qrResLevel > 0 && (
-        <View style={s.offscreenContainer}>
-          <ScrollView
-            contentContainerStyle={{ width: QR_RES_LEVELS[qrResLevel].size, height: QR_RES_LEVELS[qrResLevel].size }}
-            showsVerticalScrollIndicator={false}
-            showsHorizontalScrollIndicator={false}
-          >
-            <View
-              ref={highResQrRef}
-              collapsable={false}
-              style={{ width: QR_RES_LEVELS[qrResLevel].size, height: QR_RES_LEVELS[qrResLevel].size, backgroundColor: 'white' }}
-            >
-              <QRFrameRenderer
-                frame={selectedFrame}
-                qrValue={qrData}
-                qrStyle={qrStyle}
-                size={QR_RES_LEVELS[qrResLevel].size}
-              />
-            </View>
-          </ScrollView>
+        <View
+          ref={highResQrRef}
+          collapsable={false}
+          style={[s.offscreenContainer, { width: QR_RES_LEVELS[qrResLevel].size, height: QR_RES_LEVELS[qrResLevel].size }]}
+        >
+          <QRFrameRenderer
+            frame={selectedFrame}
+            qrValue={qrData}
+            qrStyle={qrStyle}
+            size={QR_RES_LEVELS[qrResLevel].size}
+          />
         </View>
       )}
     </View>
@@ -3360,9 +3352,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: -10000,
     top: 0,
-    width: 1800,
-    height: 1800,
-    zIndex: -1,
+    backgroundColor: 'white',
   },
   statusBarGradient: {
     position: 'absolute',
