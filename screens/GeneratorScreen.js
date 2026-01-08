@@ -1033,22 +1033,31 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
-        if (useStyledQR && qrBase64) {
-          const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-          const cacheDir = FileSystem.cacheDirectory.endsWith('/')
-            ? FileSystem.cacheDirectory
-            : FileSystem.cacheDirectory + '/';
-          const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          uri = fileUri;
-        } else {
+        if (selectedFrame) {
+          // 프레임이 선택된 경우 - 전체 뷰 캡처 (프레임 + QR)
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
+        } else {
+          // 프레임이 없는 경우 - 기존 방식
+          const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+          if (useStyledQR && qrBase64) {
+            const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
+            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+              ? FileSystem.cacheDirectory
+              : FileSystem.cacheDirectory + '/';
+            const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            uri = fileUri;
+          } else {
+            uri = await captureRef(qrRef, {
+              format: 'png',
+              quality: 1,
+            });
+          }
         }
       }
 
@@ -1140,22 +1149,31 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
-        if (useStyledQR && qrBase64) {
-          const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
-          const cacheDir = FileSystem.cacheDirectory.endsWith('/')
-            ? FileSystem.cacheDirectory
-            : FileSystem.cacheDirectory + '/';
-          const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          uri = fileUri;
-        } else {
+        if (selectedFrame) {
+          // 프레임이 선택된 경우 - 전체 뷰 캡처 (프레임 + QR)
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
+        } else {
+          // 프레임이 없는 경우 - 기존 방식
+          const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
+          if (useStyledQR && qrBase64) {
+            const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
+            const cacheDir = FileSystem.cacheDirectory.endsWith('/')
+              ? FileSystem.cacheDirectory
+              : FileSystem.cacheDirectory + '/';
+            const fileUri = cacheDir + 'qr-styled-' + Date.now() + '.png';
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            uri = fileUri;
+          } else {
+            uri = await captureRef(qrRef, {
+              format: 'png',
+              quality: 1,
+            });
+          }
         }
       }
 
@@ -2710,7 +2728,7 @@ export default function GeneratorScreen() {
                       frame={selectedFrame}
                       qrValue={qrData}
                       qrStyle={qrStyle}
-                      size={288}
+                      size={320}
                       onCapture={(base64) => setCapturedQRBase64(base64)}
                     />
                   ) : (
