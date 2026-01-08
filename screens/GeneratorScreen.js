@@ -44,6 +44,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from '../components/StyledQRCode';
 import QRFrameRenderer, { FRAME_SVG_DATA } from '../components/QRFrameRenderer';
 import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
+import NativeColorPicker from '../components/NativeColorPicker';
 import { SvgXml } from 'react-native-svg';
 import Svg, { Circle, Path } from 'react-native-svg';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
@@ -368,6 +369,7 @@ export default function GeneratorScreen() {
   const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
+  const [activeColorPicker, setActiveColorPicker] = useState(null); // 활성 컬러 피커 (dotColor, cornerSquareColor, cornerDotColor, backgroundColor)
   const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
 
   // QR 고해상도 레벨별 설정
@@ -2529,6 +2531,14 @@ export default function GeneratorScreen() {
                     {t('generator.qrStyle.dotColor') || '도트 색상'}
                   </Text>
                   <View style={s.colorGrid}>
+                    {/* 컬러 피커 버튼 */}
+                    <TouchableOpacity
+                      style={[s.colorPickerButton, { backgroundColor: qrStyle.dotColor || '#000000', borderColor: colors.border }]}
+                      onPress={() => setActiveColorPicker('dotColor')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="color-palette" size={20} color={(qrStyle.dotColor === '#FFFFFF' || qrStyle.dotColor === '#ffffff') ? '#333' : '#fff'} />
+                    </TouchableOpacity>
                     {COLOR_PRESETS.map((presetColor) => (
                       <TouchableOpacity
                         key={presetColor}
@@ -2579,6 +2589,14 @@ export default function GeneratorScreen() {
                     {t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'}
                   </Text>
                   <View style={s.colorGrid}>
+                    {/* 컬러 피커 버튼 */}
+                    <TouchableOpacity
+                      style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerSquareColor || '#000000', borderColor: colors.border }]}
+                      onPress={() => setActiveColorPicker('cornerSquareColor')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="color-palette" size={20} color={(qrStyle.cornerSquareColor === '#FFFFFF' || qrStyle.cornerSquareColor === '#ffffff') ? '#333' : '#fff'} />
+                    </TouchableOpacity>
                     {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
                       <TouchableOpacity
                         key={`cs-${presetColor}`}
@@ -2624,6 +2642,14 @@ export default function GeneratorScreen() {
                     {t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'}
                   </Text>
                   <View style={s.colorGrid}>
+                    {/* 컬러 피커 버튼 */}
+                    <TouchableOpacity
+                      style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerDotColor || '#000000', borderColor: colors.border }]}
+                      onPress={() => setActiveColorPicker('cornerDotColor')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="color-palette" size={20} color={(qrStyle.cornerDotColor === '#FFFFFF' || qrStyle.cornerDotColor === '#ffffff') ? '#333' : '#fff'} />
+                    </TouchableOpacity>
                     {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
                       <TouchableOpacity
                         key={`cd-${presetColor}`}
@@ -2650,6 +2676,14 @@ export default function GeneratorScreen() {
                     {t('generator.qrStyle.backgroundColor') || '배경 색상'}
                   </Text>
                   <View style={s.colorGrid}>
+                    {/* 컬러 피커 버튼 */}
+                    <TouchableOpacity
+                      style={[s.colorPickerButton, { backgroundColor: qrStyle.backgroundColor || '#ffffff', borderColor: colors.border }]}
+                      onPress={() => setActiveColorPicker('backgroundColor')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="color-palette" size={20} color={(qrStyle.backgroundColor === '#FFFFFF' || qrStyle.backgroundColor === '#ffffff' || !qrStyle.backgroundColor) ? '#333' : '#fff'} />
+                    </TouchableOpacity>
                     {COLOR_PRESETS.map((presetColor) => (
                       <TouchableOpacity
                         key={presetColor}
@@ -3340,6 +3374,19 @@ export default function GeneratorScreen() {
           />
         </View>
       )}
+
+      {/* 컬러 피커 모달 */}
+      <NativeColorPicker
+        visible={!!activeColorPicker}
+        onClose={() => setActiveColorPicker(null)}
+        color={activeColorPicker ? (qrStyle[activeColorPicker] || '#000000') : '#000000'}
+        onColorChange={(newColor) => {
+          if (activeColorPicker) {
+            setQrStyle(prev => ({ ...prev, [activeColorPicker]: newColor }));
+          }
+        }}
+        colors={colors}
+      />
     </View>
   );
 }
@@ -3985,6 +4032,14 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+  },
+  colorPickerButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   stepperRow: {
     flexDirection: 'row',

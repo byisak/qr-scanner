@@ -237,23 +237,11 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
           <View style={styles.colorGrid}>
             {/* 컬러피커 버튼 (맨 앞) - 컬러 휠 아이콘 */}
             <TouchableOpacity
-              style={styles.rainbowPickerButton}
+              style={[styles.rainbowPickerButton, { backgroundColor: color, borderColor: colors.border }]}
               onPress={() => setShowColorPicker(true)}
               activeOpacity={0.7}
             >
-              <Svg width={44} height={44} viewBox="5 5 90 90">
-                {/* 8개 색상 세그먼트 - 원형 파이 조각 */}
-                <Path d="M50 50 L50 5 A45 45 0 0 1 81.82 18.18 Z" fill="#EC4899" />
-                <Path d="M50 50 L81.82 18.18 A45 45 0 0 1 95 50 Z" fill="#EF4444" />
-                <Path d="M50 50 L95 50 A45 45 0 0 1 81.82 81.82 Z" fill="#F97316" />
-                <Path d="M50 50 L81.82 81.82 A45 45 0 0 1 50 95 Z" fill="#EAB308" />
-                <Path d="M50 50 L50 95 A45 45 0 0 1 18.18 81.82 Z" fill="#22C55E" />
-                <Path d="M50 50 L18.18 81.82 A45 45 0 0 1 5 50 Z" fill="#14B8A6" />
-                <Path d="M50 50 L5 50 A45 45 0 0 1 18.18 18.18 Z" fill="#3B82F6" />
-                <Path d="M50 50 L18.18 18.18 A45 45 0 0 1 50 5 Z" fill="#8B5CF6" />
-                {/* 중앙 원 - 현재 선택된 색상 표시 */}
-                <Circle cx="50" cy="50" r="18" fill={color} stroke="#fff" strokeWidth="3" />
-              </Svg>
+              <Ionicons name="color-palette" size={24} color={color === '#FFFFFF' || color === '#ffffff' ? '#333' : '#fff'} />
             </TouchableOpacity>
 
             {/* 프리셋 색상들 */}
@@ -1339,6 +1327,10 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+    overflow: 'hidden',
   },
   swiftUIColorPickerHost: {
     width: 44,
