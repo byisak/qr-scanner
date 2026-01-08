@@ -1044,21 +1044,31 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const qrScale = QR_RES_LEVELS[qrResLevel].scale;
+        const targetSize = QR_RES_LEVELS[qrResLevel].size;
 
-        if (selectedFrame) {
-          // 프레임이 있는 경우 - 단순 캡처
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: 크기 변경 후 캡처
+          setQrCaptureSize(targetSize);
+          await new Promise(resolve => setTimeout(resolve, 800));
+
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
+          });
+
+          setQrCaptureSize(340);
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
           });
         } else if (qrResLevel > 0) {
           // 프레임 없이 고해상도
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
+            pixelRatio: QR_RES_LEVELS[qrResLevel].scale,
           });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
@@ -1170,21 +1180,33 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const qrScale = QR_RES_LEVELS[qrResLevel].scale;
+        const targetSize = QR_RES_LEVELS[qrResLevel].size;
 
-        if (selectedFrame) {
-          // 프레임이 있는 경우 - 단순 캡처 (pixelRatio로 품질 조절)
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: 크기 변경 후 캡처
+          setQrCaptureSize(targetSize);
+          // 충분한 렌더링 대기 시간
+          await new Promise(resolve => setTimeout(resolve, 800));
+
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
+          });
+
+          // 원래 크기로 복원
+          setQrCaptureSize(340);
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
           });
         } else if (qrResLevel > 0) {
-          // 프레임 없이 고해상도
+          // 프레임 없이 고해상도 - pixelRatio 사용
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
+            pixelRatio: QR_RES_LEVELS[qrResLevel].scale,
           });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
@@ -2794,7 +2816,7 @@ export default function GeneratorScreen() {
                         frame={selectedFrame}
                         qrValue={qrData}
                         qrStyle={qrStyle}
-                        size={340}
+                        size={qrCaptureSize}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
                       />
                     </View>
