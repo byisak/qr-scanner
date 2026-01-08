@@ -367,6 +367,7 @@ export default function GeneratorScreen() {
   const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
+  const [qrCaptureSize, setQrCaptureSize] = useState(340); // QR 캡처 시 동적 크기
 
   // QR 고해상도 레벨별 설정
   const QR_RES_LEVELS = [
@@ -1043,16 +1044,31 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const qrScale = QR_RES_LEVELS[qrResLevel].scale;
         const targetSize = QR_RES_LEVELS[qrResLevel].size;
 
-        if (selectedFrame || qrResLevel > 0) {
-          // 프레임이 선택된 경우 또는 고해상도 - 전체 뷰 캡처
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: 동적으로 크기 변경 후 캡처
+          setQrCaptureSize(targetSize);
+          await new Promise(resolve => setTimeout(resolve, 300));
+
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
-            useRenderInContext: true,
+          });
+
+          setQrCaptureSize(340);
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+          });
+        } else if (qrResLevel > 0) {
+          // 프레임 없이 고해상도
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+            pixelRatio: QR_RES_LEVELS[qrResLevel].scale,
           });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
@@ -1164,19 +1180,36 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        const qrScale = QR_RES_LEVELS[qrResLevel].scale;
         const targetSize = QR_RES_LEVELS[qrResLevel].size;
-        console.log('QR Save - Level:', qrResLevel, 'Scale:', qrScale, 'Size:', targetSize, 'Frame:', selectedFrame?.id);
+        console.log('QR Save - Level:', qrResLevel, 'Size:', targetSize, 'Frame:', selectedFrame?.id);
 
-        if (selectedFrame || qrResLevel > 0) {
-          // 프레임이 선택된 경우 또는 고해상도 저장 - 전체 뷰 캡처
+        if (selectedFrame && qrResLevel > 0) {
+          // 프레임 + 고해상도: 동적으로 크기 변경 후 캡처
+          setQrCaptureSize(targetSize);
+          // 렌더링 대기
+          await new Promise(resolve => setTimeout(resolve, 300));
+
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            pixelRatio: qrScale,
-            useRenderInContext: true, // iOS에서 pixelRatio 적용을 위해 필요
           });
-          console.log('QR Save - URI:', uri, 'pixelRatio:', qrScale);
+
+          // 원래 크기로 복원
+          setQrCaptureSize(340);
+          console.log('QR Save - Dynamic size capture:', targetSize);
+        } else if (selectedFrame) {
+          // 프레임만 (빠른 저장)
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+          });
+        } else if (qrResLevel > 0) {
+          // 프레임 없이 고해상도
+          uri = await captureRef(qrRef, {
+            format: 'png',
+            quality: 1,
+            pixelRatio: QR_RES_LEVELS[qrResLevel].scale,
+          });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
           const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
@@ -2785,7 +2818,7 @@ export default function GeneratorScreen() {
                         frame={selectedFrame}
                         qrValue={qrData}
                         qrStyle={qrStyle}
-                        size={340}
+                        size={qrCaptureSize}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
                       />
                     </View>
