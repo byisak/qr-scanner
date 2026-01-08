@@ -366,6 +366,16 @@ export default function GeneratorScreen() {
   const [selectedFrame, setSelectedFrame] = useState(null); // 선택된 QR 프레임
   const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
+  const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
+
+  // QR 고해상도 레벨별 설정
+  const QR_RES_LEVELS = [
+    { level: 0, label: '빠름', scale: 1, description: '화면 캡처', time: '즉시', size: 300 },
+    { level: 1, label: '보통', scale: 2, description: '일반 용도', time: '~1초', size: 600 },
+    { level: 2, label: '고급', scale: 3, description: '고품질', time: '~2초', size: 900 },
+    { level: 3, label: '최고', scale: 4, description: '최고 품질', time: '~3초', size: 1200 },
+    { level: 4, label: '인쇄', scale: 6, description: '대형 인쇄', time: '~5초', size: 1800 },
+  ];
 
   // Form data for each type
   const [formData, setFormData] = useState({
@@ -1033,14 +1043,17 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame) {
-          // 프레임이 선택된 경우 - 전체 뷰 캡처 (프레임 + QR)
+        const qrScale = QR_RES_LEVELS[qrResLevel].scale;
+
+        if (selectedFrame || qrResLevel > 0) {
+          // 프레임이 선택된 경우 또는 고해상도 - 전체 뷰 캡처
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
+            ...(qrScale > 1 && { pixelRatio: qrScale }),
           });
         } else {
-          // 프레임이 없는 경우 - 기존 방식
+          // 프레임이 없고 빠른 저장 - 기존 방식
           const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
           if (useStyledQR && qrBase64) {
             const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
@@ -1149,14 +1162,17 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame) {
-          // 프레임이 선택된 경우 - 전체 뷰 캡처 (프레임 + QR)
+        const qrScale = QR_RES_LEVELS[qrResLevel].scale;
+
+        if (selectedFrame || qrResLevel > 0) {
+          // 프레임이 선택된 경우 또는 고해상도 저장 - 전체 뷰 캡처
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
+            ...(qrScale > 1 && { pixelRatio: qrScale }),
           });
         } else {
-          // 프레임이 없는 경우 - 기존 방식
+          // 프레임이 없고 빠른 저장 - 기존 방식
           const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
           if (useStyledQR && qrBase64) {
             const base64Data = qrBase64.replace(/^data:image\/\w+;base64,/, '');
@@ -2320,27 +2336,28 @@ export default function GeneratorScreen() {
             {qrSettingsExpanded && (
             <View style={s.settingsContainer}>
               {/* 탭 버튼 */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={s.qrSettingsTabScroll}
-                contentContainerStyle={s.qrSettingsTabScrollContent}
-              >
-                {[
-                  { id: 'frames', icon: 'albums-outline', label: t('generator.qrStyle.frame') || '프레임' },
-                  { id: 'presets', icon: 'color-palette-outline', label: t('generator.qrStyle.presets') || '프리셋' },
-                  { id: 'dots', icon: 'grid-outline', label: t('generator.qrStyle.dots') || '도트' },
-                  { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
-                  { id: 'background', icon: 'image-outline', label: t('generator.qrStyle.background') || '배경' },
-                  { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
-                ].map((tab) => (
-                  <TouchableOpacity
-                    key={tab.id}
-                    style={[
-                      s.settingsTab,
-                      qrSettingsTab === tab.id && { backgroundColor: colors.primary },
-                    ]}
-                    onPress={() => setQrSettingsTab(tab.id)}
+              <View style={[s.qrSettingsTabWrapper, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={s.qrSettingsTabScroll}
+                  contentContainerStyle={s.qrSettingsTabScrollContent}
+                >
+                  {[
+                    { id: 'frames', icon: 'albums-outline', label: t('generator.qrStyle.frame') || '프레임' },
+                    { id: 'presets', icon: 'color-palette-outline', label: t('generator.qrStyle.presets') || '프리셋' },
+                    { id: 'dots', icon: 'grid-outline', label: t('generator.qrStyle.dots') || '도트' },
+                    { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
+                    { id: 'background', icon: 'image-outline', label: t('generator.qrStyle.background') || '배경' },
+                    { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
+                  ].map((tab) => (
+                    <TouchableOpacity
+                      key={tab.id}
+                      style={[
+                        s.qrSettingsTab,
+                        qrSettingsTab === tab.id && { backgroundColor: colors.primary },
+                      ]}
+                      onPress={() => setQrSettingsTab(tab.id)}
                   >
                     <Ionicons
                       name={tab.icon}
@@ -2353,9 +2370,10 @@ export default function GeneratorScreen() {
                     ]}>
                       {tab.label}
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
 
               {/* 프레임 탭 */}
               {qrSettingsTab === 'frames' && (
@@ -2678,6 +2696,38 @@ export default function GeneratorScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+
+                  {/* 저장 품질 설정 */}
+                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
+                    {t('generator.saveQuality') || '저장 품질'}
+                  </Text>
+                  <View style={s.qrOptionRow}>
+                    {QR_RES_LEVELS.map((item) => (
+                      <TouchableOpacity
+                        key={item.level}
+                        style={[
+                          s.qrOptionButton,
+                          {
+                            backgroundColor: qrResLevel === item.level ? colors.primary : colors.inputBackground,
+                            borderColor: qrResLevel === item.level ? colors.primary : colors.border,
+                            flex: 1,
+                          },
+                        ]}
+                        onPress={() => setQrResLevel(item.level)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[s.qrOptionText, { color: qrResLevel === item.level ? '#fff' : colors.text }]}>
+                          {item.label}
+                        </Text>
+                        <Text style={[s.qrOptionSubtext, { color: qrResLevel === item.level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
+                          {item.time}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={[s.qrSettingHint, { color: colors.textTertiary }]}>
+                    {QR_RES_LEVELS[qrResLevel].description} (~{QR_RES_LEVELS[qrResLevel].size}px)
+                  </Text>
                 </View>
               )}
             </View>
@@ -3776,8 +3826,28 @@ const s = StyleSheet.create({
     marginBottom: 12,
   },
   qrSettingsTabScrollContent: {
-    paddingHorizontal: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     gap: 8,
+  },
+  qrSettingsTabWrapper: {
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  qrSettingsTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  qrSettingHint: {
+    fontSize: 12,
+    marginTop: 8,
   },
   qrStyleGrid: {
     flexDirection: 'row',
@@ -3906,7 +3976,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   frameContainer: {
-    padding: 12,
+    padding: 16,
+    paddingBottom: 20,
     backgroundColor: 'transparent',
   },
   qrBackground: {
