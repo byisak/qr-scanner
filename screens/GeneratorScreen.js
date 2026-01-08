@@ -1051,7 +1051,8 @@ export default function GeneratorScreen() {
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            width: targetSize,
+            pixelRatio: qrScale,
+            useRenderInContext: true,
           });
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
@@ -1169,13 +1170,13 @@ export default function GeneratorScreen() {
 
         if (selectedFrame || qrResLevel > 0) {
           // 프레임이 선택된 경우 또는 고해상도 저장 - 전체 뷰 캡처
-          // pixelRatio 대신 width로 명시적 크기 지정
           uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
-            width: targetSize,
+            pixelRatio: qrScale,
+            useRenderInContext: true, // iOS에서 pixelRatio 적용을 위해 필요
           });
-          console.log('QR Save - URI:', uri);
+          console.log('QR Save - URI:', uri, 'pixelRatio:', qrScale);
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
           const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
