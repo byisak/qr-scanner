@@ -91,8 +91,25 @@ export default function QRFrameRenderer({
   const qrX = Math.floor(qrPosition.x * scale + (qrAreaWidth - qrSize) / 2);
   const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
 
+  // 프레임 내부 영역 위치 (배경색용)
+  const innerAreaX = Math.floor(qrPosition.x * scale);
+  const innerAreaY = Math.floor(qrPosition.y * scale);
+
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
+      {/* 프레임 내부 배경색 */}
+      <View
+        style={[
+          styles.innerBackground,
+          {
+            left: innerAreaX,
+            top: innerAreaY,
+            width: Math.floor(qrAreaWidth),
+            height: Math.floor(qrAreaHeight),
+            backgroundColor: qrStyle?.backgroundColor || '#ffffff',
+          },
+        ]}
+      />
       {/* 프레임 SVG */}
       <SvgXml
         xml={frameSvg}
@@ -134,6 +151,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
+  },
+  innerBackground: {
+    position: 'absolute',
   },
   qrWrapper: {
     padding: 24,
