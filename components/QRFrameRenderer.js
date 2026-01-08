@@ -98,8 +98,9 @@ export default function QRFrameRenderer({
   const bgRectY = 155 + qrPosition.y;
   const bgRect = `<rect x="${bgRectX}" y="${bgRectY}" width="${qrPosition.width}" height="${qrPosition.height}" fill="${bgColor}"/>`;
 
-  // SVG 시작 태그 바로 뒤에 배경 rect 삽입
-  const modifiedSvg = frameSvg.replace(/<svg([^>]*)>/, `<svg$1>${bgRect}`);
+  // 배경 rect를 다크 프레임 path 뒤, 흰색 텍스트 path 앞에 삽입
+  // (첫 번째 #FFFFFF path 바로 앞에 삽입)
+  const modifiedSvg = frameSvg.replace(/<path fill="#FFFFFF"/, `${bgRect}<path fill="#FFFFFF"`);
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
