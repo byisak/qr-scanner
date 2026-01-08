@@ -111,7 +111,7 @@ export default function GeneratorScreen() {
 
   // 고해상도 저장 설정 (0: 빠른저장, 1-4: 고해상도 레벨)
   const [highResLevel, setHighResLevel] = useState(0);
-  const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '' });
+  const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '', type: 'qr' });
 
   // 고해상도 레벨별 설정
   const HIGH_RES_LEVELS = [
@@ -1106,8 +1106,8 @@ export default function GeneratorScreen() {
       return;
     }
 
-    // 저장 모달 즉시 표시
-    setSaveProgress({ visible: true, progress: 0, message: '' });
+    // 저장 모달 즉시 표시 (바코드/QR 구분)
+    setSaveProgress({ visible: true, progress: 0, message: '', type: isBarcode ? 'barcode' : 'qr' });
 
     if (hapticEnabled) {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -2982,10 +2982,10 @@ export default function GeneratorScreen() {
                 },
               ]}
             >
-              <Ionicons name="qr-code-outline" size={40} color={colors.primary} />
+              <Ionicons name={saveProgress.type === 'barcode' ? 'barcode-outline' : 'qr-code-outline'} size={40} color={colors.primary} />
             </Animated.View>
             <Text style={[s.progressTitle, { color: colors.text }]}>
-              {t('generator.savingBarcode')}
+              {saveProgress.type === 'barcode' ? t('generator.savingBarcode') : t('generator.savingQRCode')}
             </Text>
             <Text style={[s.progressMessage, { color: colors.textSecondary }]}>
               {saveProgress.message || t('generator.pleaseWait')}

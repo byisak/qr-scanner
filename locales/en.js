@@ -758,6 +758,7 @@ export default {
     },
     // Saving progress
     savingBarcode: 'Creating barcode...',
+    savingQRCode: 'Creating QR code...',
     pleaseWait: 'Please wait a moment',
     // Barcode type modal
     addBarcode: 'More',
