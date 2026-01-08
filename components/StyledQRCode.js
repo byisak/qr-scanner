@@ -139,7 +139,7 @@ export default function StyledQRCode({
             align-items: center;
           }
           #qr-container canvas {
-            border-radius: 12px;
+            border-radius: 0;
           }
         </style>
       </head>
@@ -257,7 +257,6 @@ export default function StyledQRCode({
 const styles = StyleSheet.create({
   container: {
     overflow: 'hidden',
-    borderRadius: 12,
   },
   webView: {
     backgroundColor: 'transparent',
@@ -269,6 +268,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: 12,
   },
 });
