@@ -76,7 +76,7 @@ const QR_TYPES = [
 ];
 
 export default function GeneratorScreen() {
-  const { t, fonts } = useLanguage();
+  const { t, fonts, language } = useLanguage();
   const { isDark } = useTheme();
   const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
