@@ -116,7 +116,7 @@ export default function QRFrameRenderer({
         <StyledQRCode
           value={qrValue}
           size={qrSize}
-          qrStyle={{ ...qrStyle, width: undefined, height: undefined, margin: 0, backgroundColor: 'transparent' }}
+          qrStyle={{ ...qrStyle, width: undefined, height: undefined, margin: 0 }}
           onCapture={onCapture}
         />
       </View>
