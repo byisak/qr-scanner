@@ -1163,6 +1163,7 @@ export default function GeneratorScreen() {
       } else {
         // QR 코드 캡처
         const qrScale = QR_RES_LEVELS[qrResLevel].scale;
+        console.log('QR Save - Level:', qrResLevel, 'Scale:', qrScale, 'Frame:', selectedFrame?.id);
 
         if (selectedFrame || qrResLevel > 0) {
           // 프레임이 선택된 경우 또는 고해상도 저장 - 전체 뷰 캡처
@@ -1171,6 +1172,7 @@ export default function GeneratorScreen() {
             quality: 1,
             pixelRatio: qrScale,
           });
+          console.log('QR Save - URI:', uri);
         } else {
           // 프레임이 없고 빠른 저장 - 기존 방식
           const qrBase64 = fullSizeQRBase64 || capturedQRBase64;
@@ -3969,15 +3971,16 @@ const s = StyleSheet.create({
     padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 300,
+    minHeight: 400,
+    overflow: 'visible',
   },
   qrWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   frameContainer: {
-    padding: 20,
-    paddingBottom: 28,
+    padding: 24,
+    paddingBottom: 32,
     backgroundColor: 'transparent',
   },
   qrBackground: {
