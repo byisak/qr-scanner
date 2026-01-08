@@ -84,30 +84,33 @@ export default function QRFrameRenderer({
   const frameWidth = Math.floor(size * aspectRatio);
   const scale = frameHeight / viewBoxHeight;
 
-  const qrAreaWidth = qrPosition.width * scale;
-  const qrAreaHeight = qrPosition.height * scale;
+  // 프레임 내부 영역 (배경색이 채워질 영역)
+  const bgAreaWidth = Math.floor(qrPosition.width * scale);
+  const bgAreaHeight = Math.floor(qrPosition.height * scale);
+  const bgX = Math.floor(qrPosition.x * scale);
+  const bgY = Math.floor(qrPosition.y * scale);
 
-  // QR 코드를 프레임 뒤에 배치하므로 영역보다 약간 크게 (105%)
-  const qrSize = Math.floor(Math.min(qrAreaWidth, qrAreaHeight) * 1.05);
-  const qrX = Math.floor(qrPosition.x * scale + (qrAreaWidth - qrSize) / 2);
-  const qrY = Math.floor(qrPosition.y * scale + (qrAreaHeight - qrSize) / 2);
+  // QR 코드는 내부 영역 중앙에 정사각형으로 배치
+  const qrSize = Math.floor(Math.min(bgAreaWidth, bgAreaHeight) * 0.95);
+  const qrX = bgX + Math.floor((bgAreaWidth - qrSize) / 2);
+  const qrY = bgY + Math.floor((bgAreaHeight - qrSize) / 2);
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
-      {/* 1. 배경색 (가장 뒤) */}
+      {/* 1. 배경색 (프레임 내부 전체 영역) */}
       <View
         style={[
           styles.qrBehind,
           {
-            left: qrX,
-            top: qrY,
-            width: qrSize,
-            height: qrSize,
+            left: bgX,
+            top: bgY,
+            width: bgAreaWidth,
+            height: bgAreaHeight,
             backgroundColor: qrStyle?.backgroundColor || '#ffffff',
           },
         ]}
       />
-      {/* 2. QR 코드 (투명 배경) */}
+      {/* 2. QR 코드 (투명 배경, 중앙 배치) */}
       <View
         style={[
           styles.qrBehind,
