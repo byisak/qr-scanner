@@ -349,6 +349,10 @@ export default {
     sessionPassword: '会话密码',
     passwordHint: '设置密码后加入时需要输入',
     createButton: '创建',
+    // 会话状态徽章
+    public: '公开',
+    private: '私密',
+    passwordProtected: '密码',
     // 订阅计划
     subscriptionPlans: '订阅计划',
     subscriptionPlansDesc: '选择适合您需求的计划',

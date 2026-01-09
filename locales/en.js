@@ -372,6 +372,10 @@ export default {
     sessionPassword: 'Session Password',
     passwordHint: 'Password required to join if set',
     createButton: 'Create',
+    // Session status badges
+    public: 'Public',
+    private: 'Private',
+    passwordProtected: 'Password',
     // Subscription Plans
     subscriptionPlans: 'Subscription Plans',
     subscriptionPlansDesc: 'Choose the plan that fits your needs',

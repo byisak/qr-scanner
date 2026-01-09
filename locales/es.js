@@ -349,6 +349,10 @@ export default {
     sessionPassword: 'Contraseña de Sesión',
     passwordHint: 'Se requiere contraseña para unirse si está configurada',
     createButton: 'Crear',
+    // Insignias de estado de sesión
+    public: 'Público',
+    private: 'Privado',
+    passwordProtected: 'Contraseña',
     // Planes de suscripción
     subscriptionPlans: 'Planes de suscripción',
     subscriptionPlansDesc: 'Elige el plan que mejor se adapte a tus necesidades',

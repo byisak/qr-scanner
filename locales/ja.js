@@ -349,6 +349,10 @@ export default {
     sessionPassword: 'セッションパスワード',
     passwordHint: 'パスワードを設定すると参加時に必要になります',
     createButton: '作成',
+    // セッションステータスバッジ
+    public: '公開',
+    private: '非公開',
+    passwordProtected: 'パスワード',
     // サブスクリプションプラン
     subscriptionPlans: 'サブスクリプションプラン',
     subscriptionPlansDesc: 'ニーズに合ったプランをお選びください',

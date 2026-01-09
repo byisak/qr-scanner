@@ -374,6 +374,10 @@ export default {
     sessionPassword: '세션 비밀번호',
     passwordHint: '비밀번호를 입력하면 참여 시 비밀번호가 필요합니다',
     createButton: '생성',
+    // 세션 상태 배지
+    public: '공개',
+    private: '비공개',
+    passwordProtected: '비밀번호',
     // 구독 플랜
     subscriptionPlans: '구독 플랜',
     subscriptionPlansDesc: '필요에 맞는 플랜을 선택하세요',
