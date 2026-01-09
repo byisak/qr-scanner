@@ -836,8 +836,10 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 보안 설정 저장 (비밀번호 + 공개/비공개, 서버 API 연동)
   const handleSaveSecuritySettings = async () => {
+    console.log('🔐 handleSaveSecuritySettings 시작:', { selectedSessionId, selectedIsPublic, hasPassword: !!passwordInput.trim() });
     try {
       const token = await getToken();
+      console.log('🔑 토큰 획득:', { hasToken: !!token });
 
       // 서버에 보안 설정 업데이트 요청
       try {
@@ -845,14 +847,15 @@ export default function RealtimeSyncSettingsScreen() {
           websocketClient.setAuthToken(token);
         }
         websocketClient.serverUrl = config.serverUrl;
+        console.log('🌐 serverUrl 설정:', config.serverUrl);
 
-        await websocketClient.updateSessionSettings(selectedSessionId, {
+        const result = await websocketClient.updateSessionSettings(selectedSessionId, {
           password: passwordInput.trim() || null,
           isPublic: selectedIsPublic,
         });
-        console.log('서버에 보안 설정 저장 성공:', selectedSessionId);
+        console.log('✅ 서버에 보안 설정 저장 성공:', selectedSessionId, result);
       } catch (error) {
-        console.warn('서버 보안 설정 저장 실패 (로컬에서는 저장됨):', error.message);
+        console.error('❌ 서버 보안 설정 저장 실패:', error.message, error);
       }
 
       // 로컬 상태 업데이트

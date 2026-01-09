@@ -143,6 +143,7 @@ class WebSocketClient {
 
   // 세션 설정 업데이트
   updateSessionSettings(sessionId, settings) {
+    console.log('🔄 updateSessionSettings 호출:', { sessionId, settings, serverUrl: this.serverUrl, hasToken: !!this.authToken });
     return this._apiRequest(`/api/sessions/${sessionId}/settings`, {
       method: 'PUT',
       body: JSON.stringify(settings),
@@ -159,6 +160,7 @@ class WebSocketClient {
   // API 요청 헬퍼
   async _apiRequest(endpoint, options = {}) {
     if (!this.serverUrl) {
+      console.error('❌ _apiRequest: serverUrl not set');
       throw new Error('Server URL not set');
     }
 
@@ -173,17 +175,29 @@ class WebSocketClient {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    console.log('📡 API 요청:', { url, method: options.method, hasAuth: !!this.authToken });
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Request failed' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      console.log('📡 API 응답:', { status: response.status, ok: response.ok });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Request failed' }));
+        console.error('❌ API 오류:', error);
+        throw new Error(error.message || error.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ API 성공:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ API 요청 실패:', error.message);
+      throw error;
     }
-
-    return response.json();
   }
 
   // 인증 토큰 설정
