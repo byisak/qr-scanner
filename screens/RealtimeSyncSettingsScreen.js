@@ -840,14 +840,21 @@ export default function RealtimeSyncSettingsScreen() {
     try {
       // 토큰 갱신 먼저 시도
       let token = await getToken();
+      console.log('🔑 기존 토큰:', { hasToken: !!token, tokenPreview: token ? token.substring(0, 30) + '...' : null });
+
       if (token) {
+        console.log('🔄 토큰 갱신 시도...');
         const refreshResult = await refreshAccessToken();
+        console.log('🔄 토큰 갱신 결과:', refreshResult);
+
         if (refreshResult.success) {
           token = await getToken(); // 갱신된 토큰 다시 가져오기
-          console.log('🔄 토큰 갱신 성공');
+          console.log('✅ 토큰 갱신 성공:', { newTokenPreview: token ? token.substring(0, 30) + '...' : null });
+        } else {
+          console.error('❌ 토큰 갱신 실패:', refreshResult.error);
         }
       }
-      console.log('🔑 토큰 획득:', { hasToken: !!token });
+      console.log('🔑 최종 토큰:', { hasToken: !!token });
 
       // 서버에 보안 설정 업데이트 요청
       try {
