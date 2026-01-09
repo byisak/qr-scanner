@@ -82,7 +82,7 @@ export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { isLoggedIn, getToken } = useAuth();
+  const { isLoggedIn, getToken, user } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
   // 실시간 서버전송 관련 상태
@@ -455,9 +455,12 @@ export default function RealtimeSyncSettingsScreen() {
 
       // 서버에 세션 생성 알림 (설정 포함)
       try {
-        // 인증 토큰 설정
+        // 인증 토큰 및 사용자 ID 설정
         if (token) {
           websocketClient.setAuthToken(token);
+        }
+        if (user?.id) {
+          websocketClient.setUserId(user.id);
         }
 
         if (!websocketClient.getConnectionStatus()) {
