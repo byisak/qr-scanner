@@ -94,10 +94,11 @@ export default function RealtimeSyncSettingsScreen() {
   // 탭 상태: 'active' | 'deleted'
   const [activeTab, setActiveTab] = useState('active');
 
-  // 비밀번호 모달 상태
+  // 보안 설정 모달 상태 (비밀번호 + 공개/비공개)
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [selectedIsPublic, setSelectedIsPublic] = useState(true);
 
   // 세션 생성 모달 상태
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -824,19 +825,21 @@ export default function RealtimeSyncSettingsScreen() {
   };
 
   // 비밀번호 모달 열기
-  const handleOpenPasswordModal = (sessionId) => {
+  // 보안 설정 모달 열기 (비밀번호 + 공개/비공개 토글)
+  const handleOpenSecurityModal = (sessionId) => {
     setSelectedSessionId(sessionId);
     const session = sessionUrls.find(s => s.id === sessionId);
     setPasswordInput(session?.password || '');
+    setSelectedIsPublic(session?.isPublic !== false);
     setPasswordModalVisible(true);
   };
 
-  // 비밀번호 저장 (서버 API 연동)
-  const handleSavePassword = async () => {
+  // 보안 설정 저장 (비밀번호 + 공개/비공개, 서버 API 연동)
+  const handleSaveSecuritySettings = async () => {
     try {
       const token = await getToken();
 
-      // 서버에 비밀번호 업데이트 요청
+      // 서버에 보안 설정 업데이트 요청
       try {
         if (token) {
           websocketClient.setAuthToken(token);
@@ -845,16 +848,21 @@ export default function RealtimeSyncSettingsScreen() {
 
         await websocketClient.updateSessionSettings(selectedSessionId, {
           password: passwordInput.trim() || null,
+          isPublic: selectedIsPublic,
         });
-        console.log('서버에 비밀번호 저장 성공:', selectedSessionId);
+        console.log('서버에 보안 설정 저장 성공:', selectedSessionId);
       } catch (error) {
-        console.warn('서버 비밀번호 저장 실패 (로컬에서는 저장됨):', error.message);
+        console.warn('서버 보안 설정 저장 실패 (로컬에서는 저장됨):', error.message);
       }
 
       // 로컬 상태 업데이트
       const updatedUrls = sessionUrls.map(session => {
         if (session.id === selectedSessionId) {
-          return { ...session, hasPassword: !!passwordInput.trim() };
+          return {
+            ...session,
+            hasPassword: !!passwordInput.trim(),
+            isPublic: selectedIsPublic,
+          };
         }
         return session;
       });
@@ -862,13 +870,13 @@ export default function RealtimeSyncSettingsScreen() {
       setSessionUrls(updatedUrls);
       await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
 
-      Alert.alert(t('settings.success'), t('settings.passwordSaved'));
+      Alert.alert(t('settings.success'), t('settings.securitySettingsSaved') || '보안 설정이 저장되었습니다.');
       setPasswordModalVisible(false);
       setPasswordInput('');
       setSelectedSessionId('');
     } catch (error) {
-      console.error('비밀번호 저장 실패:', error);
-      Alert.alert(t('settings.error'), t('settings.passwordSaveFailed') || '비밀번호 저장에 실패했습니다.');
+      console.error('보안 설정 저장 실패:', error);
+      Alert.alert(t('settings.error'), t('settings.securitySettingsSaveFailed') || '보안 설정 저장에 실패했습니다.');
     }
   };
 
@@ -972,18 +980,19 @@ export default function RealtimeSyncSettingsScreen() {
 
       <View style={styles.sessionItemActions}>
         <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: session.isPublic !== false ? colors.primary : colors.warning }]}
-          onPress={() => handleTogglePublic(session.id, session.isPublic !== false)}
+          style={[styles.iconButton, {
+            backgroundColor: session.isPublic === false || session.hasPassword
+              ? colors.warning
+              : colors.textTertiary
+          }]}
+          onPress={() => handleOpenSecurityModal(session.id)}
           activeOpacity={0.7}
         >
-          <Ionicons name={session.isPublic !== false ? "globe-outline" : "lock-closed-outline"} size={18} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: session.hasPassword ? colors.success : colors.textTertiary }]}
-          onPress={() => handleOpenPasswordModal(session.id)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name={session.hasPassword ? "lock-closed" : "lock-open-outline"} size={18} color="#fff" />
+          <Ionicons
+            name={session.isPublic === false || session.hasPassword ? "lock-closed" : "lock-open-outline"}
+            size={18}
+            color="#fff"
+          />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.iconButton, { backgroundColor: colors.primary }]}
@@ -1329,7 +1338,7 @@ export default function RealtimeSyncSettingsScreen() {
       </TouchableWithoutFeedback>
       )}
 
-      {/* 비밀번호 입력 모달 */}
+      {/* 보안 설정 모달 (비밀번호 + 공개/비공개) */}
       <Modal
         visible={passwordModalVisible}
         transparent={true}
@@ -1341,15 +1350,61 @@ export default function RealtimeSyncSettingsScreen() {
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                 <View style={styles.modalHeader}>
-                  <Ionicons name="lock-closed" size={24} color={colors.primary} />
+                  <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    {t('settings.addPassword')}
+                    {t('settings.securitySettings') || '보안 설정'}
                   </Text>
                 </View>
 
                 <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-                  {t('settings.passwordDescription')}
+                  {t('settings.securitySettingsDesc') || '세션의 보안 설정을 관리합니다.'}
                 </Text>
+
+                {/* 공개/비공개 토글 */}
+                <View style={[styles.securityOptionRow, { borderBottomColor: colors.border }]}>
+                  <View style={styles.securityOptionInfo}>
+                    <Ionicons
+                      name={selectedIsPublic ? "globe-outline" : "lock-closed-outline"}
+                      size={20}
+                      color={selectedIsPublic ? colors.primary : colors.warning}
+                    />
+                    <View style={styles.securityOptionText}>
+                      <Text style={[styles.securityOptionTitle, { color: colors.text }]}>
+                        {selectedIsPublic ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
+                      </Text>
+                      <Text style={[styles.securityOptionDesc, { color: colors.textSecondary }]}>
+                        {selectedIsPublic
+                          ? (t('settings.publicDesc') || '누구나 링크로 접근 가능')
+                          : (t('settings.privateDesc') || '링크로 접근 불가')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={selectedIsPublic}
+                    onValueChange={setSelectedIsPublic}
+                    trackColor={{ false: colors.warning + '60', true: colors.primary + '60' }}
+                    thumbColor={selectedIsPublic ? colors.primary : colors.warning}
+                  />
+                </View>
+
+                {/* 비밀번호 설정 */}
+                <View style={styles.securityOptionRow}>
+                  <View style={styles.securityOptionInfo}>
+                    <Ionicons
+                      name={passwordInput.trim() ? "key" : "key-outline"}
+                      size={20}
+                      color={passwordInput.trim() ? colors.success : colors.textTertiary}
+                    />
+                    <View style={styles.securityOptionText}>
+                      <Text style={[styles.securityOptionTitle, { color: colors.text }]}>
+                        {t('settings.password') || '비밀번호'}
+                      </Text>
+                      <Text style={[styles.securityOptionDesc, { color: colors.textSecondary }]}>
+                        {t('settings.passwordDescShort') || '접근 시 비밀번호 필요'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
 
                 <TextInput
                   style={[
@@ -1362,10 +1417,9 @@ export default function RealtimeSyncSettingsScreen() {
                   ]}
                   value={passwordInput}
                   onChangeText={setPasswordInput}
-                  placeholder={t('settings.passwordPlaceholder')}
+                  placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (비워두면 해제)'}
                   placeholderTextColor={colors.textTertiary}
                   secureTextEntry={true}
-                  autoFocus={true}
                 />
 
                 <View style={styles.modalButtons}>
@@ -1385,7 +1439,7 @@ export default function RealtimeSyncSettingsScreen() {
 
                   <TouchableOpacity
                     style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
-                    onPress={handleSavePassword}
+                    onPress={handleSaveSecuritySettings}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.modalButtonText, { color: '#fff' }]}>
@@ -1742,6 +1796,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
+  },
+  securityOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    marginBottom: 8,
+  },
+  securityOptionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  securityOptionText: {
+    flex: 1,
+  },
+  securityOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  securityOptionDesc: {
+    fontSize: 12,
+    marginTop: 2,
   },
   passwordInput: {
     padding: 16,
