@@ -323,7 +323,7 @@ export default {
     deleteSessionConfirm: 'このURLを削除しますか？',
     addPassword: 'パスワード追加',
     passwordDescription: 'この送信URLにパスワードを設定してください',
-    passwordPlaceholder: 'パスワードを入力',
+    passwordPlaceholder: 'パスワードを入力（空欄で解除）',
     passwordRequired: 'パスワードを入力してください',
     passwordSaved: 'パスワードが保存されました',
     // タブと削除/復元

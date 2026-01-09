@@ -348,7 +348,7 @@ export default {
     deleteSessionConfirm: '이 전송 주소를 삭제하시겠습니까?',
     addPassword: '비밀번호 추가',
     passwordDescription: '이 전송 주소에 비밀번호를 설정하세요',
-    passwordPlaceholder: '비밀번호 입력',
+    passwordPlaceholder: '비밀번호 입력 (비워두면 해제)',
     passwordRequired: '비밀번호를 입력해주세요',
     passwordSaved: '비밀번호가 저장되었습니다',
     // 탭 및 삭제/복구

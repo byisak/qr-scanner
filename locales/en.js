@@ -346,7 +346,7 @@ export default {
     deleteSessionConfirm: 'Do you want to delete this URL?',
     addPassword: 'Add Password',
     passwordDescription: 'Set a password for this transmission URL',
-    passwordPlaceholder: 'Enter password',
+    passwordPlaceholder: 'Enter password (leave empty to remove)',
     passwordRequired: 'Please enter a password',
     passwordSaved: 'Password saved successfully',
     // Tabs and delete/restore

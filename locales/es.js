@@ -323,7 +323,7 @@ export default {
     deleteSessionConfirm: '¿Deseas eliminar esta URL?',
     addPassword: 'Agregar contraseña',
     passwordDescription: 'Establece una contraseña para esta URL de transmisión',
-    passwordPlaceholder: 'Ingresa contraseña',
+    passwordPlaceholder: 'Ingresa contraseña (vacío para eliminar)',
     passwordRequired: 'Por favor, ingresa una contraseña',
     passwordSaved: 'Contraseña guardada exitosamente',
     // Pestañas y eliminar/restaurar

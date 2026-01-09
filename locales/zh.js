@@ -323,7 +323,7 @@ export default {
     deleteSessionConfirm: '要删除此URL吗？',
     addPassword: '添加密码',
     passwordDescription: '为此传输URL设置密码',
-    passwordPlaceholder: '输入密码',
+    passwordPlaceholder: '输入密码（留空可解除）',
     passwordRequired: '请输入密码',
     passwordSaved: '密码已保存',
     // 标签页和删除/恢复
