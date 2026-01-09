@@ -353,6 +353,7 @@ export default {
     createSessionDescription: '创建新的实时同步会话',
     publicSession: '公开会话',
     publicSessionDesc: '允许其他用户加入此会话',
+    privateSessionDesc: '私密会话，需要密码',
     sessionPassword: '会话密码',
     passwordHint: '设置密码后加入时需要输入',
     createButton: '创建',

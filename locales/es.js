@@ -353,6 +353,7 @@ export default {
     createSessionDescription: 'Crear una nueva sesión de sincronización en tiempo real',
     publicSession: 'Sesión Pública',
     publicSessionDesc: 'Permitir que otros usuarios se unan a esta sesión',
+    privateSessionDesc: 'Sesión privada. Se requiere contraseña',
     sessionPassword: 'Contraseña de Sesión',
     passwordHint: 'Se requiere contraseña para unirse si está configurada',
     createButton: 'Crear',

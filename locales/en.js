@@ -376,6 +376,7 @@ export default {
     createSessionDescription: 'Create a new real-time sync session',
     publicSession: 'Public Session',
     publicSessionDesc: 'Allow other users to join this session',
+    privateSessionDesc: 'Private session. Password required',
     sessionPassword: 'Session Password',
     passwordHint: 'Password required to join if set',
     createButton: 'Create',

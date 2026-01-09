@@ -378,6 +378,7 @@ export default {
     createSessionDescription: '새로운 실시간 전송 세션을 생성합니다',
     publicSession: '공개 세션',
     publicSessionDesc: '다른 사용자가 이 세션에 참여할 수 있습니다',
+    privateSessionDesc: '비공개 세션입니다. 비밀번호가 필요합니다',
     sessionPassword: '세션 비밀번호',
     passwordHint: '비밀번호를 입력하면 참여 시 비밀번호가 필요합니다',
     createButton: '생성',

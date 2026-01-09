@@ -353,6 +353,7 @@ export default {
     createSessionDescription: '新しいリアルタイム同期セッションを作成します',
     publicSession: '公開セッション',
     publicSessionDesc: '他のユーザーがこのセッションに参加できます',
+    privateSessionDesc: '非公開セッションです。パスワードが必要です',
     sessionPassword: 'セッションパスワード',
     passwordHint: 'パスワードを設定すると参加時に必要になります',
     createButton: '作成',
