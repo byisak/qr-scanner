@@ -530,6 +530,7 @@ export default function RealtimeSyncSettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             const deletedAt = Date.now();
+            const token = await getToken();
 
             // 서버 API 호출 (Soft Delete)
             try {
@@ -537,10 +538,15 @@ export default function RealtimeSyncSettingsScreen() {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
+                  ...(token && { 'Authorization': `Bearer ${token}` }),
                 },
               });
 
               if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                  Alert.alert(t('settings.error'), t('settings.sessionDeleteFailed') || '세션 삭제 권한이 없습니다.');
+                  return;
+                }
                 console.warn('Server soft delete failed:', response.status);
               } else {
                 console.log('Server soft delete success:', sessionId);
@@ -587,16 +593,23 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 복구
   const handleRestore = async (sessionId) => {
+    const token = await getToken();
+
     // 서버 API 호출 (Restore)
     try {
       const response = await fetch(`${config.serverUrl}/api/sessions/${sessionId}/restore`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          Alert.alert(t('settings.error'), t('settings.sessionRestoreFailed') || '세션 복구 권한이 없습니다.');
+          return;
+        }
         console.warn('Server restore failed:', response.status);
       } else {
         console.log('Server restore success:', sessionId);
@@ -648,16 +661,23 @@ export default function RealtimeSyncSettingsScreen() {
           text: t('settings.permanentDeleteButton'),
           style: 'destructive',
           onPress: async () => {
+            const token = await getToken();
+
             // 서버 API 호출 (Permanent Delete)
             try {
               const response = await fetch(`${config.serverUrl}/api/sessions/${sessionId}/permanent`, {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
+                  ...(token && { 'Authorization': `Bearer ${token}` }),
                 },
               });
 
               if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                  Alert.alert(t('settings.error'), t('settings.sessionPermanentDeleteFailed') || '세션 영구 삭제 권한이 없습니다.');
+                  return;
+                }
                 console.warn('Server permanent delete failed:', response.status);
               } else {
                 console.log('Server permanent delete success:', sessionId);

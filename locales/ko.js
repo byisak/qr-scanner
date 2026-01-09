@@ -361,6 +361,13 @@ export default {
     permanentDeleteConfirm: '이 전송 주소를 영구적으로 삭제하시겠습니까?\n이 작업은 취소할 수 없습니다.',
     permanentDeleteButton: '영구 삭제',
     sessionPermanentlyDeleted: '전송 주소가 영구적으로 삭제되었습니다',
+    // 오류 메시지
+    sessionCreateFailed: '세션 생성에 실패했습니다',
+    passwordSaveFailed: '비밀번호 저장에 실패했습니다',
+    togglePublicFailed: '공개여부 변경에 실패했습니다',
+    sessionDeleteFailed: '세션 삭제 권한이 없습니다',
+    sessionRestoreFailed: '세션 복구 권한이 없습니다',
+    sessionPermanentDeleteFailed: '세션 영구 삭제 권한이 없습니다',
     deletedSessions: '삭제된 주소 목록',
     deletedSessionsInfo: '삭제된 주소는 30일 후 자동으로 영구 삭제됩니다',
     daysRemaining: '{{days}}일 남음',

@@ -336,6 +336,13 @@ export default {
     permanentDeleteConfirm: '要永久删除此URL吗？\n此操作无法撤销。',
     permanentDeleteButton: '永久删除',
     sessionPermanentlyDeleted: 'URL已永久删除',
+    // 错误消息
+    sessionCreateFailed: '创建会话失败',
+    passwordSaveFailed: '保存密码失败',
+    togglePublicFailed: '更改公开状态失败',
+    sessionDeleteFailed: '没有删除会话的权限',
+    sessionRestoreFailed: '没有恢复会话的权限',
+    sessionPermanentDeleteFailed: '没有永久删除会话的权限',
     deletedSessions: '已删除的URL列表',
     deletedSessionsInfo: '已删除的URL将在30天后自动永久删除',
     daysRemaining: '剩余{{days}}天',

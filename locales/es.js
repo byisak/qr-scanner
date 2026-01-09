@@ -336,6 +336,13 @@ export default {
     permanentDeleteConfirm: '¿Deseas eliminar permanentemente esta URL?\nEsta acción no se puede deshacer.',
     permanentDeleteButton: 'Eliminar para siempre',
     sessionPermanentlyDeleted: 'URL eliminada permanentemente',
+    // Mensajes de error
+    sessionCreateFailed: 'Error al crear la sesión',
+    passwordSaveFailed: 'Error al guardar la contraseña',
+    togglePublicFailed: 'Error al cambiar la visibilidad',
+    sessionDeleteFailed: 'Sin permiso para eliminar la sesión',
+    sessionRestoreFailed: 'Sin permiso para restaurar la sesión',
+    sessionPermanentDeleteFailed: 'Sin permiso para eliminar permanentemente la sesión',
     deletedSessions: 'URLs eliminadas',
     deletedSessionsInfo: 'Las URLs eliminadas se borrarán automáticamente después de 30 días',
     daysRemaining: '{{days}} días restantes',

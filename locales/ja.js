@@ -336,6 +336,13 @@ export default {
     permanentDeleteConfirm: 'このURLを完全に削除しますか？\nこの操作は取り消せません。',
     permanentDeleteButton: '完全に削除',
     sessionPermanentlyDeleted: 'URLが完全に削除されました',
+    // エラーメッセージ
+    sessionCreateFailed: 'セッションの作成に失敗しました',
+    passwordSaveFailed: 'パスワードの保存に失敗しました',
+    togglePublicFailed: '公開設定の変更に失敗しました',
+    sessionDeleteFailed: 'セッションを削除する権限がありません',
+    sessionRestoreFailed: 'セッションを復元する権限がありません',
+    sessionPermanentDeleteFailed: 'セッションを完全に削除する権限がありません',
     deletedSessions: '削除されたURL一覧',
     deletedSessionsInfo: '削除されたURLは30日後に自動的に完全削除されます',
     daysRemaining: '残り{{days}}日',

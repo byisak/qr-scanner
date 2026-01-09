@@ -359,6 +359,13 @@ export default {
     permanentDeleteConfirm: 'Do you want to permanently delete this URL?\nThis action cannot be undone.',
     permanentDeleteButton: 'Delete Forever',
     sessionPermanentlyDeleted: 'URL permanently deleted',
+    // Error messages
+    sessionCreateFailed: 'Failed to create session',
+    passwordSaveFailed: 'Failed to save password',
+    togglePublicFailed: 'Failed to change visibility',
+    sessionDeleteFailed: 'No permission to delete session',
+    sessionRestoreFailed: 'No permission to restore session',
+    sessionPermanentDeleteFailed: 'No permission to permanently delete session',
     deletedSessions: 'Deleted URLs',
     deletedSessionsInfo: 'Deleted URLs will be automatically removed after 30 days',
     daysRemaining: '{{days}} days left',
