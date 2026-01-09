@@ -54,10 +54,10 @@ const getDaysRemaining = (deletedAt) => {
 };
 
 // 서버에서 세션 목록 가져오기 (인증된 사용자의 세션만)
-const fetchSessionsFromServer = async (token) => {
+const fetchSessionsFromServer = async (token, status = 'ALL') => {
   try {
     const headers = {};
-    let url = `${config.serverUrl}/api/sessions?status=ALL`;
+    let url = `${config.serverUrl}/api/sessions?status=${status}`;
 
     // 토큰이 있으면 내 세션만 조회
     if (token) {
@@ -115,6 +115,59 @@ export default function RealtimeSyncSettingsScreen() {
     sessionUrls.filter(s => s.status === 'DELETED'),
     [sessionUrls]
   );
+
+  // 삭제된 탭 클릭 시 서버에서 삭제된 세션 실시간 동기화
+  const handleDeletedTabClick = useCallback(async () => {
+    setActiveTab('deleted');
+
+    if (!isLoggedIn) return;
+
+    try {
+      setIsSyncing(true);
+      const token = await getToken();
+
+      // 서버에서 삭제된 세션만 가져오기
+      const deletedFromServer = await fetchSessionsFromServer(token, 'DELETED');
+
+      if (deletedFromServer && Array.isArray(deletedFromServer)) {
+        // 현재 활성 세션 유지하고, 삭제된 세션만 업데이트
+        setSessionUrls(prev => {
+          const activeOnes = prev.filter(s => s.status !== 'DELETED');
+
+          // 서버에서 가져온 삭제된 세션 변환
+          const newDeletedSessions = deletedFromServer.map(session => {
+            const sessionId = session.SESSION_ID || session.session_id || session.sessionId;
+            const deletedAt = session.DELETED_AT || session.deleted_at || session.deletedAt;
+            const createdAt = session.CREATED_AT || session.created_at || session.createdAt;
+            const sessionName = session.SESSION_NAME || session.session_name || session.name || null;
+
+            return {
+              id: sessionId,
+              url: `${config.serverUrl}/session/${sessionId}`,
+              createdAt: createdAt ? new Date(createdAt).getTime() : Date.now(),
+              status: 'DELETED',
+              deletedAt: deletedAt ? new Date(deletedAt).getTime() : null,
+              name: sessionName,
+            };
+          });
+
+          // 활성 + 새로 동기화된 삭제된 세션
+          const allSessions = [...activeOnes, ...newDeletedSessions].sort((a, b) => b.createdAt - a.createdAt);
+
+          // 로컬 저장소 업데이트
+          AsyncStorage.setItem('sessionUrls', JSON.stringify(allSessions));
+
+          return allSessions;
+        });
+
+        console.log(`삭제된 세션 동기화 완료: ${deletedFromServer.length}개`);
+      }
+    } catch (error) {
+      console.error('삭제된 세션 동기화 실패:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isLoggedIn, getToken]);
 
   // 로컬 세션들에 대한 그룹 생성 보장 함수
   const ensureGroupsForSessions = async (sessions) => {
@@ -1099,7 +1152,7 @@ export default function RealtimeSyncSettingsScreen() {
                       styles.tab,
                       activeTab === 'deleted' && { backgroundColor: colors.surface },
                     ]}
-                    onPress={() => setActiveTab('deleted')}
+                    onPress={handleDeletedTabClick}
                     activeOpacity={0.7}
                   >
                     <Text style={[
