@@ -125,6 +125,22 @@ class WebSocketClient {
     return Promise.resolve(true);
   }
 
+  // 기존 세션에 참가 (user_id 업데이트용)
+  joinSession(sessionId) {
+    if (!this.socket || !this.isConnected) {
+      console.error('Socket not connected');
+      return Promise.reject(new Error('Socket not connected'));
+    }
+
+    const payload = {
+      sessionId,
+      userId: this.userId,
+    };
+
+    this.socket.emit('join-session', payload);
+    return Promise.resolve(true);
+  }
+
   // 세션 설정 업데이트
   updateSessionSettings(sessionId, settings) {
     return this._apiRequest(`/api/sessions/${sessionId}/settings`, {

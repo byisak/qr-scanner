@@ -291,8 +291,53 @@ export default function RealtimeSyncSettingsScreen() {
     }
 
     console.log(`서버 동기화 완료: 기존 ${localSessions.length}개, 새로 추가 ${newSessions.length}개`);
+
+    // 로그인한 사용자의 경우, 기존 세션들에 대해 소유권(user_id) 업데이트
+    if (user?.id && allSessions.length > 0) {
+      try {
+        // WebSocket 연결 및 사용자 ID 설정
+        websocketClient.setUserId(user.id);
+        if (token) {
+          websocketClient.setAuthToken(token);
+        }
+
+        if (!websocketClient.getConnectionStatus()) {
+          websocketClient.connect(config.serverUrl);
+          // 연결 대기 (최대 3초)
+          await new Promise((resolve) => {
+            const checkConnection = setInterval(() => {
+              if (websocketClient.getConnectionStatus()) {
+                clearInterval(checkConnection);
+                resolve();
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(checkConnection);
+              resolve();
+            }, 3000);
+          });
+        }
+
+        // 활성 세션들에 대해 join-session 이벤트 발송 (user_id 업데이트)
+        if (websocketClient.getConnectionStatus()) {
+          const activeSessions = allSessions.filter(s => s.status !== 'DELETED');
+          for (const session of activeSessions) {
+            try {
+              await websocketClient.joinSession(session.id);
+              console.log(`세션 소유권 업데이트: ${session.id}`);
+            } catch (err) {
+              console.warn(`세션 ${session.id} 소유권 업데이트 실패:`, err.message);
+            }
+          }
+          console.log(`${activeSessions.length}개 세션 소유권 업데이트 완료`);
+        }
+      } catch (error) {
+        console.warn('세션 소유권 업데이트 중 오류:', error.message);
+      }
+    }
+
     return allSessions;
-  }, [getToken]);
+  }, [getToken, user]);
 
   // 초기 로드
   useEffect(() => {
