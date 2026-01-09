@@ -361,6 +361,15 @@ export default {
     public: '公开',
     private: '私密',
     passwordProtected: '密码',
+    // 安全设置模态框
+    securitySettings: '安全设置',
+    securitySettingsDesc: '管理会话安全设置',
+    publicDesc: '任何人都可以通过链接访问',
+    privateDesc: '无法通过链接访问',
+    password: '密码',
+    passwordDescShort: '访问时需要密码',
+    securitySettingsSaved: '安全设置已保存',
+    securitySettingsSaveFailed: '保存安全设置失败',
     // 订阅计划
     subscriptionPlans: '订阅计划',
     subscriptionPlansDesc: '选择适合您需求的计划',

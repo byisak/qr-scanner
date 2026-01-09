@@ -361,6 +361,15 @@ export default {
     public: '公開',
     private: '非公開',
     passwordProtected: 'パスワード',
+    // セキュリティ設定モーダル
+    securitySettings: 'セキュリティ設定',
+    securitySettingsDesc: 'セッションのセキュリティ設定を管理します',
+    publicDesc: 'リンクで誰でもアクセス可能',
+    privateDesc: 'リンクでアクセス不可',
+    password: 'パスワード',
+    passwordDescShort: 'アクセス時にパスワードが必要',
+    securitySettingsSaved: 'セキュリティ設定が保存されました',
+    securitySettingsSaveFailed: 'セキュリティ設定の保存に失敗しました',
     // サブスクリプションプラン
     subscriptionPlans: 'サブスクリプションプラン',
     subscriptionPlansDesc: 'ニーズに合ったプランをお選びください',

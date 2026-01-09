@@ -384,6 +384,15 @@ export default {
     public: 'Public',
     private: 'Private',
     passwordProtected: 'Password',
+    // Security settings modal
+    securitySettings: 'Security Settings',
+    securitySettingsDesc: 'Manage session security settings',
+    publicDesc: 'Anyone can access via link',
+    privateDesc: 'No access via link',
+    password: 'Password',
+    passwordDescShort: 'Password required for access',
+    securitySettingsSaved: 'Security settings saved',
+    securitySettingsSaveFailed: 'Failed to save security settings',
     // Subscription Plans
     subscriptionPlans: 'Subscription Plans',
     subscriptionPlansDesc: 'Choose the plan that fits your needs',

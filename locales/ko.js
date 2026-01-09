@@ -386,6 +386,15 @@ export default {
     public: '공개',
     private: '비공개',
     passwordProtected: '비밀번호',
+    // 보안 설정 모달
+    securitySettings: '보안 설정',
+    securitySettingsDesc: '세션의 보안 설정을 관리합니다',
+    publicDesc: '누구나 링크로 접근 가능',
+    privateDesc: '링크로 접근 불가',
+    password: '비밀번호',
+    passwordDescShort: '접근 시 비밀번호 필요',
+    securitySettingsSaved: '보안 설정이 저장되었습니다',
+    securitySettingsSaveFailed: '보안 설정 저장에 실패했습니다',
     // 구독 플랜
     subscriptionPlans: '구독 플랜',
     subscriptionPlansDesc: '필요에 맞는 플랜을 선택하세요',

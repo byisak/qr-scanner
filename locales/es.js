@@ -361,6 +361,15 @@ export default {
     public: 'Público',
     private: 'Privado',
     passwordProtected: 'Contraseña',
+    // Modal de configuración de seguridad
+    securitySettings: 'Configuración de seguridad',
+    securitySettingsDesc: 'Administrar configuración de seguridad de la sesión',
+    publicDesc: 'Cualquiera puede acceder mediante enlace',
+    privateDesc: 'Sin acceso mediante enlace',
+    password: 'Contraseña',
+    passwordDescShort: 'Se requiere contraseña para acceder',
+    securitySettingsSaved: 'Configuración de seguridad guardada',
+    securitySettingsSaveFailed: 'Error al guardar la configuración de seguridad',
     // Planes de suscripción
     subscriptionPlans: 'Planes de suscripción',
     subscriptionPlansDesc: 'Elige el plan que mejor se adapte a tus necesidades',
