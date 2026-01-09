@@ -550,6 +550,7 @@ export default function RealtimeSyncSettingsScreen() {
         deletedAt: null,
         isPublic: newSessionIsPublic,
         hasPassword: !!newSessionPassword,
+        password: newSessionPassword || null,  // 비밀번호 원본 저장
       };
 
       setSessionUrls(prev => [newSessionUrl, ...prev]);
@@ -792,7 +793,9 @@ export default function RealtimeSyncSettingsScreen() {
             }
 
             // 로컬 상태 업데이트 (서버 실패해도 진행)
-            setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
+            const updatedUrls = sessionUrls.filter(s => s.id !== sessionId);
+            setSessionUrls(updatedUrls);
+            await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
 
             // scanGroups, scanHistoryByGroup에서도 완전 삭제
             try {
@@ -884,12 +887,13 @@ export default function RealtimeSyncSettingsScreen() {
         console.error('❌ 서버 보안 설정 저장 실패:', error.message, error);
       }
 
-      // 로컬 상태 업데이트
+      // 로컬 상태 업데이트 (비밀번호 원본도 저장)
       const updatedUrls = sessionUrls.map(session => {
         if (session.id === selectedSessionId) {
           return {
             ...session,
             hasPassword: !!passwordInput.trim(),
+            password: passwordInput.trim() || null,  // 비밀번호 원본 저장
             isPublic: selectedIsPublic,
           };
         }
