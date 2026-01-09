@@ -99,12 +99,14 @@ export default function RealtimeSyncSettingsScreen() {
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [selectedIsPublic, setSelectedIsPublic] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
   // 세션 생성 모달 상태
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [newSessionPassword, setNewSessionPassword] = useState('');
   const [newSessionIsPublic, setNewSessionIsPublic] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // 활성/삭제된 세션 필터링
   const activeSessions = useMemo(() =>
@@ -611,6 +613,7 @@ export default function RealtimeSyncSettingsScreen() {
       setCreateModalVisible(false);
       setNewSessionPassword('');
       setNewSessionIsPublic(true);
+      setShowNewPassword(false);
       Alert.alert(t('settings.success'), t('settings.sessionCreated'));
     } catch (error) {
       console.error('세션 생성 실패:', error);
@@ -900,6 +903,7 @@ export default function RealtimeSyncSettingsScreen() {
       setPasswordModalVisible(false);
       setPasswordInput('');
       setSelectedSessionId('');
+      setShowPassword(false);
     } catch (error) {
       console.error('보안 설정 저장 실패:', error);
       Alert.alert(t('settings.error'), t('settings.securitySettingsSaveFailed') || '보안 설정 저장에 실패했습니다.');
@@ -1432,21 +1436,27 @@ export default function RealtimeSyncSettingsScreen() {
                   </View>
                 </View>
 
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    {
-                      backgroundColor: colors.inputBackground,
-                      color: colors.text,
-                      borderColor: colors.border
-                    }
-                  ]}
-                  value={passwordInput}
-                  onChangeText={setPasswordInput}
-                  placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (비워두면 해제)'}
-                  placeholderTextColor={colors.textTertiary}
-                  secureTextEntry={true}
-                />
+                <View style={[styles.passwordInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.passwordInputField, { color: colors.text }]}
+                    value={passwordInput}
+                    onChangeText={setPasswordInput}
+                    placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (비워두면 해제)'}
+                    placeholderTextColor={colors.textTertiary}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={22}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
@@ -1455,6 +1465,7 @@ export default function RealtimeSyncSettingsScreen() {
                       setPasswordModalVisible(false);
                       setPasswordInput('');
                       setSelectedSessionId('');
+                      setShowPassword(false);
                     }}
                     activeOpacity={0.7}
                   >
@@ -1533,21 +1544,27 @@ export default function RealtimeSyncSettingsScreen() {
                   <Text style={[styles.inputLabel, { color: colors.text }]}>
                     {t('settings.sessionPassword') || '세션 비밀번호'} {!newSessionIsPublic && <Text style={{ color: colors.error }}>*</Text>}
                   </Text>
-                  <TextInput
-                    style={[
-                      styles.passwordInput,
-                      {
-                        backgroundColor: colors.inputBackground,
-                        color: colors.text,
-                        borderColor: colors.border
-                      }
-                    ]}
-                    value={newSessionPassword}
-                    onChangeText={setNewSessionPassword}
-                    placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (선택사항)'}
-                    placeholderTextColor={colors.textTertiary}
-                    secureTextEntry={true}
-                  />
+                  <View style={[styles.passwordInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.passwordInputField, { color: colors.text }]}
+                      value={newSessionPassword}
+                      onChangeText={setNewSessionPassword}
+                      placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (선택사항)'}
+                      placeholderTextColor={colors.textTertiary}
+                      secureTextEntry={!showNewPassword}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowNewPassword(!showNewPassword)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={showNewPassword ? 'eye-off' : 'eye'}
+                        size={22}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
                   <Text style={[styles.inputHint, { color: colors.textTertiary }]}>
                     {t('settings.passwordHint') || '비밀번호를 설정하면 세션 접근 시 입력이 필요합니다.'}
                   </Text>
@@ -1560,6 +1577,7 @@ export default function RealtimeSyncSettingsScreen() {
                       setCreateModalVisible(false);
                       setNewSessionPassword('');
                       setNewSessionIsPublic(true);
+                      setShowNewPassword(false);
                     }}
                     activeOpacity={0.7}
                     disabled={isCreating}
@@ -1854,6 +1872,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderWidth: 1,
     marginBottom: 24,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  passwordInputField: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+  },
+  eyeButton: {
+    padding: 12,
+    paddingRight: 16,
   },
   modalButtons: {
     flexDirection: 'row',
