@@ -7,6 +7,7 @@ class WebSocketClient {
     this.serverUrl = null;
     this.sessionId = null;
     this.userId = null;
+    this.authToken = null;
     this.isConnected = false;
     this.listeners = {
       connect: [],
@@ -81,8 +82,20 @@ class WebSocketClient {
     }
   }
 
-  // 세션 생성 요청
-  createSession(sessionId = null) {
+  // 세션 생성 요청 (설정 포함)
+  createSession(sessionId = null, settings = {}) {
+    const payload = {
+      sessionId,
+      userId: this.userId,
+      settings: {
+        password: settings.password || null,
+        isPublic: settings.isPublic !== undefined ? settings.isPublic : true,
+        maxParticipants: settings.maxParticipants || null,
+        allowAnonymous: settings.allowAnonymous !== undefined ? settings.allowAnonymous : true,
+        expiresAt: settings.expiresAt || null,
+      }
+    };
+
     if (!this.socket || !this.isConnected) {
       console.error('Socket not connected');
       // 연결되지 않았어도 Promise 반환 (연결 시도)
@@ -102,14 +115,64 @@ class WebSocketClient {
 
         this.on('connect', () => {
           clearTimeout(timeout);
-          this.socket.emit('create-session', { sessionId });
+          this.socket.emit('create-session', payload);
           resolve(true);
         });
       });
     }
 
-    this.socket.emit('create-session', { sessionId });
+    this.socket.emit('create-session', payload);
     return Promise.resolve(true);
+  }
+
+  // 세션 설정 업데이트
+  updateSessionSettings(sessionId, settings) {
+    return this._apiRequest(`/api/sessions/${sessionId}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  // 세션 설정 조회
+  async getSessionSettings(sessionId) {
+    return this._apiRequest(`/api/sessions/${sessionId}/settings`, {
+      method: 'GET',
+    });
+  }
+
+  // API 요청 헬퍼
+  async _apiRequest(endpoint, options = {}) {
+    if (!this.serverUrl) {
+      throw new Error('Server URL not set');
+    }
+
+    const url = `${this.serverUrl}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    // 인증 토큰이 있으면 추가
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Request failed' }));
+      throw new Error(error.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // 인증 토큰 설정
+  setAuthToken(token) {
+    this.authToken = token;
   }
 
   // 스캔 데이터 전송
