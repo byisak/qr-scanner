@@ -998,13 +998,20 @@ export default function RealtimeSyncSettingsScreen() {
                 </Text>
               </View>
             )}
-            <View style={[styles.badge, { backgroundColor: session.isPublic !== false ? colors.primary + '20' : colors.warning + '20' }]}>
+            <View style={[
+              styles.badge,
+              {
+                backgroundColor: session.isPublic !== false ? colors.primary + '20' : colors.error + '15',
+                borderWidth: session.isPublic !== false ? 0 : 1,
+                borderColor: session.isPublic !== false ? 'transparent' : colors.error,
+              }
+            ]}>
               <Ionicons
                 name={session.isPublic !== false ? "globe-outline" : "lock-closed-outline"}
                 size={12}
-                color={session.isPublic !== false ? colors.primary : colors.warning}
+                color={session.isPublic !== false ? colors.primary : colors.error}
               />
-              <Text style={[styles.badgeText, { color: session.isPublic !== false ? colors.primary : colors.warning }]}>
+              <Text style={[styles.badgeText, { color: session.isPublic !== false ? colors.primary : colors.error }]}>
                 {session.isPublic !== false ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
               </Text>
             </View>
