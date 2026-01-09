@@ -393,6 +393,7 @@ export default {
     passwordDescShort: 'Password required for access',
     securitySettingsSaved: 'Security settings saved',
     securitySettingsSaveFailed: 'Failed to save security settings',
+    loginRequiredForSettings: 'Please log in to change security settings.',
     // Subscription Plans
     subscriptionPlans: 'Subscription Plans',
     subscriptionPlansDesc: 'Choose the plan that fits your needs',

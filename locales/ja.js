@@ -370,6 +370,7 @@ export default {
     passwordDescShort: 'アクセス時にパスワードが必要',
     securitySettingsSaved: 'セキュリティ設定が保存されました',
     securitySettingsSaveFailed: 'セキュリティ設定の保存に失敗しました',
+    loginRequiredForSettings: 'セキュリティ設定を変更するにはログインが必要です。',
     // サブスクリプションプラン
     subscriptionPlans: 'サブスクリプションプラン',
     subscriptionPlansDesc: 'ニーズに合ったプランをお選びください',

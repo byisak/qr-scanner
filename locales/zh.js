@@ -370,6 +370,7 @@ export default {
     passwordDescShort: '访问时需要密码',
     securitySettingsSaved: '安全设置已保存',
     securitySettingsSaveFailed: '保存安全设置失败',
+    loginRequiredForSettings: '请登录以更改安全设置。',
     // 订阅计划
     subscriptionPlans: '订阅计划',
     subscriptionPlansDesc: '选择适合您需求的计划',

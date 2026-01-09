@@ -395,6 +395,7 @@ export default {
     passwordDescShort: '접근 시 비밀번호 필요',
     securitySettingsSaved: '보안 설정이 저장되었습니다',
     securitySettingsSaveFailed: '보안 설정 저장에 실패했습니다',
+    loginRequiredForSettings: '보안 설정을 변경하려면 로그인이 필요합니다.',
     // 구독 플랜
     subscriptionPlans: '구독 플랜',
     subscriptionPlansDesc: '필요에 맞는 플랜을 선택하세요',
