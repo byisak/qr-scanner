@@ -82,7 +82,7 @@ export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { isLoggedIn, getToken, user } = useAuth();
+  const { isLoggedIn, getToken, user, refreshAccessToken } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
   // 실시간 서버전송 관련 상태
@@ -838,7 +838,15 @@ export default function RealtimeSyncSettingsScreen() {
   const handleSaveSecuritySettings = async () => {
     console.log('🔐 handleSaveSecuritySettings 시작:', { selectedSessionId, selectedIsPublic, hasPassword: !!passwordInput.trim() });
     try {
-      const token = await getToken();
+      // 토큰 갱신 먼저 시도
+      let token = await getToken();
+      if (token) {
+        const refreshResult = await refreshAccessToken();
+        if (refreshResult.success) {
+          token = await getToken(); // 갱신된 토큰 다시 가져오기
+          console.log('🔄 토큰 갱신 성공');
+        }
+      }
       console.log('🔑 토큰 획득:', { hasToken: !!token });
 
       // 서버에 보안 설정 업데이트 요청
