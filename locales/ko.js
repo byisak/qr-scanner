@@ -366,6 +366,14 @@ export default {
     daysRemaining: '{{days}}일 남음',
     noActiveSessions: '생성된 전송 주소가 없습니다\n위 버튼을 눌러 새 주소를 생성하세요',
     noDeletedSessions: '삭제된 주소가 없습니다',
+    // 세션 생성 모달
+    createSession: '새 세션 생성',
+    createSessionDescription: '새로운 실시간 전송 세션을 생성합니다',
+    publicSession: '공개 세션',
+    publicSessionDesc: '다른 사용자가 이 세션에 참여할 수 있습니다',
+    sessionPassword: '세션 비밀번호',
+    passwordHint: '비밀번호를 입력하면 참여 시 비밀번호가 필요합니다',
+    createButton: '생성',
     // 구독 플랜
     subscriptionPlans: '구독 플랜',
     subscriptionPlansDesc: '필요에 맞는 플랜을 선택하세요',

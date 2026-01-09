@@ -341,6 +341,14 @@ export default {
     daysRemaining: '残り{{days}}日',
     noActiveSessions: '生成されたURLがありません\n上のボタンをタップして新しいURLを作成してください',
     noDeletedSessions: '削除されたURLはありません',
+    // セッション作成モーダル
+    createSession: '新しいセッションを作成',
+    createSessionDescription: '新しいリアルタイム同期セッションを作成します',
+    publicSession: '公開セッション',
+    publicSessionDesc: '他のユーザーがこのセッションに参加できます',
+    sessionPassword: 'セッションパスワード',
+    passwordHint: 'パスワードを設定すると参加時に必要になります',
+    createButton: '作成',
     // サブスクリプションプラン
     subscriptionPlans: 'サブスクリプションプラン',
     subscriptionPlansDesc: 'ニーズに合ったプランをお選びください',

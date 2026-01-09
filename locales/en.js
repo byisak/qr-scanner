@@ -364,6 +364,14 @@ export default {
     daysRemaining: '{{days}} days left',
     noActiveSessions: 'No URLs generated\nTap the button above to create a new URL',
     noDeletedSessions: 'No deleted URLs',
+    // Session creation modal
+    createSession: 'Create New Session',
+    createSessionDescription: 'Create a new real-time sync session',
+    publicSession: 'Public Session',
+    publicSessionDesc: 'Allow other users to join this session',
+    sessionPassword: 'Session Password',
+    passwordHint: 'Password required to join if set',
+    createButton: 'Create',
     // Subscription Plans
     subscriptionPlans: 'Subscription Plans',
     subscriptionPlansDesc: 'Choose the plan that fits your needs',

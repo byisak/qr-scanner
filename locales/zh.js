@@ -341,6 +341,14 @@ export default {
     daysRemaining: '剩余{{days}}天',
     noActiveSessions: '没有生成的URL\n点击上方按钮创建新URL',
     noDeletedSessions: '没有已删除的URL',
+    // 会话创建模态框
+    createSession: '创建新会话',
+    createSessionDescription: '创建新的实时同步会话',
+    publicSession: '公开会话',
+    publicSessionDesc: '允许其他用户加入此会话',
+    sessionPassword: '会话密码',
+    passwordHint: '设置密码后加入时需要输入',
+    createButton: '创建',
     // 订阅计划
     subscriptionPlans: '订阅计划',
     subscriptionPlansDesc: '选择适合您需求的计划',

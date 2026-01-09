@@ -341,6 +341,14 @@ export default {
     daysRemaining: '{{days}} días restantes',
     noActiveSessions: 'No hay URLs generadas\nToca el botón de arriba para crear una nueva URL',
     noDeletedSessions: 'No hay URLs eliminadas',
+    // Modal de creación de sesión
+    createSession: 'Crear Nueva Sesión',
+    createSessionDescription: 'Crear una nueva sesión de sincronización en tiempo real',
+    publicSession: 'Sesión Pública',
+    publicSessionDesc: 'Permitir que otros usuarios se unan a esta sesión',
+    sessionPassword: 'Contraseña de Sesión',
+    passwordHint: 'Se requiere contraseña para unirse si está configurada',
+    createButton: 'Crear',
     // Planes de suscripción
     subscriptionPlans: 'Planes de suscripción',
     subscriptionPlansDesc: 'Elige el plan que mejor se adapte a tus necesidades',
