@@ -45,6 +45,60 @@ const QR_FRAMES = [
     nameKo: '재생 버튼',
     previewColor: '#000000',
   },
+  {
+    id: 'hand-phone',
+    name: 'Hand Phone',
+    nameKo: '손+폰',
+    previewColor: '#000000',
+  },
+  {
+    id: 'film-strip',
+    name: 'Film Strip',
+    nameKo: '필름',
+    previewColor: '#000000',
+  },
+  {
+    id: 'beer-mug',
+    name: 'Beer Mug',
+    nameKo: '맥주잔',
+    previewColor: '#000000',
+  },
+  {
+    id: 'car',
+    name: 'Car',
+    nameKo: '자동차',
+    previewColor: '#000000',
+  },
+  {
+    id: 'coffee-cup',
+    name: 'Coffee Cup',
+    nameKo: '커피컵',
+    previewColor: '#000000',
+  },
+  {
+    id: 'smartphone',
+    name: 'Smartphone',
+    nameKo: '스마트폰',
+    previewColor: '#000000',
+  },
+  {
+    id: 'receipt',
+    name: 'Receipt',
+    nameKo: '영수증',
+    previewColor: '#000000',
+  },
+  {
+    id: 'calendar',
+    name: 'Calendar',
+    nameKo: '캘린더',
+    previewColor: '#000000',
+  },
+  {
+    id: 'cauldron',
+    name: 'Cauldron',
+    nameKo: '가마솥',
+    previewColor: '#000000',
+  },
 ];
 
 
