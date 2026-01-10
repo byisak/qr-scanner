@@ -2429,15 +2429,19 @@ export default function GeneratorScreen() {
                             FRAME_SVG_DATA[frame.id] && FRAME_QR_POSITIONS[frame.id] ? (
                               (() => {
                                 const pos = FRAME_QR_POSITIONS[frame.id];
+                                // QRFrameRenderer와 동일한 계산 방식
                                 const previewHeight = 70;
-                                const previewWidth = (pos.viewBoxWidth / pos.viewBoxHeight) * previewHeight;
-                                // QR 영역 중심을 비율로 계산
-                                const qrCenterXRatio = (pos.x + pos.width / 2) / pos.viewBoxWidth;
-                                const qrCenterYRatio = (pos.y + pos.height / 2) / pos.viewBoxHeight;
-                                // 고정 크기 QR 아이콘 (28px)
-                                const qrSize = 28;
-                                const qrLeft = previewWidth * qrCenterXRatio - qrSize / 2;
-                                const qrTop = previewHeight * qrCenterYRatio - qrSize / 2;
+                                const scale = previewHeight / pos.viewBoxHeight;
+                                const previewWidth = Math.floor(pos.viewBoxWidth * scale);
+                                // 프레임 내부 QR 영역
+                                const bgAreaWidth = Math.floor(pos.width * scale);
+                                const bgAreaHeight = Math.floor(pos.height * scale);
+                                const bgX = Math.floor(pos.x * scale);
+                                const bgY = Math.floor(pos.y * scale);
+                                // QR 코드는 내부 영역 중앙에 정사각형으로 배치 (88%)
+                                const qrSize = Math.floor(Math.min(bgAreaWidth, bgAreaHeight) * 0.88);
+                                const qrLeft = bgX + Math.floor((bgAreaWidth - qrSize) / 2);
+                                const qrTop = bgY + Math.floor((bgAreaHeight - qrSize) / 2);
                                 return (
                                   <View style={[s.frameWithQrPreview, { width: previewWidth, height: previewHeight }]}>
                                     <SvgXml
