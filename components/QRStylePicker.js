@@ -34,25 +34,16 @@ const QR_FRAMES = [
     preview: null,
   },
   {
-    id: 'scan-me',
-    name: 'Scan Me',
-    nameKo: 'Scan Me',
-    // 프레임 파일 경로 (assets/qr-frames/ 폴더 기준)
-    fileName: 'frame-scan-me.svg',
-    // SVG viewBox 기준 QR코드 배치 위치 (700x700 viewBox 기준)
-    viewBox: '0 0 700 700',
-    qrPosition: { x: 247, y: 291, size: 206 },
-    // 미리보기용 간단한 설명
-    previewColor: '#020203',
+    id: 'envelope',
+    name: 'Envelope',
+    nameKo: '편지봉투',
+    previewColor: '#000000',
   },
   {
-    id: 'scan-me-label',
-    name: 'Scan Me Label',
-    nameKo: 'Scan Me 라벨',
-    fileName: 'frame-scan-me-label.svg',
-    viewBox: '0 0 700 700',
-    qrPosition: { x: 198, y: 160, size: 305 },
-    previewColor: '#020203',
+    id: 'play-button',
+    name: 'Play Button',
+    nameKo: '재생 버튼',
+    previewColor: '#000000',
   },
 ];
 
