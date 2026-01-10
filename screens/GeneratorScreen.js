@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   Alert,
   Platform,
   Animated,
@@ -42,10 +43,9 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from '../components/StyledQRCode';
-import QRFrameRenderer, { FRAME_SVG_DATA, FRAME_QR_POSITIONS } from '../components/QRFrameRenderer';
+import QRFrameRenderer from '../components/QRFrameRenderer';
 import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
 import NativeColorPicker from '../components/NativeColorPicker';
-import { SvgXml } from 'react-native-svg';
 import Svg, { Circle, Path } from 'react-native-svg';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
@@ -365,12 +365,19 @@ export default function GeneratorScreen() {
   const [capturedQRBase64, setCapturedQRBase64] = useState(null);
   const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
   const [logoImage, setLogoImage] = useState(null); // 로고 이미지 base64
-  const [selectedFrame, setSelectedFrame] = useState(null); // 선택된 QR 프레임
+  const [frameIndex, setFrameIndex] = useState(0); // 현재 프레임 캐러셀 인덱스
   const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
   const [activeColorPicker, setActiveColorPicker] = useState(null); // 활성 컬러 피커 (dotColor, cornerSquareColor, cornerDotColor, backgroundColor)
   const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
+  const frameCarouselRef = useRef(null); // 프레임 캐러셀 ref
+
+  // 현재 선택된 프레임 (인덱스 기반)
+  const selectedFrame = useMemo(() => {
+    const frame = QR_FRAMES[frameIndex];
+    return frame?.id === 'none' ? null : frame;
+  }, [frameIndex]);
 
   // QR 고해상도 레벨별 설정
   const QR_RES_LEVELS = [
@@ -2368,7 +2375,6 @@ export default function GeneratorScreen() {
                   contentContainerStyle={s.qrSettingsTabScrollContent}
                 >
                   {[
-                    { id: 'frames', icon: 'albums-outline', label: t('generator.qrStyle.frame') || '프레임' },
                     { id: 'presets', icon: 'color-palette-outline', label: t('generator.qrStyle.presets') || '프리셋' },
                     { id: 'dots', icon: 'grid-outline', label: t('generator.qrStyle.dots') || '도트' },
                     { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
@@ -2398,87 +2404,6 @@ export default function GeneratorScreen() {
                   ))}
                 </ScrollView>
               </View>
-
-              {/* 프레임 탭 */}
-              {qrSettingsTab === 'frames' && (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={s.frameScrollContainer}
-                >
-                  {QR_FRAMES.map((frame) => {
-                    const isSelected = selectedFrame?.id === frame.id || (!selectedFrame && frame.id === 'none');
-                    return (
-                      <TouchableOpacity
-                        key={frame.id}
-                        style={[
-                          s.frameSelectItem,
-                          {
-                            backgroundColor: colors.inputBackground,
-                            borderColor: isSelected ? colors.primary : colors.border,
-                            borderWidth: isSelected ? 2 : 1,
-                          },
-                        ]}
-                        onPress={() => setSelectedFrame(frame.id === 'none' ? null : frame)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[s.frameSelectPreview, { backgroundColor: '#fff' }]}>
-                          {frame.id === 'none' ? (
-                            <Ionicons name="close-circle-outline" size={28} color={colors.textTertiary} />
-                          ) : (
-                            FRAME_SVG_DATA[frame.id] && FRAME_QR_POSITIONS[frame.id] ? (
-                              (() => {
-                                const pos = FRAME_QR_POSITIONS[frame.id];
-                                // QRFrameRenderer와 동일한 계산 방식
-                                const previewHeight = 70;
-                                const scale = previewHeight / pos.viewBoxHeight;
-                                const previewWidth = Math.floor(pos.viewBoxWidth * scale);
-                                // 프레임 내부 QR 영역
-                                const bgAreaWidth = Math.floor(pos.width * scale);
-                                const bgAreaHeight = Math.floor(pos.height * scale);
-                                const bgX = Math.floor(pos.x * scale);
-                                const bgY = Math.floor(pos.y * scale);
-                                // QR 코드는 내부 영역 중앙에 정사각형으로 배치 (88%)
-                                const qrSize = Math.floor(Math.min(bgAreaWidth, bgAreaHeight) * 0.88);
-                                const qrLeft = bgX + Math.floor((bgAreaWidth - qrSize) / 2);
-                                const qrTop = bgY + Math.floor((bgAreaHeight - qrSize) / 2);
-                                return (
-                                  <View style={[s.frameWithQrPreview, { width: previewWidth, height: previewHeight }]}>
-                                    <SvgXml
-                                      xml={FRAME_SVG_DATA[frame.id]}
-                                      width={previewWidth}
-                                      height={previewHeight}
-                                      style={s.framePreviewSvg}
-                                    />
-                                    <SvgXml
-                                      xml={`<svg width='16' height='16' fill='none' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' clip-rule='evenodd' d='M0 5.3V0h5.3v5.3H0Zm1.25-1.25h2.8V1.25h-2.8v2.8Z' fill='#888'/><path fill='#888' d='M2.12 2.12h1.25v1.25H2.12z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M10.7 5.3V0H16v5.3h-5.3Zm1.25-1.25h2.8V1.25h-2.8v2.8Z' fill='#888'/><path fill='#888' d='M12.63 2.12h1.25v1.25h-1.25z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M0 16v-5.3h5.3V16H0Zm1.25-1.25h2.8v-2.8h-2.8v2.8Z' fill='#888'/><path fill='#888' d='M2.12 12.63h1.25v1.25H2.12zM6.37 6.07h2.5v1.25h-2.5zM8.87 8.57h1.25v2.5H8.87zM6.37 11.07h2.5v1.25h-2.5zM11.12 6.07h1.25v2.5h-1.25zM12.37 11.07h2.5v1.25h-2.5zM11.12 13.57h1.25v1.25h-1.25z'/></svg>`}
-                                      width={qrSize}
-                                      height={qrSize}
-                                      style={[s.frameQrIcon, { left: qrLeft, top: qrTop }]}
-                                    />
-                                  </View>
-                                );
-                              })()
-                            ) : (
-                              <View style={[s.framePlaceholder, { borderColor: frame.previewColor || '#000' }]}>
-                                <Text style={{ fontSize: 8 }}>{frame.name}</Text>
-                              </View>
-                            )
-                          )}
-                        </View>
-                        <Text style={[s.frameSelectName, { color: colors.text }]} numberOfLines={1}>
-                          {language === 'ko' ? frame.nameKo : frame.name}
-                        </Text>
-                        {isSelected && (
-                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
-                            <Ionicons name="checkmark" size={10} color="#fff" />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              )}
 
               {/* 프리셋 탭 */}
               {qrSettingsTab === 'presets' && (
@@ -2840,57 +2765,86 @@ export default function GeneratorScreen() {
 
             <View style={[s.qrContainer, { borderColor: colors.border }]}>
               {hasData ? (
-                <Animated.View
-                  ref={qrRef}
-                  style={[
-                    s.qrWrapper,
-                    {
-                      transform: [
-                        { scale: qrSize },
-                        {
-                          rotateZ: qrSize.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['180deg', '0deg'],
-                          }),
-                        },
-                      ],
-                      opacity: qrSize,
-                    },
-                  ]}
-                  collapsable={false}
-                >
-                  {selectedFrame ? (
-                    // 프레임이 선택된 경우 - QRFrameRenderer 사용
-                    <View style={s.frameContainer}>
-                      <QRFrameRenderer
-                        frame={selectedFrame}
-                        qrValue={qrData}
-                        qrStyle={qrStyle}
-                        size={280}
-                        onCapture={(base64) => setCapturedQRBase64(base64)}
-                      />
-                    </View>
-                  ) : (
-                    // 프레임이 없는 경우 - 기존 방식
-                    <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
-                      {useStyledQR ? (
-                        <StyledQRCode
-                          value={qrData}
-                          size={260}
-                          qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
-                          onCapture={(base64) => setCapturedQRBase64(base64)}
-                        />
-                      ) : (
-                        <QRCode
-                          value={qrData}
-                          size={240}
-                          backgroundColor="white"
-                          color="black"
-                        />
-                      )}
-                    </View>
-                  )}
-                </Animated.View>
+                <>
+                  <FlatList
+                    ref={frameCarouselRef}
+                    data={QR_FRAMES}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(item) => item.id}
+                    onMomentumScrollEnd={(e) => {
+                      const newIndex = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 32));
+                      setFrameIndex(newIndex);
+                    }}
+                    renderItem={({ item: frame, index }) => {
+                      const isCurrentFrame = index === frameIndex;
+                      const frameObj = frame.id === 'none' ? null : frame;
+                      return (
+                        <View style={[s.carouselItem, { width: SCREEN_WIDTH - 32 }]}>
+                          <Animated.View
+                            ref={isCurrentFrame ? qrRef : null}
+                            style={[
+                              s.qrWrapper,
+                              {
+                                transform: [
+                                  { scale: qrSize },
+                                  {
+                                    rotateZ: qrSize.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: ['180deg', '0deg'],
+                                    }),
+                                  },
+                                ],
+                                opacity: qrSize,
+                              },
+                            ]}
+                            collapsable={false}
+                          >
+                            {frameObj ? (
+                              <View style={s.frameContainer}>
+                                <QRFrameRenderer
+                                  frame={frameObj}
+                                  qrValue={qrData}
+                                  qrStyle={qrStyle}
+                                  size={280}
+                                  onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
+                                />
+                              </View>
+                            ) : (
+                              <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
+                                {useStyledQR ? (
+                                  <StyledQRCode
+                                    value={qrData}
+                                    size={260}
+                                    qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
+                                    onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
+                                  />
+                                ) : (
+                                  <QRCode
+                                    value={qrData}
+                                    size={240}
+                                    backgroundColor="white"
+                                    color="black"
+                                  />
+                                )}
+                              </View>
+                            )}
+                          </Animated.View>
+                        </View>
+                      );
+                    }}
+                  />
+                  {/* 프레임 이름 및 페이지 인디케이터 */}
+                  <View style={s.carouselIndicator}>
+                    <Text style={[s.carouselFrameName, { color: colors.text }]}>
+                      {language === 'ko' ? QR_FRAMES[frameIndex]?.nameKo : QR_FRAMES[frameIndex]?.name}
+                    </Text>
+                    <Text style={[s.carouselPageNum, { color: colors.textSecondary }]}>
+                      {frameIndex + 1} / {QR_FRAMES.length}
+                    </Text>
+                  </View>
+                </>
               ) : (
                 <View style={s.emptyState}>
                   <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
@@ -4140,6 +4094,23 @@ const s = StyleSheet.create({
   qrWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  carouselItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  carouselIndicator: {
+    alignItems: 'center',
+    paddingBottom: 12,
+    gap: 4,
+  },
+  carouselFrameName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  carouselPageNum: {
+    fontSize: 12,
   },
   frameContainer: {
     padding: 4,
