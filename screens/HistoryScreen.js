@@ -124,7 +124,7 @@ export default function HistoryScreen() {
     const q = query.toLowerCase();
     setFilteredList(
       currentHistory.filter(
-        (i) => i.code.toLowerCase().includes(q) || (i.url && i.url.toLowerCase().includes(q)),
+        (i) => (i.code && i.code.toLowerCase().includes(q)) || (i.url && i.url.toLowerCase().includes(q)),
       ),
     );
   }, [query, scanHistory, selectedGroupId]);

@@ -4,11 +4,13 @@ import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function WebViewScreen() {
   const params = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const { url } = params;
   const [loading, setLoading] = useState(true);
 
@@ -20,12 +22,12 @@ export default function WebViewScreen() {
     // iOS ATS 에러 (-1022) 또는 기타 로드 에러 시 외부 브라우저로 열기
     if (nativeEvent.code === -1022 || nativeEvent.description?.includes('App Transport Security')) {
       Alert.alert(
-        '보안 연결 필요',
-        '이 페이지는 앱 내에서 열 수 없습니다. 외부 브라우저에서 열까요?',
+        t('webView.secureConnectionRequired'),
+        t('webView.cannotOpenInApp'),
         [
-          { text: '취소', style: 'cancel', onPress: () => router.back() },
+          { text: t('common.cancel'), style: 'cancel', onPress: () => router.back() },
           {
-            text: '열기',
+            text: t('webView.open'),
             onPress: async () => {
               try {
                 await Linking.openURL(url);
@@ -38,7 +40,7 @@ export default function WebViewScreen() {
         ]
       );
     }
-  }, [url, router]);
+  }, [url, router, t]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -65,7 +67,7 @@ export default function WebViewScreen() {
       <View style={[s.close, { top: Platform.OS === 'ios' ? insets.top + 10 : insets.top + 10 }]}>
         <TouchableOpacity style={s.closeButton} onPress={() => router.back()}>
           <Ionicons name="close" size={24} color="#333" />
-          <Text style={s.closeText}>닫기</Text>
+          <Text style={s.closeText}>{t('common.close')}</Text>
         </TouchableOpacity>
       </View>
     </View>

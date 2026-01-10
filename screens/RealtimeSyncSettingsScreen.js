@@ -54,10 +54,10 @@ const getDaysRemaining = (deletedAt) => {
 };
 
 // 서버에서 세션 목록 가져오기 (인증된 사용자의 세션만)
-const fetchSessionsFromServer = async (token) => {
+const fetchSessionsFromServer = async (token, status = 'ALL') => {
   try {
     const headers = {};
-    let url = `${config.serverUrl}/api/sessions?status=ALL`;
+    let url = `${config.serverUrl}/api/sessions?status=${status}`;
 
     // 토큰이 있으면 내 세션만 조회
     if (token) {
@@ -82,7 +82,7 @@ export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { isLoggedIn, getToken } = useAuth();
+  const { isLoggedIn, getToken, user, refreshAccessToken } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
   // 실시간 서버전송 관련 상태
@@ -94,10 +94,19 @@ export default function RealtimeSyncSettingsScreen() {
   // 탭 상태: 'active' | 'deleted'
   const [activeTab, setActiveTab] = useState('active');
 
-  // 비밀번호 모달 상태
+  // 보안 설정 모달 상태 (비밀번호 + 공개/비공개)
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [selectedIsPublic, setSelectedIsPublic] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // 세션 생성 모달 상태
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [newSessionPassword, setNewSessionPassword] = useState('');
+  const [newSessionIsPublic, setNewSessionIsPublic] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // 활성/삭제된 세션 필터링
   const activeSessions = useMemo(() =>
@@ -109,6 +118,59 @@ export default function RealtimeSyncSettingsScreen() {
     sessionUrls.filter(s => s.status === 'DELETED'),
     [sessionUrls]
   );
+
+  // 삭제된 탭 클릭 시 서버에서 삭제된 세션 실시간 동기화
+  const handleDeletedTabClick = useCallback(async () => {
+    setActiveTab('deleted');
+
+    if (!isLoggedIn) return;
+
+    try {
+      setIsSyncing(true);
+      const token = await getToken();
+
+      // 서버에서 삭제된 세션만 가져오기
+      const deletedFromServer = await fetchSessionsFromServer(token, 'DELETED');
+
+      if (deletedFromServer && Array.isArray(deletedFromServer)) {
+        // 현재 활성 세션 유지하고, 삭제된 세션만 업데이트
+        setSessionUrls(prev => {
+          const activeOnes = prev.filter(s => s.status !== 'DELETED');
+
+          // 서버에서 가져온 삭제된 세션 변환
+          const newDeletedSessions = deletedFromServer.map(session => {
+            const sessionId = session.SESSION_ID || session.session_id || session.sessionId;
+            const deletedAt = session.DELETED_AT || session.deleted_at || session.deletedAt;
+            const createdAt = session.CREATED_AT || session.created_at || session.createdAt;
+            const sessionName = session.SESSION_NAME || session.session_name || session.name || null;
+
+            return {
+              id: sessionId,
+              url: `${config.serverUrl}/session/${sessionId}`,
+              createdAt: createdAt ? new Date(createdAt).getTime() : Date.now(),
+              status: 'DELETED',
+              deletedAt: deletedAt ? new Date(deletedAt).getTime() : null,
+              name: sessionName,
+            };
+          });
+
+          // 활성 + 새로 동기화된 삭제된 세션
+          const allSessions = [...activeOnes, ...newDeletedSessions].sort((a, b) => b.createdAt - a.createdAt);
+
+          // 로컬 저장소 업데이트
+          AsyncStorage.setItem('sessionUrls', JSON.stringify(allSessions));
+
+          return allSessions;
+        });
+
+        console.log(`삭제된 세션 동기화 완료: ${deletedFromServer.length}개`);
+      }
+    } catch (error) {
+      console.error('삭제된 세션 동기화 실패:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isLoggedIn, getToken]);
 
   // 로컬 세션들에 대한 그룹 생성 보장 함수
   const ensureGroupsForSessions = async (sessions) => {
@@ -285,8 +347,53 @@ export default function RealtimeSyncSettingsScreen() {
     }
 
     console.log(`서버 동기화 완료: 기존 ${localSessions.length}개, 새로 추가 ${newSessions.length}개`);
+
+    // 로그인한 사용자의 경우, 기존 세션들에 대해 소유권(user_id) 업데이트
+    if (user?.id && allSessions.length > 0) {
+      try {
+        // WebSocket 연결 및 사용자 ID 설정
+        websocketClient.setUserId(user.id);
+        if (token) {
+          websocketClient.setAuthToken(token);
+        }
+
+        if (!websocketClient.getConnectionStatus()) {
+          websocketClient.connect(config.serverUrl);
+          // 연결 대기 (최대 3초)
+          await new Promise((resolve) => {
+            const checkConnection = setInterval(() => {
+              if (websocketClient.getConnectionStatus()) {
+                clearInterval(checkConnection);
+                resolve();
+              }
+            }, 100);
+            setTimeout(() => {
+              clearInterval(checkConnection);
+              resolve();
+            }, 3000);
+          });
+        }
+
+        // 활성 세션들에 대해 join-session 이벤트 발송 (user_id 업데이트)
+        if (websocketClient.getConnectionStatus()) {
+          const activeSessions = allSessions.filter(s => s.status !== 'DELETED');
+          for (const session of activeSessions) {
+            try {
+              await websocketClient.joinSession(session.id);
+              console.log(`세션 소유권 업데이트: ${session.id}`);
+            } catch (err) {
+              console.warn(`세션 ${session.id} 소유권 업데이트 실패:`, err.message);
+            }
+          }
+          console.log(`${activeSessions.length}개 세션 소유권 업데이트 완료`);
+        }
+      } catch (error) {
+        console.warn('세션 소유권 업데이트 중 오류:', error.message);
+      }
+    }
+
     return allSessions;
-  }, [getToken]);
+  }, [getToken, user]);
 
   // 초기 로드
   useEffect(() => {
@@ -414,68 +521,107 @@ export default function RealtimeSyncSettingsScreen() {
     }
   }, [sessionUrls]);
 
-  // 새 세션 URL 생성
+  // 세션 생성 모달 열기
+  const handleOpenCreateModal = () => {
+    setNewSessionPassword('');
+    setNewSessionIsPublic(true);
+    setCreateModalVisible(true);
+  };
+
+  // 새 세션 URL 생성 (설정 포함)
   const handleGenerateSessionUrl = async () => {
-    const newSessionId = await generateSessionId();
-    const newSessionUrl = {
-      id: newSessionId,
-      url: `${config.serverUrl}/session/${newSessionId}`,
-      createdAt: Date.now(),
-      status: 'ACTIVE',
-      deletedAt: null,
-    };
+    setIsCreating(true);
 
-    setSessionUrls(prev => [newSessionUrl, ...prev]);
-
-    // 서버에 세션 생성 알림
     try {
-      if (!websocketClient.getConnectionStatus()) {
-        websocketClient.connect(config.serverUrl);
-        // 연결 완료 대기 (최대 3초)
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Connection timeout'));
-          }, 3000);
+      const newSessionId = await generateSessionId();
+      const token = await getToken();
 
-          const checkConnection = setInterval(() => {
-            if (websocketClient.getConnectionStatus()) {
-              clearInterval(checkConnection);
-              clearTimeout(timeout);
-              resolve();
-            }
-          }, 100);
-        });
-      }
-      await websocketClient.createSession(newSessionId);
-      console.log('서버에 세션 생성 요청:', newSessionId);
-    } catch (error) {
-      console.warn('서버 세션 생성 실패 (로컬에서는 생성됨):', error.message);
-    }
-
-    // 자동으로 scanGroups에 클라우드 동기화 그룹 추가
-    try {
-      const groupsData = await AsyncStorage.getItem('scanGroups');
-      const groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
-
-      const newGroup = {
-        id: newSessionId,
-        name: `세션 ${newSessionId.substring(0, 4)}`,
-        createdAt: Date.now(),
-        isCloudSync: true,
+      // 세션 설정
+      const sessionSettings = {
+        password: newSessionPassword || null,
+        isPublic: newSessionIsPublic,
       };
 
-      const updatedGroups = [...groups, newGroup];
-      await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+      const newSessionUrl = {
+        id: newSessionId,
+        url: `${config.serverUrl}/session/${newSessionId}`,
+        createdAt: Date.now(),
+        status: 'ACTIVE',
+        deletedAt: null,
+        isPublic: newSessionIsPublic,
+        hasPassword: !!newSessionPassword,
+        password: newSessionPassword || null,  // 비밀번호 원본 저장
+      };
 
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
-      historyByGroup[newSessionId] = [];
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      setSessionUrls(prev => [newSessionUrl, ...prev]);
+
+      // 서버에 세션 생성 알림 (설정 포함)
+      try {
+        // 인증 토큰 및 사용자 ID 설정
+        if (token) {
+          websocketClient.setAuthToken(token);
+        }
+        if (user?.id) {
+          websocketClient.setUserId(user.id);
+        }
+
+        if (!websocketClient.getConnectionStatus()) {
+          websocketClient.connect(config.serverUrl);
+          // 연결 완료 대기 (최대 3초)
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error('Connection timeout'));
+            }, 3000);
+
+            const checkConnection = setInterval(() => {
+              if (websocketClient.getConnectionStatus()) {
+                clearInterval(checkConnection);
+                clearTimeout(timeout);
+                resolve();
+              }
+            }, 100);
+          });
+        }
+        await websocketClient.createSession(newSessionId, sessionSettings);
+        console.log('서버에 세션 생성 요청:', newSessionId, '설정:', sessionSettings);
+      } catch (error) {
+        console.warn('서버 세션 생성 실패 (로컬에서는 생성됨):', error.message);
+      }
+
+      // 자동으로 scanGroups에 클라우드 동기화 그룹 추가
+      try {
+        const groupsData = await AsyncStorage.getItem('scanGroups');
+        const groups = groupsData ? JSON.parse(groupsData) : [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }];
+
+        const newGroup = {
+          id: newSessionId,
+          name: `세션 ${newSessionId.substring(0, 4)}`,
+          createdAt: Date.now(),
+          isCloudSync: true,
+        };
+
+        const updatedGroups = [...groups, newGroup];
+        await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+
+        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+        const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+        historyByGroup[newSessionId] = [];
+        await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      } catch (error) {
+        console.error('Failed to create cloud sync group:', error);
+      }
+
+      setCreateModalVisible(false);
+      setNewSessionPassword('');
+      setNewSessionIsPublic(true);
+      setShowNewPassword(false);
+      Alert.alert(t('settings.success'), t('settings.sessionCreated'));
     } catch (error) {
-      console.error('Failed to create cloud sync group:', error);
+      console.error('세션 생성 실패:', error);
+      Alert.alert(t('settings.error'), t('settings.sessionCreateFailed') || '세션 생성에 실패했습니다.');
+    } finally {
+      setIsCreating(false);
     }
-
-    Alert.alert(t('settings.success'), t('settings.sessionCreated'));
   };
 
   // Soft Delete - 세션을 삭제 상태로 변경
@@ -490,6 +636,7 @@ export default function RealtimeSyncSettingsScreen() {
           style: 'destructive',
           onPress: async () => {
             const deletedAt = Date.now();
+            const token = await getToken();
 
             // 서버 API 호출 (Soft Delete)
             try {
@@ -497,10 +644,15 @@ export default function RealtimeSyncSettingsScreen() {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
+                  ...(token && { 'Authorization': `Bearer ${token}` }),
                 },
               });
 
               if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                  Alert.alert(t('settings.error'), t('settings.sessionDeleteFailed') || '세션 삭제 권한이 없습니다.');
+                  return;
+                }
                 console.warn('Server soft delete failed:', response.status);
               } else {
                 console.log('Server soft delete success:', sessionId);
@@ -547,16 +699,23 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 복구
   const handleRestore = async (sessionId) => {
+    const token = await getToken();
+
     // 서버 API 호출 (Restore)
     try {
       const response = await fetch(`${config.serverUrl}/api/sessions/${sessionId}/restore`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          Alert.alert(t('settings.error'), t('settings.sessionRestoreFailed') || '세션 복구 권한이 없습니다.');
+          return;
+        }
         console.warn('Server restore failed:', response.status);
       } else {
         console.log('Server restore success:', sessionId);
@@ -608,16 +767,23 @@ export default function RealtimeSyncSettingsScreen() {
           text: t('settings.permanentDeleteButton'),
           style: 'destructive',
           onPress: async () => {
+            const token = await getToken();
+
             // 서버 API 호출 (Permanent Delete)
             try {
               const response = await fetch(`${config.serverUrl}/api/sessions/${sessionId}/permanent`, {
                 method: 'DELETE',
                 headers: {
                   'Content-Type': 'application/json',
+                  ...(token && { 'Authorization': `Bearer ${token}` }),
                 },
               });
 
               if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                  Alert.alert(t('settings.error'), t('settings.sessionPermanentDeleteFailed') || '세션 영구 삭제 권한이 없습니다.');
+                  return;
+                }
                 console.warn('Server permanent delete failed:', response.status);
               } else {
                 console.log('Server permanent delete success:', sessionId);
@@ -627,7 +793,9 @@ export default function RealtimeSyncSettingsScreen() {
             }
 
             // 로컬 상태 업데이트 (서버 실패해도 진행)
-            setSessionUrls(prev => prev.filter(s => s.id !== sessionId));
+            const updatedUrls = sessionUrls.filter(s => s.id !== sessionId);
+            setSessionUrls(updatedUrls);
+            await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
 
             // scanGroups, scanHistoryByGroup에서도 완전 삭제
             try {
@@ -663,34 +831,124 @@ export default function RealtimeSyncSettingsScreen() {
   };
 
   // 비밀번호 모달 열기
-  const handleOpenPasswordModal = (sessionId) => {
+  // 보안 설정 모달 열기 (비밀번호 + 공개/비공개 토글)
+  const handleOpenSecurityModal = (sessionId) => {
     setSelectedSessionId(sessionId);
     const session = sessionUrls.find(s => s.id === sessionId);
     setPasswordInput(session?.password || '');
+    setSelectedIsPublic(session?.isPublic !== false);
     setPasswordModalVisible(true);
   };
 
-  // 비밀번호 저장
-  const handleSavePassword = async () => {
-    if (!passwordInput.trim()) {
-      Alert.alert(t('settings.error'), t('settings.passwordRequired'));
-      return;
-    }
+  // 보안 설정 저장 (비밀번호 + 공개/비공개, 서버 API 연동)
+  const handleSaveSecuritySettings = async () => {
+    console.log('🔐 handleSaveSecuritySettings 시작:', { selectedSessionId, selectedIsPublic, hasPassword: !!passwordInput.trim() });
+    try {
+      // 토큰 갱신 먼저 시도
+      let token = await getToken();
 
-    const updatedUrls = sessionUrls.map(session => {
-      if (session.id === selectedSessionId) {
-        return { ...session, password: passwordInput.trim() };
+      if (!token) {
+        console.log('⚠️ 토큰 없음 - 로그인 필요');
+        Alert.alert(
+          t('common.error') || '오류',
+          t('settings.loginRequiredForSettings') || '보안 설정을 변경하려면 로그인이 필요합니다.',
+          [{ text: t('common.confirm') || '확인' }]
+        );
+        setPasswordModalVisible(false);
+        return;
       }
-      return session;
-    });
 
-    setSessionUrls(updatedUrls);
-    await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
+      console.log('🔄 토큰 갱신 시도...');
+      const refreshResult = await refreshAccessToken();
 
-    Alert.alert(t('settings.success'), t('settings.passwordSaved'));
-    setPasswordModalVisible(false);
-    setPasswordInput('');
-    setSelectedSessionId('');
+      if (refreshResult.success) {
+        token = await getToken();
+        console.log('✅ 토큰 갱신 성공');
+      } else {
+        console.error('❌ 토큰 갱신 실패:', refreshResult.error);
+        // 갱신 실패해도 기존 토큰으로 시도
+      }
+      console.log('🔑 최종 토큰:', { hasToken: !!token });
+
+      // 서버에 보안 설정 업데이트 요청
+      try {
+        if (token) {
+          websocketClient.setAuthToken(token);
+        }
+        websocketClient.serverUrl = config.serverUrl;
+        console.log('🌐 serverUrl 설정:', config.serverUrl);
+
+        const result = await websocketClient.updateSessionSettings(selectedSessionId, {
+          password: passwordInput.trim() || null,
+          isPublic: selectedIsPublic,
+        });
+        console.log('✅ 서버에 보안 설정 저장 성공:', selectedSessionId, result);
+      } catch (error) {
+        console.error('❌ 서버 보안 설정 저장 실패:', error.message, error);
+      }
+
+      // 로컬 상태 업데이트 (비밀번호 원본도 저장)
+      const updatedUrls = sessionUrls.map(session => {
+        if (session.id === selectedSessionId) {
+          return {
+            ...session,
+            hasPassword: !!passwordInput.trim(),
+            password: passwordInput.trim() || null,  // 비밀번호 원본 저장
+            isPublic: selectedIsPublic,
+          };
+        }
+        return session;
+      });
+
+      setSessionUrls(updatedUrls);
+      await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
+
+      Alert.alert(t('settings.success'), t('settings.securitySettingsSaved') || '보안 설정이 저장되었습니다.');
+      setPasswordModalVisible(false);
+      setPasswordInput('');
+      setSelectedSessionId('');
+      setShowPassword(false);
+    } catch (error) {
+      console.error('보안 설정 저장 실패:', error);
+      Alert.alert(t('settings.error'), t('settings.securitySettingsSaveFailed') || '보안 설정 저장에 실패했습니다.');
+    }
+  };
+
+  // 공개여부 토글 (서버 API 연동)
+  const handleTogglePublic = async (sessionId, currentIsPublic) => {
+    try {
+      const token = await getToken();
+      const newIsPublic = !currentIsPublic;
+
+      // 서버에 공개여부 업데이트 요청
+      try {
+        if (token) {
+          websocketClient.setAuthToken(token);
+        }
+        websocketClient.serverUrl = config.serverUrl;
+
+        await websocketClient.updateSessionSettings(sessionId, {
+          isPublic: newIsPublic,
+        });
+        console.log('서버에 공개여부 변경 성공:', sessionId, '->', newIsPublic);
+      } catch (error) {
+        console.warn('서버 공개여부 변경 실패 (로컬에서는 변경됨):', error.message);
+      }
+
+      // 로컬 상태 업데이트
+      const updatedUrls = sessionUrls.map(session => {
+        if (session.id === sessionId) {
+          return { ...session, isPublic: newIsPublic };
+        }
+        return session;
+      });
+
+      setSessionUrls(updatedUrls);
+      await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
+    } catch (error) {
+      console.error('공개여부 변경 실패:', error);
+      Alert.alert(t('settings.error'), t('settings.togglePublicFailed') || '공개여부 변경에 실패했습니다.');
+    }
   };
 
   // URL 복사
@@ -727,18 +985,55 @@ export default function RealtimeSyncSettingsScreen() {
             {getSessionUrl(session.id)}
           </Text>
         </View>
-        <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
-          {session.name || session.id}
-        </Text>
+        <View style={styles.sessionStatusRow}>
+          <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
+            {session.name || session.id}
+          </Text>
+          <View style={styles.sessionBadges}>
+            {session.hasPassword && (
+              <View style={[styles.badge, { backgroundColor: colors.success + '20' }]}>
+                <Ionicons name="lock-closed" size={12} color={colors.success} />
+                <Text style={[styles.badgeText, { color: colors.success }]}>
+                  {t('settings.passwordProtected') || '비밀번호'}
+                </Text>
+              </View>
+            )}
+            <View style={[
+              styles.badge,
+              {
+                backgroundColor: session.isPublic !== false ? colors.primary + '20' : colors.error + '15',
+                borderWidth: session.isPublic !== false ? 0 : 1,
+                borderColor: session.isPublic !== false ? 'transparent' : colors.error,
+              }
+            ]}>
+              <Ionicons
+                name={session.isPublic !== false ? "globe-outline" : "lock-closed-outline"}
+                size={12}
+                color={session.isPublic !== false ? colors.primary : colors.error}
+              />
+              <Text style={[styles.badgeText, { color: session.isPublic !== false ? colors.primary : colors.error }]}>
+                {session.isPublic !== false ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
+              </Text>
+            </View>
+          </View>
+        </View>
       </View>
 
       <View style={styles.sessionItemActions}>
         <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: session.password ? colors.success : colors.textTertiary }]}
-          onPress={() => handleOpenPasswordModal(session.id)}
+          style={[styles.iconButton, {
+            backgroundColor: session.isPublic === false || session.hasPassword
+              ? colors.warning
+              : colors.textTertiary
+          }]}
+          onPress={() => handleOpenSecurityModal(session.id)}
           activeOpacity={0.7}
         >
-          <Ionicons name={session.password ? "lock-closed" : "lock-open-outline"} size={18} color="#fff" />
+          <Ionicons
+            name={session.isPublic === false || session.hasPassword ? "lock-closed" : "lock-open-outline"}
+            size={18}
+            color="#fff"
+          />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.iconButton, { backgroundColor: colors.primary }]}
@@ -878,7 +1173,7 @@ export default function RealtimeSyncSettingsScreen() {
                 {/* 주소 생성 버튼 */}
                 <TouchableOpacity
                   style={[styles.generateButton, { backgroundColor: colors.success }]}
-                  onPress={handleGenerateSessionUrl}
+                  onPress={handleOpenCreateModal}
                   activeOpacity={0.8}
                 >
                   <Ionicons name="add-circle-outline" size={20} color="#fff" />
@@ -907,7 +1202,7 @@ export default function RealtimeSyncSettingsScreen() {
                       styles.tab,
                       activeTab === 'deleted' && { backgroundColor: colors.surface },
                     ]}
-                    onPress={() => setActiveTab('deleted')}
+                    onPress={handleDeletedTabClick}
                     activeOpacity={0.7}
                   >
                     <Text style={[
@@ -1084,7 +1379,7 @@ export default function RealtimeSyncSettingsScreen() {
       </TouchableWithoutFeedback>
       )}
 
-      {/* 비밀번호 입력 모달 */}
+      {/* 보안 설정 모달 (비밀번호 + 공개/비공개) */}
       <Modal
         visible={passwordModalVisible}
         transparent={true}
@@ -1096,32 +1391,83 @@ export default function RealtimeSyncSettingsScreen() {
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                 <View style={styles.modalHeader}>
-                  <Ionicons name="lock-closed" size={24} color={colors.primary} />
+                  <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    {t('settings.addPassword')}
+                    {t('settings.securitySettings') || '보안 설정'}
                   </Text>
                 </View>
 
                 <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-                  {t('settings.passwordDescription')}
+                  {t('settings.securitySettingsDesc') || '세션의 보안 설정을 관리합니다.'}
                 </Text>
 
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    {
-                      backgroundColor: colors.inputBackground,
-                      color: colors.text,
-                      borderColor: colors.border
-                    }
-                  ]}
-                  value={passwordInput}
-                  onChangeText={setPasswordInput}
-                  placeholder={t('settings.passwordPlaceholder')}
-                  placeholderTextColor={colors.textTertiary}
-                  secureTextEntry={true}
-                  autoFocus={true}
-                />
+                {/* 공개/비공개 토글 */}
+                <View style={[styles.securityOptionRow, { borderBottomColor: colors.border }]}>
+                  <View style={styles.securityOptionInfo}>
+                    <Ionicons
+                      name={selectedIsPublic ? "globe-outline" : "lock-closed-outline"}
+                      size={20}
+                      color={selectedIsPublic ? colors.primary : colors.warning}
+                    />
+                    <View style={styles.securityOptionText}>
+                      <Text style={[styles.securityOptionTitle, { color: colors.text }]}>
+                        {selectedIsPublic ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
+                      </Text>
+                      <Text style={[styles.securityOptionDesc, { color: colors.textSecondary }]}>
+                        {selectedIsPublic
+                          ? (t('settings.publicDesc') || '누구나 링크로 접근 가능')
+                          : (t('settings.privateDesc') || '링크로 접근 불가')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={selectedIsPublic}
+                    onValueChange={setSelectedIsPublic}
+                    trackColor={{ false: colors.warning + '60', true: colors.primary + '60' }}
+                    thumbColor={selectedIsPublic ? colors.primary : colors.warning}
+                  />
+                </View>
+
+                {/* 비밀번호 설정 */}
+                <View style={styles.securityOptionRow}>
+                  <View style={styles.securityOptionInfo}>
+                    <Ionicons
+                      name={passwordInput.trim() ? "key" : "key-outline"}
+                      size={20}
+                      color={passwordInput.trim() ? colors.success : colors.textTertiary}
+                    />
+                    <View style={styles.securityOptionText}>
+                      <Text style={[styles.securityOptionTitle, { color: colors.text }]}>
+                        {t('settings.password') || '비밀번호'}
+                      </Text>
+                      <Text style={[styles.securityOptionDesc, { color: colors.textSecondary }]}>
+                        {t('settings.passwordDescShort') || '접근 시 비밀번호 필요'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={[styles.passwordInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.passwordInputField, { color: colors.text }]}
+                    value={passwordInput}
+                    onChangeText={setPasswordInput}
+                    placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (비워두면 해제)'}
+                    placeholderTextColor={colors.textTertiary}
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off' : 'eye'}
+                      size={22}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.modalButtons}>
                   <TouchableOpacity
@@ -1130,6 +1476,7 @@ export default function RealtimeSyncSettingsScreen() {
                       setPasswordModalVisible(false);
                       setPasswordInput('');
                       setSelectedSessionId('');
+                      setShowPassword(false);
                     }}
                     activeOpacity={0.7}
                   >
@@ -1140,12 +1487,130 @@ export default function RealtimeSyncSettingsScreen() {
 
                   <TouchableOpacity
                     style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
-                    onPress={handleSavePassword}
+                    onPress={handleSaveSecuritySettings}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.modalButtonText, { color: '#fff' }]}>
                       {t('common.save')}
                     </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* 세션 생성 모달 */}
+      <Modal
+        visible={createModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setCreateModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setCreateModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+                <View style={styles.modalHeader}>
+                  <Ionicons name="add-circle" size={24} color={colors.success} />
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    {t('settings.createSession') || '새 세션 생성'}
+                  </Text>
+                </View>
+
+                <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
+                  {t('settings.createSessionDescription') || '세션의 공개 여부와 비밀번호를 설정하세요.'}
+                </Text>
+
+                {/* 공개여부 설정 */}
+                <View style={[styles.settingRow, { borderBottomColor: colors.borderLight }]}>
+                  <View style={styles.settingInfo}>
+                    <Ionicons
+                      name={newSessionIsPublic ? "globe-outline" : "lock-closed-outline"}
+                      size={20}
+                      color={newSessionIsPublic ? colors.primary : colors.warning}
+                    />
+                    <View style={styles.settingTextContainer}>
+                      <Text style={[styles.settingLabel, { color: colors.text }]}>
+                        {t('settings.publicSession') || '공개 세션'}
+                      </Text>
+                      <Text style={[styles.settingDesc, { color: colors.textTertiary }]}>
+                        {newSessionIsPublic
+                          ? (t('settings.publicSessionDesc') || '누구나 세션에 참여할 수 있습니다')
+                          : (t('settings.privateSessionDesc') || '비밀번호가 필요합니다')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={newSessionIsPublic}
+                    onValueChange={setNewSessionIsPublic}
+                    trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                    thumbColor="#fff"
+                  />
+                </View>
+
+                {/* 비밀번호 설정 */}
+                <View style={styles.passwordSection}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>
+                    {t('settings.sessionPassword') || '세션 비밀번호'} {!newSessionIsPublic && <Text style={{ color: colors.error }}>*</Text>}
+                  </Text>
+                  <View style={[styles.passwordInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                    <TextInput
+                      style={[styles.passwordInputField, { color: colors.text }]}
+                      value={newSessionPassword}
+                      onChangeText={setNewSessionPassword}
+                      placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (선택사항)'}
+                      placeholderTextColor={colors.textTertiary}
+                      secureTextEntry={!showNewPassword}
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowNewPassword(!showNewPassword)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={showNewPassword ? 'eye-off' : 'eye'}
+                        size={22}
+                        color={colors.textSecondary}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={[styles.inputHint, { color: colors.textTertiary }]}>
+                    {t('settings.passwordHint') || '비밀번호를 설정하면 세션 접근 시 입력이 필요합니다.'}
+                  </Text>
+                </View>
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.inputBackground }]}
+                    onPress={() => {
+                      setCreateModalVisible(false);
+                      setNewSessionPassword('');
+                      setNewSessionIsPublic(true);
+                      setShowNewPassword(false);
+                    }}
+                    activeOpacity={0.7}
+                    disabled={isCreating}
+                  >
+                    <Text style={[styles.modalButtonText, { color: colors.text }]}>
+                      {t('common.cancel')}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.success }]}
+                    onPress={handleGenerateSessionUrl}
+                    activeOpacity={0.7}
+                    disabled={isCreating || (!newSessionIsPublic && !newSessionPassword)}
+                  >
+                    {isCreating ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                        {t('settings.createButton') || '생성'}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1294,6 +1759,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
+  sessionStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  sessionBadges: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
   deletedInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1365,12 +1852,53 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 20,
   },
+  securityOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    marginBottom: 8,
+  },
+  securityOptionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  securityOptionText: {
+    flex: 1,
+  },
+  securityOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  securityOptionDesc: {
+    fontSize: 12,
+    marginTop: 2,
+  },
   passwordInput: {
     padding: 16,
     borderRadius: 12,
     fontSize: 16,
     borderWidth: 1,
     marginBottom: 24,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+  passwordInputField: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+  },
+  eyeButton: {
+    padding: 12,
+    paddingRight: 16,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -1390,6 +1918,45 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    marginBottom: 16,
+  },
+  settingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  settingTextContainer: {
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  settingDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  passwordSection: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  inputHint: {
+    fontSize: 12,
+    marginTop: 8,
+    lineHeight: 16,
   },
   // 구독 플랜 스타일
   planHeader: {

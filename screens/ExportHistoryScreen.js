@@ -21,7 +21,7 @@ const DEFAULT_GROUP_ID = 'default';
 
 export default function ExportHistoryScreen() {
   const router = useRouter();
-  const { t, fonts } = useLanguage();
+  const { t, fonts, language } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
@@ -83,18 +83,25 @@ export default function ExportHistoryScreen() {
 
   const allSelected = selectedGroups.length === groups.length;
 
+  // 날짜 포맷
+  const formatDate = (timestamp) => {
+    const date = new Date(timestamp);
+    const locale = language === 'ko' ? 'ko-KR' : language === 'ja' ? 'ja-JP' : language === 'zh' ? 'zh-CN' : language === 'vi' ? 'vi-VN' : 'en-US';
+    return date.toLocaleString(locale);
+  };
+
   // CSV 생성
   const generateCSV = () => {
     // UTF-8 BOM 추가 (한글 깨짐 방지)
-    let csv = '\uFEFF그룹,코드값,스캔일시,중복횟수\n';
+    let csv = '\uFEFF' + t('exportHistory.csvHeader') + '\n';
 
     selectedGroups.forEach((groupId) => {
       const group = groups.find(g => g.id === groupId);
-      const groupName = group?.name || '알 수 없는 그룹';
+      const groupName = group?.name || t('groupEdit.defaultGroup');
       const history = scanHistory[groupId] || [];
 
       history.forEach((item) => {
-        const date = new Date(item.timestamp).toLocaleString('ko-KR');
+        const date = formatDate(item.timestamp);
         const code = `"${item.code.replace(/"/g, '""')}"`;
         const scanCount = item.scanCount || 1;
         csv += `${groupName},${code},${date},${scanCount}\n`;
@@ -107,7 +114,7 @@ export default function ExportHistoryScreen() {
   // CSV 내보내기
   const handleExport = async () => {
     if (selectedGroups.length === 0) {
-      Alert.alert('알림', '내보낼 그룹을 최소 1개 이상 선택해주세요.');
+      Alert.alert(t('common.notice'), t('exportHistory.alertSelectGroup'));
       return;
     }
 
@@ -126,15 +133,15 @@ export default function ExportHistoryScreen() {
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: 'text/csv',
-          dialogTitle: '스캔 기록 내보내기 (CSV)',
+          dialogTitle: t('exportHistory.exportCSV'),
           UTI: 'public.comma-separated-values-text',
         });
       } else {
-        Alert.alert('성공', `파일이 저장되었습니다:\n${fileUri}`);
+        Alert.alert(t('exportHistory.exportSuccess'), `${t('exportHistory.fileSaved')}\n${fileUri}`);
       }
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('오류', '내보내기 중 오류가 발생했습니다.');
+      Alert.alert(t('common.error'), t('exportHistory.exportErrorMsg'));
     } finally {
       setIsExporting(false);
     }
@@ -146,7 +153,7 @@ export default function ExportHistoryScreen() {
 
     selectedGroups.forEach((groupId, index) => {
       const group = groups.find(g => g.id === groupId);
-      const groupName = group?.name || '알 수 없는 그룹';
+      const groupName = group?.name || t('groupEdit.defaultGroup');
       const history = scanHistory[groupId] || [];
 
       if (index > 0) {
@@ -154,21 +161,21 @@ export default function ExportHistoryScreen() {
       }
 
       txt += '==========================================\n';
-      txt += `그룹: ${groupName}\n`;
+      txt += `${t('exportHistory.groupLabel')}: ${groupName}\n`;
       txt += '==========================================\n\n';
 
       if (history.length === 0) {
-        txt += '(기록 없음)\n';
+        txt += `(${t('exportHistory.noRecords')})\n`;
       } else {
         history.forEach((item, itemIndex) => {
           if (itemIndex > 0) {
             txt += '\n';
           }
-          const date = new Date(item.timestamp).toLocaleString('ko-KR');
+          const date = formatDate(item.timestamp);
           const scanCount = item.scanCount || 1;
-          txt += `코드값: ${item.code}\n`;
-          txt += `스캔일시: ${date}\n`;
-          txt += `중복횟수: ${scanCount}\n`;
+          txt += `${t('exportHistory.codeLabel')}: ${item.code}\n`;
+          txt += `${t('exportHistory.scanDateLabel')}: ${date}\n`;
+          txt += `${t('exportHistory.duplicateLabel')}: ${scanCount}\n`;
         });
       }
     });
@@ -179,7 +186,7 @@ export default function ExportHistoryScreen() {
   // TXT 내보내기
   const handleExportTXT = async () => {
     if (selectedGroups.length === 0) {
-      Alert.alert('알림', '내보낼 그룹을 최소 1개 이상 선택해주세요.');
+      Alert.alert(t('common.notice'), t('exportHistory.alertSelectGroup'));
       return;
     }
 
@@ -198,15 +205,15 @@ export default function ExportHistoryScreen() {
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: 'text/plain',
-          dialogTitle: '스캔 기록 내보내기 (TXT)',
+          dialogTitle: t('exportHistory.exportTXT'),
           UTI: 'public.plain-text',
         });
       } else {
-        Alert.alert('성공', `파일이 저장되었습니다:\n${fileUri}`);
+        Alert.alert(t('exportHistory.exportSuccess'), `${t('exportHistory.fileSaved')}\n${fileUri}`);
       }
     } catch (error) {
       console.error('Export TXT error:', error);
-      Alert.alert('오류', '내보내기 중 오류가 발생했습니다.');
+      Alert.alert(t('common.error'), t('exportHistory.exportErrorMsg'));
     } finally {
       setIsExportingTxt(false);
     }
@@ -224,7 +231,7 @@ export default function ExportHistoryScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: colors.text }]}>기록 내보내기</Text>
+        <Text style={[s.headerTitle, { color: colors.text }]}>{t('exportHistory.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -232,10 +239,10 @@ export default function ExportHistoryScreen() {
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.info, { color: colors.textSecondary }]}>
-              선택한 그룹의 기록을 내보냅니다 ({selectedGroups.length}개 선택)
+              {t('exportHistory.selectedCount', { count: selectedGroups.length })}
             </Text>
             <TouchableOpacity onPress={toggleAll} style={[s.toggleAllBtn, { backgroundColor: colors.primary }]}>
-              <Text style={s.toggleAllText}>{allSelected ? '전체 해제' : '전체 선택'}</Text>
+              <Text style={s.toggleAllText}>{allSelected ? t('exportHistory.deselectAll') : t('exportHistory.selectAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -263,12 +270,12 @@ export default function ExportHistoryScreen() {
                     </Text>
                     {scanCount > 0 && (
                       <View style={[s.countBadge, { backgroundColor: colors.success }]}>
-                        <Text style={s.countBadgeText}>{scanCount}개</Text>
+                        <Text style={s.countBadgeText}>{t('exportHistory.countBadge', { count: scanCount })}</Text>
                       </View>
                     )}
                   </View>
                   <Text style={[s.groupDesc, { color: colors.textSecondary }]}>
-                    {scanCount > 0 ? `${scanCount}개의 스캔 기록` : '기록 없음'}
+                    {scanCount > 0 ? t('exportHistory.scanRecords', { count: scanCount }) : t('exportHistory.noRecords')}
                   </Text>
                 </View>
                 <View style={[s.checkbox, { borderColor: isSelected ? colors.primary : colors.borderLight, backgroundColor: isSelected ? colors.primary : 'transparent' }]}>
@@ -287,7 +294,7 @@ export default function ExportHistoryScreen() {
         >
           <Ionicons name="download-outline" size={20} color="#fff" />
           <Text style={s.exportButtonText}>
-            {isExporting ? '내보내는 중...' : 'CSV 파일로 내보내기'}
+            {isExporting ? t('exportHistory.exporting') : t('exportHistory.exportCSV')}
           </Text>
         </TouchableOpacity>
 
@@ -299,7 +306,7 @@ export default function ExportHistoryScreen() {
         >
           <Ionicons name="document-text-outline" size={20} color="#fff" />
           <Text style={s.exportButtonText}>
-            {isExportingTxt ? '내보내는 중...' : 'TXT 파일로 내보내기'}
+            {isExportingTxt ? t('exportHistory.exporting') : t('exportHistory.exportTXT')}
           </Text>
         </TouchableOpacity>
       </ScrollView>

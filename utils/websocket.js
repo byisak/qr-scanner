@@ -7,6 +7,7 @@ class WebSocketClient {
     this.serverUrl = null;
     this.sessionId = null;
     this.userId = null;
+    this.authToken = null;
     this.isConnected = false;
     this.listeners = {
       connect: [],
@@ -81,8 +82,20 @@ class WebSocketClient {
     }
   }
 
-  // 세션 생성 요청
-  createSession(sessionId = null) {
+  // 세션 생성 요청 (설정 포함)
+  createSession(sessionId = null, settings = {}) {
+    const payload = {
+      sessionId,
+      userId: this.userId,
+      settings: {
+        password: settings.password || null,
+        isPublic: settings.isPublic !== undefined ? settings.isPublic : true,
+        maxParticipants: settings.maxParticipants || null,
+        allowAnonymous: settings.allowAnonymous !== undefined ? settings.allowAnonymous : true,
+        expiresAt: settings.expiresAt || null,
+      }
+    };
+
     if (!this.socket || !this.isConnected) {
       console.error('Socket not connected');
       // 연결되지 않았어도 Promise 반환 (연결 시도)
@@ -102,14 +115,94 @@ class WebSocketClient {
 
         this.on('connect', () => {
           clearTimeout(timeout);
-          this.socket.emit('create-session', { sessionId });
+          this.socket.emit('create-session', payload);
           resolve(true);
         });
       });
     }
 
-    this.socket.emit('create-session', { sessionId });
+    this.socket.emit('create-session', payload);
     return Promise.resolve(true);
+  }
+
+  // 기존 세션에 참가 (user_id 업데이트용)
+  joinSession(sessionId) {
+    if (!this.socket || !this.isConnected) {
+      console.error('Socket not connected');
+      return Promise.reject(new Error('Socket not connected'));
+    }
+
+    const payload = {
+      sessionId,
+      userId: this.userId,
+    };
+
+    this.socket.emit('join-session', payload);
+    return Promise.resolve(true);
+  }
+
+  // 세션 설정 업데이트
+  updateSessionSettings(sessionId, settings) {
+    console.log('🔄 updateSessionSettings 호출:', { sessionId, settings, serverUrl: this.serverUrl, hasToken: !!this.authToken });
+    return this._apiRequest(`/api/sessions/${sessionId}/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
+  // 세션 설정 조회
+  async getSessionSettings(sessionId) {
+    return this._apiRequest(`/api/sessions/${sessionId}/settings`, {
+      method: 'GET',
+    });
+  }
+
+  // API 요청 헬퍼
+  async _apiRequest(endpoint, options = {}) {
+    if (!this.serverUrl) {
+      console.error('❌ _apiRequest: serverUrl not set');
+      throw new Error('Server URL not set');
+    }
+
+    const url = `${this.serverUrl}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
+
+    // 인증 토큰이 있으면 추가
+    if (this.authToken) {
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+    }
+
+    console.log('📡 API 요청:', { url, method: options.method, hasAuth: !!this.authToken });
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
+
+      console.log('📡 API 응답:', { status: response.status, ok: response.ok });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Request failed' }));
+        console.error('❌ API 오류:', error);
+        throw new Error(error.message || error.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ API 성공:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ API 요청 실패:', error.message);
+      throw error;
+    }
+  }
+
+  // 인증 토큰 설정
+  setAuthToken(token) {
+    this.authToken = token;
   }
 
   // 스캔 데이터 전송

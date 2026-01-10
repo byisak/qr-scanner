@@ -580,11 +580,13 @@ export const AuthProvider = ({ children }) => {
   const refreshAccessToken = async () => {
     try {
       const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      console.log('🔄 refreshAccessToken: refreshToken 존재:', !!refreshToken);
 
       if (!refreshToken) {
         return { success: false, error: 'No refresh token' };
       }
 
+      console.log('🔄 refreshAccessToken: API 호출 시작...');
       const response = await fetch(`${API_URL}/refresh`, {
         method: 'POST',
         headers: {
@@ -594,9 +596,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
+      console.log('🔄 refreshAccessToken: API 응답:', { status: response.status, ok: response.ok, hasAccessToken: !!data.accessToken });
 
       if (!response.ok) {
         // 리프레시 토큰도 만료되면 로그아웃
+        console.log('🔄 refreshAccessToken: 응답 실패, 로그아웃 처리');
         await logout();
         return { success: false, error: 'Session expired' };
       }
@@ -606,6 +610,7 @@ export const AuthProvider = ({ children }) => {
         if (data.refreshToken) {
           await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken);
         }
+        console.log('🔄 refreshAccessToken: 새 토큰 저장 완료');
         return { success: true, accessToken: data.accessToken };
       }
 
