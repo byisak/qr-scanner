@@ -1046,6 +1046,9 @@ export default {
       cornerDotType: 'コーナードットタイプ',
       cornerDotColor: 'コーナードット色',
       backgroundColor: '背景色',
+      textColor: 'テキスト',
+      frameTextColor: 'フレームテキスト色',
+      frameTextColorDesc: 'フレームの「Scan me!」テキストの色を設定します',
       errorCorrection: 'エラー訂正レベル',
       errorCorrectionHint: '高いほど破損したQRコードも読み取り可能',
       // 追加翻訳

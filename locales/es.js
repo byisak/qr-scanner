@@ -1043,6 +1043,9 @@ export default {
       cornerDotType: 'Tipo de punto de esquina',
       cornerDotColor: 'Color del punto de esquina',
       backgroundColor: 'Color de fondo',
+      textColor: 'Texto',
+      frameTextColor: 'Color del texto del marco',
+      frameTextColorDesc: 'Establecer el color del texto "Scan me!" en el marco',
       errorCorrection: 'Nivel de corrección de errores',
       errorCorrectionHint: 'Mayor nivel permite escanear códigos QR dañados',
       // Traducciones adicionales

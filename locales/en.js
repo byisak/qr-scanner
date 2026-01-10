@@ -1109,6 +1109,9 @@ export default {
       cornerDotType: 'Corner Dot Type',
       cornerDotColor: 'Corner Dot Color',
       backgroundColor: 'Background Color',
+      textColor: 'Text',
+      frameTextColor: 'Frame Text Color',
+      frameTextColorDesc: 'Set the color of "Scan me!" text in the frame',
       errorCorrection: 'Error Correction Level',
       errorCorrectionHint: 'Higher level allows damaged QR codes to be scanned',
       // Additional translations

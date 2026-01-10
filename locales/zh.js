@@ -1046,6 +1046,9 @@ export default {
       cornerDotType: '角落点类型',
       cornerDotColor: '角落点颜色',
       backgroundColor: '背景颜色',
+      textColor: '文字',
+      frameTextColor: '边框文字颜色',
+      frameTextColorDesc: '设置边框中"Scan me!"文字的颜色',
       errorCorrection: '纠错级别',
       errorCorrectionHint: '级别越高，受损的二维码也能被识别',
       // 附加翻译

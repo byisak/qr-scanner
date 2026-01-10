@@ -1098,6 +1098,9 @@ export default {
       cornerDotType: '코너 도트 타입',
       cornerDotColor: '코너 도트 색상',
       backgroundColor: '배경 색상',
+      textColor: '글자',
+      frameTextColor: '프레임 글자 색상',
+      frameTextColorDesc: '프레임의 "Scan me!" 텍스트 색상을 설정합니다',
       errorCorrection: '오류 보정 레벨',
       errorCorrectionHint: '높을수록 손상된 QR코드도 인식 가능',
       // 추가 번역
