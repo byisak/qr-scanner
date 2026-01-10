@@ -1,8 +1,99 @@
 // components/QRFrameRenderer.js - QR 코드 프레임 렌더링 컴포넌트
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import StyledQRCode from './StyledQRCode';
+
+// 색상 유틸리티 함수들
+const hexToHSL = (hex) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return { h: 0, s: 0, l: 0 };
+
+  let r = parseInt(result[1], 16) / 255;
+  let g = parseInt(result[2], 16) / 255;
+  let b = parseInt(result[3], 16) / 255;
+
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 };
+};
+
+const hslToHex = (h, s, l) => {
+  s /= 100;
+  l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+};
+
+// 배경색 기반으로 프레임 색상 생성
+const generateFrameColors = (backgroundColor) => {
+  if (!backgroundColor || backgroundColor === '#ffffff' || backgroundColor === '#fff') {
+    return { primary: '#000000', secondary: '#595959', text: '#000000', textOnDark: '#ffffff' };
+  }
+
+  const hsl = hexToHSL(backgroundColor);
+
+  // 배경이 밝은색인지 어두운색인지 판단
+  const isLight = hsl.l > 50;
+
+  // 프레임 주요 색상: 배경과 대비되는 어두운/밝은 색상
+  const primaryL = isLight ? Math.max(10, hsl.l - 60) : Math.min(90, hsl.l + 60);
+  const primary = hslToHex(hsl.h, Math.min(hsl.s, 70), primaryL);
+
+  // 보조 색상: 주요 색상보다 약간 밝거나 어두운
+  const secondaryL = isLight ? Math.max(25, hsl.l - 40) : Math.min(75, hsl.l + 40);
+  const secondary = hslToHex(hsl.h, Math.min(hsl.s, 50), secondaryL);
+
+  // 텍스트 색상
+  const text = isLight ? hslToHex(hsl.h, Math.min(hsl.s, 60), 15) : hslToHex(hsl.h, Math.min(hsl.s, 60), 90);
+  const textOnDark = isLight ? '#ffffff' : hslToHex(hsl.h, Math.min(hsl.s, 30), 95);
+
+  return { primary, secondary, text, textOnDark };
+};
+
+// SVG 색상 교체 함수
+const recolorSvg = (svgString, colors) => {
+  let result = svgString;
+
+  // 1단계: 텍스트 요소의 색상을 먼저 처리 (마커로 임시 대체)
+  // 검정 텍스트 -> text 색상
+  result = result.replace(/<text([^>]*)fill="#000000"([^>]*)>/g, `<text$1fill="__TEXT_COLOR__"$2>`);
+  result = result.replace(/<text([^>]*)fill='#000000'([^>]*)>/g, `<text$1fill='__TEXT_COLOR__'$2>`);
+  // 흰색 텍스트 -> textOnDark 색상
+  result = result.replace(/<text([^>]*)fill="#ffffff"([^>]*)>/g, `<text$1fill="__TEXT_ON_DARK__"$2>`);
+  result = result.replace(/<text([^>]*)fill='#ffffff'([^>]*)>/g, `<text$1fill='__TEXT_ON_DARK__'$2>`);
+
+  // 2단계: 일반 도형의 색상 처리
+  // #000000 (검정) -> primary
+  result = result.replace(/fill="#000000"/g, `fill="${colors.primary}"`);
+  result = result.replace(/fill='#000000'/g, `fill='${colors.primary}'`);
+  // #595959 (회색) -> secondary
+  result = result.replace(/fill="#595959"/g, `fill="${colors.secondary}"`);
+  result = result.replace(/fill='#595959'/g, `fill='${colors.secondary}'`);
+
+  // 3단계: 텍스트 마커를 실제 색상으로 대체
+  result = result.replace(/__TEXT_COLOR__/g, colors.text);
+  result = result.replace(/__TEXT_ON_DARK__/g, colors.textOnDark);
+
+  return result;
+};
 
 // 프레임 SVG 데이터
 const FRAME_SVG_DATA = {
@@ -144,6 +235,17 @@ export default function QRFrameRenderer({
   const frameSvg = FRAME_SVG_DATA[frame.id];
   const qrPosition = FRAME_QR_POSITIONS[frame.id];
 
+  // 배경색 기반으로 프레임 색상 생성
+  const frameColors = useMemo(() => {
+    return generateFrameColors(qrStyle?.backgroundColor);
+  }, [qrStyle?.backgroundColor]);
+
+  // 프레임 SVG 색상 적용
+  const coloredFrameSvg = useMemo(() => {
+    if (!frameSvg) return frameSvg;
+    return recolorSvg(frameSvg, frameColors);
+  }, [frameSvg, frameColors]);
+
   if (!frameSvg || !qrPosition) {
     // 프레임 데이터가 없으면 QR 코드만 렌더링
     return (
@@ -201,9 +303,9 @@ export default function QRFrameRenderer({
           onCapture={onCapture}
         />
       </View>
-      {/* 2. 프레임 SVG (가장 위) */}
+      {/* 2. 프레임 SVG (가장 위) - 배경색에 맞춰 색상 조화 적용 */}
       <SvgXml
-        xml={frameSvg}
+        xml={coloredFrameSvg}
         width={frameWidth}
         height={frameHeight}
         style={styles.frameSvg}
