@@ -2663,25 +2663,6 @@ export default function GeneratorScreen() {
               {qrSettingsTab === 'settings' && (
                 <View style={s.qrOptionSection}>
                   <Text style={[s.qrOptionTitle, { color: colors.text }]}>
-                    {t('generator.qrStyle.margin') || '여백'}
-                  </Text>
-                  <View style={s.stepperRow}>
-                    <TouchableOpacity
-                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.max(0, (prev.margin || 10) - 5) }))}
-                    >
-                      <Ionicons name="remove" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                    <Text style={[s.stepperValue, { color: colors.text }]}>{qrStyle.margin || 10}px</Text>
-                    <TouchableOpacity
-                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.min(50, (prev.margin || 10) + 5) }))}
-                    >
-                      <Ionicons name="add" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
                     {t('generator.qrStyle.errorCorrection') || '오류 수정'}
                   </Text>
                   <View style={s.qrOptionRow}>
