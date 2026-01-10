@@ -119,8 +119,11 @@ export const useGoogleLogin = () => {
   // iOS는 리버스 클라이언트 ID 사용
   const getRedirectUri = () => {
     if (Platform.OS === 'ios' && iosClientId) {
-      const reversedId = iosClientId.split('.')[0];
-      return `com.googleusercontent.apps.${reversedId}:/oauthredirect`;
+      // iOS 클라이언트 ID를 리버스하여 redirect URI 생성
+      // 예: 123456789-abcdef.apps.googleusercontent.com -> com.googleusercontent.apps.123456789-abcdef:/oauthredirect
+      const parts = iosClientId.split('.').reverse();
+      const reversedClientId = parts.join('.');
+      return `${reversedClientId}:/oauthredirect`;
     }
     return AuthSession.makeRedirectUri({ scheme: 'qrscanner' });
   };
@@ -165,22 +168,8 @@ export const useGoogleLogin = () => {
     }
   };
 
-  useEffect(() => {
-    const handleResponse = async () => {
-      if (response?.type === 'success' && request?.codeVerifier) {
-        const { params } = response;
-        if (params?.code) {
-          try {
-            const tokenResponse = await exchangeCodeForToken(params.code, request.codeVerifier);
-            setAccessToken(tokenResponse.accessToken);
-          } catch (error) {
-            console.error('Token exchange failed:', error);
-          }
-        }
-      }
-    };
-    handleResponse();
-  }, [response]);
+  // Note: Token exchange is handled in the login function directly
+  // to avoid duplicate exchange attempts (authorization codes can only be used once)
 
   const login = useCallback(async () => {
     if (!clientId) {
