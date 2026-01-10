@@ -24,7 +24,7 @@ import config from '../config/config';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const { t, fonts } = useLanguage();
+  const { t, fonts, language } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
@@ -159,7 +159,7 @@ export default function ForgotPasswordScreen() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), locale: language }),
       });
 
       // Content-Type 확인 (HTML 반환 시 JSON 파싱 방지)
