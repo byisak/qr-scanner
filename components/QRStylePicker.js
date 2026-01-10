@@ -94,9 +94,33 @@ const QR_FRAMES = [
     previewColor: '#000000',
   },
   {
-    id: 'cauldron',
-    name: 'Cauldron',
-    nameKo: '가마솥',
+    id: 'clipboard',
+    name: 'Clipboard',
+    nameKo: '클립보드',
+    previewColor: '#000000',
+  },
+  {
+    id: 'chat-bubble',
+    name: 'Chat Bubble',
+    nameKo: '말풍선',
+    previewColor: '#000000',
+  },
+  {
+    id: 'notebook',
+    name: 'Notebook',
+    nameKo: '노트북',
+    previewColor: '#000000',
+  },
+  {
+    id: 'shopping-bag',
+    name: 'Shopping Bag',
+    nameKo: '쇼핑백',
+    previewColor: '#000000',
+  },
+  {
+    id: 'gift-box',
+    name: 'Gift Box',
+    nameKo: '선물상자',
     previewColor: '#000000',
   },
 ];
