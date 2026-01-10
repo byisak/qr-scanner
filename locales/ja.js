@@ -63,6 +63,14 @@ export default {
     login: 'ログイン',
     signup: '会員登録',
     findAccount: 'アカウント検索',
+    // パスワード再設定
+    forgotPasswordTitle: 'パスワードを忘れた方',
+    forgotPasswordSubtitle: '登録したメールアドレスを入力すると\nパスワード再設定リンクをお送りします',
+    sendResetLink: '再設定リンクを送信',
+    resetEmailSent: 'メールをご確認ください',
+    resetEmailSentDesc: 'パスワード再設定リンクを送信しました。\nメールをご確認ください。',
+    checkSpamFolder: 'メールが届かない場合は迷惑メールフォルダをご確認ください。',
+    backToLogin: 'ログインに戻る',
     // 会員登録
     signupTitle: '会員登録',
     passwordConfirm: 'パスワード確認',

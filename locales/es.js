@@ -63,6 +63,14 @@ export default {
     login: 'Iniciar sesión',
     signup: 'Registrarse',
     findAccount: 'Buscar cuenta',
+    // Olvidé mi contraseña
+    forgotPasswordTitle: 'Olvidé mi contraseña',
+    forgotPasswordSubtitle: 'Ingresa tu correo electrónico y te enviaremos\nun enlace para restablecer tu contraseña',
+    sendResetLink: 'Enviar enlace',
+    resetEmailSent: 'Revisa tu correo',
+    resetEmailSentDesc: 'Te hemos enviado un enlace para restablecer tu contraseña.\nRevisa tu correo electrónico.',
+    checkSpamFolder: 'Si no ves el correo, revisa tu carpeta de spam.',
+    backToLogin: 'Volver al inicio de sesión',
     // Registro
     signupTitle: 'Registrarse',
     passwordConfirm: 'Confirmar contraseña',

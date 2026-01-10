@@ -64,6 +64,14 @@ export default {
     login: '로그인',
     signup: '회원가입',
     findAccount: '계정 찾기',
+    // 비밀번호 찾기
+    forgotPasswordTitle: '비밀번호 찾기',
+    forgotPasswordSubtitle: '가입한 이메일을 입력하면\n비밀번호 재설정 링크를 보내드립니다',
+    sendResetLink: '재설정 링크 보내기',
+    resetEmailSent: '이메일을 확인하세요',
+    resetEmailSentDesc: '비밀번호 재설정 링크를 보냈습니다.\n이메일을 확인해주세요.',
+    checkSpamFolder: '이메일이 보이지 않으면 스팸 폴더를 확인해주세요.',
+    backToLogin: '로그인으로 돌아가기',
     // 회원가입
     signupTitle: '회원가입',
     passwordConfirm: '비밀번호 확인',

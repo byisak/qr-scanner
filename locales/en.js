@@ -64,6 +64,14 @@ export default {
     login: 'Login',
     signup: 'Sign Up',
     findAccount: 'Find Account',
+    // Forgot Password
+    forgotPasswordTitle: 'Forgot Password',
+    forgotPasswordSubtitle: 'Enter your email and we\'ll send you\na link to reset your password',
+    sendResetLink: 'Send Reset Link',
+    resetEmailSent: 'Check Your Email',
+    resetEmailSentDesc: 'We\'ve sent you a password reset link.\nPlease check your email.',
+    checkSpamFolder: 'If you don\'t see the email, check your spam folder.',
+    backToLogin: 'Back to Login',
     // Sign up
     signupTitle: 'Sign Up',
     passwordConfirm: 'Confirm Password',

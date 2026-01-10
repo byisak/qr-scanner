@@ -63,6 +63,14 @@ export default {
     login: '登录',
     signup: '注册',
     findAccount: '找回账户',
+    // 找回密码
+    forgotPasswordTitle: '找回密码',
+    forgotPasswordSubtitle: '输入您注册时使用的邮箱\n我们将发送密码重置链接',
+    sendResetLink: '发送重置链接',
+    resetEmailSent: '请检查您的邮箱',
+    resetEmailSentDesc: '我们已发送密码重置链接。\n请检查您的邮箱。',
+    checkSpamFolder: '如果没有收到邮件，请检查垃圾邮件文件夹。',
+    backToLogin: '返回登录',
     // 注册
     signupTitle: '注册',
     passwordConfirm: '确认密码',

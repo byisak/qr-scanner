@@ -285,7 +285,7 @@ export default function LoginScreen() {
   };
 
   const handleFindAccount = () => {
-    Alert.alert(t('auth.findAccount'), '준비 중입니다');
+    router.push('/forgot-password');
   };
 
   const isFormValid = email && password;
