@@ -43,9 +43,14 @@ const hslToHex = (h, s, l) => {
 };
 
 // 배경색 기반으로 프레임 색상 생성
-const generateFrameColors = (backgroundColor) => {
+const generateFrameColors = (backgroundColor, customTextColor = null) => {
   if (!backgroundColor || backgroundColor === '#ffffff' || backgroundColor === '#fff') {
-    return { primary: '#000000', secondary: '#595959', text: '#000000', textOnDark: '#ffffff' };
+    return {
+      primary: '#000000',
+      secondary: '#595959',
+      text: customTextColor || '#000000',
+      textOnDark: customTextColor || '#ffffff'
+    };
   }
 
   const hsl = hexToHSL(backgroundColor);
@@ -61,9 +66,9 @@ const generateFrameColors = (backgroundColor) => {
   const secondaryL = isLight ? Math.max(25, hsl.l - 40) : Math.min(75, hsl.l + 40);
   const secondary = hslToHex(hsl.h, Math.min(hsl.s, 50), secondaryL);
 
-  // 텍스트 색상
-  const text = isLight ? hslToHex(hsl.h, Math.min(hsl.s, 60), 15) : hslToHex(hsl.h, Math.min(hsl.s, 60), 90);
-  const textOnDark = isLight ? '#ffffff' : hslToHex(hsl.h, Math.min(hsl.s, 30), 95);
+  // 텍스트 색상 - 사용자 지정 색상이 있으면 사용
+  const text = customTextColor || (isLight ? hslToHex(hsl.h, Math.min(hsl.s, 60), 15) : hslToHex(hsl.h, Math.min(hsl.s, 60), 90));
+  const textOnDark = customTextColor || (isLight ? '#ffffff' : hslToHex(hsl.h, Math.min(hsl.s, 30), 95));
 
   return { primary, secondary, text, textOnDark };
 };
@@ -213,6 +218,7 @@ export default function QRFrameRenderer({
   qrValue,
   qrStyle,
   size = 280,
+  frameTextColor,
   onCapture,
   onLayout,
 }) {
@@ -235,10 +241,10 @@ export default function QRFrameRenderer({
   const frameSvg = FRAME_SVG_DATA[frame.id];
   const qrPosition = FRAME_QR_POSITIONS[frame.id];
 
-  // 배경색 기반으로 프레임 색상 생성
+  // 배경색 기반으로 프레임 색상 생성 (사용자 지정 텍스트 색상 적용)
   const frameColors = useMemo(() => {
-    return generateFrameColors(qrStyle?.backgroundColor);
-  }, [qrStyle?.backgroundColor]);
+    return generateFrameColors(qrStyle?.backgroundColor, frameTextColor);
+  }, [qrStyle?.backgroundColor, frameTextColor]);
 
   // 프레임 SVG 색상 적용
   const coloredFrameSvg = useMemo(() => {
@@ -283,7 +289,7 @@ export default function QRFrameRenderer({
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
-      {/* 1. 배경색 + QR 코드 (flexbox 중앙 정렬) */}
+      {/* 1. QR 코드 영역 (프레임이 있을 때는 항상 흰색 배경) */}
       <View
         style={[
           styles.qrArea,
@@ -292,7 +298,7 @@ export default function QRFrameRenderer({
             top: bgY,
             width: bgAreaWidth,
             height: bgAreaHeight,
-            backgroundColor: qrStyle?.backgroundColor || '#ffffff',
+            backgroundColor: '#ffffff',
           },
         ]}
       >

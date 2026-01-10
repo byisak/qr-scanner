@@ -366,10 +366,11 @@ export default function GeneratorScreen() {
   const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
   const [logoImage, setLogoImage] = useState(null); // 로고 이미지 base64
   const [frameIndex, setFrameIndex] = useState(0); // 현재 프레임 캐러셀 인덱스
+  const [frameTextColor, setFrameTextColor] = useState(null); // 프레임 텍스트 색상 (null이면 자동)
   const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
-  const [activeColorPicker, setActiveColorPicker] = useState(null); // 활성 컬러 피커 (dotColor, cornerSquareColor, cornerDotColor, backgroundColor)
+  const [activeColorPicker, setActiveColorPicker] = useState(null); // 활성 컬러 피커 (dotColor, cornerSquareColor, cornerDotColor, backgroundColor, frameTextColor)
   const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
   const frameCarouselRef = useRef(null); // 프레임 캐러셀 ref
 
@@ -2379,6 +2380,7 @@ export default function GeneratorScreen() {
                     { id: 'dots', icon: 'grid-outline', label: t('generator.qrStyle.dots') || '도트' },
                     { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
                     { id: 'background', icon: 'image-outline', label: t('generator.qrStyle.background') || '배경' },
+                    { id: 'textColor', icon: 'text-outline', label: t('generator.qrStyle.textColor') || '글자' },
                     { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
                   ].map((tab) => (
                     <TouchableOpacity
@@ -2659,6 +2661,61 @@ export default function GeneratorScreen() {
                 </View>
               )}
 
+              {/* 글자 색상 탭 */}
+              {qrSettingsTab === 'textColor' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'}
+                  </Text>
+                  <Text style={[s.qrOptionSubtitle, { color: colors.textSecondary, marginBottom: 12 }]}>
+                    {t('generator.qrStyle.frameTextColorDesc') || '프레임의 "Scan me!" 텍스트 색상을 설정합니다'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {/* 자동 버튼 */}
+                    <TouchableOpacity
+                      style={[
+                        s.colorButton,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: frameTextColor === null ? colors.primary : colors.border,
+                          borderWidth: frameTextColor === null ? 3 : 1,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        },
+                      ]}
+                      onPress={() => setFrameTextColor(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ color: colors.textSecondary, fontSize: 10 }}>AUTO</Text>
+                    </TouchableOpacity>
+                    {/* 컬러 피커 버튼 */}
+                    <TouchableOpacity
+                      style={[s.colorPickerButton, { backgroundColor: frameTextColor || '#000000', borderColor: colors.border }]}
+                      onPress={() => setActiveColorPicker('frameTextColor')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="color-palette" size={20} color={frameTextColor === '#ffffff' || frameTextColor === '#FFFFFF' ? '#333' : '#fff'} />
+                    </TouchableOpacity>
+                    {/* 프리셋 색상 */}
+                    {['#000000', '#ffffff', '#333333', '#666666', '#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9900ff'].map((presetColor) => (
+                      <TouchableOpacity
+                        key={presetColor}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: frameTextColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: frameTextColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setFrameTextColor(presetColor)}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
               {/* 설정 탭 */}
               {qrSettingsTab === 'settings' && (
                 <View style={s.qrOptionSection}>
@@ -2791,6 +2848,7 @@ export default function GeneratorScreen() {
                                   qrValue={qrData}
                                   qrStyle={qrStyle}
                                   size={220}
+                                  frameTextColor={frameTextColor}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
                                 />
                               </View>
@@ -3350,6 +3408,7 @@ export default function GeneratorScreen() {
             qrValue={qrData}
             qrStyle={qrStyle}
             size={QR_RES_LEVELS[qrResLevel].size}
+            frameTextColor={frameTextColor}
           />
         </View>
       )}
@@ -3358,9 +3417,14 @@ export default function GeneratorScreen() {
       <NativeColorPicker
         visible={!!activeColorPicker}
         onClose={() => setActiveColorPicker(null)}
-        color={activeColorPicker ? (qrStyle[activeColorPicker] || '#000000') : '#000000'}
+        color={activeColorPicker === 'frameTextColor'
+          ? (frameTextColor || '#000000')
+          : (activeColorPicker ? (qrStyle[activeColorPicker] || '#000000') : '#000000')
+        }
         onColorChange={(newColor) => {
-          if (activeColorPicker) {
+          if (activeColorPicker === 'frameTextColor') {
+            setFrameTextColor(newColor);
+          } else if (activeColorPicker) {
             setQrStyle(prev => ({ ...prev, [activeColorPicker]: newColor }));
           }
         }}
@@ -4018,6 +4082,10 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  qrOptionSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
   },
   qrOptionRow: {
     flexDirection: 'row',
