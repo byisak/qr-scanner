@@ -2859,7 +2859,7 @@ export default function GeneratorScreen() {
                         frame={selectedFrame}
                         qrValue={qrData}
                         qrStyle={qrStyle}
-                        size={340}
+                        size={280}
                         onCapture={(base64) => setCapturedQRBase64(base64)}
                       />
                     </View>
