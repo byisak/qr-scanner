@@ -2401,14 +2401,18 @@ export default function GeneratorScreen() {
 
               {/* 프레임 탭 */}
               {qrSettingsTab === 'frames' && (
-                <View style={s.qrStyleGrid}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={s.frameScrollContainer}
+                >
                   {QR_FRAMES.map((frame) => {
                     const isSelected = selectedFrame?.id === frame.id || (!selectedFrame && frame.id === 'none');
                     return (
                       <TouchableOpacity
                         key={frame.id}
                         style={[
-                          s.qrStyleItem,
+                          s.frameSelectItem,
                           {
                             backgroundColor: colors.inputBackground,
                             borderColor: isSelected ? colors.primary : colors.border,
@@ -2418,16 +2422,25 @@ export default function GeneratorScreen() {
                         onPress={() => setSelectedFrame(frame.id === 'none' ? null : frame)}
                         activeOpacity={0.7}
                       >
-                        <View style={[s.qrStylePreview, { backgroundColor: '#fff' }]}>
+                        <View style={[s.frameSelectPreview, { backgroundColor: '#fff' }]}>
                           {frame.id === 'none' ? (
-                            <Ionicons name="close-circle-outline" size={36} color={colors.textTertiary} />
+                            <Ionicons name="close-circle-outline" size={28} color={colors.textTertiary} />
                           ) : (
                             FRAME_SVG_DATA[frame.id] ? (
-                              <SvgXml
-                                xml={FRAME_SVG_DATA[frame.id]}
-                                width={70}
-                                height={70}
-                              />
+                              <View style={s.frameWithQrPreview}>
+                                <SvgXml
+                                  xml={FRAME_SVG_DATA[frame.id]}
+                                  width={54}
+                                  height={70}
+                                  style={s.framePreviewSvg}
+                                />
+                                <SvgXml
+                                  xml={`<svg width='24' height='24' fill='none' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' clip-rule='evenodd' d='M0 7.952V0h7.952v7.952H0Zm1.871-1.871h4.21V1.871h-4.21v4.21Z' fill='#96949C'/><path fill='#96949C' d='M3.181 3.181h1.879v1.879H3.181z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M16.048 7.952V0H24v7.952h-7.952Zm1.871-1.871h4.21V1.871h-4.21v4.21Z' fill='#96949C'/><path fill='#96949C' d='M18.94 3.181h1.879v1.879H18.94z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M0 24v-7.952h7.952V24H0Zm1.871-1.871h4.21v-4.21h-4.21v4.21Z' fill='#96949C'/><path fill='#96949C' d='M3.181 18.94h1.879v1.879H3.181zM1.879 9.109h1.879v1.879H1.879zM5.516 13.012v-1.879h-1.757v1.879h1.713v1.879h1.757v-1.879h-1.713zM13.301 3.47h1.879v1.879h-1.879zM9.542 1.879h1.879V5.35H9.542zM11.422 0h1.879v1.879h-1.879zM11.422 5.639v1.879H9.542v1.879h3.759V5.639h-1.879zM13.301 16.748v-1.856h-1.879v-3.88H9.542v3.808h1.879v1.856h1.879v1.855h3.759v-1.855h-3.759zM13.301 9.109h1.879v3.759h-1.879z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M22.174 9.542v1.753H24v3.596h-5.114v-1.753h-1.827v-1.798h1.78V9.542h3.334Zm-3.288 3.551h3.288v-1.753h-3.288v1.753Z' fill='#96949C'/><path fill='#96949C' d='M22.12 16.771H24v3.759h-1.879zM15.181 13.012h1.879v1.879h-1.879zM17.06 18.651h1.879v1.879H17.06zM18.94 16.482h1.879v1.879H18.94z'/><path d='M18.65 20.53v3.47h1.928v-1.668h1.542v-1.802h-3.47zM9.542 16.771h1.879V20.24H9.542zM15.018 22.12v-1.879H11.422v3.759h1.798v-1.879h1.753v1.879h1.798v-1.879h-1.753zM5.639 9.109h3.759v1.879H5.639zM0 11.133h1.879v3.759H0z' fill='#96949C'/></svg>`}
+                                  width={24}
+                                  height={24}
+                                  style={s.frameQrIcon}
+                                />
+                              </View>
                             ) : (
                               <View style={[s.framePlaceholder, { borderColor: frame.previewColor || '#000' }]}>
                                 <Text style={{ fontSize: 8 }}>{frame.name}</Text>
@@ -2435,18 +2448,18 @@ export default function GeneratorScreen() {
                             )
                           )}
                         </View>
-                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
+                        <Text style={[s.frameSelectName, { color: colors.text }]} numberOfLines={1}>
                           {language === 'ko' ? frame.nameKo : frame.name}
                         </Text>
                         {isSelected && (
                           <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
-                            <Ionicons name="checkmark" size={12} color="#fff" />
+                            <Ionicons name="checkmark" size={10} color="#fff" />
                           </View>
                         )}
                       </TouchableOpacity>
                     );
                   })}
-                </View>
+                </ScrollView>
               )}
 
               {/* 프리셋 탭 */}
@@ -3957,6 +3970,47 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
     overflow: 'hidden',
+  },
+  // 프레임 가로 스크롤 스타일
+  frameScrollContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  frameSelectItem: {
+    width: 72,
+    borderRadius: 10,
+    padding: 6,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  frameSelectPreview: {
+    width: 60,
+    height: 78,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  frameSelectName: {
+    fontSize: 9,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  frameWithQrPreview: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  framePreviewSvg: {
+    position: 'absolute',
+  },
+  frameQrIcon: {
+    position: 'absolute',
+    top: '25%',
   },
   qrStyleName: {
     fontSize: 11,
