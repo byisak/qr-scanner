@@ -1637,4 +1637,11 @@ export default {
     supplementTitle: 'Supplementary Provisions',
     supplementContent: 'This privacy policy becomes effective on December 24, 2024.',
   },
+
+  // WebView screen
+  webView: {
+    secureConnectionRequired: 'Secure Connection Required',
+    cannotOpenInApp: 'This page cannot be opened in the app. Would you like to open it in an external browser?',
+    open: 'Open',
+  },
 };

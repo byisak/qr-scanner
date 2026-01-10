@@ -620,6 +620,23 @@ export default {
     exportSuccess: 'エクスポート完了',
     exportError: 'エクスポート失敗',
     noData: 'エクスポートするデータがありません。',
+    selectedCount: '選択したグループの記録をエクスポートします（{{count}}件選択）',
+    selectAll: '全て選択',
+    deselectAll: '全て解除',
+    scanRecords: '{{count}}件のスキャン記録',
+    noRecords: '記録なし',
+    countBadge: '{{count}}件',
+    exporting: 'エクスポート中...',
+    exportCSV: 'CSVファイルでエクスポート',
+    exportTXT: 'TXTファイルでエクスポート',
+    alertSelectGroup: 'エクスポートするグループを1つ以上選択してください。',
+    fileSaved: 'ファイルが保存されました：',
+    exportErrorMsg: 'エクスポート中にエラーが発生しました。',
+    csvHeader: 'グループ,コード値,スキャン日時,重複回数',
+    groupLabel: 'グループ',
+    codeLabel: 'コード値',
+    scanDateLabel: 'スキャン日時',
+    duplicateLabel: '重複回数',
   },
 
   // ディスプレイモード選択画面
@@ -1471,5 +1488,12 @@ export default {
     section9Content: 'アプリはQRコードおよびバーコードスキャン機能を提供するためにカメラアクセス権限が必要です。また、画像からコードを認識するためにギャラリーアクセス権限が必要な場合があります。\n\nこれらの権限はアプリの核心機能提供のためにのみ使用され、ユーザーの明示的同意なしに写真や映像が収集、保存または送信されることはありません。',
     supplementTitle: '付則',
     supplementContent: 'このプライバシーポリシーは2024年12月24日から施行されます。',
+  },
+
+  // WebView screen
+  webView: {
+    secureConnectionRequired: 'セキュア接続が必要',
+    cannotOpenInApp: 'このページはアプリ内で開くことができません。外部ブラウザで開きますか？',
+    open: '開く',
   },
 };

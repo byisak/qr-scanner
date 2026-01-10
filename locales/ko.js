@@ -1627,4 +1627,11 @@ export default {
     supplementTitle: '부칙',
     supplementContent: '이 개인정보 처리방침은 2024년 12월 24일부터 시행됩니다.',
   },
+
+  // WebView screen
+  webView: {
+    secureConnectionRequired: '보안 연결 필요',
+    cannotOpenInApp: '이 페이지는 앱 내에서 열 수 없습니다. 외부 브라우저에서 열까요?',
+    open: '열기',
+  },
 };

@@ -620,6 +620,23 @@ export default {
     exportSuccess: 'Exportación completa',
     exportError: 'Error de exportación',
     noData: 'No hay datos para exportar.',
+    selectedCount: 'Exportar registros de grupos seleccionados ({{count}} seleccionados)',
+    selectAll: 'Seleccionar todo',
+    deselectAll: 'Deseleccionar todo',
+    scanRecords: '{{count}} registros de escaneo',
+    noRecords: 'Sin registros',
+    countBadge: '{{count}}',
+    exporting: 'Exportando...',
+    exportCSV: 'Exportar como CSV',
+    exportTXT: 'Exportar como TXT',
+    alertSelectGroup: 'Seleccione al menos un grupo para exportar.',
+    fileSaved: 'Archivo guardado:',
+    exportErrorMsg: 'Ocurrió un error durante la exportación.',
+    csvHeader: 'Grupo,Código,Fecha de escaneo,Recuento de duplicados',
+    groupLabel: 'Grupo',
+    codeLabel: 'Código',
+    scanDateLabel: 'Fecha de escaneo',
+    duplicateLabel: 'Recuento de duplicados',
   },
 
   // Pantalla de selección de modo de pantalla
@@ -1468,5 +1485,12 @@ export default {
     section9Content: 'La Aplicación requiere permiso de acceso a la cámara para proporcionar funciones de escaneo de códigos QR y códigos de barras. Además, puede requerir permiso de acceso a la galería para reconocer códigos en imágenes.\n\nEstos permisos se utilizan únicamente para proporcionar las funciones principales de la Aplicación, y las fotos o videos no se recopilan, almacenan ni transmiten sin el consentimiento explícito del usuario.',
     supplementTitle: 'Disposiciones Adicionales',
     supplementContent: 'Esta política de privacidad entra en vigor el 24 de diciembre de 2024.',
+  },
+
+  // WebView screen
+  webView: {
+    secureConnectionRequired: 'Conexión Segura Requerida',
+    cannotOpenInApp: 'Esta página no se puede abrir en la aplicación. ¿Desea abrirla en un navegador externo?',
+    open: 'Abrir',
   },
 };

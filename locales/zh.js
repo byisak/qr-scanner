@@ -620,6 +620,23 @@ export default {
     exportSuccess: '导出成功',
     exportError: '导出失败',
     noData: '没有可导出的数据。',
+    selectedCount: '导出所选分组的记录（已选{{count}}个）',
+    selectAll: '全选',
+    deselectAll: '取消全选',
+    scanRecords: '{{count}}条扫描记录',
+    noRecords: '无记录',
+    countBadge: '{{count}}条',
+    exporting: '正在导出...',
+    exportCSV: '导出为CSV文件',
+    exportTXT: '导出为TXT文件',
+    alertSelectGroup: '请至少选择一个要导出的分组。',
+    fileSaved: '文件已保存：',
+    exportErrorMsg: '导出过程中发生错误。',
+    csvHeader: '分组,代码值,扫描时间,重复次数',
+    groupLabel: '分组',
+    codeLabel: '代码值',
+    scanDateLabel: '扫描时间',
+    duplicateLabel: '重复次数',
   },
 
   // 显示模式选择界面
@@ -1471,5 +1488,12 @@ export default {
     section9Content: '应用需要相机访问权限以提供QR码和条形码扫描功能。此外，可能需要相册访问权限以从图像中识别码。\n\n这些权限仅用于提供应用的核心功能，未经用户明确同意，不会收集、存储或传输照片或视频。',
     supplementTitle: '附则',
     supplementContent: '本隐私政策自2024年12月24日起施行。',
+  },
+
+  // WebView screen
+  webView: {
+    secureConnectionRequired: '需要安全连接',
+    cannotOpenInApp: '无法在应用内打开此页面。是否在外部浏览器中打开？',
+    open: '打开',
   },
 };
