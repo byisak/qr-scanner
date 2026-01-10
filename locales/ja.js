@@ -767,6 +767,17 @@ export default {
     barcodeRotate: '回転',
     barcodeCustomText: '表示テキスト',
     barcodeCustomTextPlaceholder: '空欄の場合はバーコード値を表示',
+    saveQuality: '保存品質',
+    // バーコード設定タブ
+    barcodeSettingsTabs: {
+      size: 'サイズ',
+      display: '表示',
+      save: '保存',
+    },
+    // 保存プログレス
+    savingBarcode: 'バーコードを作成中...',
+    savingQRCode: 'QRコードを作成中...',
+    pleaseWait: 'しばらくお待ちください',
     // バーコードタイプモーダル
     addBarcode: 'その他',
     selectBarcodeType: 'バーコードタイプを選択',

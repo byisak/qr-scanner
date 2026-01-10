@@ -767,6 +767,17 @@ export default {
     barcodeRotate: '旋转',
     barcodeCustomText: '显示文字',
     barcodeCustomTextPlaceholder: '留空则显示条码值',
+    saveQuality: '保存质量',
+    // 条码设置标签
+    barcodeSettingsTabs: {
+      size: '尺寸',
+      display: '显示',
+      save: '保存',
+    },
+    // 保存进度
+    savingBarcode: '正在创建条码...',
+    savingQRCode: '正在创建二维码...',
+    pleaseWait: '请稍候',
     // 条形码类型弹窗
     addBarcode: '更多',
     selectBarcodeType: '选择条形码类型',

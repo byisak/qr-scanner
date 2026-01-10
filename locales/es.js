@@ -764,6 +764,20 @@ export default {
     barcodeHeight: 'Alto',
     barcodeFontSize: 'Tamaño de fuente',
     barcodeShowText: 'Mostrar texto',
+    barcodeRotate: 'Rotar',
+    barcodeCustomText: 'Texto personalizado',
+    barcodeCustomTextPlaceholder: 'Dejar vacío para mostrar el valor',
+    saveQuality: 'Calidad de guardado',
+    // Pestañas de configuración de código de barras
+    barcodeSettingsTabs: {
+      size: 'Tamaño',
+      display: 'Mostrar',
+      save: 'Guardar',
+    },
+    // Progreso de guardado
+    savingBarcode: 'Creando código de barras...',
+    savingQRCode: 'Creando código QR...',
+    pleaseWait: 'Por favor espere',
     // Modal de tipo de código de barras
     addBarcode: 'Más',
     selectBarcodeType: 'Seleccionar tipo',
