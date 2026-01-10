@@ -221,8 +221,8 @@ export default function ForgotPasswordScreen() {
 
             <View style={styles.successCard}>
               <View style={styles.tipRow}>
-                <Ionicons name="information-circle" size={20} color={colors.primary} />
-                <Text style={[styles.tipText, { color: colors.text, fontFamily: fonts.regular }]}>
+                <Ionicons name="information-circle" size={20} color="#667eea" />
+                <Text style={[styles.tipText, { color: '#333', fontFamily: fonts.regular }]}>
                   {t('auth.checkSpamFolder') || '이메일이 보이지 않으면 스팸 폴더를 확인해주세요.'}
                 </Text>
               </View>
