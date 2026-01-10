@@ -52,6 +52,14 @@ export default function LoginScreen() {
   const slideAnim = useRef(new Animated.Value(30)).current;
   const iconFloat = useRef(new Animated.Value(0)).current;
 
+  // 장식 원 애니메이션
+  const circle1Anim = useRef(new Animated.Value(0)).current;
+  const circle2Anim = useRef(new Animated.Value(0)).current;
+  const circle3Anim = useRef(new Animated.Value(0)).current;
+  const circle1Scale = useRef(new Animated.Value(1)).current;
+  const circle2Scale = useRef(new Animated.Value(1)).current;
+  const circle3Scale = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     // 진입 애니메이션
     Animated.parallel([
@@ -78,6 +86,102 @@ export default function LoginScreen() {
         Animated.timing(iconFloat, {
           toValue: 0,
           duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // 장식 원 1 - 느린 상하 움직임
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(circle1Anim, {
+          toValue: 20,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(circle1Anim, {
+          toValue: 0,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // 장식 원 1 - 스케일 펄스
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(circle1Scale, {
+          toValue: 1.1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(circle1Scale, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // 장식 원 2 - 대각선 움직임
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(circle2Anim, {
+          toValue: 15,
+          duration: 5000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(circle2Anim, {
+          toValue: 0,
+          duration: 5000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // 장식 원 2 - 스케일 펄스
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(circle2Scale, {
+          toValue: 0.9,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(circle2Scale, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // 장식 원 3 - 좌우 움직임
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(circle3Anim, {
+          toValue: -12,
+          duration: 3500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(circle3Anim, {
+          toValue: 0,
+          duration: 3500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // 장식 원 3 - 스케일 펄스
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(circle3Scale, {
+          toValue: 1.15,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(circle3Scale, {
+          toValue: 1,
+          duration: 2500,
           useNativeDriver: true,
         }),
       ])
@@ -196,10 +300,44 @@ export default function LoginScreen() {
         end={{ x: 1, y: 1 }}
       />
 
-      {/* 배경 장식 원 */}
-      <View style={[styles.decorCircle, styles.decorCircle1]} />
-      <View style={[styles.decorCircle, styles.decorCircle2]} />
-      <View style={[styles.decorCircle, styles.decorCircle3]} />
+      {/* 배경 장식 원 - 애니메이션 적용 */}
+      <Animated.View
+        style={[
+          styles.decorCircle,
+          styles.decorCircle1,
+          {
+            transform: [
+              { translateY: circle1Anim },
+              { scale: circle1Scale },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.decorCircle,
+          styles.decorCircle2,
+          {
+            transform: [
+              { translateX: circle2Anim },
+              { translateY: circle2Anim },
+              { scale: circle2Scale },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.decorCircle,
+          styles.decorCircle3,
+          {
+            transform: [
+              { translateX: circle3Anim },
+              { scale: circle3Scale },
+            ],
+          },
+        ]}
+      />
 
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
