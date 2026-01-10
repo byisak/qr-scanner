@@ -1028,6 +1028,8 @@ export default {
     saveErrorMessage: 'QRコードの保存に失敗しました。',
     clipboardPasted: 'クリップボードの内容を取得しました',
     clipboardEmpty: 'クリップボードが空です',
+    selectLocation: '位置を選択',
+    selectFromMap: '地図から選択',
     // QRスタイル
     qrStyle: {
       title: 'QRスタイル',
@@ -1417,6 +1419,25 @@ export default {
     qualityMinimum: '最小',
     qualityMinimumDesc: '最小サイズ、画質低下',
     note: '圧縮率の変更は新しく保存する写真にのみ適用されます',
+  },
+
+  // 地図
+  map: {
+    searchPlaceholder: '住所を検索...',
+    selectedLocation: '選択された場所',
+    latitude: '緯度',
+    longitude: '経度',
+    noResults: '結果なし',
+    noResultsDesc: '住所が見つかりませんでした。別の検索語を試してください。',
+    requiresBuild: '開発ビルドが必要です',
+    requiresBuildDesc: '地図機能には開発ビルドが必要です。\nExpo Goではサポートされていません。',
+    useCurrentLocation: '現在位置を使用',
+  },
+
+  // 位置情報
+  location: {
+    permissionDenied: '位置情報の権限が必要です。',
+    fetchError: '現在位置を取得できませんでした。',
   },
 
   // QRコンテンツタイプ

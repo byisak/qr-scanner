@@ -1028,6 +1028,8 @@ export default {
     saveErrorMessage: '二维码保存失败。',
     clipboardPasted: '已粘贴剪贴板内容',
     clipboardEmpty: '剪贴板为空',
+    selectLocation: '选择位置',
+    selectFromMap: '从地图选择',
     // QR样式
     qrStyle: {
       title: 'QR样式',
@@ -1417,6 +1419,25 @@ export default {
     qualityMinimum: '最小',
     qualityMinimumDesc: '最小文件，画质明显下降',
     note: '压缩率更改仅适用于新保存的照片',
+  },
+
+  // 地图
+  map: {
+    searchPlaceholder: '搜索地址...',
+    selectedLocation: '已选位置',
+    latitude: '纬度',
+    longitude: '经度',
+    noResults: '无结果',
+    noResultsDesc: '找不到该地址，请尝试其他搜索词。',
+    requiresBuild: '需要开发版本',
+    requiresBuildDesc: '地图功能需要开发版本。\nExpo Go不支持。',
+    useCurrentLocation: '使用当前位置',
+  },
+
+  // 位置
+  location: {
+    permissionDenied: '需要位置权限。',
+    fetchError: '无法获取当前位置。',
   },
 
   // QR内容类型

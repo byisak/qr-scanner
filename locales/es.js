@@ -1025,6 +1025,8 @@ export default {
     saveErrorMessage: 'Error al guardar el código QR.',
     clipboardPasted: 'Contenido del portapapeles pegado',
     clipboardEmpty: 'El portapapeles está vacío',
+    selectLocation: 'Seleccionar ubicación',
+    selectFromMap: 'Seleccionar del mapa',
     // Estilo QR
     qrStyle: {
       title: 'Estilo QR',
@@ -1414,6 +1416,25 @@ export default {
     qualityMinimum: 'Mínima',
     qualityMinimumDesc: 'Tamaño mínimo, pérdida notable de calidad',
     note: 'Los cambios de compresión solo aplican a nuevas fotos',
+  },
+
+  // Mapa
+  map: {
+    searchPlaceholder: 'Buscar dirección...',
+    selectedLocation: 'Ubicación seleccionada',
+    latitude: 'Latitud',
+    longitude: 'Longitud',
+    noResults: 'Sin resultados',
+    noResultsDesc: 'No se encontró la dirección. Por favor intente otra búsqueda.',
+    requiresBuild: 'Requiere compilación de desarrollo',
+    requiresBuildDesc: 'La función de mapa requiere una compilación de desarrollo.\nNo compatible con Expo Go.',
+    useCurrentLocation: 'Usar ubicación actual',
+  },
+
+  // Ubicación
+  location: {
+    permissionDenied: 'Se requiere permiso de ubicación.',
+    fetchError: 'No se pudo obtener la ubicación actual.',
   },
 
   // Tipos de contenido QR
