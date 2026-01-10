@@ -2432,7 +2432,7 @@ export default function GeneratorScreen() {
                                 const previewHeight = 70;
                                 const scale = previewHeight / pos.viewBoxHeight;
                                 const previewWidth = pos.viewBoxWidth * scale;
-                                const qrSize = Math.min(pos.width, pos.height) * scale * 0.95;
+                                const qrSize = Math.min(pos.width, pos.height) * scale * 0.8;
                                 const qrLeft = (pos.x + pos.width / 2) * scale - qrSize / 2;
                                 const qrTop = (pos.y + pos.height / 2) * scale - qrSize / 2;
                                 return (
