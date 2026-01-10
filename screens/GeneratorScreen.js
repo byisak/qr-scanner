@@ -2774,14 +2774,16 @@ export default function GeneratorScreen() {
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={(item) => item.id}
                     onMomentumScrollEnd={(e) => {
-                      const newIndex = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 32));
+                      const itemWidth = SCREEN_WIDTH - 96;
+                      const newIndex = Math.round(e.nativeEvent.contentOffset.x / itemWidth);
                       setFrameIndex(newIndex);
                     }}
                     renderItem={({ item: frame, index }) => {
                       const isCurrentFrame = index === frameIndex;
                       const frameObj = frame.id === 'none' ? null : frame;
+                      const itemWidth = SCREEN_WIDTH - 96;
                       return (
-                        <View style={[s.carouselItem, { width: SCREEN_WIDTH - 32 }]}>
+                        <View style={[s.carouselItem, { width: itemWidth }]}>
                           <Animated.View
                             ref={isCurrentFrame ? qrRef : null}
                             style={[
