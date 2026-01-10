@@ -2430,11 +2430,14 @@ export default function GeneratorScreen() {
                               (() => {
                                 const pos = FRAME_QR_POSITIONS[frame.id];
                                 const previewHeight = 70;
-                                const scale = previewHeight / pos.viewBoxHeight;
-                                const previewWidth = pos.viewBoxWidth * scale;
-                                const qrSize = Math.min(pos.width, pos.height) * scale * 1.0;
-                                const qrLeft = (pos.x + pos.width / 2) * scale - qrSize / 2;
-                                const qrTop = (pos.y + pos.height / 2) * scale - qrSize / 2;
+                                const previewWidth = (pos.viewBoxWidth / pos.viewBoxHeight) * previewHeight;
+                                // QR 영역 중심을 비율로 계산
+                                const qrCenterXRatio = (pos.x + pos.width / 2) / pos.viewBoxWidth;
+                                const qrCenterYRatio = (pos.y + pos.height / 2) / pos.viewBoxHeight;
+                                // 고정 크기 QR 아이콘 (28px)
+                                const qrSize = 28;
+                                const qrLeft = previewWidth * qrCenterXRatio - qrSize / 2;
+                                const qrTop = previewHeight * qrCenterYRatio - qrSize / 2;
                                 return (
                                   <View style={[s.frameWithQrPreview, { width: previewWidth, height: previewHeight }]}>
                                     <SvgXml
