@@ -42,7 +42,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from '../components/StyledQRCode';
-import QRFrameRenderer, { FRAME_SVG_DATA } from '../components/QRFrameRenderer';
+import QRFrameRenderer, { FRAME_SVG_DATA, FRAME_QR_POSITIONS } from '../components/QRFrameRenderer';
 import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
 import NativeColorPicker from '../components/NativeColorPicker';
 import { SvgXml } from 'react-native-svg';
@@ -2426,21 +2426,32 @@ export default function GeneratorScreen() {
                           {frame.id === 'none' ? (
                             <Ionicons name="close-circle-outline" size={28} color={colors.textTertiary} />
                           ) : (
-                            FRAME_SVG_DATA[frame.id] ? (
-                              <View style={s.frameWithQrPreview}>
-                                <SvgXml
-                                  xml={FRAME_SVG_DATA[frame.id]}
-                                  width={54}
-                                  height={70}
-                                  style={s.framePreviewSvg}
-                                />
-                                <SvgXml
-                                  xml={`<svg width='24' height='24' fill='none' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' clip-rule='evenodd' d='M0 7.952V0h7.952v7.952H0Zm1.871-1.871h4.21V1.871h-4.21v4.21Z' fill='#96949C'/><path fill='#96949C' d='M3.181 3.181h1.879v1.879H3.181z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M16.048 7.952V0H24v7.952h-7.952Zm1.871-1.871h4.21V1.871h-4.21v4.21Z' fill='#96949C'/><path fill='#96949C' d='M18.94 3.181h1.879v1.879H18.94z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M0 24v-7.952h7.952V24H0Zm1.871-1.871h4.21v-4.21h-4.21v4.21Z' fill='#96949C'/><path fill='#96949C' d='M3.181 18.94h1.879v1.879H3.181zM1.879 9.109h1.879v1.879H1.879zM5.516 13.012v-1.879h-1.757v1.879h1.713v1.879h1.757v-1.879h-1.713zM13.301 3.47h1.879v1.879h-1.879zM9.542 1.879h1.879V5.35H9.542zM11.422 0h1.879v1.879h-1.879zM11.422 5.639v1.879H9.542v1.879h3.759V5.639h-1.879zM13.301 16.748v-1.856h-1.879v-3.88H9.542v3.808h1.879v1.856h1.879v1.855h3.759v-1.855h-3.759zM13.301 9.109h1.879v3.759h-1.879z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M22.174 9.542v1.753H24v3.596h-5.114v-1.753h-1.827v-1.798h1.78V9.542h3.334Zm-3.288 3.551h3.288v-1.753h-3.288v1.753Z' fill='#96949C'/><path fill='#96949C' d='M22.12 16.771H24v3.759h-1.879zM15.181 13.012h1.879v1.879h-1.879zM17.06 18.651h1.879v1.879H17.06zM18.94 16.482h1.879v1.879H18.94z'/><path d='M18.65 20.53v3.47h1.928v-1.668h1.542v-1.802h-3.47zM9.542 16.771h1.879V20.24H9.542zM15.018 22.12v-1.879H11.422v3.759h1.798v-1.879h1.753v1.879h1.798v-1.879h-1.753zM5.639 9.109h3.759v1.879H5.639zM0 11.133h1.879v3.759H0z' fill='#96949C'/></svg>`}
-                                  width={24}
-                                  height={24}
-                                  style={s.frameQrIcon}
-                                />
-                              </View>
+                            FRAME_SVG_DATA[frame.id] && FRAME_QR_POSITIONS[frame.id] ? (
+                              (() => {
+                                const pos = FRAME_QR_POSITIONS[frame.id];
+                                const previewHeight = 70;
+                                const scale = previewHeight / pos.viewBoxHeight;
+                                const previewWidth = pos.viewBoxWidth * scale;
+                                const qrSize = Math.min(pos.width, pos.height) * scale * 0.7;
+                                const qrLeft = (pos.x + pos.width / 2) * scale - qrSize / 2;
+                                const qrTop = (pos.y + pos.height / 2) * scale - qrSize / 2;
+                                return (
+                                  <View style={[s.frameWithQrPreview, { width: previewWidth, height: previewHeight }]}>
+                                    <SvgXml
+                                      xml={FRAME_SVG_DATA[frame.id]}
+                                      width={previewWidth}
+                                      height={previewHeight}
+                                      style={s.framePreviewSvg}
+                                    />
+                                    <SvgXml
+                                      xml={`<svg width='16' height='16' fill='none' xmlns='http://www.w3.org/2000/svg'><path fill-rule='evenodd' clip-rule='evenodd' d='M0 5.3V0h5.3v5.3H0Zm1.25-1.25h2.8V1.25h-2.8v2.8Z' fill='#888'/><path fill='#888' d='M2.12 2.12h1.25v1.25H2.12z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M10.7 5.3V0H16v5.3h-5.3Zm1.25-1.25h2.8V1.25h-2.8v2.8Z' fill='#888'/><path fill='#888' d='M12.63 2.12h1.25v1.25h-1.25z'/><path fill-rule='evenodd' clip-rule='evenodd' d='M0 16v-5.3h5.3V16H0Zm1.25-1.25h2.8v-2.8h-2.8v2.8Z' fill='#888'/><path fill='#888' d='M2.12 12.63h1.25v1.25H2.12zM6.37 6.07h2.5v1.25h-2.5zM8.87 8.57h1.25v2.5H8.87zM6.37 11.07h2.5v1.25h-2.5zM11.12 6.07h1.25v2.5h-1.25zM12.37 11.07h2.5v1.25h-2.5zM11.12 13.57h1.25v1.25h-1.25z'/></svg>`}
+                                      width={qrSize}
+                                      height={qrSize}
+                                      style={[s.frameQrIcon, { left: qrLeft, top: qrTop }]}
+                                    />
+                                  </View>
+                                );
+                              })()
                             ) : (
                               <View style={[s.framePlaceholder, { borderColor: frame.previewColor || '#000' }]}>
                                 <Text style={{ fontSize: 8 }}>{frame.name}</Text>
@@ -3999,18 +4010,15 @@ const s = StyleSheet.create({
     textAlign: 'center',
   },
   frameWithQrPreview: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
     position: 'relative',
   },
   framePreviewSvg: {
     position: 'absolute',
+    left: 0,
+    top: 0,
   },
   frameQrIcon: {
     position: 'absolute',
-    top: '25%',
   },
   qrStyleName: {
     fontSize: 11,
