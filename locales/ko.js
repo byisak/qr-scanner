@@ -47,7 +47,10 @@ export default {
     loginPrompt: '로그인하여 실시간 서버 전송을 이용해보세요',
     // 로그인 화면
     loginTitle: '로그인',
-    loginSubtitle: 'QR 스캐너로 시작하기',
+    loginSubtitle: '로그인하여 실시간 동기화를 시작하세요',
+    realtimeSyncLogin: '실시간 전송',
+    secureConnection: '안전한 암호화 연결',
+    orContinueWith: 'SNS 계정으로 계속',
     loginWithKakao: '카카오로 로그인',
     loginWithGoogle: 'Google로 로그인',
     loginWithApple: 'Apple로 로그인',

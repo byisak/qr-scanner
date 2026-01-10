@@ -46,7 +46,10 @@ export default {
     loginPrompt: 'ログインしてリアルタイムサーバー送信を利用しましょう',
     // ログイン画面
     loginTitle: 'ログイン',
-    loginSubtitle: 'QRスキャナーで始めよう',
+    loginSubtitle: 'ログインしてリアルタイム同期を開始',
+    realtimeSyncLogin: 'リアルタイム転送',
+    secureConnection: '安全な暗号化接続',
+    orContinueWith: 'SNSアカウントで続ける',
     loginWithKakao: 'カカオでログイン',
     loginWithGoogle: 'Googleでログイン',
     loginWithApple: 'Appleでログイン',

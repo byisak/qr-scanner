@@ -46,7 +46,10 @@ export default {
     loginPrompt: 'Inicia sesión para usar la sincronización en tiempo real',
     // Pantalla de inicio de sesión
     loginTitle: 'Iniciar sesión',
-    loginSubtitle: 'Comienza con QR Scanner',
+    loginSubtitle: 'Inicia sesión para sincronizar en tiempo real',
+    realtimeSyncLogin: 'Sincronización en tiempo real',
+    secureConnection: 'Conexión segura encriptada',
+    orContinueWith: 'O continuar con',
     loginWithKakao: 'Iniciar sesión con Kakao',
     loginWithGoogle: 'Iniciar sesión con Google',
     loginWithApple: 'Iniciar sesión con Apple',
