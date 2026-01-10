@@ -2807,23 +2807,23 @@ export default function GeneratorScreen() {
                                   frame={frameObj}
                                   qrValue={qrData}
                                   qrStyle={qrStyle}
-                                  size={280}
+                                  size={220}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
                                 />
                               </View>
                             ) : (
-                              <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
+                              <View style={[s.qrBackgroundPlain, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
                                 {useStyledQR ? (
                                   <StyledQRCode
                                     value={qrData}
-                                    size={260}
+                                    size={200}
                                     qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
                                     onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
                                   />
                                 ) : (
                                   <QRCode
                                     value={qrData}
-                                    size={240}
+                                    size={200}
                                     backgroundColor="white"
                                     color="black"
                                   />
@@ -2835,14 +2835,25 @@ export default function GeneratorScreen() {
                       );
                     }}
                   />
-                  {/* 프레임 이름 및 페이지 인디케이터 */}
+                  {/* 프레임 이름 및 도트 인디케이터 */}
                   <View style={s.carouselIndicator}>
                     <Text style={[s.carouselFrameName, { color: colors.text }]}>
                       {language === 'ko' ? QR_FRAMES[frameIndex]?.nameKo : QR_FRAMES[frameIndex]?.name}
                     </Text>
-                    <Text style={[s.carouselPageNum, { color: colors.textSecondary }]}>
-                      {frameIndex + 1} / {QR_FRAMES.length}
-                    </Text>
+                    <View style={s.dotContainer}>
+                      {QR_FRAMES.map((_, index) => (
+                        <View
+                          key={index}
+                          style={[
+                            s.dot,
+                            {
+                              backgroundColor: index === frameIndex ? colors.primary : colors.border,
+                              width: index === frameIndex ? 16 : 6,
+                            },
+                          ]}
+                        />
+                      ))}
+                    </View>
                   </View>
                 </>
               ) : (
@@ -4088,7 +4099,7 @@ const s = StyleSheet.create({
     padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 400,
+    minHeight: 300,
     overflow: 'visible',
   },
   qrWrapper: {
@@ -4098,19 +4109,25 @@ const s = StyleSheet.create({
   carouselItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 8,
   },
   carouselIndicator: {
     alignItems: 'center',
-    paddingBottom: 12,
-    gap: 4,
+    paddingBottom: 8,
+    gap: 8,
   },
   carouselFrameName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
-  carouselPageNum: {
-    fontSize: 12,
+  dotContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
   },
   frameContainer: {
     padding: 4,
@@ -4126,6 +4143,10 @@ const s = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     position: 'relative',
+  },
+  qrBackgroundPlain: {
+    backgroundColor: 'white',
+    padding: 16,
   },
   frameIndicator: {
     position: 'absolute',
