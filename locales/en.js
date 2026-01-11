@@ -1163,6 +1163,17 @@ export default {
       imageSize: 'Image Size',
       imageMargin: 'Image Margin',
     },
+    // Custom preset translations
+    savePreset: 'Save Preset',
+    saveCurrentAsPreset: 'Save Current Style as Preset',
+    presetName: 'Preset Name',
+    presetNamePlaceholder: 'Enter preset name',
+    noSavedPresets: 'No saved presets',
+    savePresetHint: 'Save your current style for quick access later',
+    longPressToDelete: 'Long press to delete',
+    deletePreset: 'Delete Preset',
+    deletePresetConfirm: 'Are you sure you want to delete this preset?',
+    presetSaveError: 'Failed to save preset',
   },
 
   // Backup Export

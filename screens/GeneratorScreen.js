@@ -53,6 +53,8 @@ import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatli
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Slider from '@react-native-community/slider';
 import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved, trackQRShared } from '../utils/analytics';
+import PresetSaveModal from '../components/PresetSaveModal';
+import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -371,6 +373,8 @@ export default function GeneratorScreen() {
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
   const [activeColorPicker, setActiveColorPicker] = useState(null); // 활성 컬러 피커 (dotColor, cornerSquareColor, cornerDotColor, backgroundColor, frameTextColor)
+  const [customPresets, setCustomPresets] = useState([]); // 사용자 커스텀 프리셋
+  const [presetSaveModalVisible, setPresetSaveModalVisible] = useState(false); // 프리셋 저장 모달
   const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
   const frameCarouselRef = useRef(null); // 프레임 캐러셀 ref
 
@@ -479,8 +483,62 @@ export default function GeneratorScreen() {
       };
 
       loadSelectedLocation();
+
+      // 커스텀 프리셋 로드
+      const loadCustomPresets = async () => {
+        try {
+          const presets = await getPresets();
+          setCustomPresets(presets);
+        } catch (error) {
+          console.error('Error loading custom presets:', error);
+        }
+      };
+      loadCustomPresets();
     }, [])
   );
+
+  // 커스텀 프리셋 저장 핸들러
+  const handleSavePreset = async (presetData) => {
+    try {
+      const newPreset = await savePreset(presetData);
+      setCustomPresets(prev => [newPreset, ...prev]);
+    } catch (error) {
+      console.error('Error saving preset:', error);
+      Alert.alert(t('common.error') || '오류', t('generator.presetSaveError') || '프리셋 저장에 실패했습니다.');
+    }
+  };
+
+  // 커스텀 프리셋 삭제 핸들러
+  const handleDeletePreset = async (presetId) => {
+    Alert.alert(
+      t('generator.deletePreset') || '프리셋 삭제',
+      t('generator.deletePresetConfirm') || '이 프리셋을 삭제하시겠습니까?',
+      [
+        { text: t('common.cancel') || '취소', style: 'cancel' },
+        {
+          text: t('common.delete') || '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await deletePreset(presetId);
+            if (success) {
+              setCustomPresets(prev => prev.filter(p => p.id !== presetId));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // 커스텀 프리셋 선택 핸들러
+  const handleSelectPreset = (preset) => {
+    setQrStyle(prev => ({ ...prev, ...preset.style }));
+    if (preset.frameIndex !== undefined) {
+      setFrameIndex(preset.frameIndex);
+    }
+    if (preset.logoImage) {
+      setLogoImage(preset.logoImage);
+    }
+  };
 
   const generateQRData = () => {
     const data = formData[selectedType];
@@ -2404,54 +2462,80 @@ export default function GeneratorScreen() {
                 </ScrollView>
               </View>
 
-              {/* 프리셋 탭 */}
+              {/* 프리셋 탭 - 커스텀 프리셋 */}
               {qrSettingsTab === 'presets' && (
-                <View style={s.qrStyleGrid}>
-                  {QR_STYLE_PRESETS.map((preset) => {
-                    const isSelected = JSON.stringify(qrStyle) === JSON.stringify(preset.style);
-                    return (
-                      <TouchableOpacity
-                        key={preset.id}
-                        style={[
-                          s.qrStyleItem,
-                          {
-                            backgroundColor: colors.inputBackground,
-                            borderColor: isSelected ? colors.primary : colors.border,
-                            borderWidth: isSelected ? 2 : 1,
-                          },
-                        ]}
-                        onPress={() => setQrStyle(prev => ({ ...prev, ...preset.style }))}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[s.qrStylePreview, { backgroundColor: preset.style.backgroundColor || '#fff' }]}>
-                          <View style={s.presetDotsContainer}>
-                            {[...Array(9)].map((_, i) => (
-                              <View
-                                key={i}
-                                style={[
-                                  s.presetDot,
-                                  {
-                                    backgroundColor: preset.style.dotGradient
-                                      ? preset.style.dotGradient.colorStops[0].color
-                                      : preset.style.dotColor,
-                                    borderRadius: preset.style.dotType === 'dots' || preset.style.dotType === 'rounded' ? 3 : 0,
-                                  },
-                                ]}
-                              />
-                            ))}
+                <View style={s.customPresetContainer}>
+                  {/* 프리셋 저장 버튼 */}
+                  <TouchableOpacity
+                    style={[s.savePresetButton, { backgroundColor: colors.primary }]}
+                    onPress={() => setPresetSaveModalVisible(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                    <Text style={[s.savePresetButtonText, { fontFamily: fonts.semiBold }]}>
+                      {t('generator.saveCurrentAsPreset') || '현재 스타일을 프리셋으로 저장'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* 저장된 프리셋 목록 */}
+                  {customPresets.length > 0 ? (
+                    <View style={s.qrStyleGrid}>
+                      {customPresets.map((preset) => (
+                        <TouchableOpacity
+                          key={preset.id}
+                          style={[
+                            s.qrStyleItem,
+                            {
+                              backgroundColor: colors.inputBackground,
+                              borderColor: colors.border,
+                              borderWidth: 1,
+                            },
+                          ]}
+                          onPress={() => handleSelectPreset(preset)}
+                          onLongPress={() => handleDeletePreset(preset.id)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[s.qrStylePreview, { backgroundColor: preset.style?.backgroundColor || '#fff' }]}>
+                            <View style={s.presetDotsContainer}>
+                              {[...Array(9)].map((_, i) => (
+                                <View
+                                  key={i}
+                                  style={[
+                                    s.presetDot,
+                                    {
+                                      backgroundColor: preset.style?.dotGradient
+                                        ? preset.style.dotGradient.colorStops[0].color
+                                        : preset.style?.dotColor || '#000',
+                                      borderRadius: preset.style?.dotType === 'dots' || preset.style?.dotType === 'rounded' ? 3 : 0,
+                                    },
+                                  ]}
+                                />
+                              ))}
+                            </View>
                           </View>
-                        </View>
-                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
-                          {language === 'ko' ? preset.nameKo : preset.name}
-                        </Text>
-                        {isSelected && (
-                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
-                            <Ionicons name="checkmark" size={12} color="#fff" />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                          <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
+                            {preset.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={s.emptyPresetContainer}>
+                      <Ionicons name="layers-outline" size={48} color={colors.textTertiary} />
+                      <Text style={[s.emptyPresetText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                        {t('generator.noSavedPresets') || '저장된 프리셋이 없습니다'}
+                      </Text>
+                      <Text style={[s.emptyPresetSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                        {t('generator.savePresetHint') || '도트, 코너, 배경 등을 설정한 후\n프리셋으로 저장하세요'}
+                      </Text>
+                    </View>
+                  )}
+
+                  {customPresets.length > 0 && (
+                    <Text style={[s.presetHintText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                      {t('generator.longPressToDelete') || '길게 누르면 삭제할 수 있습니다'}
+                    </Text>
+                  )}
                 </View>
               )}
 
@@ -3427,6 +3511,16 @@ export default function GeneratorScreen() {
         }}
         colors={colors}
       />
+
+      {/* 프리셋 저장 모달 */}
+      <PresetSaveModal
+        visible={presetSaveModalVisible}
+        onClose={() => setPresetSaveModalVisible(false)}
+        onSave={handleSavePreset}
+        qrStyle={qrStyle}
+        frameIndex={frameIndex}
+        logoImage={logoImage}
+      />
     </View>
   );
 }
@@ -3997,6 +4091,45 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 6,
     overflow: 'hidden',
+  },
+  // 커스텀 프리셋 스타일
+  customPresetContainer: {
+    paddingBottom: 8,
+  },
+  savePresetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  savePresetButtonText: {
+    color: '#fff',
+    fontSize: 15,
+  },
+  emptyPresetContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyPresetText: {
+    fontSize: 16,
+    marginTop: 12,
+  },
+  emptyPresetSubText: {
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  presetHintText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
   },
   // 프레임 가로 스크롤 스타일
   frameScrollContainer: {

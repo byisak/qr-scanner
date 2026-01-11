@@ -1152,6 +1152,17 @@ export default {
       imageSize: '이미지 크기',
       imageMargin: '이미지 여백',
     },
+    // 커스텀 프리셋 번역
+    savePreset: '프리셋 저장',
+    saveCurrentAsPreset: '현재 스타일을 프리셋으로 저장',
+    presetName: '프리셋 이름',
+    presetNamePlaceholder: '프리셋 이름을 입력하세요',
+    noSavedPresets: '저장된 프리셋이 없습니다',
+    savePresetHint: '현재 스타일을 저장하여 나중에 빠르게 적용하세요',
+    longPressToDelete: '길게 눌러서 삭제',
+    deletePreset: '프리셋 삭제',
+    deletePresetConfirm: '이 프리셋을 삭제하시겠습니까?',
+    presetSaveError: '프리셋 저장에 실패했습니다',
   },
 
   // 백업 내보내기
