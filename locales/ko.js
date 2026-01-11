@@ -797,6 +797,29 @@ export default {
     barcodeCustomText: '표시 텍스트',
     barcodeCustomTextPlaceholder: '비워두면 바코드 값 표시',
     saveQuality: '저장 품질',
+    // 저장 품질 레벨
+    qualityLevels: {
+      fast: '빠름',
+      normal: '보통',
+      high: '고급',
+      best: '최고',
+      print: '인쇄',
+    },
+    qualityDescriptions: {
+      screenCapture: '화면 캡처',
+      generalUse: '일반 용도',
+      generalPrint: '일반 인쇄',
+      highQuality: '고품질',
+      bestQuality: '최고 품질',
+      largePrint: '대형 인쇄',
+    },
+    qualityTime: {
+      instant: '즉시',
+      second1: '~1초',
+      second2: '~2초',
+      second3: '~3초',
+      second5: '~5초',
+    },
     // 바코드 설정 탭
     barcodeSettingsTabs: {
       size: '크기',

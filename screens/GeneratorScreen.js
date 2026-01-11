@@ -116,11 +116,11 @@ export default function GeneratorScreen() {
 
   // 고해상도 레벨별 설정
   const HIGH_RES_LEVELS = [
-    { level: 0, label: '빠름', scale: 0, description: '화면 캡처', time: '즉시' },
-    { level: 1, label: '보통', scale: 4, description: '일반 인쇄', time: '~1초' },
-    { level: 2, label: '고급', scale: 6, description: '고품질', time: '~2초' },
-    { level: 3, label: '최고', scale: 8, description: '최고 품질', time: '~3초' },
-    { level: 4, label: '인쇄', scale: 12, description: '대형 인쇄', time: '~5초' },
+    { level: 0, label: t('generator.qualityLevels.fast') || '빠름', scale: 0, description: t('generator.qualityDescriptions.screenCapture') || '화면 캡처', time: t('generator.qualityTime.instant') || '즉시' },
+    { level: 1, label: t('generator.qualityLevels.normal') || '보통', scale: 4, description: t('generator.qualityDescriptions.generalPrint') || '일반 인쇄', time: t('generator.qualityTime.second1') || '~1초' },
+    { level: 2, label: t('generator.qualityLevels.high') || '고급', scale: 6, description: t('generator.qualityDescriptions.highQuality') || '고품질', time: t('generator.qualityTime.second2') || '~2초' },
+    { level: 3, label: t('generator.qualityLevels.best') || '최고', scale: 8, description: t('generator.qualityDescriptions.bestQuality') || '최고 품질', time: t('generator.qualityTime.second3') || '~3초' },
+    { level: 4, label: t('generator.qualityLevels.print') || '인쇄', scale: 12, description: t('generator.qualityDescriptions.largePrint') || '대형 인쇄', time: t('generator.qualityTime.second5') || '~5초' },
   ];
 
   // 바코드 타입 즐겨찾기 및 모달
@@ -382,11 +382,11 @@ export default function GeneratorScreen() {
 
   // QR 고해상도 레벨별 설정
   const QR_RES_LEVELS = [
-    { level: 0, label: '빠름', scale: 1, description: '화면 캡처', time: '즉시', size: 300 },
-    { level: 1, label: '보통', scale: 2, description: '일반 용도', time: '~1초', size: 600 },
-    { level: 2, label: '고급', scale: 3, description: '고품질', time: '~2초', size: 900 },
-    { level: 3, label: '최고', scale: 4, description: '최고 품질', time: '~3초', size: 1200 },
-    { level: 4, label: '인쇄', scale: 6, description: '대형 인쇄', time: '~5초', size: 1800 },
+    { level: 0, label: t('generator.qualityLevels.fast') || '빠름', scale: 1, description: t('generator.qualityDescriptions.screenCapture') || '화면 캡처', time: t('generator.qualityTime.instant') || '즉시', size: 300 },
+    { level: 1, label: t('generator.qualityLevels.normal') || '보통', scale: 2, description: t('generator.qualityDescriptions.generalUse') || '일반 용도', time: t('generator.qualityTime.second1') || '~1초', size: 600 },
+    { level: 2, label: t('generator.qualityLevels.high') || '고급', scale: 3, description: t('generator.qualityDescriptions.highQuality') || '고품질', time: t('generator.qualityTime.second2') || '~2초', size: 900 },
+    { level: 3, label: t('generator.qualityLevels.best') || '최고', scale: 4, description: t('generator.qualityDescriptions.bestQuality') || '최고 품질', time: t('generator.qualityTime.second3') || '~3초', size: 1200 },
+    { level: 4, label: t('generator.qualityLevels.print') || '인쇄', scale: 6, description: t('generator.qualityDescriptions.largePrint') || '대형 인쇄', time: t('generator.qualityTime.second5') || '~5초', size: 1800 },
   ];
 
   // Form data for each type
@@ -2304,7 +2304,7 @@ export default function GeneratorScreen() {
                               s.qualityLevelText,
                               { color: highResLevel === item.level ? '#fff' : colors.text }
                             ]}>
-                              {item.level === 0 ? '빠름' : item.level}
+                              {item.level === 0 ? (t('generator.qualityLevels.fast') || '빠름') : item.level}
                             </Text>
                           </TouchableOpacity>
                         ))}

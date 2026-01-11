@@ -768,6 +768,29 @@ export default {
     barcodeCustomText: '表示テキスト',
     barcodeCustomTextPlaceholder: '空欄の場合はバーコード値を表示',
     saveQuality: '保存品質',
+    // 保存品質レベル
+    qualityLevels: {
+      fast: '高速',
+      normal: '普通',
+      high: '高級',
+      best: '最高',
+      print: '印刷',
+    },
+    qualityDescriptions: {
+      screenCapture: '画面キャプチャ',
+      generalUse: '一般用途',
+      generalPrint: '一般印刷',
+      highQuality: '高品質',
+      bestQuality: '最高品質',
+      largePrint: '大判印刷',
+    },
+    qualityTime: {
+      instant: '即時',
+      second1: '~1秒',
+      second2: '~2秒',
+      second3: '~3秒',
+      second5: '~5秒',
+    },
     // バーコード設定タブ
     barcodeSettingsTabs: {
       size: 'サイズ',

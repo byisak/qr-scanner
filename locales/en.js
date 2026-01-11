@@ -808,6 +808,29 @@ export default {
     barcodeCustomText: 'Display Text',
     barcodeCustomTextPlaceholder: 'Leave empty to show barcode value',
     saveQuality: 'Save Quality',
+    // Save quality levels
+    qualityLevels: {
+      fast: 'Fast',
+      normal: 'Normal',
+      high: 'High',
+      best: 'Best',
+      print: 'Print',
+    },
+    qualityDescriptions: {
+      screenCapture: 'Screen Capture',
+      generalUse: 'General Use',
+      generalPrint: 'General Print',
+      highQuality: 'High Quality',
+      bestQuality: 'Best Quality',
+      largePrint: 'Large Print',
+    },
+    qualityTime: {
+      instant: 'Instant',
+      second1: '~1s',
+      second2: '~2s',
+      second3: '~3s',
+      second5: '~5s',
+    },
     // Barcode settings tabs
     barcodeSettingsTabs: {
       size: 'Size',

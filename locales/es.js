@@ -768,6 +768,29 @@ export default {
     barcodeCustomText: 'Texto personalizado',
     barcodeCustomTextPlaceholder: 'Dejar vacío para mostrar el valor',
     saveQuality: 'Calidad de guardado',
+    // Niveles de calidad de guardado
+    qualityLevels: {
+      fast: 'Rápido',
+      normal: 'Normal',
+      high: 'Alto',
+      best: 'Mejor',
+      print: 'Imprimir',
+    },
+    qualityDescriptions: {
+      screenCapture: 'Captura de pantalla',
+      generalUse: 'Uso general',
+      generalPrint: 'Impresión general',
+      highQuality: 'Alta calidad',
+      bestQuality: 'Mejor calidad',
+      largePrint: 'Impresión grande',
+    },
+    qualityTime: {
+      instant: 'Instantáneo',
+      second1: '~1s',
+      second2: '~2s',
+      second3: '~3s',
+      second5: '~5s',
+    },
     // Pestañas de configuración de código de barras
     barcodeSettingsTabs: {
       size: 'Tamaño',

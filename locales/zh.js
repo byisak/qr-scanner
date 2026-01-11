@@ -768,6 +768,29 @@ export default {
     barcodeCustomText: '显示文字',
     barcodeCustomTextPlaceholder: '留空则显示条码值',
     saveQuality: '保存质量',
+    // 保存质量级别
+    qualityLevels: {
+      fast: '快速',
+      normal: '普通',
+      high: '高级',
+      best: '最佳',
+      print: '印刷',
+    },
+    qualityDescriptions: {
+      screenCapture: '屏幕截图',
+      generalUse: '一般用途',
+      generalPrint: '一般印刷',
+      highQuality: '高质量',
+      bestQuality: '最佳质量',
+      largePrint: '大幅印刷',
+    },
+    qualityTime: {
+      instant: '即时',
+      second1: '~1秒',
+      second2: '~2秒',
+      second3: '~3秒',
+      second5: '~5秒',
+    },
     // 条码设置标签
     barcodeSettingsTabs: {
       size: '尺寸',
