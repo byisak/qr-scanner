@@ -1475,14 +1475,11 @@ export default function GeneratorScreen() {
               {t('generator.fields.textLabel')}
             </Text>
             <TextInput
-              style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder={t('generator.fields.textPlaceholder')}
               placeholderTextColor={colors.textTertiary}
               value={data.text}
               onChangeText={(text) => updateFormData('text', text)}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
             />
           </View>
         );
