@@ -14,7 +14,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
-import StyledQRCode from './StyledQRCode';
 
 export default function PresetSaveModal({
   visible,
@@ -82,16 +81,6 @@ export default function PresetSaveModal({
             <TouchableOpacity onPress={handleClose} style={s.closeButton}>
               <Ionicons name="close" size={24} color={colors.textTertiary} />
             </TouchableOpacity>
-          </View>
-
-          {/* QR 미리보기 */}
-          <View style={[s.previewContainer, { backgroundColor: colors.background }]}>
-            <StyledQRCode
-              value="PRESET PREVIEW"
-              size={120}
-              style={qrStyle}
-              logo={logoImage}
-            />
           </View>
 
           {/* 프리셋 이름 입력 */}
@@ -182,13 +171,6 @@ const s = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
-  },
-  previewContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 20,
   },
   inputContainer: {
     marginBottom: 24,

@@ -2931,6 +2931,7 @@ export default function GeneratorScreen() {
                                   size={220}
                                   frameTextColor={frameTextColor}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
+                                  isDark={isDark}
                                 />
                               </View>
                             ) : (
@@ -3500,7 +3501,9 @@ export default function GeneratorScreen() {
         onClose={() => setActiveColorPicker(null)}
         color={activeColorPicker === 'frameTextColor'
           ? (frameTextColor || '#000000')
-          : (activeColorPicker ? (qrStyle[activeColorPicker] || '#000000') : '#000000')
+          : activeColorPicker === 'backgroundColor'
+            ? (qrStyle.backgroundColor || '#ffffff')
+            : (activeColorPicker ? (qrStyle[activeColorPicker] || '#000000') : '#000000')
         }
         onColorChange={(newColor) => {
           if (activeColorPicker === 'frameTextColor') {

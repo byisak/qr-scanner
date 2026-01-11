@@ -43,7 +43,17 @@ const hslToHex = (h, s, l) => {
 };
 
 // 배경색 기반으로 프레임 색상 생성
-const generateFrameColors = (backgroundColor, customTextColor = null) => {
+const generateFrameColors = (backgroundColor, customTextColor = null, isDark = false) => {
+  // 다크모드일 때는 프레임을 흰색으로 표시
+  if (isDark) {
+    return {
+      primary: '#ffffff',
+      secondary: '#cccccc',
+      text: customTextColor || '#ffffff',
+      textOnDark: customTextColor || '#000000'
+    };
+  }
+
   if (!backgroundColor || backgroundColor === '#ffffff' || backgroundColor === '#fff') {
     return {
       primary: '#000000',
@@ -247,6 +257,7 @@ export default function QRFrameRenderer({
   frameTextColor,
   onCapture,
   onLayout,
+  isDark = false,
 }) {
   if (!frame || !frame.id || frame.id === 'none') {
     // 프레임이 없으면 QR 코드만 렌더링
@@ -267,10 +278,10 @@ export default function QRFrameRenderer({
   const frameSvg = FRAME_SVG_DATA[frame.id];
   const qrPosition = FRAME_QR_POSITIONS[frame.id];
 
-  // 배경색 기반으로 프레임 색상 생성 (사용자 지정 텍스트 색상 적용)
+  // 배경색 기반으로 프레임 색상 생성 (사용자 지정 텍스트 색상 적용, 다크모드 지원)
   const frameColors = useMemo(() => {
-    return generateFrameColors(qrStyle?.backgroundColor, frameTextColor);
-  }, [qrStyle?.backgroundColor, frameTextColor]);
+    return generateFrameColors(qrStyle?.backgroundColor, frameTextColor, isDark);
+  }, [qrStyle?.backgroundColor, frameTextColor, isDark]);
 
   // 프레임 SVG 색상 적용
   const coloredFrameSvg = useMemo(() => {
