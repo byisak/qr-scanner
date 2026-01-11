@@ -307,6 +307,8 @@ export default {
     batchScanModeDesc: '여러 QR/바코드를 연속으로 스캔합니다',
     multiCodeMode: '여러 코드 인식 모드',
     multiCodeModeDesc: '여러 코드를 모아서 한번에 결과 확인',
+    lotteryScan: '복권 인식',
+    lotteryScanDesc: '복권 QR코드 스캔 시 당첨 확인',
     resultWindowAutoOpen: '결과창 자동 열림',
     resultWindowAutoOpenDesc: '스캔 시 결과 화면 자동 이동 설정',
     selectBarcodes: '인식할 바코드 선택',
@@ -1447,6 +1449,14 @@ export default {
     showValues: '인식된 코드 값 표시',
     showValuesDesc: '바코드 경계 아래에 인식된 값을 표시합니다',
     infoMessage: '여러 코드 인식 모드가 활성화되면 카메라를 움직여 여러 코드를 스캔한 후, 하단의 결과 보기 버튼을 눌러 한번에 확인할 수 있습니다.',
+  },
+
+  // 복권 인식 설정
+  lotteryScan: {
+    title: '복권 인식',
+    enable: '복권 인식 활성화',
+    enableDesc: '복권 QR코드 스캔 시 당첨 여부를 자동으로 확인합니다',
+    infoMessage: '복권 인식을 활성화하면 로또, 연금복권 등의 QR코드를 스캔할 때 자동으로 당첨 결과를 확인할 수 있습니다.',
   },
 
   // 여러 코드 결과 화면

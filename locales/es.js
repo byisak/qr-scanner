@@ -284,6 +284,8 @@ export default {
     batchScanModeDesc: 'Escanear múltiples códigos QR/barras continuamente',
     multiCodeMode: 'Modo multicódigo',
     multiCodeModeDesc: 'Recopilar múltiples códigos y ver resultados a la vez',
+    lotteryScan: 'Escaneo de lotería',
+    lotteryScanDesc: 'Verificar resultados al escanear QR de lotería',
     resultWindowAutoOpen: 'Abrir ventana de resultado automáticamente',
     resultWindowAutoOpenDesc: 'Navegar automáticamente a la pantalla de resultado al escanear',
     selectBarcodes: 'Seleccionar códigos de barras',
@@ -1409,6 +1411,14 @@ export default {
     showValues: 'Mostrar valores de códigos detectados',
     showValuesDesc: 'Muestra los valores reconocidos debajo de los límites del código',
     infoMessage: 'Cuando el modo multicódigo está habilitado, puedes mover la cámara para escanear múltiples códigos, luego toca el botón Ver Resultados en la parte inferior para verlos todos a la vez.',
+  },
+
+  // Configuración de escaneo de lotería
+  lotteryScan: {
+    title: 'Escaneo de lotería',
+    enable: 'Habilitar escaneo de lotería',
+    enableDesc: 'Verificar automáticamente los resultados al escanear códigos QR de lotería',
+    infoMessage: 'Cuando el escaneo de lotería está habilitado, puedes verificar automáticamente los resultados al escanear códigos QR de lotería.',
   },
 
   // Configuración de escaneo por lotes (compatibilidad)

@@ -305,6 +305,8 @@ export default {
     batchScanModeDesc: 'Scan multiple QR/barcodes continuously',
     multiCodeMode: 'Multi-Code Mode',
     multiCodeModeDesc: 'Collect multiple codes and view results at once',
+    lotteryScan: 'Lottery Scan',
+    lotteryScanDesc: 'Check lottery results when scanning QR code',
     resultWindowAutoOpen: 'Auto-Open Result Window',
     resultWindowAutoOpenDesc: 'Auto-navigate to result screen on scan',
     selectBarcodes: 'Select Barcodes',
@@ -1457,6 +1459,14 @@ export default {
     showValues: 'Show Detected Code Values',
     showValuesDesc: 'Display recognized values below barcode boundaries',
     infoMessage: 'When multi-code mode is enabled, you can move the camera to scan multiple codes, then tap the View Results button at the bottom to see them all at once.',
+  },
+
+  // Lottery scan settings
+  lotteryScan: {
+    title: 'Lottery Scan',
+    enable: 'Enable Lottery Scan',
+    enableDesc: 'Automatically check winning results when scanning lottery QR codes',
+    infoMessage: 'When lottery scan is enabled, you can automatically check winning results when scanning lottery QR codes such as Lotto and pension lottery.',
   },
 
   // Multi-code results screen

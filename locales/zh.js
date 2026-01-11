@@ -284,6 +284,8 @@ export default {
     batchScanModeDesc: '连续扫描多个二维码/条形码',
     multiCodeMode: '多码识别模式',
     multiCodeModeDesc: '收集多个代码后一次性查看结果',
+    lotteryScan: '彩票识别',
+    lotteryScanDesc: '扫描彩票二维码时检查中奖结果',
     resultWindowAutoOpen: '自动打开结果窗口',
     resultWindowAutoOpenDesc: '扫描时自动跳转到结果界面',
     selectBarcodes: '选择要识别的条形码',
@@ -1409,6 +1411,14 @@ export default {
     showValues: '显示识别的代码值',
     showValuesDesc: '在条形码边界下方显示识别的值',
     infoMessage: '启用多码识别模式后，可以移动相机扫描多个代码，然后点击底部的查看结果按钮一次性查看全部结果。',
+  },
+
+  // 彩票识别设置
+  lotteryScan: {
+    title: '彩票识别',
+    enable: '启用彩票识别',
+    enableDesc: '扫描彩票二维码时自动检查中奖结果',
+    infoMessage: '启用彩票识别后，扫描彩票等二维码时可以自动检查中奖结果。',
   },
 
   // 批量扫描设置（旧版兼容）

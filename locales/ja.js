@@ -284,6 +284,8 @@ export default {
     batchScanModeDesc: '複数のQR/バーコードを連続してスキャンします',
     multiCodeMode: '複数コード認識モード',
     multiCodeModeDesc: '複数のコードをまとめて結果を確認',
+    lotteryScan: '宝くじ認識',
+    lotteryScanDesc: '宝くじQRコードスキャン時に当選確認',
     resultWindowAutoOpen: '結果画面の自動表示',
     resultWindowAutoOpenDesc: 'スキャン時に結果画面に自動移動する設定',
     selectBarcodes: '認識するバーコードを選択',
@@ -1409,6 +1411,14 @@ export default {
     showValues: '認識したコード値を表示',
     showValuesDesc: 'バーコード境界の下に認識した値を表示します',
     infoMessage: '複数コード認識モードが有効になると、カメラを動かして複数のコードをスキャンし、下部の結果を見るボタンをタップしてまとめて確認できます。',
+  },
+
+  // 宝くじ認識設定
+  lotteryScan: {
+    title: '宝くじ認識',
+    enable: '宝くじ認識を有効化',
+    enableDesc: '宝くじQRコードスキャン時に当選結果を自動確認します',
+    infoMessage: '宝くじ認識を有効にすると、ロトや年金宝くじなどのQRコードをスキャンする際に自動的に当選結果を確認できます。',
   },
 
   // バッチスキャン設定（レガシー互換）
