@@ -79,6 +79,53 @@
     "plugins": [
       "expo-router",
       [
+        "expo-quick-actions",
+        {
+          "androidItemBackgroundColor": "#1a1a1a",
+          "androidItemIconColor": "#007AFF",
+          "iosActions": [
+            {
+              "id": "scan",
+              "title": "스캔하기",
+              "icon": "symbol:qrcode.viewfinder",
+              "params": { "screen": "scan" }
+            },
+            {
+              "id": "history",
+              "title": "기록보기",
+              "icon": "symbol:clock.arrow.circlepath",
+              "params": { "screen": "history" }
+            },
+            {
+              "id": "generate",
+              "title": "코드생성",
+              "icon": "symbol:qrcode",
+              "params": { "screen": "generate" }
+            }
+          ],
+          "androidActions": [
+            {
+              "id": "scan",
+              "title": "스캔하기",
+              "icon": "qrcode_scanner",
+              "params": { "screen": "scan" }
+            },
+            {
+              "id": "history",
+              "title": "기록보기",
+              "icon": "history",
+              "params": { "screen": "history" }
+            },
+            {
+              "id": "generate",
+              "title": "코드생성",
+              "icon": "qr_code",
+              "params": { "screen": "generate" }
+            }
+          ]
+        }
+      ],
+      [
         "react-native-maps",
         {
           "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"

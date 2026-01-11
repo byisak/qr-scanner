@@ -1,8 +1,9 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import * as QuickActions from 'expo-quick-actions';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider } from '../contexts/AuthContext';
@@ -15,12 +16,36 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FontAssets);
+  const router = useRouter();
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  // 퀵 액션 핸들러
+  useEffect(() => {
+    const subscription = QuickActions.addListener((action) => {
+      if (action?.params?.screen) {
+        switch (action.params.screen) {
+          case 'scan':
+            router.replace('/(tabs)/scan');
+            break;
+          case 'history':
+            router.replace('/(tabs)/history');
+            break;
+          case 'generate':
+            router.replace('/(tabs)/generate');
+            break;
+        }
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [router]);
 
   // Don't render until fonts are loaded
   if (!fontsLoaded && !fontError) {
