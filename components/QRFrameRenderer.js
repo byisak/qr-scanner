@@ -326,7 +326,7 @@ export default function QRFrameRenderer({
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
-      {/* 1. QR 코드 영역 (프레임이 있을 때는 항상 흰색 배경) */}
+      {/* 1. QR 코드 영역 */}
       <View
         style={[
           styles.qrArea,
@@ -335,7 +335,7 @@ export default function QRFrameRenderer({
             top: bgY,
             width: bgAreaWidth,
             height: bgAreaHeight,
-            backgroundColor: '#ffffff',
+            backgroundColor: qrStyle?.backgroundColor || '#ffffff',
           },
         ]}
       >
