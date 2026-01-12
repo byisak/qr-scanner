@@ -19,14 +19,14 @@ import { Colors } from '../constants/Colors';
 // 지원 복권 목록
 const SUPPORTED_LOTTERIES = [
   { country: 'korea', lotteries: 'lotto645' },
-  { country: 'usa', lotteries: 'powerballMega' },
-  { country: 'uk', lotteries: 'ukLottoEuro' },
-  { country: 'canada', lotteries: 'lotto649Max' },
-  { country: 'europe', lotteries: 'euroMillionsJackpot' },
-  { country: 'japan', lotteries: 'takarakuji' },
-  { country: 'china', lotteries: 'welfareLottery' },
-  { country: 'singapore', lotteries: 'toto4d' },
-  { country: 'southAfrica', lotteries: 'lottoPowerball' },
+  // { country: 'usa', lotteries: 'powerballMega' },
+  // { country: 'uk', lotteries: 'ukLottoEuro' },
+  // { country: 'canada', lotteries: 'lotto649Max' },
+  // { country: 'europe', lotteries: 'euroMillionsJackpot' },
+  // { country: 'japan', lotteries: 'takarakuji' },
+  // { country: 'china', lotteries: 'welfareLottery' },
+  // { country: 'singapore', lotteries: 'toto4d' },
+  // { country: 'southAfrica', lotteries: 'lottoPowerball' },
 ];
 
 export default function LotteryScanSettingsScreen() {
