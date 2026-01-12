@@ -155,7 +155,8 @@ export default function StyledQRCode({
               cornersDotOptions: ${cornerDotOptions},
               backgroundOptions: ${backgroundOptions},
               qrOptions: {
-                errorCorrectionLevel: "${errorCorrectionLevel}"
+                errorCorrectionLevel: "${errorCorrectionLevel}",
+                mode: "Byte"
               }
             };
 
