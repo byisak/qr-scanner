@@ -2317,7 +2317,7 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <BlurView intensity={50} tint="light" style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
+          <BlurView intensity={80} tint="light" style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Ionicons name="folder" size={24} color={colors.primary} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
@@ -2483,7 +2483,7 @@ function ScannerScreen() {
       {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
       {lastScannedCode && !resultWindowAutoOpen && (
         <View style={[styles.resultWindowButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
-          <BlurView intensity={50} tint="light" style={styles.resultWindowButtonBlur}>
+          <BlurView intensity={80} tint="light" style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
               <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{t('resultWindowSettings.scannedCode')}</Text>
               <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1}>{lastScannedCode.code}</Text>
@@ -2776,16 +2776,15 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   modalContentBlur: {
-    borderRadius: 20,
+    borderRadius: 16,
     width: '100%',
     maxWidth: 400,
     maxHeight: '70%',
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 12,
+    shadowRadius: 8,
     elevation: 5,
   },
   modalHeader: {
@@ -2944,28 +2943,28 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   resultWindowButtonBlur: {
-    padding: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
   scannedCodeInfo: {
     marginBottom: 12,
   },
   scannedCodeLabel: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#666',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 4,
   },
   scannedCodeValue: {
-    color: '#fff',
+    color: '#000',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   resultWindowButtonRow: {
     flexDirection: 'row',

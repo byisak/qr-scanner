@@ -371,6 +371,10 @@ export default {
     privateSessionDesc: '私密会话，需要密码',
     sessionPassword: '会话密码',
     passwordHint: '设置密码后加入时需要输入',
+    sessionName: '会话名称',
+    sessionNamePlaceholder: '输入会话名称（可选）',
+    sessionNameHint: '留空将自动生成',
+    defaultSessionName: '会话 {{id}}',
     createButton: '创建',
     // 会话状态徽章
     public: '公开',
@@ -385,7 +389,12 @@ export default {
     passwordDescShort: '访问时需要密码',
     securitySettingsSaved: '安全设置已保存',
     securitySettingsSaveFailed: '保存安全设置失败',
-    loginRequiredForSettings: '请登录以更改安全设置。',
+    loginRequiredForSettings: '请登录以更改设置。',
+    // 会话设置模态框
+    editSession: '会话设置',
+    editSessionDesc: '管理会话名称和安全设置',
+    sessionSettingsSaved: '会话设置已保存',
+    sessionSettingsSaveFailed: '保存会话设置失败',
     // 订阅计划
     subscriptionPlans: '订阅计划',
     subscriptionPlansDesc: '选择适合您需求的计划',

@@ -118,6 +118,7 @@ export default function StyledQRCode({
       <!DOCTYPE html>
       <html>
       <head>
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <script>${QR_CODE_STYLING_LIB}</script>
         <style>
@@ -143,19 +144,34 @@ export default function StyledQRCode({
       <body>
         <div id="qr-container"></div>
         <script>
+          // UTF-8 인코딩 함수: 문자열을 UTF-8 바이트로 변환 후 Latin-1 문자열로 반환
+          // QR 코드 스캐너가 UTF-8로 디코딩하여 한글이 제대로 표시됨
+          function toUTF8ByteString(str) {
+            const utf8 = new TextEncoder().encode(str);
+            let result = '';
+            for (let i = 0; i < utf8.length; i++) {
+              result += String.fromCharCode(utf8[i]);
+            }
+            return result;
+          }
+
           try {
+            const rawData = ${JSON.stringify(value)};
+            const encodedData = toUTF8ByteString(rawData);
+
             const options = {
               width: ${actualWidth},
               height: ${actualHeight},
               type: "canvas",
-              data: ${JSON.stringify(value)},
+              data: encodedData,
               margin: ${margin},
               dotsOptions: ${dotOptions},
               cornersSquareOptions: ${cornerSquareOptions},
               cornersDotOptions: ${cornerDotOptions},
               backgroundOptions: ${backgroundOptions},
               qrOptions: {
-                errorCorrectionLevel: "${errorCorrectionLevel}"
+                errorCorrectionLevel: "${errorCorrectionLevel}",
+                mode: "Byte"
               }
             };
 

@@ -392,6 +392,10 @@ export default {
     privateSessionDesc: 'Private session. Password required',
     sessionPassword: 'Session Password',
     passwordHint: 'Password required to join if set',
+    sessionName: 'Session Name',
+    sessionNamePlaceholder: 'Enter session name (optional)',
+    sessionNameHint: 'Auto-generated if left empty',
+    defaultSessionName: 'Session {{id}}',
     createButton: 'Create',
     // Session status badges
     public: 'Public',
@@ -406,7 +410,12 @@ export default {
     passwordDescShort: 'Password required for access',
     securitySettingsSaved: 'Security settings saved',
     securitySettingsSaveFailed: 'Failed to save security settings',
-    loginRequiredForSettings: 'Please log in to change security settings.',
+    loginRequiredForSettings: 'Please log in to change settings.',
+    // Session settings modal
+    editSession: 'Session Settings',
+    editSessionDesc: 'Manage session name and security settings',
+    sessionSettingsSaved: 'Session settings saved',
+    sessionSettingsSaveFailed: 'Failed to save session settings',
     // Subscription Plans
     subscriptionPlans: 'Subscription Plans',
     subscriptionPlansDesc: 'Choose the plan that fits your needs',

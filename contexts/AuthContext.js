@@ -1,6 +1,7 @@
 // contexts/AuthContext.js - 인증 상태 관리 Context
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import config from '../config/config';
 
 const AuthContext = createContext();
@@ -110,6 +111,9 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
+      // 실시간 서버 전송 비활성화
+      await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
+
       await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
       await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
@@ -146,7 +150,7 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorMsg = data.error?.message || data.message || 'Registration failed';
-        console.error('[Auth] 회원가입 실패:', errorMsg);
+        console.warn('[Auth] 회원가입 실패:', errorMsg);
         return {
           success: false,
           error: errorMsg
@@ -159,10 +163,10 @@ export const AuthProvider = ({ children }) => {
         return { success: true, user: data.user };
       }
 
-      console.error('[Auth] 서버 응답 형식 오류');
+      console.warn('[Auth] 서버 응답 형식 오류');
       return { success: false, error: 'Invalid response from server' };
     } catch (error) {
-      console.error('[Auth] 회원가입 네트워크 오류:', error.message);
+      console.warn('[Auth] 회원가입 네트워크 오류:', error.message);
       console.error('[Auth] 오류 상세:', error);
       return { success: false, error: error.message };
     }
@@ -213,7 +217,7 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorMsg = data.error?.message || data.message || 'Login failed';
-        console.error('[Auth] 로그인 실패:', errorMsg);
+        console.log('[Auth] 로그인 실패:', errorMsg);
         return {
           success: false,
           error: errorMsg
@@ -226,10 +230,10 @@ export const AuthProvider = ({ children }) => {
         return { success: true, user: data.user };
       }
 
-      console.error('[Auth] 서버 응답 형식 오류');
+      console.warn('[Auth] 서버 응답 형식 오류');
       return { success: false, error: 'Invalid response from server' };
     } catch (error) {
-      console.error('[Auth] 로그인 네트워크 오류:', error.message);
+      console.warn('[Auth] 로그인 네트워크 오류:', error.message);
       console.error('[Auth] 오류 상세:', error);
       return { success: false, error: error.message };
     }

@@ -371,6 +371,10 @@ export default {
     privateSessionDesc: 'Sesión privada. Se requiere contraseña',
     sessionPassword: 'Contraseña de Sesión',
     passwordHint: 'Se requiere contraseña para unirse si está configurada',
+    sessionName: 'Nombre de Sesión',
+    sessionNamePlaceholder: 'Ingrese nombre de sesión (opcional)',
+    sessionNameHint: 'Se genera automáticamente si se deja vacío',
+    defaultSessionName: 'Sesión {{id}}',
     createButton: 'Crear',
     // Insignias de estado de sesión
     public: 'Público',
@@ -385,7 +389,12 @@ export default {
     passwordDescShort: 'Se requiere contraseña para acceder',
     securitySettingsSaved: 'Configuración de seguridad guardada',
     securitySettingsSaveFailed: 'Error al guardar la configuración de seguridad',
-    loginRequiredForSettings: 'Inicia sesión para cambiar la configuración de seguridad.',
+    loginRequiredForSettings: 'Inicia sesión para cambiar la configuración.',
+    // Modal de configuración de sesión
+    editSession: 'Configuración de Sesión',
+    editSessionDesc: 'Administrar nombre y configuración de seguridad de la sesión',
+    sessionSettingsSaved: 'Configuración de sesión guardada',
+    sessionSettingsSaveFailed: 'Error al guardar la configuración de sesión',
     // Planes de suscripción
     subscriptionPlans: 'Planes de suscripción',
     subscriptionPlansDesc: 'Elige el plan que mejor se adapte a tus necesidades',
