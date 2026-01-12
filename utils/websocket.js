@@ -87,6 +87,7 @@ class WebSocketClient {
     const payload = {
       sessionId,
       userId: this.userId,
+      sessionName: settings.sessionName || null,
       settings: {
         password: settings.password || null,
         isPublic: settings.isPublic !== undefined ? settings.isPublic : true,
@@ -126,7 +127,7 @@ class WebSocketClient {
   }
 
   // 기존 세션에 참가 (user_id 업데이트용)
-  joinSession(sessionId) {
+  joinSession(sessionId, sessionName = null) {
     if (!this.socket || !this.isConnected) {
       console.error('Socket not connected');
       return Promise.reject(new Error('Socket not connected'));
@@ -135,6 +136,7 @@ class WebSocketClient {
     const payload = {
       sessionId,
       userId: this.userId,
+      sessionName,
     };
 
     this.socket.emit('join-session', payload);

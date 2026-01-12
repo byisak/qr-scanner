@@ -103,6 +103,7 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 생성 모달 상태
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [newSessionName, setNewSessionName] = useState('');
   const [newSessionPassword, setNewSessionPassword] = useState('');
   const [newSessionIsPublic, setNewSessionIsPublic] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -523,6 +524,7 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 생성 모달 열기
   const handleOpenCreateModal = () => {
+    setNewSessionName('');
     setNewSessionPassword('');
     setNewSessionIsPublic(true);
     setCreateModalVisible(true);
@@ -536,8 +538,12 @@ export default function RealtimeSyncSettingsScreen() {
       const newSessionId = await generateSessionId();
       const token = await getToken();
 
+      // 세션 이름 (입력하지 않으면 세션 ID 앞 4자리로 기본 이름 생성)
+      const sessionName = newSessionName.trim() || `세션 ${newSessionId.substring(0, 4)}`;
+
       // 세션 설정
       const sessionSettings = {
+        sessionName: sessionName,
         password: newSessionPassword || null,
         isPublic: newSessionIsPublic,
       };
@@ -548,6 +554,7 @@ export default function RealtimeSyncSettingsScreen() {
         createdAt: Date.now(),
         status: 'ACTIVE',
         deletedAt: null,
+        name: sessionName,
         isPublic: newSessionIsPublic,
         hasPassword: !!newSessionPassword,
         password: newSessionPassword || null,  // 비밀번호 원본 저장
@@ -595,7 +602,7 @@ export default function RealtimeSyncSettingsScreen() {
 
         const newGroup = {
           id: newSessionId,
-          name: `세션 ${newSessionId.substring(0, 4)}`,
+          name: sessionName,
           createdAt: Date.now(),
           isCloudSync: true,
         };
@@ -612,6 +619,7 @@ export default function RealtimeSyncSettingsScreen() {
       }
 
       setCreateModalVisible(false);
+      setNewSessionName('');
       setNewSessionPassword('');
       setNewSessionIsPublic(true);
       setShowNewPassword(false);
@@ -1520,8 +1528,29 @@ export default function RealtimeSyncSettingsScreen() {
                 </View>
 
                 <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-                  {t('settings.createSessionDescription') || '세션의 공개 여부와 비밀번호를 설정하세요.'}
+                  {t('settings.createSessionDescription') || '세션의 이름, 공개 여부와 비밀번호를 설정하세요.'}
                 </Text>
+
+                {/* 세션 이름 입력 */}
+                <View style={styles.sessionNameSection}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>
+                    {t('settings.sessionName') || '세션 이름'}
+                  </Text>
+                  <View style={[styles.sessionNameInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                    <Ionicons name="text-outline" size={18} color={colors.textTertiary} style={{ marginLeft: 12 }} />
+                    <TextInput
+                      style={[styles.sessionNameInputField, { color: colors.text }]}
+                      value={newSessionName}
+                      onChangeText={setNewSessionName}
+                      placeholder={t('settings.sessionNamePlaceholder') || '세션 이름 입력 (선택사항)'}
+                      placeholderTextColor={colors.textTertiary}
+                      maxLength={50}
+                    />
+                  </View>
+                  <Text style={[styles.inputHint, { color: colors.textTertiary }]}>
+                    {t('settings.sessionNameHint') || '비워두면 자동으로 이름이 생성됩니다.'}
+                  </Text>
+                </View>
 
                 {/* 공개여부 설정 */}
                 <View style={[styles.settingRow, { borderBottomColor: colors.borderLight }]}>
@@ -1586,6 +1615,7 @@ export default function RealtimeSyncSettingsScreen() {
                     style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.inputBackground }]}
                     onPress={() => {
                       setCreateModalVisible(false);
+                      setNewSessionName('');
                       setNewSessionPassword('');
                       setNewSessionIsPublic(true);
                       setShowNewPassword(false);
@@ -1947,6 +1977,20 @@ const styles = StyleSheet.create({
   },
   passwordSection: {
     marginBottom: 20,
+  },
+  sessionNameSection: {
+    marginBottom: 16,
+  },
+  sessionNameInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  sessionNameInputField: {
+    flex: 1,
+    padding: 14,
+    fontSize: 16,
   },
   inputLabel: {
     fontSize: 14,
