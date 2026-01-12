@@ -1060,7 +1060,6 @@ export default function QRStylePicker({
               qrValue={previewValue}
               qrStyle={tempStyle}
               size={180}
-              isDark={isDark}
             />
           ) : (
             // 프레임이 없는 경우 - 기존 방식
