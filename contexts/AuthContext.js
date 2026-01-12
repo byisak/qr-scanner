@@ -1,6 +1,7 @@
 // contexts/AuthContext.js - 인증 상태 관리 Context
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import config from '../config/config';
 
 const AuthContext = createContext();
@@ -109,6 +110,9 @@ export const AuthProvider = ({ children }) => {
           console.warn('Server logout failed:', e);
         }
       }
+
+      // 실시간 서버 전송 비활성화
+      await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
 
       await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
       await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
