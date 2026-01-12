@@ -449,8 +449,41 @@ export default function QRStylePicker({
     }));
   };
 
+  // 기본 스타일 (초기화용)
+  const DEFAULT_STYLE = QR_STYLE_PRESETS[0].style;
+
+  const handleResetToDefault = () => {
+    setTempStyle(DEFAULT_STYLE);
+  };
+
   const renderPresets = () => (
     <View style={styles.presetGrid}>
+      {/* 기본값 초기화 버튼 */}
+      <TouchableOpacity
+        style={[
+          styles.presetItem,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.border,
+            borderWidth: 1,
+          },
+        ]}
+        onPress={handleResetToDefault}
+        activeOpacity={0.7}
+      >
+        <View
+          style={[
+            styles.presetPreview,
+            { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
+          ]}
+        >
+          <Ionicons name="refresh-outline" size={32} color={colors.textTertiary} />
+        </View>
+        <Text style={[styles.presetName, { color: colors.textSecondary }]}>
+          {language === 'ko' ? '기본값' : 'Default'}
+        </Text>
+      </TouchableOpacity>
+
       {QR_STYLE_PRESETS.map((preset, index) => {
         const isStyleLocked = isQrStyleLocked(index);
         return (
