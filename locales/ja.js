@@ -371,6 +371,9 @@ export default {
     privateSessionDesc: '非公開セッションです。パスワードが必要です',
     sessionPassword: 'セッションパスワード',
     passwordHint: 'パスワードを設定すると参加時に必要になります',
+    sessionName: 'セッション名',
+    sessionNamePlaceholder: 'セッション名を入力（任意）',
+    sessionNameHint: '空欄の場合は自動生成されます',
     createButton: '作成',
     // セッションステータスバッジ
     public: '公開',
@@ -385,7 +388,12 @@ export default {
     passwordDescShort: 'アクセス時にパスワードが必要',
     securitySettingsSaved: 'セキュリティ設定が保存されました',
     securitySettingsSaveFailed: 'セキュリティ設定の保存に失敗しました',
-    loginRequiredForSettings: 'セキュリティ設定を変更するにはログインが必要です。',
+    loginRequiredForSettings: '設定を変更するにはログインが必要です。',
+    // セッション設定モーダル
+    editSession: 'セッション設定',
+    editSessionDesc: 'セッション名とセキュリティ設定を管理します',
+    sessionSettingsSaved: 'セッション設定が保存されました',
+    sessionSettingsSaveFailed: 'セッション設定の保存に失敗しました',
     // サブスクリプションプラン
     subscriptionPlans: 'サブスクリプションプラン',
     subscriptionPlansDesc: 'ニーズに合ったプランをお選びください',

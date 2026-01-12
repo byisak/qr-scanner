@@ -394,6 +394,9 @@ export default {
     privateSessionDesc: '비공개 세션입니다. 비밀번호가 필요합니다',
     sessionPassword: '세션 비밀번호',
     passwordHint: '비밀번호를 입력하면 참여 시 비밀번호가 필요합니다',
+    sessionName: '세션 이름',
+    sessionNamePlaceholder: '세션 이름 입력 (선택사항)',
+    sessionNameHint: '비워두면 자동으로 이름이 생성됩니다',
     createButton: '생성',
     // 세션 상태 배지
     public: '공개',
@@ -408,7 +411,12 @@ export default {
     passwordDescShort: '접근 시 비밀번호 필요',
     securitySettingsSaved: '보안 설정이 저장되었습니다',
     securitySettingsSaveFailed: '보안 설정 저장에 실패했습니다',
-    loginRequiredForSettings: '보안 설정을 변경하려면 로그인이 필요합니다.',
+    loginRequiredForSettings: '설정을 변경하려면 로그인이 필요합니다.',
+    // 세션 설정 모달
+    editSession: '세션 설정',
+    editSessionDesc: '세션의 이름과 보안 설정을 관리합니다',
+    sessionSettingsSaved: '세션 설정이 저장되었습니다',
+    sessionSettingsSaveFailed: '세션 설정 저장에 실패했습니다',
     // 구독 플랜
     subscriptionPlans: '구독 플랜',
     subscriptionPlansDesc: '필요에 맞는 플랜을 선택하세요',
