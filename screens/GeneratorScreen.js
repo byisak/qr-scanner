@@ -2477,10 +2477,32 @@ export default function GeneratorScreen() {
                     </Text>
                   </TouchableOpacity>
 
-                  {/* 저장된 프리셋 목록 */}
-                  {customPresets.length > 0 ? (
-                    <View style={s.qrStyleGrid}>
-                      {customPresets.map((preset) => (
+                  {/* 기본값 + 저장된 프리셋 목록 */}
+                  <View style={s.qrStyleGrid}>
+                    {/* 기본값 초기화 버튼 */}
+                    <TouchableOpacity
+                      style={[
+                        s.qrStyleItem,
+                        {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: colors.border,
+                          borderWidth: 1,
+                          borderStyle: 'dashed',
+                        },
+                      ]}
+                      onPress={() => setQrStyle(QR_STYLE_PRESETS[0].style)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.qrStylePreview, { backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
+                        <Ionicons name="refresh-outline" size={32} color={colors.textTertiary} />
+                      </View>
+                      <Text style={[s.qrStyleName, { color: colors.textSecondary }]}>
+                        {language === 'ko' ? '기본값' : 'Default'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* 커스텀 프리셋 */}
+                    {customPresets.map((preset) => (
                         <TouchableOpacity
                           key={preset.id}
                           style={[
@@ -2517,19 +2539,8 @@ export default function GeneratorScreen() {
                             {preset.name}
                           </Text>
                         </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : (
-                    <View style={s.emptyPresetContainer}>
-                      <Ionicons name="layers-outline" size={48} color={colors.textTertiary} />
-                      <Text style={[s.emptyPresetText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                        {t('generator.noSavedPresets') || '저장된 프리셋이 없습니다'}
-                      </Text>
-                      <Text style={[s.emptyPresetSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                        {t('generator.savePresetHint') || '도트, 코너, 배경 등을 설정한 후\n프리셋으로 저장하세요'}
-                      </Text>
-                    </View>
-                  )}
+                    ))}
+                  </View>
 
                   {customPresets.length > 0 && (
                     <Text style={[s.presetHintText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
@@ -2931,7 +2942,6 @@ export default function GeneratorScreen() {
                                   size={220}
                                   frameTextColor={frameTextColor}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
-                                  isDark={isDark}
                                 />
                               </View>
                             ) : (
