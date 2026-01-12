@@ -68,17 +68,17 @@ const generateFrameColors = (backgroundColor, customTextColor = null, isDark = f
   // 배경이 밝은색인지 어두운색인지 판단
   const isLight = hsl.l > 50;
 
-  // 프레임 주요 색상: 배경과 대비되는 어두운/밝은 색상
+  // 프레임 주요 색상: 배경과 대비되는 어두운/밝은 색상 (원본 채도 유지)
   const primaryL = isLight ? Math.max(10, hsl.l - 60) : Math.min(90, hsl.l + 60);
-  const primary = hslToHex(hsl.h, Math.min(hsl.s, 70), primaryL);
+  const primary = hslToHex(hsl.h, hsl.s, primaryL);
 
-  // 보조 색상: 주요 색상보다 약간 밝거나 어두운
+  // 보조 색상: 주요 색상보다 약간 밝거나 어두운 (원본 채도 유지)
   const secondaryL = isLight ? Math.max(25, hsl.l - 40) : Math.min(75, hsl.l + 40);
-  const secondary = hslToHex(hsl.h, Math.min(hsl.s, 50), secondaryL);
+  const secondary = hslToHex(hsl.h, hsl.s, secondaryL);
 
-  // 텍스트 색상 - 사용자 지정 색상이 있으면 사용
-  const text = customTextColor || (isLight ? hslToHex(hsl.h, Math.min(hsl.s, 60), 15) : hslToHex(hsl.h, Math.min(hsl.s, 60), 90));
-  const textOnDark = customTextColor || (isLight ? '#ffffff' : hslToHex(hsl.h, Math.min(hsl.s, 30), 95));
+  // 텍스트 색상 - 사용자 지정 색상이 있으면 사용 (원본 채도 유지)
+  const text = customTextColor || (isLight ? hslToHex(hsl.h, hsl.s, 15) : hslToHex(hsl.h, hsl.s, 90));
+  const textOnDark = customTextColor || (isLight ? '#ffffff' : hslToHex(hsl.h, hsl.s, 95));
 
   return { primary, secondary, text, textOnDark };
 };
