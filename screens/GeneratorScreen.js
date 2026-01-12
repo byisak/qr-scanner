@@ -361,9 +361,20 @@ export default function GeneratorScreen() {
     }
   }, [saveProgress.visible]);
 
-  // QR 스타일 관련 상태
+  // QR 스타일 관련 상태 (다크 모드일 때 흰색 기본값)
   const [useStyledQR, setUseStyledQR] = useState(true);
-  const [qrStyle, setQrStyle] = useState(QR_STYLE_PRESETS[0].style);
+  const [qrStyle, setQrStyle] = useState(() => {
+    if (isDark) {
+      return {
+        ...QR_STYLE_PRESETS[0].style,
+        dotColor: '#FFFFFF',
+        cornerSquareColor: '#FFFFFF',
+        cornerDotColor: '#FFFFFF',
+        backgroundColor: '#000000',
+      };
+    }
+    return QR_STYLE_PRESETS[0].style;
+  });
   const [capturedQRBase64, setCapturedQRBase64] = useState(null);
   const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
   const [logoImage, setLogoImage] = useState(null); // 로고 이미지 base64
@@ -2490,7 +2501,13 @@ export default function GeneratorScreen() {
                           borderStyle: 'dashed',
                         },
                       ]}
-                      onPress={() => setQrStyle(QR_STYLE_PRESETS[0].style)}
+                      onPress={() => setQrStyle(isDark ? {
+                        ...QR_STYLE_PRESETS[0].style,
+                        dotColor: '#FFFFFF',
+                        cornerSquareColor: '#FFFFFF',
+                        cornerDotColor: '#FFFFFF',
+                        backgroundColor: '#000000',
+                      } : QR_STYLE_PRESETS[0].style)}
                       activeOpacity={0.7}
                     >
                       <View style={[s.qrStylePreview, { backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
@@ -2941,6 +2958,7 @@ export default function GeneratorScreen() {
                                   qrStyle={qrStyle}
                                   size={220}
                                   frameTextColor={frameTextColor}
+                                  isDark={isDark}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
                                 />
                               </View>
@@ -3501,6 +3519,7 @@ export default function GeneratorScreen() {
             qrStyle={qrStyle}
             size={QR_RES_LEVELS[qrResLevel].size}
             frameTextColor={frameTextColor}
+            isDark={isDark}
           />
         </View>
       )}
