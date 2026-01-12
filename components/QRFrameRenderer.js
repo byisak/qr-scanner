@@ -43,18 +43,10 @@ const hslToHex = (h, s, l) => {
 };
 
 // 배경색 기반으로 프레임 색상 생성
+// 배경색 변경 시 프레임 색상도 같이 변경됨
 const generateFrameColors = (backgroundColor, customTextColor = null, isDark = false) => {
-  // 다크모드일 때는 프레임을 흰색으로 표시
-  if (isDark) {
-    return {
-      primary: '#ffffff',
-      secondary: '#cccccc',
-      text: customTextColor || '#ffffff',
-      textOnDark: customTextColor || '#000000'
-    };
-  }
-
-  if (!backgroundColor || backgroundColor === '#ffffff' || backgroundColor === '#fff') {
+  // 배경색이 없거나 흰색인 경우 기본 검정 프레임
+  if (!backgroundColor || backgroundColor === '#ffffff' || backgroundColor === '#fff' || backgroundColor === '#FFFFFF') {
     return {
       primary: '#000000',
       secondary: '#595959',
@@ -68,17 +60,16 @@ const generateFrameColors = (backgroundColor, customTextColor = null, isDark = f
   // 배경이 밝은색인지 어두운색인지 판단
   const isLight = hsl.l > 50;
 
-  // 프레임 주요 색상: 배경과 대비되는 어두운/밝은 색상 (원본 채도 유지)
-  const primaryL = isLight ? Math.max(10, hsl.l - 60) : Math.min(90, hsl.l + 60);
-  const primary = hslToHex(hsl.h, hsl.s, primaryL);
+  // 프레임 주요 색상: 배경색을 그대로 사용
+  const primary = backgroundColor;
 
-  // 보조 색상: 주요 색상보다 약간 밝거나 어두운 (원본 채도 유지)
-  const secondaryL = isLight ? Math.max(25, hsl.l - 40) : Math.min(75, hsl.l + 40);
+  // 보조 색상: 배경색보다 약간 어둡거나 밝게
+  const secondaryL = isLight ? Math.max(10, hsl.l - 20) : Math.min(90, hsl.l + 20);
   const secondary = hslToHex(hsl.h, hsl.s, secondaryL);
 
-  // 텍스트 색상 - 사용자 지정 색상이 있으면 사용 (원본 채도 유지)
-  const text = customTextColor || (isLight ? hslToHex(hsl.h, hsl.s, 15) : hslToHex(hsl.h, hsl.s, 90));
-  const textOnDark = customTextColor || (isLight ? '#ffffff' : hslToHex(hsl.h, hsl.s, 95));
+  // 텍스트 색상 - 사용자 지정 색상이 있으면 사용, 없으면 대비되는 색상
+  const text = customTextColor || (isLight ? '#000000' : '#ffffff');
+  const textOnDark = customTextColor || (isLight ? '#ffffff' : '#000000');
 
   return { primary, secondary, text, textOnDark };
 };
@@ -326,7 +317,7 @@ export default function QRFrameRenderer({
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
-      {/* 1. QR 코드 영역 */}
+      {/* 1. QR 코드 영역 - 프레임이 있는 경우 배경은 투명 */}
       <View
         style={[
           styles.qrArea,
@@ -335,7 +326,7 @@ export default function QRFrameRenderer({
             top: bgY,
             width: bgAreaWidth,
             height: bgAreaHeight,
-            backgroundColor: qrStyle?.backgroundColor || '#ffffff',
+            backgroundColor: 'transparent',
           },
         ]}
       >
