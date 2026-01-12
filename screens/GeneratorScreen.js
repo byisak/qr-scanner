@@ -1124,15 +1124,9 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+        if (selectedFrame) {
+          // 프레임: 오프스크린 뷰에서 캡처 (isDark=false로 렌더링됨)
           uri = await captureRef(highResQrRef, {
-            format: 'png',
-            quality: 1,
-          });
-        } else if (selectedFrame) {
-          // 프레임만 (빠른 저장)
-          uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
@@ -1253,15 +1247,9 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+        if (selectedFrame) {
+          // 프레임: 오프스크린 뷰에서 캡처 (isDark=false로 렌더링됨)
           uri = await captureRef(highResQrRef, {
-            format: 'png',
-            quality: 1,
-          });
-        } else if (selectedFrame) {
-          // 프레임만 (빠른 저장)
-          uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
@@ -3506,8 +3494,8 @@ export default function GeneratorScreen() {
         </View>
       </Modal>
 
-      {/* 오프스크린 고해상도 캡처용 뷰 */}
-      {selectedFrame && hasData && qrResLevel > 0 && (
+      {/* 오프스크린 저장용 뷰 (프레임이 있을 때 항상 렌더링, isDark=false로 저장) */}
+      {selectedFrame && hasData && (
         <View
           ref={highResQrRef}
           collapsable={false}
@@ -3517,9 +3505,9 @@ export default function GeneratorScreen() {
             frame={selectedFrame}
             qrValue={qrData}
             qrStyle={qrStyle}
-            size={QR_RES_LEVELS[qrResLevel].size}
+            size={qrResLevel > 0 ? QR_RES_LEVELS[qrResLevel].size : 280}
             frameTextColor={frameTextColor}
-            isDark={isDark}
+            isDark={false}
           />
         </View>
       )}
