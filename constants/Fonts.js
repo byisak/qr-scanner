@@ -1,34 +1,35 @@
 // constants/Fonts.js - Font configuration for multi-language support
+// CJK languages use system fonts to reduce app size (73MB → 1.3MB)
 
 // Font families by language
 export const FontFamilies = {
-  // Korean - Pretendard
+  // Korean - System font (Apple SD Gothic Neo on iOS, Noto Sans KR on Android)
   ko: {
-    regular: 'Pretendard-Regular',
-    medium: 'Pretendard-Medium',
-    semiBold: 'Pretendard-SemiBold',
-    bold: 'Pretendard-Bold',
+    regular: 'System',
+    medium: 'System',
+    semiBold: 'System',
+    bold: 'System',
   },
-  // English - Inter
+  // English - Inter (custom font for branding)
   en: {
     regular: 'Inter-Regular',
     medium: 'Inter-Medium',
     semiBold: 'Inter-SemiBold',
     bold: 'Inter-Bold',
   },
-  // Japanese - Noto Sans JP
+  // Japanese - System font (Hiragino Sans on iOS, Noto Sans JP on Android)
   ja: {
-    regular: 'NotoSansJP-Regular',
-    medium: 'NotoSansJP-Medium',
-    semiBold: 'NotoSansJP-SemiBold',
-    bold: 'NotoSansJP-Bold',
+    regular: 'System',
+    medium: 'System',
+    semiBold: 'System',
+    bold: 'System',
   },
-  // Chinese - Noto Sans SC
+  // Chinese - System font (PingFang SC on iOS, Noto Sans SC on Android)
   zh: {
-    regular: 'NotoSansSC-Regular',
-    medium: 'NotoSansSC-Medium',
-    semiBold: 'NotoSansSC-SemiBold',
-    bold: 'NotoSansSC-Bold',
+    regular: 'System',
+    medium: 'System',
+    semiBold: 'System',
+    bold: 'System',
   },
   // Spanish - Inter (same as English, Latin alphabet)
   es: {
@@ -40,27 +41,13 @@ export const FontFamilies = {
 };
 
 // Font assets map for expo-font loading
+// Only Inter fonts are loaded - CJK languages use system fonts
 export const FontAssets = {
-  // Pretendard (Korean)
-  'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
-  'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
-  'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
-  'Pretendard-Bold': require('../assets/fonts/Pretendard-Bold.otf'),
   // Inter (English, Spanish)
   'Inter-Regular': require('../assets/fonts/Inter_400Regular.ttf'),
   'Inter-Medium': require('../assets/fonts/Inter_500Medium.ttf'),
   'Inter-SemiBold': require('../assets/fonts/Inter_600SemiBold.ttf'),
   'Inter-Bold': require('../assets/fonts/Inter_700Bold.ttf'),
-  // Noto Sans JP (Japanese)
-  'NotoSansJP-Regular': require('../assets/fonts/NotoSansJP_400Regular.ttf'),
-  'NotoSansJP-Medium': require('../assets/fonts/NotoSansJP_500Medium.ttf'),
-  'NotoSansJP-SemiBold': require('../assets/fonts/NotoSansJP_600SemiBold.ttf'),
-  'NotoSansJP-Bold': require('../assets/fonts/NotoSansJP_700Bold.ttf'),
-  // Noto Sans SC (Chinese)
-  'NotoSansSC-Regular': require('../assets/fonts/NotoSansSC_400Regular.ttf'),
-  'NotoSansSC-Medium': require('../assets/fonts/NotoSansSC_500Medium.ttf'),
-  'NotoSansSC-SemiBold': require('../assets/fonts/NotoSansSC_600SemiBold.ttf'),
-  'NotoSansSC-Bold': require('../assets/fonts/NotoSansSC_700Bold.ttf'),
 };
 
 // Default font family (fallback)

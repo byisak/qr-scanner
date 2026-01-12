@@ -284,6 +284,8 @@ export default {
     batchScanModeDesc: 'Escanear múltiples códigos QR/barras continuamente',
     multiCodeMode: 'Modo multicódigo',
     multiCodeModeDesc: 'Recopilar múltiples códigos y ver resultados a la vez',
+    lotteryScan: 'Escaneo de lotería',
+    lotteryScanDesc: 'Verificar resultados al escanear QR de lotería',
     resultWindowAutoOpen: 'Abrir ventana de resultado automáticamente',
     resultWindowAutoOpenDesc: 'Navegar automáticamente a la pantalla de resultado al escanear',
     selectBarcodes: 'Seleccionar códigos de barras',
@@ -764,6 +766,43 @@ export default {
     barcodeHeight: 'Alto',
     barcodeFontSize: 'Tamaño de fuente',
     barcodeShowText: 'Mostrar texto',
+    barcodeRotate: 'Rotar',
+    barcodeCustomText: 'Texto personalizado',
+    barcodeCustomTextPlaceholder: 'Dejar vacío para mostrar el valor',
+    saveQuality: 'Calidad de guardado',
+    // Niveles de calidad de guardado
+    qualityLevels: {
+      fast: 'Rápido',
+      normal: 'Normal',
+      high: 'Alto',
+      best: 'Mejor',
+      print: 'Imprimir',
+    },
+    qualityDescriptions: {
+      screenCapture: 'Captura de pantalla',
+      generalUse: 'Uso general',
+      generalPrint: 'Impresión general',
+      highQuality: 'Alta calidad',
+      bestQuality: 'Mejor calidad',
+      largePrint: 'Impresión grande',
+    },
+    qualityTime: {
+      instant: 'Instantáneo',
+      second1: '~1s',
+      second2: '~2s',
+      second3: '~3s',
+      second5: '~5s',
+    },
+    // Pestañas de configuración de código de barras
+    barcodeSettingsTabs: {
+      size: 'Tamaño',
+      display: 'Mostrar',
+      save: 'Guardar',
+    },
+    // Progreso de guardado
+    savingBarcode: 'Creando código de barras...',
+    savingQRCode: 'Creando código QR...',
+    pleaseWait: 'Por favor espere',
     // Modal de tipo de código de barras
     addBarcode: 'Más',
     selectBarcodeType: 'Seleccionar tipo',
@@ -1025,6 +1064,8 @@ export default {
     saveErrorMessage: 'Error al guardar el código QR.',
     clipboardPasted: 'Contenido del portapapeles pegado',
     clipboardEmpty: 'El portapapeles está vacío',
+    selectLocation: 'Seleccionar ubicación',
+    selectFromMap: 'Seleccionar del mapa',
     // Estilo QR
     qrStyle: {
       title: 'Estilo QR',
@@ -1043,6 +1084,9 @@ export default {
       cornerDotType: 'Tipo de punto de esquina',
       cornerDotColor: 'Color del punto de esquina',
       backgroundColor: 'Color de fondo',
+      textColor: 'Texto',
+      frameTextColor: 'Color del texto del marco',
+      frameTextColorDesc: 'Establecer el color del texto "Scan me!" en el marco',
       errorCorrection: 'Nivel de corrección de errores',
       errorCorrectionHint: 'Mayor nivel permite escanear códigos QR dañados',
       // Traducciones adicionales
@@ -1069,6 +1113,17 @@ export default {
       imageSize: 'Tamaño de imagen',
       imageMargin: 'Margen de imagen',
     },
+    // Traducciones de preajustes personalizados
+    savePreset: 'Guardar preajuste',
+    saveCurrentAsPreset: 'Guardar estilo actual como preajuste',
+    presetName: 'Nombre del preajuste',
+    presetNamePlaceholder: 'Ingrese el nombre del preajuste',
+    noSavedPresets: 'No hay preajustes guardados',
+    savePresetHint: 'Guarde su estilo actual para acceso rápido más tarde',
+    longPressToDelete: 'Mantener presionado para eliminar',
+    deletePreset: 'Eliminar preajuste',
+    deletePresetConfirm: '¿Está seguro de que desea eliminar este preajuste?',
+    presetSaveError: 'Error al guardar el preajuste',
     reorderTypes: 'Reordenar tipos de QR',
     reorderTypesDesc: 'Arrastra para reordenar',
     reorder: 'Orden',
@@ -1369,6 +1424,39 @@ export default {
     infoMessage: 'Cuando el modo multicódigo está habilitado, puedes mover la cámara para escanear múltiples códigos, luego toca el botón Ver Resultados en la parte inferior para verlos todos a la vez.',
   },
 
+  // Configuración de escaneo de lotería
+  lotteryScan: {
+    title: 'Escaneo de lotería',
+    enable: 'Habilitar escaneo de lotería',
+    enableDesc: 'Verificar automáticamente los resultados al escanear códigos QR de lotería',
+    infoMessage: 'Cuando el escaneo de lotería está habilitado, puedes verificar automáticamente los resultados al escanear códigos QR de lotería.',
+    winningNotification: 'Notificación de premio',
+    winningNotificationDesc: 'Recibir notificaciones push al ganar',
+    supportedLotteries: 'Loterías compatibles',
+    countries: {
+      korea: 'Corea del Sur',
+      usa: 'Estados Unidos',
+      uk: 'Reino Unido',
+      canada: 'Canadá',
+      europe: 'Europa (Multinacional)',
+      japan: 'Japón',
+      china: 'China',
+      singapore: 'Singapur',
+      southAfrica: 'Sudáfrica',
+    },
+    lotteryTypes: {
+      lotto645: 'Lotto 6/45 (Lotería Donghang)',
+      powerballMega: 'Powerball, Mega Millions',
+      ukLottoEuro: 'UK Lotto, EuroMillions',
+      lotto649Max: 'Lotto 6/49, Lotto Max',
+      euroMillionsJackpot: 'EuroMillions, EuroJackpot',
+      takarakuji: 'Takarakuji (Lotto 6, etc.)',
+      welfareLottery: 'Lotería de Bienestar, etc.',
+      toto4d: 'Toto, 4D',
+      lottoPowerball: 'LOTTO, PowerBall',
+    },
+  },
+
   // Configuración de escaneo por lotes (compatibilidad)
   batchScan: {
     title: 'Configuración de escaneo por lotes',
@@ -1411,6 +1499,25 @@ export default {
     qualityMinimum: 'Mínima',
     qualityMinimumDesc: 'Tamaño mínimo, pérdida notable de calidad',
     note: 'Los cambios de compresión solo aplican a nuevas fotos',
+  },
+
+  // Mapa
+  map: {
+    searchPlaceholder: 'Buscar dirección...',
+    selectedLocation: 'Ubicación seleccionada',
+    latitude: 'Latitud',
+    longitude: 'Longitud',
+    noResults: 'Sin resultados',
+    noResultsDesc: 'No se encontró la dirección. Por favor intente otra búsqueda.',
+    requiresBuild: 'Requiere compilación de desarrollo',
+    requiresBuildDesc: 'La función de mapa requiere una compilación de desarrollo.\nNo compatible con Expo Go.',
+    useCurrentLocation: 'Usar ubicación actual',
+  },
+
+  // Ubicación
+  location: {
+    permissionDenied: 'Se requiere permiso de ubicación.',
+    fetchError: 'No se pudo obtener la ubicación actual.',
   },
 
   // Tipos de contenido QR

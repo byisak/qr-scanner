@@ -284,6 +284,8 @@ export default {
     batchScanModeDesc: '複数のQR/バーコードを連続してスキャンします',
     multiCodeMode: '複数コード認識モード',
     multiCodeModeDesc: '複数のコードをまとめて結果を確認',
+    lotteryScan: '宝くじ認識',
+    lotteryScanDesc: '宝くじQRコードスキャン時に当選確認',
     resultWindowAutoOpen: '結果画面の自動表示',
     resultWindowAutoOpenDesc: 'スキャン時に結果画面に自動移動する設定',
     selectBarcodes: '認識するバーコードを選択',
@@ -767,6 +769,40 @@ export default {
     barcodeRotate: '回転',
     barcodeCustomText: '表示テキスト',
     barcodeCustomTextPlaceholder: '空欄の場合はバーコード値を表示',
+    saveQuality: '保存品質',
+    // 保存品質レベル
+    qualityLevels: {
+      fast: '高速',
+      normal: '普通',
+      high: '高級',
+      best: '最高',
+      print: '印刷',
+    },
+    qualityDescriptions: {
+      screenCapture: '画面キャプチャ',
+      generalUse: '一般用途',
+      generalPrint: '一般印刷',
+      highQuality: '高品質',
+      bestQuality: '最高品質',
+      largePrint: '大判印刷',
+    },
+    qualityTime: {
+      instant: '即時',
+      second1: '~1秒',
+      second2: '~2秒',
+      second3: '~3秒',
+      second5: '~5秒',
+    },
+    // バーコード設定タブ
+    barcodeSettingsTabs: {
+      size: 'サイズ',
+      display: '表示',
+      save: '保存',
+    },
+    // 保存プログレス
+    savingBarcode: 'バーコードを作成中...',
+    savingQRCode: 'QRコードを作成中...',
+    pleaseWait: 'しばらくお待ちください',
     // バーコードタイプモーダル
     addBarcode: 'その他',
     selectBarcodeType: 'バーコードタイプを選択',
@@ -1028,6 +1064,8 @@ export default {
     saveErrorMessage: 'QRコードの保存に失敗しました。',
     clipboardPasted: 'クリップボードの内容を取得しました',
     clipboardEmpty: 'クリップボードが空です',
+    selectLocation: '位置を選択',
+    selectFromMap: '地図から選択',
     // QRスタイル
     qrStyle: {
       title: 'QRスタイル',
@@ -1046,6 +1084,9 @@ export default {
       cornerDotType: 'コーナードットタイプ',
       cornerDotColor: 'コーナードット色',
       backgroundColor: '背景色',
+      textColor: 'テキスト',
+      frameTextColor: 'フレームテキスト色',
+      frameTextColorDesc: 'フレームの「Scan me!」テキストの色を設定します',
       errorCorrection: 'エラー訂正レベル',
       errorCorrectionHint: '高いほど破損したQRコードも読み取り可能',
       // 追加翻訳
@@ -1072,6 +1113,17 @@ export default {
       imageSize: '画像サイズ',
       imageMargin: '画像の余白',
     },
+    // カスタムプリセット翻訳
+    savePreset: 'プリセットを保存',
+    saveCurrentAsPreset: '現在のスタイルをプリセットとして保存',
+    presetName: 'プリセット名',
+    presetNamePlaceholder: 'プリセット名を入力',
+    noSavedPresets: '保存されたプリセットがありません',
+    savePresetHint: '現在のスタイルを保存して後で素早く適用できます',
+    longPressToDelete: '長押しで削除',
+    deletePreset: 'プリセットを削除',
+    deletePresetConfirm: 'このプリセットを削除しますか？',
+    presetSaveError: 'プリセットの保存に失敗しました',
     reorderTypes: 'QRタイプの順序変更',
     reorderTypesDesc: 'ドラッグして順序を変更',
     reorder: '順序',
@@ -1372,6 +1424,39 @@ export default {
     infoMessage: '複数コード認識モードが有効になると、カメラを動かして複数のコードをスキャンし、下部の結果を見るボタンをタップしてまとめて確認できます。',
   },
 
+  // 宝くじ認識設定
+  lotteryScan: {
+    title: '宝くじ認識',
+    enable: '宝くじ認識を有効化',
+    enableDesc: '宝くじQRコードスキャン時に当選結果を自動確認します',
+    infoMessage: '宝くじ認識を有効にすると、ロトや年金宝くじなどのQRコードをスキャンする際に自動的に当選結果を確認できます。',
+    winningNotification: '当選通知',
+    winningNotificationDesc: '当選時にプッシュ通知を受け取ります',
+    supportedLotteries: '対応宝くじ一覧',
+    countries: {
+      korea: '韓国',
+      usa: 'アメリカ',
+      uk: 'イギリス',
+      canada: 'カナダ',
+      europe: 'ヨーロッパ（多国籍）',
+      japan: '日本',
+      china: '中国',
+      singapore: 'シンガポール',
+      southAfrica: '南アフリカ',
+    },
+    lotteryTypes: {
+      lotto645: 'ロト6/45（同行宝くじ）',
+      powerballMega: 'Powerball, Mega Millions',
+      ukLottoEuro: 'UK Lotto, EuroMillions',
+      lotto649Max: 'Lotto 6/49, Lotto Max',
+      euroMillionsJackpot: 'EuroMillions, EuroJackpot',
+      takarakuji: 'たからくじ（ロト6等）',
+      welfareLottery: '福祉宝くじ等',
+      toto4d: 'Toto, 4D',
+      lottoPowerball: 'LOTTO, PowerBall',
+    },
+  },
+
   // バッチスキャン設定（レガシー互換）
   batchScan: {
     title: 'バッチスキャン設定',
@@ -1414,6 +1499,25 @@ export default {
     qualityMinimum: '最小',
     qualityMinimumDesc: '最小サイズ、画質低下',
     note: '圧縮率の変更は新しく保存する写真にのみ適用されます',
+  },
+
+  // 地図
+  map: {
+    searchPlaceholder: '住所を検索...',
+    selectedLocation: '選択された場所',
+    latitude: '緯度',
+    longitude: '経度',
+    noResults: '結果なし',
+    noResultsDesc: '住所が見つかりませんでした。別の検索語を試してください。',
+    requiresBuild: '開発ビルドが必要です',
+    requiresBuildDesc: '地図機能には開発ビルドが必要です。\nExpo Goではサポートされていません。',
+    useCurrentLocation: '現在位置を使用',
+  },
+
+  // 位置情報
+  location: {
+    permissionDenied: '位置情報の権限が必要です。',
+    fetchError: '現在位置を取得できませんでした。',
   },
 
   // QRコンテンツタイプ

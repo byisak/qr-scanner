@@ -307,6 +307,8 @@ export default {
     batchScanModeDesc: '여러 QR/바코드를 연속으로 스캔합니다',
     multiCodeMode: '여러 코드 인식 모드',
     multiCodeModeDesc: '여러 코드를 모아서 한번에 결과 확인',
+    lotteryScan: '복권 인식',
+    lotteryScanDesc: '복권 QR코드 스캔 시 당첨 확인',
     resultWindowAutoOpen: '결과창 자동 열림',
     resultWindowAutoOpenDesc: '스캔 시 결과 화면 자동 이동 설정',
     selectBarcodes: '인식할 바코드 선택',
@@ -797,6 +799,29 @@ export default {
     barcodeCustomText: '표시 텍스트',
     barcodeCustomTextPlaceholder: '비워두면 바코드 값 표시',
     saveQuality: '저장 품질',
+    // 저장 품질 레벨
+    qualityLevels: {
+      fast: '빠름',
+      normal: '보통',
+      high: '고급',
+      best: '최고',
+      print: '인쇄',
+    },
+    qualityDescriptions: {
+      screenCapture: '화면 캡처',
+      generalUse: '일반 용도',
+      generalPrint: '일반 인쇄',
+      highQuality: '고품질',
+      bestQuality: '최고 품질',
+      largePrint: '대형 인쇄',
+    },
+    qualityTime: {
+      instant: '즉시',
+      second1: '~1초',
+      second2: '~2초',
+      second3: '~3초',
+      second5: '~5초',
+    },
     // 바코드 설정 탭
     barcodeSettingsTabs: {
       size: '크기',
@@ -1098,6 +1123,9 @@ export default {
       cornerDotType: '코너 도트 타입',
       cornerDotColor: '코너 도트 색상',
       backgroundColor: '배경 색상',
+      textColor: '글자',
+      frameTextColor: '프레임 글자 색상',
+      frameTextColorDesc: '프레임의 "Scan me!" 텍스트 색상을 설정합니다',
       errorCorrection: '오류 보정 레벨',
       errorCorrectionHint: '높을수록 손상된 QR코드도 인식 가능',
       // 추가 번역
@@ -1124,6 +1152,17 @@ export default {
       imageSize: '이미지 크기',
       imageMargin: '이미지 여백',
     },
+    // 커스텀 프리셋 번역
+    savePreset: '프리셋 저장',
+    saveCurrentAsPreset: '현재 스타일을 프리셋으로 저장',
+    presetName: '프리셋 이름',
+    presetNamePlaceholder: '프리셋 이름을 입력하세요',
+    noSavedPresets: '저장된 프리셋이 없습니다',
+    savePresetHint: '현재 스타일을 저장하여 나중에 빠르게 적용하세요',
+    longPressToDelete: '길게 눌러서 삭제',
+    deletePreset: '프리셋 삭제',
+    deletePresetConfirm: '이 프리셋을 삭제하시겠습니까?',
+    presetSaveError: '프리셋 저장에 실패했습니다',
   },
 
   // 백업 내보내기
@@ -1421,6 +1460,39 @@ export default {
     showValues: '인식된 코드 값 표시',
     showValuesDesc: '바코드 경계 아래에 인식된 값을 표시합니다',
     infoMessage: '여러 코드 인식 모드가 활성화되면 카메라를 움직여 여러 코드를 스캔한 후, 하단의 결과 보기 버튼을 눌러 한번에 확인할 수 있습니다.',
+  },
+
+  // 복권 인식 설정
+  lotteryScan: {
+    title: '복권 인식',
+    enable: '복권 인식 활성화',
+    enableDesc: '복권 QR코드 스캔 시 당첨 여부를 자동으로 확인합니다',
+    infoMessage: '복권 인식을 활성화하면 로또, 연금복권 등의 QR코드를 스캔할 때 자동으로 당첨 결과를 확인할 수 있습니다.',
+    winningNotification: '당첨 알림',
+    winningNotificationDesc: '당첨 시 푸시 알림을 받습니다',
+    supportedLotteries: '지원 복권 목록',
+    countries: {
+      korea: '대한민국',
+      usa: '미국',
+      uk: '영국',
+      canada: '캐나다',
+      europe: '유럽 다국적',
+      japan: '일본',
+      china: '중국',
+      singapore: '싱가포르',
+      southAfrica: '남아프리카공화국',
+    },
+    lotteryTypes: {
+      lotto645: '로또 6/45 (동행복권)',
+      powerballMega: 'Powerball, Mega Millions',
+      ukLottoEuro: 'UK Lotto, EuroMillions',
+      lotto649Max: 'Lotto 6/49, Lotto Max',
+      euroMillionsJackpot: 'EuroMillions, EuroJackpot',
+      takarakuji: 'Takarakuji (로또6 등)',
+      welfareLottery: 'Welfare Lottery 등',
+      toto4d: 'Toto, 4D',
+      lottoPowerball: 'LOTTO, PowerBall',
+    },
   },
 
   // 여러 코드 결과 화면

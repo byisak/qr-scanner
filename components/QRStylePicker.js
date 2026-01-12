@@ -45,6 +45,84 @@ const QR_FRAMES = [
     nameKo: '재생 버튼',
     previewColor: '#000000',
   },
+  {
+    id: 'hand-phone',
+    name: 'Hand Phone',
+    nameKo: '손+폰',
+    previewColor: '#000000',
+  },
+  {
+    id: 'film-strip',
+    name: 'Film Strip',
+    nameKo: '필름',
+    previewColor: '#000000',
+  },
+  {
+    id: 'beer-mug',
+    name: 'Beer Mug',
+    nameKo: '맥주잔',
+    previewColor: '#000000',
+  },
+  {
+    id: 'car',
+    name: 'Car',
+    nameKo: '자동차',
+    previewColor: '#000000',
+  },
+  {
+    id: 'coffee-cup',
+    name: 'Coffee Cup',
+    nameKo: '커피컵',
+    previewColor: '#000000',
+  },
+  {
+    id: 'smartphone',
+    name: 'Smartphone',
+    nameKo: '스마트폰',
+    previewColor: '#000000',
+  },
+  {
+    id: 'receipt',
+    name: 'Receipt',
+    nameKo: '영수증',
+    previewColor: '#000000',
+  },
+  {
+    id: 'calendar',
+    name: 'Calendar',
+    nameKo: '캘린더',
+    previewColor: '#000000',
+  },
+  {
+    id: 'clipboard',
+    name: 'Clipboard',
+    nameKo: '클립보드',
+    previewColor: '#000000',
+  },
+  {
+    id: 'chat-bubble',
+    name: 'Chat Bubble',
+    nameKo: '말풍선',
+    previewColor: '#000000',
+  },
+  {
+    id: 'notebook',
+    name: 'Notebook',
+    nameKo: '노트북',
+    previewColor: '#000000',
+  },
+  {
+    id: 'shopping-bag',
+    name: 'Shopping Bag',
+    nameKo: '쇼핑백',
+    previewColor: '#000000',
+  },
+  {
+    id: 'gift-box',
+    name: 'Gift Box',
+    nameKo: '선물상자',
+    previewColor: '#000000',
+  },
 ];
 
 
@@ -371,8 +449,41 @@ export default function QRStylePicker({
     }));
   };
 
+  // 기본 스타일 (초기화용)
+  const DEFAULT_STYLE = QR_STYLE_PRESETS[0].style;
+
+  const handleResetToDefault = () => {
+    setTempStyle(DEFAULT_STYLE);
+  };
+
   const renderPresets = () => (
     <View style={styles.presetGrid}>
+      {/* 기본값 초기화 버튼 */}
+      <TouchableOpacity
+        style={[
+          styles.presetItem,
+          {
+            backgroundColor: colors.inputBackground,
+            borderColor: colors.border,
+            borderWidth: 1,
+          },
+        ]}
+        onPress={handleResetToDefault}
+        activeOpacity={0.7}
+      >
+        <View
+          style={[
+            styles.presetPreview,
+            { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
+          ]}
+        >
+          <Ionicons name="refresh-outline" size={32} color={colors.textTertiary} />
+        </View>
+        <Text style={[styles.presetName, { color: colors.textSecondary }]}>
+          {language === 'ko' ? '기본값' : 'Default'}
+        </Text>
+      </TouchableOpacity>
+
       {QR_STYLE_PRESETS.map((preset, index) => {
         const isStyleLocked = isQrStyleLocked(index);
         return (
@@ -949,6 +1060,7 @@ export default function QRStylePicker({
               qrValue={previewValue}
               qrStyle={tempStyle}
               size={180}
+              isDark={isDark}
             />
           ) : (
             // 프레임이 없는 경우 - 기존 방식

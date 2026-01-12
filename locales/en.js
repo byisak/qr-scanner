@@ -305,6 +305,8 @@ export default {
     batchScanModeDesc: 'Scan multiple QR/barcodes continuously',
     multiCodeMode: 'Multi-Code Mode',
     multiCodeModeDesc: 'Collect multiple codes and view results at once',
+    lotteryScan: 'Lottery Scan',
+    lotteryScanDesc: 'Check lottery results when scanning QR code',
     resultWindowAutoOpen: 'Auto-Open Result Window',
     resultWindowAutoOpenDesc: 'Auto-navigate to result screen on scan',
     selectBarcodes: 'Select Barcodes',
@@ -808,6 +810,29 @@ export default {
     barcodeCustomText: 'Display Text',
     barcodeCustomTextPlaceholder: 'Leave empty to show barcode value',
     saveQuality: 'Save Quality',
+    // Save quality levels
+    qualityLevels: {
+      fast: 'Fast',
+      normal: 'Normal',
+      high: 'High',
+      best: 'Best',
+      print: 'Print',
+    },
+    qualityDescriptions: {
+      screenCapture: 'Screen Capture',
+      generalUse: 'General Use',
+      generalPrint: 'General Print',
+      highQuality: 'High Quality',
+      bestQuality: 'Best Quality',
+      largePrint: 'Large Print',
+    },
+    qualityTime: {
+      instant: 'Instant',
+      second1: '~1s',
+      second2: '~2s',
+      second3: '~3s',
+      second5: '~5s',
+    },
     // Barcode settings tabs
     barcodeSettingsTabs: {
       size: 'Size',
@@ -1109,6 +1134,9 @@ export default {
       cornerDotType: 'Corner Dot Type',
       cornerDotColor: 'Corner Dot Color',
       backgroundColor: 'Background Color',
+      textColor: 'Text',
+      frameTextColor: 'Frame Text Color',
+      frameTextColorDesc: 'Set the color of "Scan me!" text in the frame',
       errorCorrection: 'Error Correction Level',
       errorCorrectionHint: 'Higher level allows damaged QR codes to be scanned',
       // Additional translations
@@ -1135,6 +1163,17 @@ export default {
       imageSize: 'Image Size',
       imageMargin: 'Image Margin',
     },
+    // Custom preset translations
+    savePreset: 'Save Preset',
+    saveCurrentAsPreset: 'Save Current Style as Preset',
+    presetName: 'Preset Name',
+    presetNamePlaceholder: 'Enter preset name',
+    noSavedPresets: 'No saved presets',
+    savePresetHint: 'Save your current style for quick access later',
+    longPressToDelete: 'Long press to delete',
+    deletePreset: 'Delete Preset',
+    deletePresetConfirm: 'Are you sure you want to delete this preset?',
+    presetSaveError: 'Failed to save preset',
   },
 
   // Backup Export
@@ -1431,6 +1470,39 @@ export default {
     showValues: 'Show Detected Code Values',
     showValuesDesc: 'Display recognized values below barcode boundaries',
     infoMessage: 'When multi-code mode is enabled, you can move the camera to scan multiple codes, then tap the View Results button at the bottom to see them all at once.',
+  },
+
+  // Lottery scan settings
+  lotteryScan: {
+    title: 'Lottery Scan',
+    enable: 'Enable Lottery Scan',
+    enableDesc: 'Automatically check winning results when scanning lottery QR codes',
+    infoMessage: 'When lottery scan is enabled, you can automatically check winning results when scanning lottery QR codes such as Lotto and pension lottery.',
+    winningNotification: 'Winning Notification',
+    winningNotificationDesc: 'Receive push notifications when you win',
+    supportedLotteries: 'Supported Lotteries',
+    countries: {
+      korea: 'South Korea',
+      usa: 'USA',
+      uk: 'UK',
+      canada: 'Canada',
+      europe: 'Europe (Multi-national)',
+      japan: 'Japan',
+      china: 'China',
+      singapore: 'Singapore',
+      southAfrica: 'South Africa',
+    },
+    lotteryTypes: {
+      lotto645: 'Lotto 6/45 (Donghang Lottery)',
+      powerballMega: 'Powerball, Mega Millions',
+      ukLottoEuro: 'UK Lotto, EuroMillions',
+      lotto649Max: 'Lotto 6/49, Lotto Max',
+      euroMillionsJackpot: 'EuroMillions, EuroJackpot',
+      takarakuji: 'Takarakuji (Lotto 6, etc.)',
+      welfareLottery: 'Welfare Lottery, etc.',
+      toto4d: 'Toto, 4D',
+      lottoPowerball: 'LOTTO, PowerBall',
+    },
   },
 
   // Multi-code results screen

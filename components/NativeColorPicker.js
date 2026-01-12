@@ -6,11 +6,11 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import { runOnJS } from 'react-native-reanimated';
 
 export default function NativeColorPicker({ visible, onClose, color, onColorChange, colors }) {
-  const [tempColor, setTempColor] = useState(color || '#000000');
+  const [tempColor, setTempColor] = useState(color || '#ffffff');
 
   useEffect(() => {
-    if (visible) {
-      setTempColor(color || '#000000');
+    if (visible && color) {
+      setTempColor(color);
     }
   }, [visible, color]);
 

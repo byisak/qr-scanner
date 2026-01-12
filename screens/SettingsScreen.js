@@ -48,6 +48,7 @@ export default function SettingsScreen() {
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 기본값: 끔
   const [continuousScanEnabled, setContinuousScanEnabled] = useState(false);
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
+  const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
 
@@ -304,6 +305,10 @@ export default function SettingsScreen() {
           // 여러 코드 인식 모드 설정 로드
           const mcm = await AsyncStorage.getItem('multiCodeModeEnabled');
           setMultiCodeModeEnabled(mcm === 'true');
+
+          // 복권 인식 설정 로드
+          const ls = await AsyncStorage.getItem('lotteryScanEnabled');
+          setLotteryScanEnabled(ls === 'true');
 
           // 결과창 자동 열림 설정 로드
           const rwa = await AsyncStorage.getItem('resultWindowAutoOpen');
@@ -748,6 +753,24 @@ export default function SettingsScreen() {
               <LockIcon featureId="realtimeSync" size={12} badge />
               <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {realtimeSyncEnabled ? t('settings.statusOn') : t('settings.statusOff')}
+              </Text>
+              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+            </View>
+          </TouchableOpacity>
+
+          {/* 복권 인식 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/lottery-scan-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.lotteryScan')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.lotteryScanDesc')}</Text>
+            </View>
+            <View style={s.menuItemRight}>
+              <Text style={[s.statusText, { color: lotteryScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+                {lotteryScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>

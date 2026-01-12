@@ -19,5 +19,13 @@
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" }
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "she1212@naver.com",
+        "ascAppId": "6757360768"
+      }
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   Alert,
   Platform,
   Animated,
@@ -42,10 +43,9 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from '../components/StyledQRCode';
-import QRFrameRenderer, { FRAME_SVG_DATA } from '../components/QRFrameRenderer';
+import QRFrameRenderer from '../components/QRFrameRenderer';
 import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
 import NativeColorPicker from '../components/NativeColorPicker';
-import { SvgXml } from 'react-native-svg';
 import Svg, { Circle, Path } from 'react-native-svg';
 import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
@@ -53,6 +53,8 @@ import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatli
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Slider from '@react-native-community/slider';
 import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved, trackQRShared } from '../utils/analytics';
+import PresetSaveModal from '../components/PresetSaveModal';
+import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (2개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -116,11 +118,11 @@ export default function GeneratorScreen() {
 
   // 고해상도 레벨별 설정
   const HIGH_RES_LEVELS = [
-    { level: 0, label: '빠름', scale: 0, description: '화면 캡처', time: '즉시' },
-    { level: 1, label: '보통', scale: 4, description: '일반 인쇄', time: '~1초' },
-    { level: 2, label: '고급', scale: 6, description: '고품질', time: '~2초' },
-    { level: 3, label: '최고', scale: 8, description: '최고 품질', time: '~3초' },
-    { level: 4, label: '인쇄', scale: 12, description: '대형 인쇄', time: '~5초' },
+    { level: 0, label: t('generator.qualityLevels.fast') || '빠름', scale: 0, description: t('generator.qualityDescriptions.screenCapture') || '화면 캡처', time: t('generator.qualityTime.instant') || '즉시' },
+    { level: 1, label: t('generator.qualityLevels.normal') || '보통', scale: 4, description: t('generator.qualityDescriptions.generalPrint') || '일반 인쇄', time: t('generator.qualityTime.second1') || '~1초' },
+    { level: 2, label: t('generator.qualityLevels.high') || '고급', scale: 6, description: t('generator.qualityDescriptions.highQuality') || '고품질', time: t('generator.qualityTime.second2') || '~2초' },
+    { level: 3, label: t('generator.qualityLevels.best') || '최고', scale: 8, description: t('generator.qualityDescriptions.bestQuality') || '최고 품질', time: t('generator.qualityTime.second3') || '~3초' },
+    { level: 4, label: t('generator.qualityLevels.print') || '인쇄', scale: 12, description: t('generator.qualityDescriptions.largePrint') || '대형 인쇄', time: t('generator.qualityTime.second5') || '~5초' },
   ];
 
   // 바코드 타입 즐겨찾기 및 모달
@@ -359,26 +361,47 @@ export default function GeneratorScreen() {
     }
   }, [saveProgress.visible]);
 
-  // QR 스타일 관련 상태
+  // QR 스타일 관련 상태 (다크 모드일 때 흰색 기본값)
   const [useStyledQR, setUseStyledQR] = useState(true);
-  const [qrStyle, setQrStyle] = useState(QR_STYLE_PRESETS[0].style);
+  const [qrStyle, setQrStyle] = useState(() => {
+    if (isDark) {
+      return {
+        ...QR_STYLE_PRESETS[0].style,
+        dotColor: '#FFFFFF',
+        cornerSquareColor: '#FFFFFF',
+        cornerDotColor: '#FFFFFF',
+        backgroundColor: '#000000',
+      };
+    }
+    return QR_STYLE_PRESETS[0].style;
+  });
   const [capturedQRBase64, setCapturedQRBase64] = useState(null);
   const [fullSizeQRBase64, setFullSizeQRBase64] = useState(null); // 저장용 전체 크기
   const [logoImage, setLogoImage] = useState(null); // 로고 이미지 base64
-  const [selectedFrame, setSelectedFrame] = useState(null); // 선택된 QR 프레임
+  const [frameIndex, setFrameIndex] = useState(0); // 현재 프레임 캐러셀 인덱스
+  const [frameTextColor, setFrameTextColor] = useState(null); // 프레임 텍스트 색상 (null이면 자동)
   const [qrSettingsExpanded, setQrSettingsExpanded] = useState(false); // QR 스타일 설정 펼침/접힘
   const [qrSettingsTab, setQrSettingsTab] = useState('presets'); // 활성 탭
   const [qrResLevel, setQrResLevel] = useState(0); // QR 저장 품질 레벨 (0-4)
-  const [activeColorPicker, setActiveColorPicker] = useState(null); // 활성 컬러 피커 (dotColor, cornerSquareColor, cornerDotColor, backgroundColor)
+  const [activeColorPicker, setActiveColorPicker] = useState(null); // 활성 컬러 피커 (dotColor, cornerSquareColor, cornerDotColor, backgroundColor, frameTextColor)
+  const [customPresets, setCustomPresets] = useState([]); // 사용자 커스텀 프리셋
+  const [presetSaveModalVisible, setPresetSaveModalVisible] = useState(false); // 프리셋 저장 모달
   const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
+  const frameCarouselRef = useRef(null); // 프레임 캐러셀 ref
+
+  // 현재 선택된 프레임 (인덱스 기반)
+  const selectedFrame = useMemo(() => {
+    const frame = QR_FRAMES[frameIndex];
+    return frame?.id === 'none' ? null : frame;
+  }, [frameIndex]);
 
   // QR 고해상도 레벨별 설정
   const QR_RES_LEVELS = [
-    { level: 0, label: '빠름', scale: 1, description: '화면 캡처', time: '즉시', size: 300 },
-    { level: 1, label: '보통', scale: 2, description: '일반 용도', time: '~1초', size: 600 },
-    { level: 2, label: '고급', scale: 3, description: '고품질', time: '~2초', size: 900 },
-    { level: 3, label: '최고', scale: 4, description: '최고 품질', time: '~3초', size: 1200 },
-    { level: 4, label: '인쇄', scale: 6, description: '대형 인쇄', time: '~5초', size: 1800 },
+    { level: 0, label: t('generator.qualityLevels.fast') || '빠름', scale: 1, description: t('generator.qualityDescriptions.screenCapture') || '화면 캡처', time: t('generator.qualityTime.instant') || '즉시', size: 300 },
+    { level: 1, label: t('generator.qualityLevels.normal') || '보통', scale: 2, description: t('generator.qualityDescriptions.generalUse') || '일반 용도', time: t('generator.qualityTime.second1') || '~1초', size: 600 },
+    { level: 2, label: t('generator.qualityLevels.high') || '고급', scale: 3, description: t('generator.qualityDescriptions.highQuality') || '고품질', time: t('generator.qualityTime.second2') || '~2초', size: 900 },
+    { level: 3, label: t('generator.qualityLevels.best') || '최고', scale: 4, description: t('generator.qualityDescriptions.bestQuality') || '최고 품질', time: t('generator.qualityTime.second3') || '~3초', size: 1200 },
+    { level: 4, label: t('generator.qualityLevels.print') || '인쇄', scale: 6, description: t('generator.qualityDescriptions.largePrint') || '대형 인쇄', time: t('generator.qualityTime.second5') || '~5초', size: 1800 },
   ];
 
   // Form data for each type
@@ -471,8 +494,62 @@ export default function GeneratorScreen() {
       };
 
       loadSelectedLocation();
+
+      // 커스텀 프리셋 로드
+      const loadCustomPresets = async () => {
+        try {
+          const presets = await getPresets();
+          setCustomPresets(presets);
+        } catch (error) {
+          console.error('Error loading custom presets:', error);
+        }
+      };
+      loadCustomPresets();
     }, [])
   );
+
+  // 커스텀 프리셋 저장 핸들러
+  const handleSavePreset = async (presetData) => {
+    try {
+      const newPreset = await savePreset(presetData);
+      setCustomPresets(prev => [newPreset, ...prev]);
+    } catch (error) {
+      console.error('Error saving preset:', error);
+      Alert.alert(t('common.error') || '오류', t('generator.presetSaveError') || '프리셋 저장에 실패했습니다.');
+    }
+  };
+
+  // 커스텀 프리셋 삭제 핸들러
+  const handleDeletePreset = async (presetId) => {
+    Alert.alert(
+      t('generator.deletePreset') || '프리셋 삭제',
+      t('generator.deletePresetConfirm') || '이 프리셋을 삭제하시겠습니까?',
+      [
+        { text: t('common.cancel') || '취소', style: 'cancel' },
+        {
+          text: t('common.delete') || '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            const success = await deletePreset(presetId);
+            if (success) {
+              setCustomPresets(prev => prev.filter(p => p.id !== presetId));
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // 커스텀 프리셋 선택 핸들러
+  const handleSelectPreset = (preset) => {
+    setQrStyle(prev => ({ ...prev, ...preset.style }));
+    if (preset.frameIndex !== undefined) {
+      setFrameIndex(preset.frameIndex);
+    }
+    if (preset.logoImage) {
+      setLogoImage(preset.logoImage);
+    }
+  };
 
   const generateQRData = () => {
     const data = formData[selectedType];
@@ -1047,15 +1124,9 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+        if (selectedFrame) {
+          // 프레임: 오프스크린 뷰에서 캡처 (isDark=false로 렌더링됨)
           uri = await captureRef(highResQrRef, {
-            format: 'png',
-            quality: 1,
-          });
-        } else if (selectedFrame) {
-          // 프레임만 (빠른 저장)
-          uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
@@ -1176,15 +1247,9 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame && qrResLevel > 0) {
-          // 프레임 + 고해상도: 오프스크린 뷰에서 캡처
+        if (selectedFrame) {
+          // 프레임: 오프스크린 뷰에서 캡처 (isDark=false로 렌더링됨)
           uri = await captureRef(highResQrRef, {
-            format: 'png',
-            quality: 1,
-          });
-        } else if (selectedFrame) {
-          // 프레임만 (빠른 저장)
-          uri = await captureRef(qrRef, {
             format: 'png',
             quality: 1,
           });
@@ -1467,14 +1532,11 @@ export default function GeneratorScreen() {
               {t('generator.fields.textLabel')}
             </Text>
             <TextInput
-              style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder={t('generator.fields.textPlaceholder')}
               placeholderTextColor={colors.textTertiary}
               value={data.text}
               onChangeText={(text) => updateFormData('text', text)}
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
             />
           </View>
         );
@@ -2296,7 +2358,7 @@ export default function GeneratorScreen() {
                               s.qualityLevelText,
                               { color: highResLevel === item.level ? '#fff' : colors.text }
                             ]}>
-                              {item.level === 0 ? '빠름' : item.level}
+                              {item.level === 0 ? (t('generator.qualityLevels.fast') || '빠름') : item.level}
                             </Text>
                           </TouchableOpacity>
                         ))}
@@ -2368,11 +2430,11 @@ export default function GeneratorScreen() {
                   contentContainerStyle={s.qrSettingsTabScrollContent}
                 >
                   {[
-                    { id: 'frames', icon: 'albums-outline', label: t('generator.qrStyle.frame') || '프레임' },
                     { id: 'presets', icon: 'color-palette-outline', label: t('generator.qrStyle.presets') || '프리셋' },
                     { id: 'dots', icon: 'grid-outline', label: t('generator.qrStyle.dots') || '도트' },
                     { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
                     { id: 'background', icon: 'image-outline', label: t('generator.qrStyle.background') || '배경' },
+                    { id: 'textColor', icon: 'text-outline', label: t('generator.qrStyle.textColor') || '글자' },
                     { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
                   ].map((tab) => (
                     <TouchableOpacity
@@ -2399,104 +2461,97 @@ export default function GeneratorScreen() {
                 </ScrollView>
               </View>
 
-              {/* 프레임 탭 */}
-              {qrSettingsTab === 'frames' && (
-                <View style={s.qrStyleGrid}>
-                  {QR_FRAMES.map((frame) => {
-                    const isSelected = selectedFrame?.id === frame.id || (!selectedFrame && frame.id === 'none');
-                    return (
-                      <TouchableOpacity
-                        key={frame.id}
-                        style={[
-                          s.qrStyleItem,
-                          {
-                            backgroundColor: colors.inputBackground,
-                            borderColor: isSelected ? colors.primary : colors.border,
-                            borderWidth: isSelected ? 2 : 1,
-                          },
-                        ]}
-                        onPress={() => setSelectedFrame(frame.id === 'none' ? null : frame)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[s.qrStylePreview, { backgroundColor: '#fff' }]}>
-                          {frame.id === 'none' ? (
-                            <Ionicons name="close-circle-outline" size={36} color={colors.textTertiary} />
-                          ) : (
-                            FRAME_SVG_DATA[frame.id] ? (
-                              <SvgXml
-                                xml={FRAME_SVG_DATA[frame.id]}
-                                width={70}
-                                height={70}
-                              />
-                            ) : (
-                              <View style={[s.framePlaceholder, { borderColor: frame.previewColor || '#000' }]}>
-                                <Text style={{ fontSize: 8 }}>{frame.name}</Text>
-                              </View>
-                            )
-                          )}
-                        </View>
-                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
-                          {language === 'ko' ? frame.nameKo : frame.name}
-                        </Text>
-                        {isSelected && (
-                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
-                            <Ionicons name="checkmark" size={12} color="#fff" />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-
-              {/* 프리셋 탭 */}
+              {/* 프리셋 탭 - 커스텀 프리셋 */}
               {qrSettingsTab === 'presets' && (
-                <View style={s.qrStyleGrid}>
-                  {QR_STYLE_PRESETS.map((preset) => {
-                    const isSelected = JSON.stringify(qrStyle) === JSON.stringify(preset.style);
-                    return (
-                      <TouchableOpacity
-                        key={preset.id}
-                        style={[
-                          s.qrStyleItem,
-                          {
-                            backgroundColor: colors.inputBackground,
-                            borderColor: isSelected ? colors.primary : colors.border,
-                            borderWidth: isSelected ? 2 : 1,
-                          },
-                        ]}
-                        onPress={() => setQrStyle(prev => ({ ...prev, ...preset.style }))}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[s.qrStylePreview, { backgroundColor: preset.style.backgroundColor || '#fff' }]}>
-                          <View style={s.presetDotsContainer}>
-                            {[...Array(9)].map((_, i) => (
-                              <View
-                                key={i}
-                                style={[
-                                  s.presetDot,
-                                  {
-                                    backgroundColor: preset.style.dotGradient
-                                      ? preset.style.dotGradient.colorStops[0].color
-                                      : preset.style.dotColor,
-                                    borderRadius: preset.style.dotType === 'dots' || preset.style.dotType === 'rounded' ? 3 : 0,
-                                  },
-                                ]}
-                              />
-                            ))}
+                <View style={s.customPresetContainer}>
+                  {/* 프리셋 저장 버튼 */}
+                  <TouchableOpacity
+                    style={[s.savePresetButton, { backgroundColor: colors.primary }]}
+                    onPress={() => setPresetSaveModalVisible(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                    <Text style={[s.savePresetButtonText, { fontFamily: fonts.semiBold }]}>
+                      {t('generator.saveCurrentAsPreset') || '현재 스타일을 프리셋으로 저장'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* 기본값 + 저장된 프리셋 목록 */}
+                  <View style={s.qrStyleGrid}>
+                    {/* 기본값 초기화 버튼 */}
+                    <TouchableOpacity
+                      style={[
+                        s.qrStyleItem,
+                        {
+                          backgroundColor: colors.inputBackground,
+                          borderColor: colors.border,
+                          borderWidth: 1,
+                          borderStyle: 'dashed',
+                        },
+                      ]}
+                      onPress={() => setQrStyle(isDark ? {
+                        ...QR_STYLE_PRESETS[0].style,
+                        dotColor: '#FFFFFF',
+                        cornerSquareColor: '#FFFFFF',
+                        cornerDotColor: '#FFFFFF',
+                        backgroundColor: '#000000',
+                      } : QR_STYLE_PRESETS[0].style)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.qrStylePreview, { backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
+                        <Ionicons name="refresh-outline" size={32} color={colors.textTertiary} />
+                      </View>
+                      <Text style={[s.qrStyleName, { color: colors.textSecondary }]}>
+                        {language === 'ko' ? '기본값' : 'Default'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* 커스텀 프리셋 */}
+                    {customPresets.map((preset) => (
+                        <TouchableOpacity
+                          key={preset.id}
+                          style={[
+                            s.qrStyleItem,
+                            {
+                              backgroundColor: colors.inputBackground,
+                              borderColor: colors.border,
+                              borderWidth: 1,
+                            },
+                          ]}
+                          onPress={() => handleSelectPreset(preset)}
+                          onLongPress={() => handleDeletePreset(preset.id)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[s.qrStylePreview, { backgroundColor: preset.style?.backgroundColor || '#fff' }]}>
+                            <View style={s.presetDotsContainer}>
+                              {[...Array(9)].map((_, i) => (
+                                <View
+                                  key={i}
+                                  style={[
+                                    s.presetDot,
+                                    {
+                                      backgroundColor: preset.style?.dotGradient
+                                        ? preset.style.dotGradient.colorStops[0].color
+                                        : preset.style?.dotColor || '#000',
+                                      borderRadius: preset.style?.dotType === 'dots' || preset.style?.dotType === 'rounded' ? 3 : 0,
+                                    },
+                                  ]}
+                                />
+                              ))}
+                            </View>
                           </View>
-                        </View>
-                        <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
-                          {language === 'ko' ? preset.nameKo : preset.name}
-                        </Text>
-                        {isSelected && (
-                          <View style={[s.qrStyleCheck, { backgroundColor: colors.primary }]}>
-                            <Ionicons name="checkmark" size={12} color="#fff" />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
+                          <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
+                            {preset.name}
+                          </Text>
+                        </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {customPresets.length > 0 && (
+                    <Text style={[s.presetHintText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                      {t('generator.longPressToDelete') || '길게 누르면 삭제할 수 있습니다'}
+                    </Text>
+                  )}
                 </View>
               )}
 
@@ -2703,29 +2758,65 @@ export default function GeneratorScreen() {
                 </View>
               )}
 
+              {/* 글자 색상 탭 */}
+              {qrSettingsTab === 'textColor' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>
+                    {t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'}
+                  </Text>
+                  <Text style={[s.qrOptionSubtitle, { color: colors.textSecondary, marginBottom: 12 }]}>
+                    {t('generator.qrStyle.frameTextColorDesc') || '프레임의 "Scan me!" 텍스트 색상을 설정합니다'}
+                  </Text>
+                  <View style={s.colorGrid}>
+                    {/* 자동 버튼 */}
+                    <TouchableOpacity
+                      style={[
+                        s.colorButton,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: frameTextColor === null ? colors.primary : colors.border,
+                          borderWidth: frameTextColor === null ? 3 : 1,
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        },
+                      ]}
+                      onPress={() => setFrameTextColor(null)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={{ color: colors.textSecondary, fontSize: 10 }}>AUTO</Text>
+                    </TouchableOpacity>
+                    {/* 컬러 피커 버튼 */}
+                    <TouchableOpacity
+                      style={[s.colorPickerButton, { backgroundColor: frameTextColor || '#000000', borderColor: colors.border }]}
+                      onPress={() => setActiveColorPicker('frameTextColor')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="color-palette" size={20} color={frameTextColor === '#ffffff' || frameTextColor === '#FFFFFF' ? '#333' : '#fff'} />
+                    </TouchableOpacity>
+                    {/* 프리셋 색상 */}
+                    {['#000000', '#ffffff', '#333333', '#666666', '#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9900ff'].map((presetColor) => (
+                      <TouchableOpacity
+                        key={presetColor}
+                        style={[
+                          s.colorButton,
+                          {
+                            backgroundColor: presetColor,
+                            borderColor: frameTextColor === presetColor ? colors.primary : colors.border,
+                            borderWidth: frameTextColor === presetColor ? 3 : 1,
+                          },
+                        ]}
+                        onPress={() => setFrameTextColor(presetColor)}
+                        activeOpacity={0.7}
+                      />
+                    ))}
+                  </View>
+                </View>
+              )}
+
               {/* 설정 탭 */}
               {qrSettingsTab === 'settings' && (
                 <View style={s.qrOptionSection}>
                   <Text style={[s.qrOptionTitle, { color: colors.text }]}>
-                    {t('generator.qrStyle.margin') || '여백'}
-                  </Text>
-                  <View style={s.stepperRow}>
-                    <TouchableOpacity
-                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.max(0, (prev.margin || 10) - 5) }))}
-                    >
-                      <Ionicons name="remove" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                    <Text style={[s.stepperValue, { color: colors.text }]}>{qrStyle.margin || 10}px</Text>
-                    <TouchableOpacity
-                      style={[s.stepperBtn, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                      onPress={() => setQrStyle(prev => ({ ...prev, margin: Math.min(50, (prev.margin || 10) + 5) }))}
-                    >
-                      <Ionicons name="add" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>
                     {t('generator.qrStyle.errorCorrection') || '오류 수정'}
                   </Text>
                   <View style={s.qrOptionRow}>
@@ -2809,57 +2900,101 @@ export default function GeneratorScreen() {
 
             <View style={[s.qrContainer, { borderColor: colors.border }]}>
               {hasData ? (
-                <Animated.View
-                  ref={qrRef}
-                  style={[
-                    s.qrWrapper,
-                    {
-                      transform: [
-                        { scale: qrSize },
-                        {
-                          rotateZ: qrSize.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: ['180deg', '0deg'],
-                          }),
-                        },
-                      ],
-                      opacity: qrSize,
-                    },
-                  ]}
-                  collapsable={false}
-                >
-                  {selectedFrame ? (
-                    // 프레임이 선택된 경우 - QRFrameRenderer 사용
-                    <View style={s.frameContainer}>
-                      <QRFrameRenderer
-                        frame={selectedFrame}
-                        qrValue={qrData}
-                        qrStyle={qrStyle}
-                        size={340}
-                        onCapture={(base64) => setCapturedQRBase64(base64)}
-                      />
-                    </View>
-                  ) : (
-                    // 프레임이 없는 경우 - 기존 방식
-                    <View style={[s.qrBackground, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
-                      {useStyledQR ? (
-                        <StyledQRCode
-                          value={qrData}
-                          size={260}
-                          qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
-                          onCapture={(base64) => setCapturedQRBase64(base64)}
+                <>
+                  <FlatList
+                    ref={frameCarouselRef}
+                    data={QR_FRAMES}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(item) => item.id}
+                    onMomentumScrollEnd={(e) => {
+                      const itemWidth = SCREEN_WIDTH - 96;
+                      const newIndex = Math.round(e.nativeEvent.contentOffset.x / itemWidth);
+                      setFrameIndex(newIndex);
+                    }}
+                    renderItem={({ item: frame, index }) => {
+                      const isCurrentFrame = index === frameIndex;
+                      const frameObj = frame.id === 'none' ? null : frame;
+                      const itemWidth = SCREEN_WIDTH - 96;
+                      return (
+                        <View style={[s.carouselItem, { width: itemWidth }]}>
+                          <Animated.View
+                            ref={isCurrentFrame ? qrRef : null}
+                            style={[
+                              s.qrWrapper,
+                              {
+                                transform: [
+                                  { scale: qrSize },
+                                  {
+                                    rotateZ: qrSize.interpolate({
+                                      inputRange: [0, 1],
+                                      outputRange: ['180deg', '0deg'],
+                                    }),
+                                  },
+                                ],
+                                opacity: qrSize,
+                              },
+                            ]}
+                            collapsable={false}
+                          >
+                            {frameObj ? (
+                              <View style={s.frameContainer}>
+                                <QRFrameRenderer
+                                  frame={frameObj}
+                                  qrValue={qrData}
+                                  qrStyle={qrStyle}
+                                  size={220}
+                                  frameTextColor={frameTextColor}
+                                  isDark={isDark}
+                                  onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
+                                />
+                              </View>
+                            ) : (
+                              <View style={[s.qrBackgroundPlain, { backgroundColor: useStyledQR ? (qrStyle.backgroundColor || '#fff') : '#fff' }]}>
+                                {useStyledQR ? (
+                                  <StyledQRCode
+                                    value={qrData}
+                                    size={200}
+                                    qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
+                                    onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
+                                  />
+                                ) : (
+                                  <QRCode
+                                    value={qrData}
+                                    size={200}
+                                    backgroundColor="white"
+                                    color="black"
+                                  />
+                                )}
+                              </View>
+                            )}
+                          </Animated.View>
+                        </View>
+                      );
+                    }}
+                  />
+                  {/* 프레임 이름 및 도트 인디케이터 */}
+                  <View style={s.carouselIndicator}>
+                    <Text style={[s.carouselFrameName, { color: colors.text }]}>
+                      {language === 'ko' ? QR_FRAMES[frameIndex]?.nameKo : QR_FRAMES[frameIndex]?.name}
+                    </Text>
+                    <View style={s.dotContainer}>
+                      {QR_FRAMES.map((_, index) => (
+                        <View
+                          key={index}
+                          style={[
+                            s.dot,
+                            {
+                              backgroundColor: index === frameIndex ? colors.primary : colors.border,
+                              width: index === frameIndex ? 16 : 6,
+                            },
+                          ]}
                         />
-                      ) : (
-                        <QRCode
-                          value={qrData}
-                          size={240}
-                          backgroundColor="white"
-                          color="black"
-                        />
-                      )}
+                      ))}
                     </View>
-                  )}
-                </Animated.View>
+                  </View>
+                </>
               ) : (
                 <View style={s.emptyState}>
                   <View style={[s.emptyIconContainer, { backgroundColor: colors.background }]}>
@@ -3359,8 +3494,8 @@ export default function GeneratorScreen() {
         </View>
       </Modal>
 
-      {/* 오프스크린 고해상도 캡처용 뷰 */}
-      {selectedFrame && hasData && qrResLevel > 0 && (
+      {/* 오프스크린 저장용 뷰 (프레임이 있을 때 항상 렌더링, isDark=false로 저장) */}
+      {selectedFrame && hasData && (
         <View
           ref={highResQrRef}
           collapsable={false}
@@ -3370,7 +3505,9 @@ export default function GeneratorScreen() {
             frame={selectedFrame}
             qrValue={qrData}
             qrStyle={qrStyle}
-            size={QR_RES_LEVELS[qrResLevel].size}
+            size={qrResLevel > 0 ? QR_RES_LEVELS[qrResLevel].size : 280}
+            frameTextColor={frameTextColor}
+            isDark={false}
           />
         </View>
       )}
@@ -3379,13 +3516,30 @@ export default function GeneratorScreen() {
       <NativeColorPicker
         visible={!!activeColorPicker}
         onClose={() => setActiveColorPicker(null)}
-        color={activeColorPicker ? (qrStyle[activeColorPicker] || '#000000') : '#000000'}
+        color={activeColorPicker === 'frameTextColor'
+          ? (frameTextColor || '#000000')
+          : activeColorPicker === 'backgroundColor'
+            ? (qrStyle.backgroundColor || '#ffffff')
+            : (activeColorPicker ? (qrStyle[activeColorPicker] || '#000000') : '#000000')
+        }
         onColorChange={(newColor) => {
-          if (activeColorPicker) {
+          if (activeColorPicker === 'frameTextColor') {
+            setFrameTextColor(newColor);
+          } else if (activeColorPicker) {
             setQrStyle(prev => ({ ...prev, [activeColorPicker]: newColor }));
           }
         }}
         colors={colors}
+      />
+
+      {/* 프리셋 저장 모달 */}
+      <PresetSaveModal
+        visible={presetSaveModalVisible}
+        onClose={() => setPresetSaveModalVisible(false)}
+        onSave={handleSavePreset}
+        qrStyle={qrStyle}
+        frameIndex={frameIndex}
+        logoImage={logoImage}
       />
     </View>
   );
@@ -3958,6 +4112,83 @@ const s = StyleSheet.create({
     marginBottom: 6,
     overflow: 'hidden',
   },
+  // 커스텀 프리셋 스타일
+  customPresetContainer: {
+    paddingBottom: 8,
+  },
+  savePresetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  savePresetButtonText: {
+    color: '#fff',
+    fontSize: 15,
+  },
+  emptyPresetContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyPresetText: {
+    fontSize: 16,
+    marginTop: 12,
+  },
+  emptyPresetSubText: {
+    fontSize: 13,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  presetHintText: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  // 프레임 가로 스크롤 스타일
+  frameScrollContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  frameSelectItem: {
+    width: 72,
+    borderRadius: 10,
+    padding: 6,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  frameSelectPreview: {
+    width: 60,
+    height: 78,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  frameSelectName: {
+    fontSize: 9,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  frameWithQrPreview: {
+    position: 'relative',
+  },
+  framePreviewSvg: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  frameQrIcon: {
+    position: 'absolute',
+  },
   qrStyleName: {
     fontSize: 11,
     fontWeight: '600',
@@ -4001,6 +4232,10 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 4,
+  },
+  qrOptionSubtitle: {
+    fontSize: 12,
+    fontWeight: '400',
   },
   qrOptionRow: {
     flexDirection: 'row',
@@ -4065,12 +4300,35 @@ const s = StyleSheet.create({
     padding: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 400,
+    minHeight: 300,
     overflow: 'visible',
   },
   qrWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  carouselItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  carouselIndicator: {
+    alignItems: 'center',
+    paddingBottom: 8,
+    gap: 8,
+  },
+  carouselFrameName: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  dotContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
   },
   frameContainer: {
     padding: 4,
@@ -4086,6 +4344,10 @@ const s = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     position: 'relative',
+  },
+  qrBackgroundPlain: {
+    backgroundColor: 'white',
+    padding: 16,
   },
   frameIndicator: {
     position: 'absolute',

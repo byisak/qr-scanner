@@ -284,6 +284,8 @@ export default {
     batchScanModeDesc: '连续扫描多个二维码/条形码',
     multiCodeMode: '多码识别模式',
     multiCodeModeDesc: '收集多个代码后一次性查看结果',
+    lotteryScan: '彩票识别',
+    lotteryScanDesc: '扫描彩票二维码时检查中奖结果',
     resultWindowAutoOpen: '自动打开结果窗口',
     resultWindowAutoOpenDesc: '扫描时自动跳转到结果界面',
     selectBarcodes: '选择要识别的条形码',
@@ -767,6 +769,40 @@ export default {
     barcodeRotate: '旋转',
     barcodeCustomText: '显示文字',
     barcodeCustomTextPlaceholder: '留空则显示条码值',
+    saveQuality: '保存质量',
+    // 保存质量级别
+    qualityLevels: {
+      fast: '快速',
+      normal: '普通',
+      high: '高级',
+      best: '最佳',
+      print: '印刷',
+    },
+    qualityDescriptions: {
+      screenCapture: '屏幕截图',
+      generalUse: '一般用途',
+      generalPrint: '一般印刷',
+      highQuality: '高质量',
+      bestQuality: '最佳质量',
+      largePrint: '大幅印刷',
+    },
+    qualityTime: {
+      instant: '即时',
+      second1: '~1秒',
+      second2: '~2秒',
+      second3: '~3秒',
+      second5: '~5秒',
+    },
+    // 条码设置标签
+    barcodeSettingsTabs: {
+      size: '尺寸',
+      display: '显示',
+      save: '保存',
+    },
+    // 保存进度
+    savingBarcode: '正在创建条码...',
+    savingQRCode: '正在创建二维码...',
+    pleaseWait: '请稍候',
     // 条形码类型弹窗
     addBarcode: '更多',
     selectBarcodeType: '选择条形码类型',
@@ -1028,6 +1064,8 @@ export default {
     saveErrorMessage: '二维码保存失败。',
     clipboardPasted: '已粘贴剪贴板内容',
     clipboardEmpty: '剪贴板为空',
+    selectLocation: '选择位置',
+    selectFromMap: '从地图选择',
     // QR样式
     qrStyle: {
       title: 'QR样式',
@@ -1046,6 +1084,9 @@ export default {
       cornerDotType: '角落点类型',
       cornerDotColor: '角落点颜色',
       backgroundColor: '背景颜色',
+      textColor: '文字',
+      frameTextColor: '边框文字颜色',
+      frameTextColorDesc: '设置边框中"Scan me!"文字的颜色',
       errorCorrection: '纠错级别',
       errorCorrectionHint: '级别越高，受损的二维码也能被识别',
       // 附加翻译
@@ -1072,6 +1113,17 @@ export default {
       imageSize: '图片大小',
       imageMargin: '图片边距',
     },
+    // 自定义预设翻译
+    savePreset: '保存预设',
+    saveCurrentAsPreset: '将当前样式保存为预设',
+    presetName: '预设名称',
+    presetNamePlaceholder: '请输入预设名称',
+    noSavedPresets: '没有保存的预设',
+    savePresetHint: '保存当前样式以便稍后快速应用',
+    longPressToDelete: '长按删除',
+    deletePreset: '删除预设',
+    deletePresetConfirm: '确定要删除此预设吗？',
+    presetSaveError: '保存预设失败',
     reorderTypes: '重新排列QR类型',
     reorderTypesDesc: '拖动以重新排列',
     reorder: '排序',
@@ -1372,6 +1424,39 @@ export default {
     infoMessage: '启用多码识别模式后，可以移动相机扫描多个代码，然后点击底部的查看结果按钮一次性查看全部结果。',
   },
 
+  // 彩票识别设置
+  lotteryScan: {
+    title: '彩票识别',
+    enable: '启用彩票识别',
+    enableDesc: '扫描彩票二维码时自动检查中奖结果',
+    infoMessage: '启用彩票识别后，扫描彩票等二维码时可以自动检查中奖结果。',
+    winningNotification: '中奖通知',
+    winningNotificationDesc: '中奖时接收推送通知',
+    supportedLotteries: '支持的彩票列表',
+    countries: {
+      korea: '韩国',
+      usa: '美国',
+      uk: '英国',
+      canada: '加拿大',
+      europe: '欧洲（多国）',
+      japan: '日本',
+      china: '中国',
+      singapore: '新加坡',
+      southAfrica: '南非',
+    },
+    lotteryTypes: {
+      lotto645: '乐透6/45（同行彩票）',
+      powerballMega: 'Powerball, Mega Millions',
+      ukLottoEuro: 'UK Lotto, EuroMillions',
+      lotto649Max: 'Lotto 6/49, Lotto Max',
+      euroMillionsJackpot: 'EuroMillions, EuroJackpot',
+      takarakuji: 'Takarakuji（乐透6等）',
+      welfareLottery: '福利彩票等',
+      toto4d: 'Toto, 4D',
+      lottoPowerball: 'LOTTO, PowerBall',
+    },
+  },
+
   // 批量扫描设置（旧版兼容）
   batchScan: {
     title: '批量扫描设置',
@@ -1414,6 +1499,25 @@ export default {
     qualityMinimum: '最小',
     qualityMinimumDesc: '最小文件，画质明显下降',
     note: '压缩率更改仅适用于新保存的照片',
+  },
+
+  // 地图
+  map: {
+    searchPlaceholder: '搜索地址...',
+    selectedLocation: '已选位置',
+    latitude: '纬度',
+    longitude: '经度',
+    noResults: '无结果',
+    noResultsDesc: '找不到该地址，请尝试其他搜索词。',
+    requiresBuild: '需要开发版本',
+    requiresBuildDesc: '地图功能需要开发版本。\nExpo Go不支持。',
+    useCurrentLocation: '使用当前位置',
+  },
+
+  // 位置
+  location: {
+    permissionDenied: '需要位置权限。',
+    fetchError: '无法获取当前位置。',
   },
 
   // QR内容类型
