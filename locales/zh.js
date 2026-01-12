@@ -374,6 +374,7 @@ export default {
     sessionName: '会话名称',
     sessionNamePlaceholder: '输入会话名称（可选）',
     sessionNameHint: '留空将自动生成',
+    defaultSessionName: '会话 {{id}}',
     createButton: '创建',
     // 会话状态徽章
     public: '公开',

@@ -374,6 +374,7 @@ export default {
     sessionName: 'Nombre de Sesión',
     sessionNamePlaceholder: 'Ingrese nombre de sesión (opcional)',
     sessionNameHint: 'Se genera automáticamente si se deja vacío',
+    defaultSessionName: 'Sesión {{id}}',
     createButton: 'Crear',
     // Insignias de estado de sesión
     public: 'Público',

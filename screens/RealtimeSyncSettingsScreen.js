@@ -195,7 +195,7 @@ export default function RealtimeSyncSettingsScreen() {
         if (!groupIds.has(session.id)) {
           groups.push({
             id: session.id,
-            name: session.name || `세션 ${session.id.substring(0, 4)}`,
+            name: session.name || t('settings.defaultSessionName', { id: session.id.substring(0, 4) }),
             createdAt: session.createdAt || Date.now(),
             isCloudSync: true,
             isDeleted: session.status === 'DELETED',
@@ -324,7 +324,7 @@ export default function RealtimeSyncSettingsScreen() {
         if (!groupIds.has(session.id)) {
           groups.push({
             id: session.id,
-            name: session.name || `세션 ${session.id.substring(0, 4)}`,
+            name: session.name || t('settings.defaultSessionName', { id: session.id.substring(0, 4) }),
             createdAt: session.createdAt,
             isCloudSync: true,
             isDeleted: session.status === 'DELETED',
@@ -540,7 +540,7 @@ export default function RealtimeSyncSettingsScreen() {
       const token = await getToken();
 
       // 세션 이름 (입력하지 않으면 세션 ID 앞 4자리로 기본 이름 생성)
-      const sessionName = newSessionName.trim() || `세션 ${newSessionId.substring(0, 4)}`;
+      const sessionName = newSessionName.trim() || t('settings.defaultSessionName', { id: newSessionId.substring(0, 4) });
 
       // 세션 설정
       const sessionSettings = {
@@ -851,7 +851,7 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 세션 설정 저장 (이름 + 비밀번호 + 공개/비공개, 서버 API 연동)
   const handleSaveSecuritySettings = async () => {
-    const sessionName = selectedSessionName.trim() || `세션 ${selectedSessionId.substring(0, 4)}`;
+    const sessionName = selectedSessionName.trim() || t('settings.defaultSessionName', { id: selectedSessionId.substring(0, 4) });
     console.log('🔐 handleSaveSecuritySettings 시작:', { selectedSessionId, sessionName, selectedIsPublic, hasPassword: !!passwordInput.trim() });
     try {
       // 토큰 갱신 먼저 시도

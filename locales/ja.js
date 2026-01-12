@@ -374,6 +374,7 @@ export default {
     sessionName: 'セッション名',
     sessionNamePlaceholder: 'セッション名を入力（任意）',
     sessionNameHint: '空欄の場合は自動生成されます',
+    defaultSessionName: 'セッション {{id}}',
     createButton: '作成',
     // セッションステータスバッジ
     public: '公開',

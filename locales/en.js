@@ -395,6 +395,7 @@ export default {
     sessionName: 'Session Name',
     sessionNamePlaceholder: 'Enter session name (optional)',
     sessionNameHint: 'Auto-generated if left empty',
+    defaultSessionName: 'Session {{id}}',
     createButton: 'Create',
     // Session status badges
     public: 'Public',

@@ -397,6 +397,7 @@ export default {
     sessionName: '세션 이름',
     sessionNamePlaceholder: '세션 이름 입력 (선택사항)',
     sessionNameHint: '비워두면 자동으로 이름이 생성됩니다',
+    defaultSessionName: '세션 {{id}}',
     createButton: '생성',
     // 세션 상태 배지
     public: '공개',
