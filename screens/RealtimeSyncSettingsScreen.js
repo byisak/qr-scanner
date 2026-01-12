@@ -97,6 +97,7 @@ export default function RealtimeSyncSettingsScreen() {
   // 보안 설정 모달 상태 (비밀번호 + 공개/비공개)
   const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState('');
+  const [selectedSessionName, setSelectedSessionName] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [selectedIsPublic, setSelectedIsPublic] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -838,19 +839,20 @@ export default function RealtimeSyncSettingsScreen() {
     );
   };
 
-  // 비밀번호 모달 열기
-  // 보안 설정 모달 열기 (비밀번호 + 공개/비공개 토글)
+  // 세션 설정 모달 열기 (이름 + 비밀번호 + 공개/비공개 토글)
   const handleOpenSecurityModal = (sessionId) => {
     setSelectedSessionId(sessionId);
     const session = sessionUrls.find(s => s.id === sessionId);
+    setSelectedSessionName(session?.name || '');
     setPasswordInput(session?.password || '');
     setSelectedIsPublic(session?.isPublic !== false);
     setPasswordModalVisible(true);
   };
 
-  // 보안 설정 저장 (비밀번호 + 공개/비공개, 서버 API 연동)
+  // 세션 설정 저장 (이름 + 비밀번호 + 공개/비공개, 서버 API 연동)
   const handleSaveSecuritySettings = async () => {
-    console.log('🔐 handleSaveSecuritySettings 시작:', { selectedSessionId, selectedIsPublic, hasPassword: !!passwordInput.trim() });
+    const sessionName = selectedSessionName.trim() || `세션 ${selectedSessionId.substring(0, 4)}`;
+    console.log('🔐 handleSaveSecuritySettings 시작:', { selectedSessionId, sessionName, selectedIsPublic, hasPassword: !!passwordInput.trim() });
     try {
       // 토큰 갱신 먼저 시도
       let token = await getToken();
@@ -859,7 +861,7 @@ export default function RealtimeSyncSettingsScreen() {
         console.log('⚠️ 토큰 없음 - 로그인 필요');
         Alert.alert(
           t('common.error') || '오류',
-          t('settings.loginRequiredForSettings') || '보안 설정을 변경하려면 로그인이 필요합니다.',
+          t('settings.loginRequiredForSettings') || '설정을 변경하려면 로그인이 필요합니다.',
           [{ text: t('common.confirm') || '확인' }]
         );
         setPasswordModalVisible(false);
@@ -878,7 +880,7 @@ export default function RealtimeSyncSettingsScreen() {
       }
       console.log('🔑 최종 토큰:', { hasToken: !!token });
 
-      // 서버에 보안 설정 업데이트 요청
+      // 서버에 세션 설정 업데이트 요청
       try {
         if (token) {
           websocketClient.setAuthToken(token);
@@ -887,19 +889,21 @@ export default function RealtimeSyncSettingsScreen() {
         console.log('🌐 serverUrl 설정:', config.serverUrl);
 
         const result = await websocketClient.updateSessionSettings(selectedSessionId, {
+          sessionName: sessionName,
           password: passwordInput.trim() || null,
           isPublic: selectedIsPublic,
         });
-        console.log('✅ 서버에 보안 설정 저장 성공:', selectedSessionId, result);
+        console.log('✅ 서버에 세션 설정 저장 성공:', selectedSessionId, result);
       } catch (error) {
-        console.error('❌ 서버 보안 설정 저장 실패:', error.message, error);
+        console.error('❌ 서버 세션 설정 저장 실패:', error.message, error);
       }
 
-      // 로컬 상태 업데이트 (비밀번호 원본도 저장)
+      // 로컬 상태 업데이트 (이름 + 비밀번호 원본도 저장)
       const updatedUrls = sessionUrls.map(session => {
         if (session.id === selectedSessionId) {
           return {
             ...session,
+            name: sessionName,
             hasPassword: !!passwordInput.trim(),
             password: passwordInput.trim() || null,  // 비밀번호 원본 저장
             isPublic: selectedIsPublic,
@@ -911,14 +915,32 @@ export default function RealtimeSyncSettingsScreen() {
       setSessionUrls(updatedUrls);
       await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));
 
-      Alert.alert(t('settings.success'), t('settings.securitySettingsSaved') || '보안 설정이 저장되었습니다.');
+      // scanGroups에서도 이름 업데이트
+      try {
+        const groupsJson = await AsyncStorage.getItem('scanGroups');
+        if (groupsJson) {
+          const groups = JSON.parse(groupsJson);
+          const updatedGroups = groups.map(g => {
+            if (g.id === selectedSessionId) {
+              return { ...g, name: sessionName };
+            }
+            return g;
+          });
+          await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
+        }
+      } catch (error) {
+        console.error('scanGroups 이름 업데이트 실패:', error);
+      }
+
+      Alert.alert(t('settings.success'), t('settings.sessionSettingsSaved') || '세션 설정이 저장되었습니다.');
       setPasswordModalVisible(false);
+      setSelectedSessionName('');
       setPasswordInput('');
       setSelectedSessionId('');
       setShowPassword(false);
     } catch (error) {
-      console.error('보안 설정 저장 실패:', error);
-      Alert.alert(t('settings.error'), t('settings.securitySettingsSaveFailed') || '보안 설정 저장에 실패했습니다.');
+      console.error('세션 설정 저장 실패:', error);
+      Alert.alert(t('settings.error'), t('settings.sessionSettingsSaveFailed') || '세션 설정 저장에 실패했습니다.');
     }
   };
 
@@ -1029,19 +1051,11 @@ export default function RealtimeSyncSettingsScreen() {
 
       <View style={styles.sessionItemActions}>
         <TouchableOpacity
-          style={[styles.iconButton, {
-            backgroundColor: session.isPublic === false || session.hasPassword
-              ? colors.warning
-              : colors.textTertiary
-          }]}
+          style={[styles.iconButton, { backgroundColor: colors.primary }]}
           onPress={() => handleOpenSecurityModal(session.id)}
           activeOpacity={0.7}
         >
-          <Ionicons
-            name={session.isPublic === false || session.hasPassword ? "lock-closed" : "lock-open-outline"}
-            size={18}
-            color="#fff"
-          />
+          <Ionicons name="create-outline" size={18} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.iconButton, { backgroundColor: colors.primary }]}
@@ -1387,7 +1401,7 @@ export default function RealtimeSyncSettingsScreen() {
       </TouchableWithoutFeedback>
       )}
 
-      {/* 보안 설정 모달 (비밀번호 + 공개/비공개) */}
+      {/* 세션 설정 모달 (이름 + 비밀번호 + 공개/비공개) */}
       <Modal
         visible={passwordModalVisible}
         transparent={true}
@@ -1399,15 +1413,33 @@ export default function RealtimeSyncSettingsScreen() {
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
                 <View style={styles.modalHeader}>
-                  <Ionicons name="shield-checkmark" size={24} color={colors.primary} />
+                  <Ionicons name="create-outline" size={24} color={colors.primary} />
                   <Text style={[styles.modalTitle, { color: colors.text }]}>
-                    {t('settings.securitySettings') || '보안 설정'}
+                    {t('settings.editSession') || '세션 설정'}
                   </Text>
                 </View>
 
                 <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
-                  {t('settings.securitySettingsDesc') || '세션의 보안 설정을 관리합니다.'}
+                  {t('settings.editSessionDesc') || '세션의 이름과 보안 설정을 관리합니다.'}
                 </Text>
+
+                {/* 세션 이름 입력 */}
+                <View style={styles.sessionNameSection}>
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>
+                    {t('settings.sessionName') || '세션 이름'}
+                  </Text>
+                  <View style={[styles.sessionNameInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                    <Ionicons name="text-outline" size={18} color={colors.textTertiary} style={{ marginLeft: 12 }} />
+                    <TextInput
+                      style={[styles.sessionNameInputField, { color: colors.text }]}
+                      value={selectedSessionName}
+                      onChangeText={setSelectedSessionName}
+                      placeholder={t('settings.sessionNamePlaceholder') || '세션 이름 입력'}
+                      placeholderTextColor={colors.textTertiary}
+                      maxLength={50}
+                    />
+                  </View>
+                </View>
 
                 {/* 공개/비공개 토글 */}
                 <View style={[styles.securityOptionRow, { borderBottomColor: colors.border }]}>
@@ -1482,6 +1514,7 @@ export default function RealtimeSyncSettingsScreen() {
                     style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.inputBackground }]}
                     onPress={() => {
                       setPasswordModalVisible(false);
+                      setSelectedSessionName('');
                       setPasswordInput('');
                       setSelectedSessionId('');
                       setShowPassword(false);
