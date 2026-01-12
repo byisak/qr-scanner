@@ -214,7 +214,9 @@ export default function LoginScreen() {
       if (result.success) {
         router.dismissAll();
       } else {
-        Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));
+        // 서버에서 받은 구체적인 에러 메시지 표시
+        const errorMessage = result.error || t('auth.errorLoginFailed');
+        Alert.alert(t('settings.error'), errorMessage);
       }
     } catch (error) {
       Alert.alert(t('settings.error'), t('auth.errorLoginFailed'));

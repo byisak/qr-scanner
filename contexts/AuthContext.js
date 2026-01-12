@@ -146,7 +146,7 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorMsg = data.error?.message || data.message || 'Registration failed';
-        console.error('[Auth] 회원가입 실패:', errorMsg);
+        console.warn('[Auth] 회원가입 실패:', errorMsg);
         return {
           success: false,
           error: errorMsg
@@ -159,10 +159,10 @@ export const AuthProvider = ({ children }) => {
         return { success: true, user: data.user };
       }
 
-      console.error('[Auth] 서버 응답 형식 오류');
+      console.warn('[Auth] 서버 응답 형식 오류');
       return { success: false, error: 'Invalid response from server' };
     } catch (error) {
-      console.error('[Auth] 회원가입 네트워크 오류:', error.message);
+      console.warn('[Auth] 회원가입 네트워크 오류:', error.message);
       console.error('[Auth] 오류 상세:', error);
       return { success: false, error: error.message };
     }
@@ -213,7 +213,7 @@ export const AuthProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorMsg = data.error?.message || data.message || 'Login failed';
-        console.error('[Auth] 로그인 실패:', errorMsg);
+        console.log('[Auth] 로그인 실패:', errorMsg);
         return {
           success: false,
           error: errorMsg
@@ -226,10 +226,10 @@ export const AuthProvider = ({ children }) => {
         return { success: true, user: data.user };
       }
 
-      console.error('[Auth] 서버 응답 형식 오류');
+      console.warn('[Auth] 서버 응답 형식 오류');
       return { success: false, error: 'Invalid response from server' };
     } catch (error) {
-      console.error('[Auth] 로그인 네트워크 오류:', error.message);
+      console.warn('[Auth] 로그인 네트워크 오류:', error.message);
       console.error('[Auth] 오류 상세:', error);
       return { success: false, error: error.message };
     }
