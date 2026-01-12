@@ -84,9 +84,13 @@ export default function ScanUrlSettingsScreen() {
     (async () => {
       await SecureStore.setItemAsync('scanLinkEnabled', enabled.toString());
 
-      // 스캔 연동 URL이 켜지면 실시간 서버 전송 끄기 (상호 배타적)
+      // 다른 고급 스캔 기능 비활성화 (상호 배타적)
       if (enabled) {
+        await AsyncStorage.setItem('continuousScanEnabled', 'false');
+        await AsyncStorage.setItem('batchScanEnabled', 'false');
+        await AsyncStorage.setItem('multiCodeModeEnabled', 'false');
         await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
+        await AsyncStorage.setItem('lotteryScanEnabled', 'false');
       }
     })();
   }, [enabled]);
