@@ -16,6 +16,7 @@ export default {
     notice: '알림',
     success: '성공',
     copied: '복사됨',
+    later: '나중에',
   },
 
   // 기능 잠금
@@ -29,6 +30,8 @@ export default {
     watchAdProgress: '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.',
     adWatched: '광고 시청 완료',
     remainingAds: '해제까지 {remaining}회 더 시청해주세요.',
+    remainingAdsWithProgress: '광고 {current}/{total} 시청 완료!\n{remaining}회 더 시청하면 해제됩니다.',
+    watchNextAd: '계속 시청',
     featureUnlocked: '기능이 해제되었습니다!',
     allStylesUnlocked: '모든 QR 스타일이 해제되었습니다!',
     // 광고 로딩/에러 관련

@@ -16,6 +16,7 @@ export default {
     notice: 'Notice',
     success: 'Success',
     copied: 'Copied',
+    later: 'Later',
   },
 
   // Feature Lock
@@ -29,6 +30,8 @@ export default {
     watchAdProgress: 'Watched {current}/{total} ads\nWatch {remaining} more to unlock.',
     adWatched: 'Ad Watched',
     remainingAds: 'Watch {remaining} more ads to unlock.',
+    remainingAdsWithProgress: 'Watched {current}/{total} ads!\nWatch {remaining} more to unlock.',
+    watchNextAd: 'Continue',
     featureUnlocked: 'Feature unlocked!',
     allStylesUnlocked: 'All QR styles unlocked!',
     // Ad loading/error related

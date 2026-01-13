@@ -38,6 +38,7 @@ export const FeatureLockProvider = ({ children }) => {
   const [isAdLoading, setIsAdLoading] = useState(false);
   const rewardedAdRef = useRef(null);
   const rewardCallbackRef = useRef(null);
+  const showRewardedAdRef = useRef(null); // 순환 참조 방지용
 
   // 저장된 해제 상태 및 개발 모드 로드
   useEffect(() => {
@@ -364,22 +365,53 @@ export const FeatureLockProvider = ({ children }) => {
       // 필요한 횟수 달성 - 잠금 해제
       const success = await unlock(featureId);
       if (success) {
-        Alert.alert(
-          t('featureLock.unlocked') || '잠금 해제됨',
-          t('featureLock.featureUnlocked') || '기능이 해제되었습니다!',
-          [{ text: t('common.confirm') || '확인', onPress: onUnlock }]
-        );
+        // 약간의 지연 후 Alert 표시 (상태 업데이트 완료 후)
+        setTimeout(() => {
+          Alert.alert(
+            t('featureLock.unlocked') || '잠금 해제됨',
+            t('featureLock.featureUnlocked') || '기능이 해제되었습니다!',
+            [{
+              text: t('common.confirm') || '확인',
+              onPress: () => {
+                // onUnlock이 함수인 경우에만 호출
+                if (typeof onUnlock === 'function') {
+                  try {
+                    onUnlock();
+                  } catch (e) {
+                    console.error('onUnlock callback error:', e);
+                  }
+                }
+              }
+            }]
+          );
+        }, 100);
       }
     } else {
-      // 진행 중 - 남은 횟수 표시
+      // 진행 중 - 남은 횟수 표시 후 연속 재생 옵션 제공
       const remaining = requiredCount - newCount;
       Alert.alert(
         t('featureLock.adWatched') || '광고 시청 완료',
-        (t('featureLock.remainingAds') || '해제까지 {remaining}회 더 시청해주세요.')
+        (t('featureLock.remainingAdsWithProgress') || '광고 {current}/{total} 시청 완료!\n{remaining}회 더 시청하면 해제됩니다.')
           .replace('{remaining}', remaining.toString())
           .replace('{current}', newCount.toString())
           .replace('{total}', requiredCount.toString()),
-        [{ text: t('common.confirm') || '확인' }]
+        [
+          {
+            text: t('common.later') || '나중에',
+            style: 'cancel'
+          },
+          {
+            text: t('featureLock.watchNextAd') || '계속 시청',
+            onPress: () => {
+              // 다음 광고 로드 후 재생 (ref 사용으로 순환 참조 방지)
+              setTimeout(() => {
+                if (showRewardedAdRef.current) {
+                  showRewardedAdRef.current(featureId, onUnlock);
+                }
+              }, 500);
+            },
+          },
+        ]
       );
     }
   }, [incrementAdWatchCount, unlock, t]);
@@ -414,6 +446,11 @@ export const FeatureLockProvider = ({ children }) => {
       );
     }
   }, [isAdLoaded, isAdLoading, loadRewardedAd, handleAdWatched, t]);
+
+  // showRewardedAdAndProcess ref 업데이트 (순환 참조 방지)
+  useEffect(() => {
+    showRewardedAdRef.current = showRewardedAdAndProcess;
+  }, [showRewardedAdAndProcess]);
 
   // QR 스타일용 리워드 광고 표시
   const showRewardedAdForQrStyles = useCallback(async (onUnlock) => {
