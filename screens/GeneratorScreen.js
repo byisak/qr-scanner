@@ -1859,12 +1859,13 @@ export default function GeneratorScreen() {
         {codeMode === 'qr' && (
           <>
             {/* Type Selector */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.typesContainer}
-              style={s.typesScroll}
-            >
+            <View style={[s.typeSelectorSection, { backgroundColor: colors.surface }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.typesContainerInSection}
+                style={s.typesScrollInSection}
+              >
               {orderedQrTypes.map((type) => {
                 const isTypeLocked = isQrTypeLocked(type.id);
                 const qrFeatureId = getQrTypeFeatureId(type.id);
@@ -1923,7 +1924,8 @@ export default function GeneratorScreen() {
                   {t('generator.reorder') || '순서'}
                 </Text>
               </TouchableOpacity>
-            </ScrollView>
+              </ScrollView>
+            </View>
 
             {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
             <AdBanner
@@ -1956,12 +1958,13 @@ export default function GeneratorScreen() {
         {codeMode === 'barcode' && (
           <>
             {/* 바코드 포맷 선택 */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.typesContainer}
-              style={s.typesScroll}
-            >
+            <View style={[s.typeSelectorSection, { backgroundColor: colors.surface }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.typesContainerInSection}
+                style={s.typesScrollInSection}
+              >
               {displayedBarcodeTypes.map((format) => {
                 const isSelected = selectedBarcodeFormat === format.bcid;
                 return (
@@ -2039,7 +2042,8 @@ export default function GeneratorScreen() {
                   {t('generator.reorder') || '순서'}
                 </Text>
               </TouchableOpacity>
-            </ScrollView>
+              </ScrollView>
+            </View>
 
             {/* 배너 광고 - 바코드 선택과 입력 폼 사이 */}
             <AdBanner
@@ -3945,6 +3949,25 @@ const s = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.3,
     textAlign: 'center',
+  },
+  typeSelectorSection: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    paddingVertical: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  typesScrollInSection: {
+    maxHeight: 110,
+  },
+  typesContainerInSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    gap: 10,
   },
   formSection: {
     marginHorizontal: 20,
