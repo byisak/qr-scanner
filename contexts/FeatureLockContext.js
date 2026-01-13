@@ -29,8 +29,8 @@ export const FeatureLockProvider = ({ children }) => {
   const { t } = useLanguage();
   const [unlockedFeatures, setUnlockedFeatures] = useState([]);
   const [adWatchCounts, setAdWatchCounts] = useState({}); // { featureId: count }
-  // TODO: 스크린샷 촬영 후 false로 복원
-  const [devModeEnabled, setDevModeEnabled] = useState(true);
+  // 개발 모드 비활성화 (프로덕션)
+  const [devModeEnabled, setDevModeEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // 광고 관련 상태
