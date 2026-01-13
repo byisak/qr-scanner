@@ -761,7 +761,13 @@ export default function SettingsScreen() {
           {/* 복권 인식 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/lottery-scan-settings')}
+            onPress={() => {
+              if (isLocked('lotteryScan')) {
+                showUnlockAlert('lotteryScan', () => router.push('/lottery-scan-settings'));
+              } else {
+                router.push('/lottery-scan-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -769,6 +775,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.lotteryScanDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="lotteryScan" size={12} badge />
               <Text style={[s.statusText, { color: lotteryScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {lotteryScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>
