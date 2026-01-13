@@ -1931,7 +1931,6 @@ export default function GeneratorScreen() {
                 marginTop: 8,
                 marginBottom: 8,
                 marginHorizontal: 20,
-                paddingHorizontal: 0,
               }}
             />
 
@@ -2049,7 +2048,6 @@ export default function GeneratorScreen() {
                 marginTop: 8,
                 marginBottom: 8,
                 marginHorizontal: 20,
-                paddingHorizontal: 0,
               }}
             />
 

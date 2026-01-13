@@ -104,7 +104,6 @@ export default function AdBanner({ style, containerStyle, wrapperStyle }) {
 const styles = StyleSheet.create({
   wrapper: {
     width: '100%',
-    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   container: {
