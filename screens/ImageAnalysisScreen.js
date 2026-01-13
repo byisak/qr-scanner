@@ -216,18 +216,32 @@ function ImageAnalysisScreen() {
   const timeoutRef = useRef(null);
   const analysisStartedRef = useRef(false);
 
-  // zxing-wasm 라이브러리 로드
+  // zxing-wasm 라이브러리 로드 (오프라인 지원)
   useEffect(() => {
     const loadZxingScript = async () => {
       try {
         const asset = Asset.fromModule(zxingWasmAsset);
-        await asset.downloadAsync();
-        const scriptContent = await FileSystem.readAsStringAsync(asset.localUri);
+
+        // 이미 로컬에 있으면 downloadAsync 건너뛰기 (오프라인 지원)
+        if (!asset.localUri) {
+          try {
+            await asset.downloadAsync();
+          } catch (downloadErr) {
+            console.log('Asset download failed (offline?), trying local:', downloadErr.message);
+          }
+        }
+
+        // localUri가 있으면 사용, 없으면 uri 사용 (번들된 에셋)
+        const assetUri = asset.localUri || asset.uri;
+        if (!assetUri) {
+          throw new Error('Asset URI not available');
+        }
+
+        const scriptContent = await FileSystem.readAsStringAsync(assetUri);
         setZxingScript(scriptContent);
         console.log('ZXing WASM script loaded, size:', scriptContent.length);
       } catch (err) {
         console.error('Failed to load ZXing script:', err);
-        // CDN 폴백
         setZxingScript(null);
       }
     };
