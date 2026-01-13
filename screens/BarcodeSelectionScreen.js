@@ -37,15 +37,10 @@ export default function BarcodeSelectionScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
-  // ✅ 기본값: 자주 사용되는 바코드 타입들을 기본 활성화
-  const [selectedBarcodes, setSelectedBarcodes] = useState([
-    'qr',
-    'ean13',
-    'ean8',
-    'code128',
-    'upce',
-    'upca',
-  ]);
+  // ✅ 기본값: 모든 바코드 타입 활성화
+  const [selectedBarcodes, setSelectedBarcodes] = useState(
+    BARCODE_TYPES.map((b) => b.key)
+  );
 
   useEffect(() => {
     (async () => {
@@ -56,7 +51,7 @@ export default function BarcodeSelectionScreen() {
           setSelectedBarcodes(
             parsed.length > 0
               ? parsed
-              : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+              : BARCODE_TYPES.map((bt) => bt.key)
           );
         }
       } catch (error) {

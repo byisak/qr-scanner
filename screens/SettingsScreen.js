@@ -45,7 +45,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
-  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 기본값: 끔
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
   const [continuousScanEnabled, setContinuousScanEnabled] = useState(false);
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
@@ -57,7 +57,7 @@ export default function SettingsScreen() {
   // URL 열기 방식 상태
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   // 사진 압축률 상태
-  const [photoQuality, setPhotoQuality] = useState('0.8');
+  const [photoQuality, setPhotoQuality] = useState('0.5'); // 기본값: 중간
   // 제품 검색 자동 실행 상태
   const [productAutoSearch, setProductAutoSearch] = useState(false);
   // 스캔 연동 URL 목록
