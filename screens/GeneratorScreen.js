@@ -3436,6 +3436,13 @@ export default function GeneratorScreen() {
                               }}
                               activeOpacity={0.7}
                             >
+                              {/* 잠금 아이콘 - 오른쪽 상단 */}
+                              {isBarcodeLocked && (
+                                <View style={s.barcodeLockIcon}>
+                                  <Ionicons name="lock-closed" size={12} color="#FF1493" />
+                                </View>
+                              )}
+
                               {/* 즐겨찾기 체크박스 */}
                               <TouchableOpacity
                                 style={s.favoriteButton}
@@ -3452,19 +3459,11 @@ export default function GeneratorScreen() {
                                 }}
                                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                               >
-                                {isBarcodeLocked ? (
-                                  <Ionicons
-                                    name="lock-closed"
-                                    size={18}
-                                    color="#FF1493"
-                                  />
-                                ) : (
-                                  <Ionicons
-                                    name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
-                                    size={20}
-                                    color={isChecked ? '#22c55e' : colors.textTertiary}
-                                  />
-                                )}
+                                <Ionicons
+                                  name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
+                                  size={20}
+                                  color={isBarcodeLocked ? colors.textTertiary : (isChecked ? '#22c55e' : colors.textTertiary)}
+                                />
                               </TouchableOpacity>
 
                               <View style={s.modalBarcodeTextContainer}>
@@ -3906,6 +3905,20 @@ const s = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 2,
+  },
+  barcodeLockIcon: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 1,
   },
   typeText: {
     fontSize: 13,
