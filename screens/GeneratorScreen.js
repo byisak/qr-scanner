@@ -1934,14 +1934,13 @@ export default function GeneratorScreen() {
               </ScrollView>
             </View>
 
-            {/* 배너 광고 - 타입 선택과 정보 입력 사이 - 임시 주석처리
+            {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
             <AdBanner
               wrapperStyle={{
                 marginTop: 8,
                 marginBottom: 8,
               }}
             />
-            */}
 
             {/* Form Section */}
             <View style={[s.formSection, { backgroundColor: colors.surface }]}>
@@ -2053,14 +2052,13 @@ export default function GeneratorScreen() {
               </ScrollView>
             </View>
 
-            {/* 배너 광고 - 바코드 선택과 입력 폼 사이 - 임시 주석처리
+            {/* 배너 광고 - 바코드 선택과 입력 폼 사이 */}
             <AdBanner
               wrapperStyle={{
                 marginTop: 8,
                 marginBottom: 8,
               }}
             />
-            */}
 
             {/* 바코드 입력 폼 */}
             <View style={[s.formSection, { backgroundColor: colors.surface }]}>
