@@ -37,7 +37,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
-import LockIcon from '../components/LockIcon';
+import LockIcon, { HOT_PINK, LIGHT_PINK } from '../components/LockIcon';
 import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -82,7 +82,7 @@ const QR_TYPES = [
 export default function GeneratorScreen() {
   const { t, fonts, language } = useLanguage();
   const { isDark } = useTheme();
-  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId } = useFeatureLock();
+  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId, getAdProgress } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -1867,6 +1867,9 @@ export default function GeneratorScreen() {
             >
               {orderedQrTypes.map((type) => {
                 const isTypeLocked = isQrTypeLocked(type.id);
+                const qrFeatureId = getQrTypeFeatureId(type.id);
+                const hasQrProgress = qrFeatureId ? getAdProgress(qrFeatureId).current > 0 : false;
+                const qrLockColor = hasQrProgress ? LIGHT_PINK : HOT_PINK;
                 return (
                   <TouchableOpacity
                     key={type.id}
@@ -1891,7 +1894,7 @@ export default function GeneratorScreen() {
                       />
                       {isTypeLocked && (
                         <View style={s.typeLockIcon}>
-                          <Ionicons name="lock-closed" size={12} color="#FF1493" />
+                          <Ionicons name="lock-closed" size={12} color={qrLockColor} />
                         </View>
                       )}
                     </View>
@@ -3413,6 +3416,9 @@ export default function GeneratorScreen() {
                           const isChecked = (isDefault && !isHiddenDefault) || isFavorite;
                           const isSelected = selectedBarcodeFormat === format.bcid;
                           const isBarcodeLocked = isBarcodeTypeLocked(format.bcid);
+                          const barcodeFeatureId = getBarcodeFeatureId(format.bcid);
+                          const hasBarcodeProgress = barcodeFeatureId ? getAdProgress(barcodeFeatureId).current > 0 : false;
+                          const barcodeLockColor = hasBarcodeProgress ? LIGHT_PINK : HOT_PINK;
 
                           return (
                             <TouchableOpacity
@@ -3439,7 +3445,7 @@ export default function GeneratorScreen() {
                               {/* 잠금 아이콘 또는 체크박스 - 오른쪽 상단 (둘 중 하나만 표시) */}
                               {isBarcodeLocked ? (
                                 <View style={s.barcodeLockIcon}>
-                                  <Ionicons name="lock-closed" size={12} color="#FF1493" />
+                                  <Ionicons name="lock-closed" size={12} color={barcodeLockColor} />
                                 </View>
                               ) : (
                                 <TouchableOpacity
