@@ -728,7 +728,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       try {
         const photo = await cameraRef.current.takePhoto({
-          qualityPrioritization: 'quality',
+          qualityPrioritization: 'balanced', // 속도와 품질 균형 (흔들림 방지)
           flash: 'off',
           enableShutterSound: false,
         });
@@ -752,7 +752,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       try {
         const photo = await cameraRef.current.takePhoto({
-          qualityPrioritization: 'quality',
+          qualityPrioritization: 'balanced', // 속도와 품질 균형 (흔들림 방지)
           flash: 'off',
           enableShutterSound: false,
         });
@@ -785,6 +785,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         photo={true}
         onError={handleCameraError}
         enableZoomGesture={true}
+        videoStabilizationMode="auto"
         {...cameraProps}
       />
       {showHighlights && (
@@ -814,7 +815,7 @@ export function useNativeCamera() {
 
     try {
       const photo = await cameraRef.current.takePhoto({
-        qualityPrioritization: 'quality',
+        qualityPrioritization: 'balanced', // 속도와 품질 균형 (흔들림 방지)
         flash: 'off',
         enableShutterSound: false,
       });
