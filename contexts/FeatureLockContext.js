@@ -39,6 +39,7 @@ export const FeatureLockProvider = ({ children }) => {
   const rewardedAdRef = useRef(null);
   const rewardCallbackRef = useRef(null);
   const showRewardedAdRef = useRef(null); // 순환 참조 방지용
+  const isAdLoadedRef = useRef(false); // 콜백에서 접근용
 
   // 저장된 해제 상태 및 개발 모드 로드
   useEffect(() => {
@@ -90,6 +91,7 @@ export const FeatureLockProvider = ({ children }) => {
         () => {
           setIsAdLoaded(true);
           setIsAdLoading(false);
+          isAdLoadedRef.current = true;
           console.log('Rewarded ad loaded');
         }
       );
@@ -112,8 +114,15 @@ export const FeatureLockProvider = ({ children }) => {
         () => {
           console.log('Rewarded ad closed');
           setIsAdLoaded(false);
-          // 다음 광고 미리 로드
-          setTimeout(() => loadRewardedAd(), 1000);
+          isAdLoadedRef.current = false;
+          // 광고 객체 초기화 (재사용 방지)
+          if (rewardedAdRef.current?.unsubscribe) {
+            rewardedAdRef.current.unsubscribe();
+          }
+          rewardedAdRef.current = null;
+          // 다음 광고 즉시 로드 시작
+          setIsAdLoading(false); // 로딩 상태 초기화
+          setTimeout(() => loadRewardedAd(), 500);
         }
       );
 
@@ -403,12 +412,31 @@ export const FeatureLockProvider = ({ children }) => {
           {
             text: t('featureLock.watchNextAd') || '계속 시청',
             onPress: () => {
-              // 다음 광고 로드 후 재생 (ref 사용으로 순환 참조 방지)
-              setTimeout(() => {
-                if (showRewardedAdRef.current) {
+              // 광고 로드 대기 후 재생 (최대 10초 대기)
+              let attempts = 0;
+              const maxAttempts = 20; // 500ms * 20 = 10초
+
+              const tryShowAd = () => {
+                attempts++;
+                // 광고가 로드되었고 광고 객체가 있으면 표시
+                if (isAdLoadedRef.current && rewardedAdRef.current?.ad && showRewardedAdRef.current) {
                   showRewardedAdRef.current(featureId, onUnlock);
+                } else if (attempts < maxAttempts) {
+                  // 아직 준비 안됨, 500ms 후 재시도
+                  console.log(`Waiting for ad to load... attempt ${attempts}/${maxAttempts}`);
+                  setTimeout(tryShowAd, 500);
+                } else {
+                  // 최대 시도 횟수 초과 - 사용자에게 알림
+                  Alert.alert(
+                    t('featureLock.adNotReady') || '광고 준비 중',
+                    t('featureLock.adNotReadyRetry') || '광고 로딩에 시간이 걸리고 있습니다. 잠시 후 다시 시도해주세요.',
+                    [{ text: t('common.confirm') || '확인' }]
+                  );
                 }
-              }, 500);
+              };
+
+              // 1.5초 후 첫 시도 (광고 로드 시간 확보)
+              setTimeout(tryShowAd, 1500);
             },
           },
         ]

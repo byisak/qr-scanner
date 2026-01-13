@@ -37,6 +37,7 @@ export default {
     // 광고 로딩/에러 관련
     adNotReady: '광고 준비 중',
     adNotReadyMessage: '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+    adNotReadyRetry: '광고 로딩에 시간이 걸리고 있습니다. 잠시 후 다시 시도해주세요.',
     adError: '광고 오류',
     adErrorMessage: '광고를 표시하는 중 오류가 발생했습니다.',
     loadingAd: '로딩 중...',

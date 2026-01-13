@@ -37,6 +37,7 @@ export default {
     // Ad loading/error related
     adNotReady: 'Ad not ready',
     adNotReadyMessage: 'Loading ad. Please try again in a moment.',
+    adNotReadyRetry: 'Ad is taking longer to load. Please try again later.',
     adError: 'Ad Error',
     adErrorMessage: 'An error occurred while showing the ad.',
     loadingAd: 'Loading...',
