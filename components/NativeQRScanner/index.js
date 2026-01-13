@@ -785,7 +785,6 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         photo={true}
         onError={handleCameraError}
         enableZoomGesture={true}
-        videoStabilizationMode="auto"
         {...cameraProps}
       />
       {showHighlights && (
