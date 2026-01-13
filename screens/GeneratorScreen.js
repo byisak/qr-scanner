@@ -56,9 +56,9 @@ import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved,
 import PresetSaveModal from '../components/PresetSaveModal';
 import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 
-// 기본 표시되는 바코드 타입 bcid 목록 (2개)
+// 기본 표시되는 바코드 타입 bcid 목록 (1개)
 const DEFAULT_BARCODE_BCIDS = [
-  'code128', 'ean13',
+  'code128',
 ];
 
 // 카테고리 순서 (2D 바코드 제외 - QR코드는 별도 탭에서 생성)
@@ -94,7 +94,7 @@ export default function GeneratorScreen() {
   // 세그먼트 탭: 'qr' 또는 'barcode'
   const [codeMode, setCodeMode] = useState(params.initialMode || 'qr');
 
-  const [selectedType, setSelectedType] = useState(params.initialType || 'website');
+  const [selectedType, setSelectedType] = useState(params.initialType || 'text');
   // bcid 형태로 저장 (예: 'code128', 'ean13')
   const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState(params.initialBarcodeFormat || 'code128');
   const [barcodeValue, setBarcodeValue] = useState(params.initialBarcodeValue || '');
