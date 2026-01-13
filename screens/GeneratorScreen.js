@@ -1891,7 +1891,7 @@ export default function GeneratorScreen() {
                       />
                       {isTypeLocked && (
                         <View style={s.typeLockIcon}>
-                          <Ionicons name="lock-closed" size={12} color="#FF3B30" />
+                          <Ionicons name="lock-closed" size={12} color="#FF1493" />
                         </View>
                       )}
                     </View>
@@ -3456,7 +3456,7 @@ export default function GeneratorScreen() {
                                   <Ionicons
                                     name="lock-closed"
                                     size={18}
-                                    color={colors.textTertiary}
+                                    color="#FF1493"
                                   />
                                 ) : (
                                   <Ionicons

@@ -1431,6 +1431,7 @@ export default {
       photoSave: '스캔 사진 저장',
       icloudBackup: 'iCloud 백업',
       googleDriveBackup: 'Google Drive 백업',
+      lotteryScan: '복권 인식',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

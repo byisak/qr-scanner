@@ -534,7 +534,7 @@ export default function QRStylePicker({
               </View>
               {isStyleLocked && (
                 <View style={styles.lockOverlay}>
-                  <Ionicons name="lock-closed" size={20} color="#666" />
+                  <Ionicons name="lock-closed" size={20} color="#FF1493" />
                 </View>
               )}
             </View>

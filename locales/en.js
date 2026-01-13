@@ -1441,6 +1441,7 @@ export default {
       photoSave: 'Scan Photo Save',
       icloudBackup: 'iCloud Backup',
       googleDriveBackup: 'Google Drive Backup',
+      lotteryScan: 'Lottery Scan',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',
