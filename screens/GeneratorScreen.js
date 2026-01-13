@@ -1060,6 +1060,13 @@ export default function GeneratorScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setCodeMode(mode);
+
+    // 탭 변경 시 첫 번째 타입 선택
+    if (mode === 'qr' && orderedQrTypes.length > 0) {
+      setSelectedType(orderedQrTypes[0].id);
+    } else if (mode === 'barcode' && displayedBarcodeTypes.length > 0) {
+      setSelectedBarcodeFormat(displayedBarcodeTypes[0].bcid);
+    }
   };
 
   const handleShare = async () => {
