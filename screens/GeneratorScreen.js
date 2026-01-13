@@ -3436,35 +3436,27 @@ export default function GeneratorScreen() {
                               }}
                               activeOpacity={0.7}
                             >
-                              {/* 잠금 아이콘 - 오른쪽 상단 */}
-                              {isBarcodeLocked && (
+                              {/* 잠금 아이콘 또는 체크박스 - 오른쪽 상단 (둘 중 하나만 표시) */}
+                              {isBarcodeLocked ? (
                                 <View style={s.barcodeLockIcon}>
                                   <Ionicons name="lock-closed" size={12} color="#FF1493" />
                                 </View>
-                              )}
-
-                              {/* 즐겨찾기 체크박스 */}
-                              <TouchableOpacity
-                                style={s.favoriteButton}
-                                onPress={(e) => {
-                                  e.stopPropagation();
-                                  if (isBarcodeLocked) {
-                                    const featureId = getBarcodeFeatureId(format.bcid);
-                                    if (featureId) {
-                                      showUnlockAlert(featureId, () => toggleFavoriteBarcode(format.bcid));
-                                    }
-                                  } else {
+                              ) : (
+                                <TouchableOpacity
+                                  style={s.barcodeCheckbox}
+                                  onPress={(e) => {
+                                    e.stopPropagation();
                                     toggleFavoriteBarcode(format.bcid);
-                                  }
-                                }}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              >
-                                <Ionicons
-                                  name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
-                                  size={20}
-                                  color={isBarcodeLocked ? colors.textTertiary : (isChecked ? '#22c55e' : colors.textTertiary)}
-                                />
-                              </TouchableOpacity>
+                                  }}
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                  <Ionicons
+                                    name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
+                                    size={20}
+                                    color={isChecked ? '#22c55e' : colors.textTertiary}
+                                  />
+                                </TouchableOpacity>
+                              )}
 
                               <View style={s.modalBarcodeTextContainer}>
                                 <Text style={[
@@ -3918,6 +3910,12 @@ const s = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 2,
+    zIndex: 1,
+  },
+  barcodeCheckbox: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
     zIndex: 1,
   },
   typeText: {
