@@ -14,7 +14,9 @@ import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import LockIcon from '../components/LockIcon';
 
 // 지원 복권 목록
 const SUPPORTED_LOTTERIES = [
@@ -33,7 +35,11 @@ export default function LotteryScanSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const { isLocked, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
+
+  // 잠금 상태
+  const isLotteryScanLocked = isLocked('lotteryScan');
 
   // 상태
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false);
@@ -56,18 +62,40 @@ export default function LotteryScanSettingsScreen() {
 
   // 복권 인식 활성화 저장
   const handleLotteryScanToggle = async (value) => {
-    setLotteryScanEnabled(value);
+    // 잠금 상태에서 켜려고 할 때 광고 시청 필요
+    if (value && isLotteryScanLocked) {
+      showUnlockAlert('lotteryScan', () => {
+        // 광고 시청 후 활성화
+        enableLotteryScan();
+      });
+      return;
+    }
+
+    if (value) {
+      enableLotteryScan();
+    } else {
+      // 끄는 것은 언제든 가능
+      setLotteryScanEnabled(false);
+      try {
+        await AsyncStorage.setItem('lotteryScanEnabled', 'false');
+      } catch (error) {
+        console.error('Save lottery scan enabled error:', error);
+      }
+    }
+  };
+
+  // 복권 인식 활성화 실행
+  const enableLotteryScan = async () => {
+    setLotteryScanEnabled(true);
     try {
-      await AsyncStorage.setItem('lotteryScanEnabled', value.toString());
+      await AsyncStorage.setItem('lotteryScanEnabled', 'true');
 
       // 다른 고급 스캔 기능 비활성화 (상호 배타적)
-      if (value) {
-        await AsyncStorage.setItem('continuousScanEnabled', 'false');
-        await AsyncStorage.setItem('batchScanEnabled', 'false');
-        await AsyncStorage.setItem('multiCodeModeEnabled', 'false');
-        await SecureStore.setItemAsync('scanLinkEnabled', 'false');
-        await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
-      }
+      await AsyncStorage.setItem('continuousScanEnabled', 'false');
+      await AsyncStorage.setItem('batchScanEnabled', 'false');
+      await AsyncStorage.setItem('multiCodeModeEnabled', 'false');
+      await SecureStore.setItemAsync('scanLinkEnabled', 'false');
+      await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
     } catch (error) {
       console.error('Save lottery scan enabled error:', error);
     }
@@ -117,12 +145,15 @@ export default function LotteryScanSettingsScreen() {
                 </Text>
               </View>
             </View>
-            <Switch
-              value={lotteryScanEnabled}
-              onValueChange={handleLotteryScanToggle}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-            />
+            <View style={s.switchContainer}>
+              {isLotteryScanLocked && <LockIcon size={18} style={{ marginRight: 8 }} />}
+              <Switch
+                value={lotteryScanEnabled}
+                onValueChange={handleLotteryScanToggle}
+                trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                thumbColor="#fff"
+              />
+            </View>
           </View>
         </View>
 
@@ -266,6 +297,10 @@ const s = StyleSheet.create({
   rowDesc: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   infoBox: {
     flexDirection: 'row',
