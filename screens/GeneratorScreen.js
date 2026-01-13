@@ -1930,7 +1930,6 @@ export default function GeneratorScreen() {
               wrapperStyle={{
                 marginTop: 8,
                 marginBottom: 8,
-                marginHorizontal: 20,
               }}
             />
 
@@ -2047,7 +2046,6 @@ export default function GeneratorScreen() {
               wrapperStyle={{
                 marginTop: 8,
                 marginBottom: 8,
-                marginHorizontal: 20,
               }}
             />
 
