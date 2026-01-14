@@ -22,14 +22,7 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-
-// ImagePicker는 네이티브 모듈이 필요하므로 동적 로딩
-let ImagePicker = null;
-try {
-  ImagePicker = require('expo-image-picker');
-} catch (e) {
-  console.log('expo-image-picker not available - rebuild required');
-}
+import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
