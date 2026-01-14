@@ -43,6 +43,7 @@ import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/a
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as MediaLibrary from 'expo-media-library';
+import * as ImagePicker from 'expo-image-picker';
 
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation'; // 플러스 표시만 활성화
@@ -2003,94 +2004,25 @@ function ScannerScreen() {
     }
   }, [realtimeSyncEnabled, user]);
 
-  // 갤러리 사진 목록 상태
-  const [galleryModalVisible, setGalleryModalVisible] = useState(false);
-  const [galleryPhotos, setGalleryPhotos] = useState([]);
-  const [galleryLoading, setGalleryLoading] = useState(false);
-  const [galleryEndCursor, setGalleryEndCursor] = useState(null);
-  const [galleryHasMore, setGalleryHasMore] = useState(true);
-  const [galleryLoadingMore, setGalleryLoadingMore] = useState(false);
-  const [selectedPhotoId, setSelectedPhotoId] = useState(null); // 선택된 사진 로딩 표시용
-
-  // 갤러리 열기
+  // 네이티브 이미지 피커로 갤러리 열기
   const handlePickImage = useCallback(async () => {
     try {
-      // 미디어 라이브러리 권한 요청
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      // iOS 14+에서는 'limited' 권한도 허용
-      if (status !== 'granted' && status !== 'limited') {
-        Alert.alert(
-          t('result.permissionDenied'),
-          t('result.permissionDeniedMessage')
-        );
+      // 네이티브 이미지 피커 실행
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
         return;
       }
 
-      setGalleryLoading(true);
-      setGalleryModalVisible(true);
-      setGalleryPhotos([]);
-      setGalleryEndCursor(null);
-      setGalleryHasMore(true);
-
-      // 최근 사진 100개씩 가져오기 (무한 스크롤)
-      const assets = await MediaLibrary.getAssetsAsync({
-        mediaType: 'photo',
-        first: 100,
-        sortBy: [MediaLibrary.SortBy.creationTime],
-      });
-
-      setGalleryPhotos(assets.assets);
-      setGalleryEndCursor(assets.endCursor);
-      setGalleryHasMore(assets.hasNextPage);
-      setGalleryLoading(false);
-    } catch (error) {
-      console.error('Gallery error:', error);
-      setGalleryLoading(false);
-      Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
-    }
-  }, [t]);
-
-  // 갤러리 더 불러오기 (무한 스크롤)
-  const handleLoadMorePhotos = useCallback(async () => {
-    if (galleryLoadingMore || !galleryHasMore || !galleryEndCursor) return;
-
-    try {
-      setGalleryLoadingMore(true);
-
-      const assets = await MediaLibrary.getAssetsAsync({
-        mediaType: 'photo',
-        first: 100,
-        after: galleryEndCursor,
-        sortBy: [MediaLibrary.SortBy.creationTime],
-      });
-
-      setGalleryPhotos(prev => [...prev, ...assets.assets]);
-      setGalleryEndCursor(assets.endCursor);
-      setGalleryHasMore(assets.hasNextPage);
-      setGalleryLoadingMore(false);
-    } catch (error) {
-      console.error('Load more photos error:', error);
-      setGalleryLoadingMore(false);
-    }
-  }, [galleryLoadingMore, galleryHasMore, galleryEndCursor]);
-
-  // 사진 선택 시
-  const handleSelectPhoto = useCallback(async (asset) => {
-    try {
-      // 선택한 사진에 로딩 표시 (모달은 아직 열어둠)
-      setSelectedPhotoId(asset.id);
-
-      // 에셋 정보 가져오기 (로컬 URI 포함)
-      const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
-      const imageUri = assetInfo.localUri || asset.uri;
+      const imageUri = result.assets[0].uri;
 
       // 네비게이션 전 카메라 중지
       isNavigatingRef.current = true;
       setIsActive(false);
-
-      // 모달 닫기 및 로딩 상태 초기화
-      setGalleryModalVisible(false);
-      setSelectedPhotoId(null);
 
       // 이미지 분석 화면으로 이동
       router.push({
@@ -2098,8 +2030,7 @@ function ScannerScreen() {
         params: { imageUri: imageUri },
       });
     } catch (error) {
-      console.error('Photo select error:', error);
-      setSelectedPhotoId(null);
+      console.error('Image picker error:', error);
       Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
     }
   }, [router, t]);
@@ -2370,75 +2301,6 @@ function ScannerScreen() {
             </ScrollView>
           </BlurView>
         </TouchableOpacity>
-      </Modal>
-
-      {/* 갤러리 모달 */}
-      <Modal
-        visible={galleryModalVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setGalleryModalVisible(false)}
-      >
-        <View style={styles.galleryModalContainer}>
-          <View style={[styles.galleryModalContent, { paddingTop: insets.top }]}>
-            <View style={styles.galleryModalHeader}>
-              <Text style={styles.galleryModalTitle}>{t('imageAnalysis.selectPhoto')}</Text>
-              <TouchableOpacity
-                onPress={() => setGalleryModalVisible(false)}
-                style={styles.galleryModalCloseButton}
-              >
-                <Ionicons name="close" size={28} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            {galleryLoading ? (
-              <View style={styles.galleryLoading}>
-                <ActivityIndicator size="large" color="#fff" />
-                <Text style={styles.galleryLoadingText}>{t('common.loading')}</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={galleryPhotos}
-                numColumns={5}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.galleryGrid}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.galleryPhotoItem}
-                    onPress={() => handleSelectPhoto(item)}
-                    activeOpacity={0.7}
-                    disabled={selectedPhotoId !== null}
-                  >
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.galleryPhotoImage}
-                    />
-                    {selectedPhotoId === item.id && (
-                      <View style={styles.galleryPhotoLoading}>
-                        <ActivityIndicator size="small" color="#fff" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                )}
-                onEndReached={handleLoadMorePhotos}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={
-                  galleryLoadingMore ? (
-                    <View style={styles.galleryFooterLoading}>
-                      <ActivityIndicator size="small" color="#fff" />
-                    </View>
-                  ) : null
-                }
-                ListEmptyComponent={
-                  <View style={styles.galleryEmpty}>
-                    <Ionicons name="images-outline" size={48} color="#666" />
-                    <Text style={styles.galleryEmptyText}>{t('imageAnalysis.noPhotos')}</Text>
-                  </View>
-                }
-              />
-            )}
-          </View>
-        </View>
       </Modal>
 
       {/* 토스트 결과 표시 (연속 스캔 모드) */}
@@ -2846,75 +2708,6 @@ const styles = StyleSheet.create({
   },
   groupItemTextActive: {
     color: '#007AFF',
-  },
-  // 갤러리 모달 스타일
-  galleryModalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.95)',
-  },
-  galleryModalContent: {
-    flex: 1,
-  },
-  galleryModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  galleryModalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  galleryModalCloseButton: {
-    padding: 4,
-  },
-  galleryLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  galleryLoadingText: {
-    color: '#fff',
-    fontSize: 14,
-    marginTop: 12,
-  },
-  galleryGrid: {
-    padding: 2,
-  },
-  galleryPhotoItem: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 1,
-  },
-  galleryPhotoImage: {
-    flex: 1,
-    borderRadius: 4,
-  },
-  galleryPhotoLoading: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  galleryEmpty: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  galleryEmptyText: {
-    color: '#666',
-    fontSize: 14,
-    marginTop: 12,
-  },
-  galleryFooterLoading: {
-    paddingVertical: 20,
-    alignItems: 'center',
   },
   multiScanButtonContainer: {
     position: 'absolute',
