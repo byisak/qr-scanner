@@ -179,13 +179,18 @@ export default function HistoryScreen() {
     const item = data.item;
     const swipeValue = swipeValues[item.timestamp.toString()] || 0;
 
-    // 스와이프 거리에 따라 버튼 크기 계산 (최소 40, 최대 52)
-    const minSize = 40;
-    const maxSize = 52;
-    const buttonSize = Math.min(maxSize, minSize + (swipeValue / 5));
+    // 스와이프 거리에 따라 버튼 크기 계산 (20px에서 시작해서 56px까지)
+    const minSize = 20;
+    const maxSize = 56;
+    // 스와이프 값에 따라 더 빠르게 커지도록
+    const progress = Math.min(1, swipeValue / 80);
+    const buttonSize = minSize + (maxSize - minSize) * progress;
 
     // 스와이프 거리에 따라 투명도 계산
-    const opacity = Math.min(1, swipeValue / 60);
+    const opacity = Math.min(1, swipeValue / 40);
+
+    // 아이콘 크기도 함께 변화
+    const iconSize = Math.round(14 + (8 * progress));
 
     return (
       <View style={s.rowBack}>
@@ -197,6 +202,7 @@ export default function HistoryScreen() {
               height: buttonSize,
               borderRadius: buttonSize / 2,
               opacity: opacity,
+              transform: [{ scale: 0.9 + (0.1 * progress) }],
             }
           ]}
           onPress={() => {
@@ -206,7 +212,7 @@ export default function HistoryScreen() {
             deleteHistoryItem(item);
           }}
         >
-          <Ionicons name="trash" size={22} color="#fff" />
+          <Ionicons name="trash" size={iconSize} color="#fff" />
         </TouchableOpacity>
       </View>
     );
