@@ -167,26 +167,43 @@ export default function HistoryScreen() {
     triggerSync();
   };
 
-  // 스와이프 삭제 버튼 렌더링
+  // iOS 네이티브 스타일 스와이프 삭제 버튼
   const renderRightActions = (progress, dragX, item) => {
-    const scale = dragX.interpolate({
-      inputRange: [-100, 0],
-      outputRange: [1, 0.5],
+    // 스와이프 양에 따른 너비 변화 (iOS 메일처럼)
+    const width = dragX.interpolate({
+      inputRange: [-200, -80, 0],
+      outputRange: [200, 80, 0],
+      extrapolate: 'clamp',
+    });
+
+    // 아이콘/텍스트 투명도
+    const opacity = dragX.interpolate({
+      inputRange: [-80, -40, 0],
+      outputRange: [1, 0.5, 0],
       extrapolate: 'clamp',
     });
 
     return (
-      <TouchableOpacity
-        style={s.deleteAction}
-        onPress={() => deleteHistoryItem(item)}
-        activeOpacity={0.8}
-      >
-        <Animated.View style={[s.deleteActionContent, { transform: [{ scale }] }]}>
-          <Ionicons name="trash-outline" size={24} color="#fff" />
-          <Text style={s.deleteActionText}>{t('common.delete')}</Text>
-        </Animated.View>
-      </TouchableOpacity>
+      <Animated.View style={[s.deleteAction, { width }]}>
+        <TouchableOpacity
+          style={s.deleteActionTouchable}
+          onPress={() => deleteHistoryItem(item)}
+          activeOpacity={0.8}
+        >
+          <Animated.View style={[s.deleteActionContent, { opacity }]}>
+            <Ionicons name="trash" size={22} color="#fff" />
+            <Text style={s.deleteActionText}>{t('common.delete')}</Text>
+          </Animated.View>
+        </TouchableOpacity>
+      </Animated.View>
     );
+  };
+
+  // 풀 스와이프 시 삭제 처리
+  const handleSwipeOpen = (direction, item) => {
+    if (direction === 'right') {
+      deleteHistoryItem(item);
+    }
   };
 
   const formatDateTime = (timestamp) => {
@@ -363,7 +380,10 @@ export default function HistoryScreen() {
             return (
               <Swipeable
                 renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}
-                overshootRight={false}
+                onSwipeableOpen={(direction) => handleSwipeOpen(direction, item)}
+                rightThreshold={150}
+                friction={2}
+                overshootFriction={8}
               >
                 <TouchableOpacity
                   style={[s.item, { backgroundColor: colors.surface }]}
@@ -694,11 +714,14 @@ const s = StyleSheet.create({
   deleteAction: {
     backgroundColor: '#FF3B30',
     justifyContent: 'center',
-    alignItems: 'center',
-    width: 80,
+    alignItems: 'flex-end',
     marginVertical: 6,
-    marginRight: 15,
-    borderRadius: 12,
+  },
+  deleteActionTouchable: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   deleteActionContent: {
     alignItems: 'center',
@@ -706,7 +729,7 @@ const s = StyleSheet.create({
   },
   deleteActionText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     marginTop: 4,
   },
