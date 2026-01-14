@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,6 +47,13 @@ export default function HistoryScreen() {
   const [filteredList, setFilteredList] = useState([]);
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
+  const [swipeValues, setSwipeValues] = useState({});
+
+  // 스와이프 값 변경 핸들러
+  const onSwipeValueChange = (swipeData) => {
+    const { key, value } = swipeData;
+    setSwipeValues(prev => ({ ...prev, [key]: Math.abs(value) }));
+  };
 
   // 그룹 데이터 로드
   const loadGroups = async () => {
@@ -169,10 +177,28 @@ export default function HistoryScreen() {
   // SwipeListView에서 숨겨진 삭제 버튼 렌더링
   const renderHiddenItem = (data, rowMap) => {
     const item = data.item;
+    const swipeValue = swipeValues[item.timestamp.toString()] || 0;
+
+    // 스와이프 거리에 따라 버튼 크기 계산 (최소 44, 최대 70)
+    const minSize = 44;
+    const maxSize = 70;
+    const buttonSize = Math.min(maxSize, minSize + (swipeValue / 3));
+
+    // 스와이프 거리에 따라 투명도 계산
+    const opacity = Math.min(1, swipeValue / 60);
+
     return (
       <View style={s.rowBack}>
         <TouchableOpacity
-          style={s.deleteBtn}
+          style={[
+            s.deleteBtn,
+            {
+              width: buttonSize,
+              height: buttonSize,
+              borderRadius: buttonSize / 2,
+              opacity: opacity,
+            }
+          ]}
           onPress={() => {
             if (rowMap[item.timestamp]) {
               rowMap[item.timestamp].closeRow();
@@ -180,8 +206,7 @@ export default function HistoryScreen() {
             deleteHistoryItem(item);
           }}
         >
-          <Ionicons name="trash" size={24} color="#fff" />
-          <Text style={s.deleteBtnText}>{t('common.delete')}</Text>
+          <Ionicons name="trash" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
     );
@@ -458,11 +483,13 @@ export default function HistoryScreen() {
             );
           }}
           renderHiddenItem={renderHiddenItem}
-          rightOpenValue={-80}
+          rightOpenValue={-90}
           disableRightSwipe
           closeOnRowPress
           closeOnRowOpen
           closeOnScroll
+          onSwipeValueChange={onSwipeValueChange}
+          useNativeDriver={false}
           contentContainerStyle={s.listContent}
         />
       )}
@@ -695,6 +722,7 @@ const s = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    paddingRight: 20,
     marginHorizontal: 15,
     marginVertical: 6,
   },
@@ -702,15 +730,10 @@ const s = StyleSheet.create({
     backgroundColor: '#FF3B30',
     justifyContent: 'center',
     alignItems: 'center',
-    width: 80,
-    height: '100%',
-    borderTopRightRadius: 14,
-    borderBottomRightRadius: 14,
-  },
-  deleteBtnText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 4,
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });
