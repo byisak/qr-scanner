@@ -32,9 +32,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // 분석 타임아웃 (15초)
 const ANALYSIS_TIMEOUT = 15000;
 
-// 분석용 이미지 최대 크기 (너무 크면 느림)
-const MAX_ANALYSIS_SIZE = 1920;
-
 // zxing-wasm 라이브러리 로컬 파일 (텍스트 파일로 번들링)
 const zxingWasmAsset = require('../assets/js/zxing-wasm.txt');
 
@@ -319,37 +316,12 @@ function ImageAnalysisScreen() {
         // 원본 이미지 크기 로그 (디버깅용)
         console.log('[ImageAnalysis] Original image:', imageUri, 'size:', fileInfo.size ? `${(fileInfo.size / 1024).toFixed(1)}KB` : 'unknown');
 
-        // EXIF 회전 정규화 및 크기 조정
-        // 너무 큰 이미지는 분석 속도가 느리므로 리사이즈
-        console.log('Normalizing image orientation and size...');
-
-        // 먼저 원본 이미지 크기 확인
-        const originalImage = await ImageManipulator.manipulateAsync(
-          imageUri,
-          [],
-          { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
-        );
-
-        const actions = [];
-        const origWidth = originalImage.width;
-        const origHeight = originalImage.height;
-
-        // 이미지가 너무 크면 리사이즈 (분석 속도 향상)
-        if (origWidth > MAX_ANALYSIS_SIZE || origHeight > MAX_ANALYSIS_SIZE) {
-          const scale = MAX_ANALYSIS_SIZE / Math.max(origWidth, origHeight);
-          actions.push({
-            resize: {
-              width: Math.round(origWidth * scale),
-              height: Math.round(origHeight * scale),
-            },
-          });
-          console.log(`Resizing image: ${origWidth}x${origHeight} -> ${Math.round(origWidth * scale)}x${Math.round(origHeight * scale)}`);
-        }
-
+        // EXIF 회전 정규화 (원본 크기 유지)
+        console.log('Normalizing image orientation...');
         const manipulatedImage = await ImageManipulator.manipulateAsync(
           imageUri,
-          actions,
-          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+          [], // EXIF rotation만 적용
+          { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
         );
 
         const normalizedUri = manipulatedImage.uri;
