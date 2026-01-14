@@ -37,7 +37,7 @@ export const Colors = {
     text: '#000',
     textSecondary: '#666',
     textTertiary: '#8E8E93',
-    border: '#e0e0e0',
+    border: '#d0d0d0',
     borderLight: '#F0F0F0',
     inputBackground: '#F2F2F7',
     success: '#34C759',

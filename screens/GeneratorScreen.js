@@ -56,9 +56,9 @@ import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved,
 import PresetSaveModal from '../components/PresetSaveModal';
 import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 
-// 기본 표시되는 바코드 타입 bcid 목록 (2개)
+// 기본 표시되는 바코드 타입 bcid 목록 (1개)
 const DEFAULT_BARCODE_BCIDS = [
-  'code128', 'ean13',
+  'code128',
 ];
 
 // 카테고리 순서 (2D 바코드 제외 - QR코드는 별도 탭에서 생성)
@@ -94,7 +94,7 @@ export default function GeneratorScreen() {
   // 세그먼트 탭: 'qr' 또는 'barcode'
   const [codeMode, setCodeMode] = useState(params.initialMode || 'qr');
 
-  const [selectedType, setSelectedType] = useState(params.initialType || 'website');
+  const [selectedType, setSelectedType] = useState(params.initialType || 'text');
   // bcid 형태로 저장 (예: 'code128', 'ean13')
   const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState(params.initialBarcodeFormat || 'code128');
   const [barcodeValue, setBarcodeValue] = useState(params.initialBarcodeValue || '');
@@ -3876,16 +3876,16 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 16,
-    borderWidth: 2,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     minWidth: 100,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   typeIconContainer: {
     width: 44,

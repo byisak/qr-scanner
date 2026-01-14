@@ -17,20 +17,20 @@ const UNLOCKED_FEATURES_KEY = 'unlockedFeatures';
 const AD_WATCH_COUNT_KEY = 'adWatchCounts';
 const DEV_MODE_KEY = 'devModeEnabled';
 
-// 테스트 광고 ID (개발용) - 실제 배포 시 교체 필요
+// 리워드 광고 ID
 const REWARDED_AD_UNIT_ID = __DEV__
   ? TestIds.REWARDED
   : Platform.select({
-      ios: 'ca-app-pub-XXXXX/XXXXX', // TODO: 실제 iOS 광고 단위 ID
-      android: 'ca-app-pub-XXXXX/XXXXX', // TODO: 실제 Android 광고 단위 ID
+      ios: 'ca-app-pub-9431243505417325/1216382236',
+      android: 'ca-app-pub-9431243505417325/1216382236',
     });
 
 export const FeatureLockProvider = ({ children }) => {
   const { t } = useLanguage();
   const [unlockedFeatures, setUnlockedFeatures] = useState([]);
   const [adWatchCounts, setAdWatchCounts] = useState({}); // { featureId: count }
-  // TODO: 스크린샷 촬영 후 false로 복원
-  const [devModeEnabled, setDevModeEnabled] = useState(true);
+  // 개발 모드 비활성화 (프로덕션)
+  const [devModeEnabled, setDevModeEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // 광고 관련 상태
