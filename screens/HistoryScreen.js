@@ -179,10 +179,10 @@ export default function HistoryScreen() {
     const item = data.item;
     const swipeValue = swipeValues[item.timestamp.toString()] || 0;
 
-    // 스와이프 거리에 따라 버튼 크기 계산 (최소 44, 최대 70)
-    const minSize = 44;
-    const maxSize = 70;
-    const buttonSize = Math.min(maxSize, minSize + (swipeValue / 3));
+    // 스와이프 거리에 따라 버튼 크기 계산 (최소 40, 최대 52)
+    const minSize = 40;
+    const maxSize = 52;
+    const buttonSize = Math.min(maxSize, minSize + (swipeValue / 5));
 
     // 스와이프 거리에 따라 투명도 계산
     const opacity = Math.min(1, swipeValue / 60);
@@ -722,7 +722,7 @@ const s = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingRight: 20,
+    paddingRight: 8,
     marginHorizontal: 15,
     marginVertical: 6,
   },
