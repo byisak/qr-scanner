@@ -155,6 +155,12 @@ export const LOCKED_FEATURES = {
     type: 'settings',
     description: '스캔 사진 저장',
   },
+  lotteryScan: {
+    id: 'lotteryScan',
+    adCount: 2, // 복권 인식
+    type: 'settings',
+    description: '복권 인식',
+  },
 
   // ===== 백업/내보내기 =====
   icloudBackup: {
@@ -173,98 +179,118 @@ export const LOCKED_FEATURES = {
   // ===== 바코드 타입 (code128 제외한 모든 바코드) =====
   // 기본 무료: Code 128만
   // 개별 잠금 바코드 타입 - 각 2회 (개별 해제)
-  barcodeEan13: {
-    id: 'barcodeEan13',
-    bcid: 'ean13',
-    adCount: 2,
-    type: 'barcode',
-    name: 'EAN-13',
-  },
-  barcodeEan8: {
-    id: 'barcodeEan8',
-    bcid: 'ean8',
-    adCount: 2,
-    type: 'barcode',
-    name: 'EAN-8',
-  },
-  barcodeUpca: {
-    id: 'barcodeUpca',
-    bcid: 'upca',
-    adCount: 2,
-    type: 'barcode',
-    name: 'UPC-A',
-  },
-  barcodeUpce: {
-    id: 'barcodeUpce',
-    bcid: 'upce',
-    adCount: 2,
-    type: 'barcode',
-    name: 'UPC-E',
-  },
-  barcodeCode39: {
-    id: 'barcodeCode39',
-    bcid: 'code39',
-    adCount: 2, // 산업용 바코드
-    type: 'barcode',
-    name: 'Code 39',
-  },
-  barcodeCode93: {
-    id: 'barcodeCode93',
-    bcid: 'code93',
-    adCount: 2, // 고밀도 바코드
-    type: 'barcode',
-    name: 'Code 93',
-  },
-  barcodeItf14: {
-    id: 'barcodeItf14',
-    bcid: 'itf14',
-    adCount: 2, // 물류용 바코드
-    type: 'barcode',
-    name: 'ITF-14',
-  },
-  barcodeInterleaved: {
-    id: 'barcodeInterleaved',
-    bcid: 'interleaved2of5',
-    adCount: 2, // 창고/물류용
-    type: 'barcode',
-    name: 'Interleaved 2 of 5',
-  },
-  barcodeCodabar: {
-    id: 'barcodeCodabar',
-    bcid: 'rationalizedCodabar',
-    adCount: 2, // 도서관/혈액은행용
-    type: 'barcode',
-    name: 'Codabar',
-  },
-  barcodePdf417: {
-    id: 'barcodePdf417',
-    bcid: 'pdf417',
-    adCount: 2, // 2D 바코드 - 신분증/면허증
-    type: 'barcode',
-    name: 'PDF417',
-  },
-  barcodeDatamatrix: {
-    id: 'barcodeDatamatrix',
-    bcid: 'datamatrix',
-    adCount: 2, // 2D 바코드 - 소형 부품 마킹
-    type: 'barcode',
-    name: 'Data Matrix',
-  },
-  barcodeAztec: {
-    id: 'barcodeAztec',
-    bcid: 'azteccode',
-    adCount: 2, // 2D 바코드 - 항공권/티켓
-    type: 'barcode',
-    name: 'Aztec Code',
-  },
-  // 기타 모든 바코드 (개별 정의되지 않은 바코드용)
-  barcodeOther: {
-    id: 'barcodeOther',
-    adCount: 2,
-    type: 'barcode',
-    name: '기타 바코드',
-    description: '개별 정의되지 않은 모든 바코드 타입',
-  },
+
+  // --- 1D Industrial/Logistics ---
+  barcodeCode39: { id: 'barcodeCode39', bcid: 'code39', adCount: 2, type: 'barcode', name: 'Code 39' },
+  barcodeCode39ext: { id: 'barcodeCode39ext', bcid: 'code39ext', adCount: 2, type: 'barcode', name: 'Code 39 Extended' },
+  barcodeCode93: { id: 'barcodeCode93', bcid: 'code93', adCount: 2, type: 'barcode', name: 'Code 93' },
+  barcodeCode93ext: { id: 'barcodeCode93ext', bcid: 'code93ext', adCount: 2, type: 'barcode', name: 'Code 93 Extended' },
+  barcodeCode11: { id: 'barcodeCode11', bcid: 'code11', adCount: 2, type: 'barcode', name: 'Code 11' },
+  barcodeIndustrial2of5: { id: 'barcodeIndustrial2of5', bcid: 'industrial2of5', adCount: 2, type: 'barcode', name: 'Industrial 2 of 5' },
+  barcodeInterleaved2of5: { id: 'barcodeInterleaved2of5', bcid: 'interleaved2of5', adCount: 2, type: 'barcode', name: 'Interleaved 2 of 5' },
+  barcodeItf14: { id: 'barcodeItf14', bcid: 'itf14', adCount: 2, type: 'barcode', name: 'ITF-14' },
+  barcodeMatrix2of5: { id: 'barcodeMatrix2of5', bcid: 'matrix2of5', adCount: 2, type: 'barcode', name: 'Matrix 2 of 5' },
+  barcodeCoop2of5: { id: 'barcodeCoop2of5', bcid: 'coop2of5', adCount: 2, type: 'barcode', name: 'COOP 2 of 5' },
+  barcodeIata2of5: { id: 'barcodeIata2of5', bcid: 'iata2of5', adCount: 2, type: 'barcode', name: 'IATA 2 of 5' },
+  barcodeDatalogic2of5: { id: 'barcodeDatalogic2of5', bcid: 'datalogic2of5', adCount: 2, type: 'barcode', name: 'Datalogic 2 of 5' },
+
+  // --- Retail ---
+  barcodeEan13: { id: 'barcodeEan13', bcid: 'ean13', adCount: 2, type: 'barcode', name: 'EAN-13' },
+  barcodeEan8: { id: 'barcodeEan8', bcid: 'ean8', adCount: 2, type: 'barcode', name: 'EAN-8' },
+  barcodeEan5: { id: 'barcodeEan5', bcid: 'ean5', adCount: 2, type: 'barcode', name: 'EAN-5' },
+  barcodeEan2: { id: 'barcodeEan2', bcid: 'ean2', adCount: 2, type: 'barcode', name: 'EAN-2' },
+  barcodeUpca: { id: 'barcodeUpca', bcid: 'upca', adCount: 2, type: 'barcode', name: 'UPC-A' },
+  barcodeUpce: { id: 'barcodeUpce', bcid: 'upce', adCount: 2, type: 'barcode', name: 'UPC-E' },
+  barcodeIsbn: { id: 'barcodeIsbn', bcid: 'isbn', adCount: 2, type: 'barcode', name: 'ISBN' },
+  barcodeIsmn: { id: 'barcodeIsmn', bcid: 'ismn', adCount: 2, type: 'barcode', name: 'ISMN' },
+  barcodeIssn: { id: 'barcodeIssn', bcid: 'issn', adCount: 2, type: 'barcode', name: 'ISSN' },
+  barcodeEan13composite: { id: 'barcodeEan13composite', bcid: 'ean13composite', adCount: 2, type: 'barcode', name: 'EAN-13 Composite' },
+  barcodeEan8composite: { id: 'barcodeEan8composite', bcid: 'ean8composite', adCount: 2, type: 'barcode', name: 'EAN-8 Composite' },
+  barcodeUpcacomposite: { id: 'barcodeUpcacomposite', bcid: 'upcacomposite', adCount: 2, type: 'barcode', name: 'UPC-A Composite' },
+  barcodeUpcecomposite: { id: 'barcodeUpcecomposite', bcid: 'upcecomposite', adCount: 2, type: 'barcode', name: 'UPC-E Composite' },
+
+  // --- GS1 / Logistics ---
+  barcodeGs1128: { id: 'barcodeGs1128', bcid: 'gs1-128', adCount: 2, type: 'barcode', name: 'GS1-128' },
+  barcodeGs1cc: { id: 'barcodeGs1cc', bcid: 'gs1-cc', adCount: 2, type: 'barcode', name: 'GS1 Composite' },
+  barcodeGs1databar: { id: 'barcodeGs1databar', bcid: 'gs1databar', adCount: 2, type: 'barcode', name: 'GS1 DataBar Omnidirectional' },
+  barcodeGs1databarstacked: { id: 'barcodeGs1databarstacked', bcid: 'gs1databarstacked', adCount: 2, type: 'barcode', name: 'GS1 DataBar Stacked' },
+  barcodeGs1databarstackedomni: { id: 'barcodeGs1databarstackedomni', bcid: 'gs1databarstackedomni', adCount: 2, type: 'barcode', name: 'GS1 DataBar Stacked Omni' },
+  barcodeGs1databartruncated: { id: 'barcodeGs1databartruncated', bcid: 'gs1databartruncated', adCount: 2, type: 'barcode', name: 'GS1 DataBar Truncated' },
+  barcodeGs1databarlimited: { id: 'barcodeGs1databarlimited', bcid: 'gs1databarlimited', adCount: 2, type: 'barcode', name: 'GS1 DataBar Limited' },
+  barcodeGs1databarexpanded: { id: 'barcodeGs1databarexpanded', bcid: 'gs1databarexpanded', adCount: 2, type: 'barcode', name: 'GS1 DataBar Expanded' },
+  barcodeGs1databarexpandedstacked: { id: 'barcodeGs1databarexpandedstacked', bcid: 'gs1databarexpandedstacked', adCount: 2, type: 'barcode', name: 'GS1 DataBar Expanded Stacked' },
+  barcodeGs1northamericancoupon: { id: 'barcodeGs1northamericancoupon', bcid: 'gs1northamericancoupon', adCount: 2, type: 'barcode', name: 'GS1 North American Coupon' },
+  barcodeGs1qrcode: { id: 'barcodeGs1qrcode', bcid: 'gs1qrcode', adCount: 2, type: 'barcode', name: 'GS1 QR Code' },
+  barcodeGs1dotcode: { id: 'barcodeGs1dotcode', bcid: 'gs1dotcode', adCount: 2, type: 'barcode', name: 'GS1 DotCode' },
+  barcodeSscc18: { id: 'barcodeSscc18', bcid: 'sscc18', adCount: 2, type: 'barcode', name: 'SSCC-18' },
+  barcodeEan14: { id: 'barcodeEan14', bcid: 'ean14', adCount: 2, type: 'barcode', name: 'EAN-14' },
+
+  // --- Medical/Pharmaceutical ---
+  barcodePharmacode: { id: 'barcodePharmacode', bcid: 'pharmacode', adCount: 2, type: 'barcode', name: 'Pharmacode' },
+  barcodePharmacode2: { id: 'barcodePharmacode2', bcid: 'pharmacode2', adCount: 2, type: 'barcode', name: 'Pharmacode Two-Track' },
+  barcodeCode32: { id: 'barcodeCode32', bcid: 'code32', adCount: 2, type: 'barcode', name: 'Code 32 (Italian Pharma)' },
+  barcodePzn: { id: 'barcodePzn', bcid: 'pzn', adCount: 2, type: 'barcode', name: 'PZN' },
+  barcodeHibc39: { id: 'barcodeHibc39', bcid: 'hibc39', adCount: 2, type: 'barcode', name: 'HIBC Code 39' },
+  barcodeHibc128: { id: 'barcodeHibc128', bcid: 'hibc128', adCount: 2, type: 'barcode', name: 'HIBC Code 128' },
+  barcodeHibcdatamatrix: { id: 'barcodeHibcdatamatrix', bcid: 'hibcdatamatrix', adCount: 2, type: 'barcode', name: 'HIBC Data Matrix' },
+  barcodeHibcpdf417: { id: 'barcodeHibcpdf417', bcid: 'hibcpdf417', adCount: 2, type: 'barcode', name: 'HIBC PDF417' },
+  barcodeHibcqrcode: { id: 'barcodeHibcqrcode', bcid: 'hibcqrcode', adCount: 2, type: 'barcode', name: 'HIBC QR Code' },
+  barcodeHibcazteccode: { id: 'barcodeHibcazteccode', bcid: 'hibcazteccode', adCount: 2, type: 'barcode', name: 'HIBC Aztec Code' },
+  barcodeHibccodablockf: { id: 'barcodeHibccodablockf', bcid: 'hibccodablockf', adCount: 2, type: 'barcode', name: 'HIBC Codablock F' },
+  barcodeHibcmicropdf417: { id: 'barcodeHibcmicropdf417', bcid: 'hibcmicropdf417', adCount: 2, type: 'barcode', name: 'HIBC MicroPDF417' },
+
+  // --- Library/Special ---
+  barcodeCodabar: { id: 'barcodeCodabar', bcid: 'rationalizedCodabar', adCount: 2, type: 'barcode', name: 'Codabar' },
+  barcodeBc412: { id: 'barcodeBc412', bcid: 'bc412', adCount: 2, type: 'barcode', name: 'BC412' },
+  barcodeMsi: { id: 'barcodeMsi', bcid: 'msi', adCount: 2, type: 'barcode', name: 'MSI' },
+  barcodePlessey: { id: 'barcodePlessey', bcid: 'plessey', adCount: 2, type: 'barcode', name: 'Plessey' },
+  barcodeTelepen: { id: 'barcodeTelepen', bcid: 'telepen', adCount: 2, type: 'barcode', name: 'Telepen' },
+  barcodeTelepennumeric: { id: 'barcodeTelepennumeric', bcid: 'telepennumeric', adCount: 2, type: 'barcode', name: 'Telepen Numeric' },
+  barcodeChannelcode: { id: 'barcodeChannelcode', bcid: 'channelcode', adCount: 2, type: 'barcode', name: 'Channel Code' },
+  barcodePosicode: { id: 'barcodePosicode', bcid: 'posicode', adCount: 2, type: 'barcode', name: 'PosiCode' },
+
+  // --- Postal ---
+  barcodePostnet: { id: 'barcodePostnet', bcid: 'postnet', adCount: 2, type: 'barcode', name: 'POSTNET' },
+  barcodePlanet: { id: 'barcodePlanet', bcid: 'planet', adCount: 2, type: 'barcode', name: 'PLANET' },
+  barcodeUspsintellligentmail: { id: 'barcodeUspsintellligentmail', bcid: 'uspsintellligentmail', adCount: 2, type: 'barcode', name: 'USPS Intelligent Mail' },
+  barcodeOnecode: { id: 'barcodeOnecode', bcid: 'onecode', adCount: 2, type: 'barcode', name: 'OneCode' },
+  barcodeRoyalmail: { id: 'barcodeRoyalmail', bcid: 'royalmail', adCount: 2, type: 'barcode', name: 'Royal Mail 4-State' },
+  barcodeKix: { id: 'barcodeKix', bcid: 'kix', adCount: 2, type: 'barcode', name: 'KIX (Dutch)' },
+  barcodeJapanpost: { id: 'barcodeJapanpost', bcid: 'japanpost', adCount: 2, type: 'barcode', name: 'Japan Post' },
+  barcodeAuspost: { id: 'barcodeAuspost', bcid: 'auspost', adCount: 2, type: 'barcode', name: 'Australia Post' },
+  barcodeDeutschepost: { id: 'barcodeDeutschepost', bcid: 'deutschepost', adCount: 2, type: 'barcode', name: 'Deutsche Post Leitcode' },
+  barcodeDeutschepostidentcode: { id: 'barcodeDeutschepostidentcode', bcid: 'deutschepostidentcode', adCount: 2, type: 'barcode', name: 'Deutsche Post Identcode' },
+  barcodeCepnet: { id: 'barcodeCepnet', bcid: 'cepnet', adCount: 2, type: 'barcode', name: 'CEPNet' },
+  barcodeFlattermarken: { id: 'barcodeFlattermarken', bcid: 'flattermarken', adCount: 2, type: 'barcode', name: 'Flattermarken' },
+  barcodeLeitcode: { id: 'barcodeLeitcode', bcid: 'leitcode', adCount: 2, type: 'barcode', name: 'Leitcode' },
+  barcodeIdentcode: { id: 'barcodeIdentcode', bcid: 'identcode', adCount: 2, type: 'barcode', name: 'Identcode' },
+
+  // --- 2D Barcodes ---
+  barcodeQrcode: { id: 'barcodeQrcode', bcid: 'qrcode', adCount: 2, type: 'barcode', name: 'QR Code' },
+  barcodeMicroqrcode: { id: 'barcodeMicroqrcode', bcid: 'microqrcode', adCount: 2, type: 'barcode', name: 'Micro QR Code' },
+  barcodeRectangularmicroqrcode: { id: 'barcodeRectangularmicroqrcode', bcid: 'rectangularmicroqrcode', adCount: 2, type: 'barcode', name: 'Rectangular Micro QR' },
+  barcodeDatamatrix: { id: 'barcodeDatamatrix', bcid: 'datamatrix', adCount: 2, type: 'barcode', name: 'Data Matrix' },
+  barcodeDatamatrixrectangular: { id: 'barcodeDatamatrixrectangular', bcid: 'datamatrixrectangular', adCount: 2, type: 'barcode', name: 'Data Matrix Rectangular' },
+  barcodeDatamatrixrectangularextension: { id: 'barcodeDatamatrixrectangularextension', bcid: 'datamatrixrectangularextension', adCount: 2, type: 'barcode', name: 'Data Matrix Rectangular Ext' },
+  barcodePdf417: { id: 'barcodePdf417', bcid: 'pdf417', adCount: 2, type: 'barcode', name: 'PDF417' },
+  barcodePdf417compact: { id: 'barcodePdf417compact', bcid: 'pdf417compact', adCount: 2, type: 'barcode', name: 'Compact PDF417' },
+  barcodeMicropdf417: { id: 'barcodeMicropdf417', bcid: 'micropdf417', adCount: 2, type: 'barcode', name: 'MicroPDF417' },
+  barcodeAzteccode: { id: 'barcodeAzteccode', bcid: 'azteccode', adCount: 2, type: 'barcode', name: 'Aztec Code' },
+  barcodeAzteccodecompact: { id: 'barcodeAzteccodecompact', bcid: 'azteccodecompact', adCount: 2, type: 'barcode', name: 'Compact Aztec Code' },
+  barcodeAztecrune: { id: 'barcodeAztecrune', bcid: 'aztecrune', adCount: 2, type: 'barcode', name: 'Aztec Runes' },
+  barcodeMaxicode: { id: 'barcodeMaxicode', bcid: 'maxicode', adCount: 2, type: 'barcode', name: 'MaxiCode' },
+  barcodeDotcode: { id: 'barcodeDotcode', bcid: 'dotcode', adCount: 2, type: 'barcode', name: 'DotCode' },
+  barcodeHanxin: { id: 'barcodeHanxin', bcid: 'hanxin', adCount: 2, type: 'barcode', name: 'Han Xin Code' },
+  barcodeCodeone: { id: 'barcodeCodeone', bcid: 'codeone', adCount: 2, type: 'barcode', name: 'Code One' },
+  barcodeUltracode: { id: 'barcodeUltracode', bcid: 'ultracode', adCount: 2, type: 'barcode', name: 'Ultracode' },
+
+  // --- Stacked Barcodes ---
+  barcodeCodablockf: { id: 'barcodeCodablockf', bcid: 'codablockf', adCount: 2, type: 'barcode', name: 'Codablock F' },
+  barcodeCode16k: { id: 'barcodeCode16k', bcid: 'code16k', adCount: 2, type: 'barcode', name: 'Code 16K' },
+  barcodeCode49: { id: 'barcodeCode49', bcid: 'code49', adCount: 2, type: 'barcode', name: 'Code 49' },
+
+  // --- Automotive ---
+  barcodeVin: { id: 'barcodeVin', bcid: 'vin', adCount: 2, type: 'barcode', name: 'VIN (Vehicle ID)' },
 };
 
 // 무료로 제공되는 바코드 타입 (bcid 기준)

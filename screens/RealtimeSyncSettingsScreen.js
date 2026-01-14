@@ -477,8 +477,12 @@ export default function RealtimeSyncSettingsScreen() {
         await AsyncStorage.setItem('realtimeSyncEnabled', realtimeSyncEnabled.toString());
 
         if (realtimeSyncEnabled) {
-          // 실시간 서버 전송이 켜지면 스캔 연동 URL 끄기 (상호 배타적)
+          // 다른 고급 스캔 기능 비활성화 (상호 배타적)
+          await AsyncStorage.setItem('continuousScanEnabled', 'false');
+          await AsyncStorage.setItem('batchScanEnabled', 'false');
+          await AsyncStorage.setItem('multiCodeModeEnabled', 'false');
           await SecureStore.setItemAsync('scanLinkEnabled', 'false');
+          await AsyncStorage.setItem('lotteryScanEnabled', 'false');
           // 토글 활성화 시 서버에서 세션 목록 동기화
           const savedSessionUrls = await AsyncStorage.getItem('sessionUrls');
           let localSessions = [];

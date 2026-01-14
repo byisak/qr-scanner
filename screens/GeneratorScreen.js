@@ -37,7 +37,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
-import LockIcon from '../components/LockIcon';
+import LockIcon, { HOT_PINK, LIGHT_PINK } from '../components/LockIcon';
 import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -82,7 +82,7 @@ const QR_TYPES = [
 export default function GeneratorScreen() {
   const { t, fonts, language } = useLanguage();
   const { isDark } = useTheme();
-  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId } = useFeatureLock();
+  const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId, getAdProgress } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -1060,6 +1060,13 @@ export default function GeneratorScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     setCodeMode(mode);
+
+    // 탭 변경 시 첫 번째 타입 선택
+    if (mode === 'qr' && orderedQrTypes.length > 0) {
+      setSelectedType(orderedQrTypes[0].id);
+    } else if (mode === 'barcode' && displayedBarcodeTypes.length > 0) {
+      setSelectedBarcodeFormat(displayedBarcodeTypes[0].bcid);
+    }
   };
 
   const handleShare = async () => {
@@ -1859,14 +1866,18 @@ export default function GeneratorScreen() {
         {codeMode === 'qr' && (
           <>
             {/* Type Selector */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.typesContainer}
-              style={s.typesScroll}
-            >
+            <View style={[s.typeSelectorSection, { backgroundColor: colors.surface }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.typesContainerInSection}
+                style={s.typesScrollInSection}
+              >
               {orderedQrTypes.map((type) => {
                 const isTypeLocked = isQrTypeLocked(type.id);
+                const qrFeatureId = getQrTypeFeatureId(type.id);
+                const hasQrProgress = qrFeatureId ? getAdProgress(qrFeatureId).current > 0 : false;
+                const qrLockColor = hasQrProgress ? LIGHT_PINK : HOT_PINK;
                 return (
                   <TouchableOpacity
                     key={type.id}
@@ -1891,7 +1902,7 @@ export default function GeneratorScreen() {
                       />
                       {isTypeLocked && (
                         <View style={s.typeLockIcon}>
-                          <Ionicons name="lock-closed" size={12} color="#FF3B30" />
+                          <Ionicons name="lock-closed" size={12} color={qrLockColor} />
                         </View>
                       )}
                     </View>
@@ -1920,7 +1931,8 @@ export default function GeneratorScreen() {
                   {t('generator.reorder') || '순서'}
                 </Text>
               </TouchableOpacity>
-            </ScrollView>
+              </ScrollView>
+            </View>
 
             {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
             <AdBanner
@@ -1953,12 +1965,13 @@ export default function GeneratorScreen() {
         {codeMode === 'barcode' && (
           <>
             {/* 바코드 포맷 선택 */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.typesContainer}
-              style={s.typesScroll}
-            >
+            <View style={[s.typeSelectorSection, { backgroundColor: colors.surface }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.typesContainerInSection}
+                style={s.typesScrollInSection}
+              >
               {displayedBarcodeTypes.map((format) => {
                 const isSelected = selectedBarcodeFormat === format.bcid;
                 return (
@@ -2036,7 +2049,8 @@ export default function GeneratorScreen() {
                   {t('generator.reorder') || '순서'}
                 </Text>
               </TouchableOpacity>
-            </ScrollView>
+              </ScrollView>
+            </View>
 
             {/* 배너 광고 - 바코드 선택과 입력 폼 사이 */}
             <AdBanner
@@ -3413,6 +3427,9 @@ export default function GeneratorScreen() {
                           const isChecked = (isDefault && !isHiddenDefault) || isFavorite;
                           const isSelected = selectedBarcodeFormat === format.bcid;
                           const isBarcodeLocked = isBarcodeTypeLocked(format.bcid);
+                          const barcodeFeatureId = getBarcodeFeatureId(format.bcid);
+                          const hasBarcodeProgress = barcodeFeatureId ? getAdProgress(barcodeFeatureId).current > 0 : false;
+                          const barcodeLockColor = hasBarcodeProgress ? LIGHT_PINK : HOT_PINK;
 
                           return (
                             <TouchableOpacity
@@ -3436,36 +3453,27 @@ export default function GeneratorScreen() {
                               }}
                               activeOpacity={0.7}
                             >
-                              {/* 즐겨찾기 체크박스 */}
-                              <TouchableOpacity
-                                style={s.favoriteButton}
-                                onPress={(e) => {
-                                  e.stopPropagation();
-                                  if (isBarcodeLocked) {
-                                    const featureId = getBarcodeFeatureId(format.bcid);
-                                    if (featureId) {
-                                      showUnlockAlert(featureId, () => toggleFavoriteBarcode(format.bcid));
-                                    }
-                                  } else {
+                              {/* 잠금 아이콘 또는 체크박스 - 오른쪽 상단 (둘 중 하나만 표시) */}
+                              {isBarcodeLocked ? (
+                                <View style={s.barcodeLockIcon}>
+                                  <Ionicons name="lock-closed" size={12} color={barcodeLockColor} />
+                                </View>
+                              ) : (
+                                <TouchableOpacity
+                                  style={s.barcodeCheckbox}
+                                  onPress={(e) => {
+                                    e.stopPropagation();
                                     toggleFavoriteBarcode(format.bcid);
-                                  }
-                                }}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              >
-                                {isBarcodeLocked ? (
-                                  <Ionicons
-                                    name="lock-closed"
-                                    size={18}
-                                    color={colors.textTertiary}
-                                  />
-                                ) : (
+                                  }}
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
                                   <Ionicons
                                     name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
                                     size={20}
                                     color={isChecked ? '#22c55e' : colors.textTertiary}
                                   />
-                                )}
-                              </TouchableOpacity>
+                                </TouchableOpacity>
+                              )}
 
                               <View style={s.modalBarcodeTextContainer}>
                                 <Text style={[
@@ -3907,6 +3915,26 @@ const s = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+  barcodeLockIcon: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 1,
+  },
+  barcodeCheckbox: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    zIndex: 1,
+  },
   typeText: {
     fontSize: 13,
     fontWeight: '600',
@@ -3928,6 +3956,25 @@ const s = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.3,
     textAlign: 'center',
+  },
+  typeSelectorSection: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    paddingVertical: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  typesScrollInSection: {
+    maxHeight: 110,
+  },
+  typesContainerInSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    gap: 10,
   },
   formSection: {
     marginHorizontal: 20,

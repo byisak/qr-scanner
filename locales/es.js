@@ -1393,6 +1393,7 @@ export default {
       photoSave: 'Guardar foto de escaneo',
       icloudBackup: 'Respaldo iCloud',
       googleDriveBackup: 'Respaldo Google Drive',
+      lotteryScan: 'Escaneo de Lotería',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

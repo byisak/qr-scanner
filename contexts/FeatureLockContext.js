@@ -38,6 +38,10 @@ export const FeatureLockProvider = ({ children }) => {
   const [isAdLoading, setIsAdLoading] = useState(false);
   const rewardedAdRef = useRef(null);
   const rewardCallbackRef = useRef(null);
+  const showRewardedAdRef = useRef(null); // 순환 참조 방지용
+  const isAdLoadedRef = useRef(false); // 콜백에서 접근용
+  const isAdLoadingRef = useRef(false); // 콜백에서 접근용
+  const adUsedRef = useRef(false); // 광고 사용됨 플래그
 
   // 저장된 해제 상태 및 개발 모드 로드
   useEffect(() => {
@@ -67,16 +71,29 @@ export const FeatureLockProvider = ({ children }) => {
     }
   };
 
-  // 광고 로드
+  // 광고 로드 (ref 기반으로 클로저 문제 해결)
   const loadRewardedAd = useCallback(() => {
-    if (isAdLoading || isAdLoaded) return;
+    // ref로 체크하여 클로저 문제 방지
+    if (isAdLoadingRef.current) {
+      console.log('Ad is already loading, skip');
+      return;
+    }
 
+    // 이미 로드된 광고가 있고 사용되지 않았으면 스킵
+    if (isAdLoadedRef.current && !adUsedRef.current && rewardedAdRef.current?.ad) {
+      console.log('Ad already loaded and not used, skip');
+      return;
+    }
+
+    console.log('Loading new rewarded ad...');
+    isAdLoadingRef.current = true;
     setIsAdLoading(true);
 
     try {
       // 이전 인스턴스 정리
       if (rewardedAdRef.current?.unsubscribe) {
         rewardedAdRef.current.unsubscribe();
+        rewardedAdRef.current = null;
       }
 
       const rewarded = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID, {
@@ -87,9 +104,12 @@ export const FeatureLockProvider = ({ children }) => {
       const unsubscribeLoaded = rewarded.addAdEventListener(
         RewardedAdEventType.LOADED,
         () => {
+          console.log('Rewarded ad loaded successfully');
+          isAdLoadedRef.current = true;
+          isAdLoadingRef.current = false;
+          adUsedRef.current = false; // 새 광고는 사용되지 않음
           setIsAdLoaded(true);
           setIsAdLoading(false);
-          console.log('Rewarded ad loaded');
         }
       );
 
@@ -98,6 +118,7 @@ export const FeatureLockProvider = ({ children }) => {
         RewardedAdEventType.EARNED_REWARD,
         (reward) => {
           console.log('User earned reward:', reward);
+          adUsedRef.current = true; // 광고 사용됨 표시
           if (rewardCallbackRef.current) {
             rewardCallbackRef.current();
             rewardCallbackRef.current = null;
@@ -110,9 +131,22 @@ export const FeatureLockProvider = ({ children }) => {
         AdEventType.CLOSED,
         () => {
           console.log('Rewarded ad closed');
+          isAdLoadedRef.current = false;
+          isAdLoadingRef.current = false;
+          adUsedRef.current = true; // 닫힌 광고는 사용됨으로 표시
           setIsAdLoaded(false);
-          // 다음 광고 미리 로드
-          setTimeout(() => loadRewardedAd(), 1000);
+          setIsAdLoading(false);
+
+          // 다음 광고 로드 (새 인스턴스 생성 강제)
+          setTimeout(() => {
+            // ref 초기화 후 새 광고 로드
+            if (rewardedAdRef.current?.unsubscribe) {
+              rewardedAdRef.current.unsubscribe();
+            }
+            rewardedAdRef.current = null;
+            isAdLoadingRef.current = false; // 로딩 상태 초기화
+            loadRewardedAd();
+          }, 1000);
         }
       );
 
@@ -121,10 +155,15 @@ export const FeatureLockProvider = ({ children }) => {
         AdEventType.ERROR,
         (error) => {
           console.error('Rewarded ad error:', error);
+          isAdLoadingRef.current = false;
+          isAdLoadedRef.current = false;
           setIsAdLoading(false);
           setIsAdLoaded(false);
           // 에러 발생 시 재시도
-          setTimeout(() => loadRewardedAd(), 5000);
+          setTimeout(() => {
+            rewardedAdRef.current = null;
+            loadRewardedAd();
+          }, 5000);
         }
       );
 
@@ -141,9 +180,10 @@ export const FeatureLockProvider = ({ children }) => {
       rewarded.load();
     } catch (error) {
       console.error('Failed to create rewarded ad:', error);
+      isAdLoadingRef.current = false;
       setIsAdLoading(false);
     }
-  }, [isAdLoading, isAdLoaded]);
+  }, []); // 의존성 제거 - ref만 사용
 
   // 초기 광고 로드
   useEffect(() => {
@@ -364,37 +404,105 @@ export const FeatureLockProvider = ({ children }) => {
       // 필요한 횟수 달성 - 잠금 해제
       const success = await unlock(featureId);
       if (success) {
-        Alert.alert(
-          t('featureLock.unlocked') || '잠금 해제됨',
-          t('featureLock.featureUnlocked') || '기능이 해제되었습니다!',
-          [{ text: t('common.confirm') || '확인', onPress: onUnlock }]
-        );
+        // 약간의 지연 후 Alert 표시 (상태 업데이트 완료 후)
+        setTimeout(() => {
+          Alert.alert(
+            t('featureLock.unlocked') || '잠금 해제됨',
+            t('featureLock.featureUnlocked') || '기능이 해제되었습니다!',
+            [{
+              text: t('common.confirm') || '확인',
+              onPress: () => {
+                // onUnlock이 함수인 경우에만 호출
+                if (typeof onUnlock === 'function') {
+                  try {
+                    onUnlock();
+                  } catch (e) {
+                    console.error('onUnlock callback error:', e);
+                  }
+                }
+              }
+            }]
+          );
+        }, 100);
       }
     } else {
-      // 진행 중 - 남은 횟수 표시
+      // 진행 중 - 남은 횟수 표시 후 연속 재생 옵션 제공
       const remaining = requiredCount - newCount;
       Alert.alert(
         t('featureLock.adWatched') || '광고 시청 완료',
-        (t('featureLock.remainingAds') || '해제까지 {remaining}회 더 시청해주세요.')
+        (t('featureLock.remainingAdsWithProgress') || '광고 {current}/{total} 시청 완료!\n{remaining}회 더 시청하면 해제됩니다.')
           .replace('{remaining}', remaining.toString())
           .replace('{current}', newCount.toString())
           .replace('{total}', requiredCount.toString()),
-        [{ text: t('common.confirm') || '확인' }]
+        [
+          {
+            text: t('common.later') || '나중에',
+            style: 'cancel'
+          },
+          {
+            text: t('featureLock.watchNextAd') || '계속 시청',
+            onPress: () => {
+              // 광고 로드 대기 후 재생 (최대 10초 대기)
+              let attempts = 0;
+              const maxAttempts = 20; // 500ms * 20 = 10초
+
+              const tryShowAd = () => {
+                attempts++;
+                // 광고가 로드되었고, 사용되지 않았고, 광고 객체가 있으면 표시
+                const isReady = isAdLoadedRef.current &&
+                                !adUsedRef.current &&
+                                rewardedAdRef.current?.ad &&
+                                showRewardedAdRef.current;
+
+                console.log(`tryShowAd attempt ${attempts}/${maxAttempts}:`, {
+                  isLoaded: isAdLoadedRef.current,
+                  isUsed: adUsedRef.current,
+                  hasAd: !!rewardedAdRef.current?.ad,
+                  hasShowFn: !!showRewardedAdRef.current,
+                  isReady
+                });
+
+                if (isReady) {
+                  showRewardedAdRef.current(featureId, onUnlock);
+                } else if (attempts < maxAttempts) {
+                  // 아직 준비 안됨, 500ms 후 재시도
+                  setTimeout(tryShowAd, 500);
+                } else {
+                  // 최대 시도 횟수 초과 - 사용자에게 알림
+                  Alert.alert(
+                    t('featureLock.adNotReady') || '광고 준비 중',
+                    t('featureLock.adNotReadyRetry') || '광고 로딩에 시간이 걸리고 있습니다. 잠시 후 다시 시도해주세요.',
+                    [{ text: t('common.confirm') || '확인' }]
+                  );
+                }
+              };
+
+              // 1.5초 후 첫 시도 (광고 로드 시간 확보)
+              setTimeout(tryShowAd, 1500);
+            },
+          },
+        ]
       );
     }
   }, [incrementAdWatchCount, unlock, t]);
 
   // 리워드 광고 표시
   const showRewardedAdAndProcess = useCallback(async (featureId, onUnlock) => {
-    if (!isAdLoaded || !rewardedAdRef.current?.ad) {
-      // 광고가 로드되지 않은 경우
+    // ref 기반으로 체크 - 광고가 로드되었고, 사용되지 않았는지 확인
+    if (!isAdLoadedRef.current || !rewardedAdRef.current?.ad || adUsedRef.current) {
+      console.log('Ad not ready:', {
+        isLoaded: isAdLoadedRef.current,
+        hasAd: !!rewardedAdRef.current?.ad,
+        isUsed: adUsedRef.current
+      });
+      // 광고가 로드되지 않거나 이미 사용된 경우
       Alert.alert(
         t('featureLock.adNotReady') || '광고 준비 중',
         t('featureLock.adNotReadyMessage') || '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
         [{ text: t('common.confirm') || '확인' }]
       );
       // 광고 다시 로드 시도
-      if (!isAdLoading) {
+      if (!isAdLoadingRef.current) {
         loadRewardedAd();
       }
       return;
@@ -404,16 +512,36 @@ export const FeatureLockProvider = ({ children }) => {
     rewardCallbackRef.current = () => handleAdWatched(featureId, onUnlock);
 
     try {
+      // 광고 표시 직전에 사용됨 표시 (중복 호출 방지)
+      adUsedRef.current = true;
       await rewardedAdRef.current.ad.show();
     } catch (error) {
       console.error('Failed to show rewarded ad:', error);
+      // 표시 실패 시 다시 로드 시도
+      adUsedRef.current = true; // 실패한 광고도 사용됨으로 표시
       Alert.alert(
         t('featureLock.adError') || '광고 오류',
         t('featureLock.adErrorMessage') || '광고를 표시하는 중 오류가 발생했습니다.',
         [{ text: t('common.confirm') || '확인' }]
       );
+      // 새 광고 로드
+      setTimeout(() => {
+        if (rewardedAdRef.current?.unsubscribe) {
+          rewardedAdRef.current.unsubscribe();
+        }
+        rewardedAdRef.current = null;
+        isAdLoadedRef.current = false;
+        isAdLoadingRef.current = false;
+        setIsAdLoaded(false);
+        loadRewardedAd();
+      }, 500);
     }
-  }, [isAdLoaded, isAdLoading, loadRewardedAd, handleAdWatched, t]);
+  }, [loadRewardedAd, handleAdWatched, t]);
+
+  // showRewardedAdAndProcess ref 업데이트 (순환 참조 방지)
+  useEffect(() => {
+    showRewardedAdRef.current = showRewardedAdAndProcess;
+  }, [showRewardedAdAndProcess]);
 
   // QR 스타일용 리워드 광고 표시
   const showRewardedAdForQrStyles = useCallback(async (onUnlock) => {
@@ -422,13 +550,19 @@ export const FeatureLockProvider = ({ children }) => {
     );
     const firstStyleId = qrStyleFeatures[0];
 
-    if (!isAdLoaded || !rewardedAdRef.current?.ad) {
+    // ref 기반으로 체크 - 광고가 로드되었고, 사용되지 않았는지 확인
+    if (!isAdLoadedRef.current || !rewardedAdRef.current?.ad || adUsedRef.current) {
+      console.log('Ad not ready for QR styles:', {
+        isLoaded: isAdLoadedRef.current,
+        hasAd: !!rewardedAdRef.current?.ad,
+        isUsed: adUsedRef.current
+      });
       Alert.alert(
         t('featureLock.adNotReady') || '광고 준비 중',
         t('featureLock.adNotReadyMessage') || '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
         [{ text: t('common.confirm') || '확인' }]
       );
-      if (!isAdLoading) {
+      if (!isAdLoadingRef.current) {
         loadRewardedAd();
       }
       return;
@@ -461,16 +595,30 @@ export const FeatureLockProvider = ({ children }) => {
     };
 
     try {
+      // 광고 표시 직전에 사용됨 표시 (중복 호출 방지)
+      adUsedRef.current = true;
       await rewardedAdRef.current.ad.show();
     } catch (error) {
       console.error('Failed to show rewarded ad:', error);
+      adUsedRef.current = true;
       Alert.alert(
         t('featureLock.adError') || '광고 오류',
         t('featureLock.adErrorMessage') || '광고를 표시하는 중 오류가 발생했습니다.',
         [{ text: t('common.confirm') || '확인' }]
       );
+      // 새 광고 로드
+      setTimeout(() => {
+        if (rewardedAdRef.current?.unsubscribe) {
+          rewardedAdRef.current.unsubscribe();
+        }
+        rewardedAdRef.current = null;
+        isAdLoadedRef.current = false;
+        isAdLoadingRef.current = false;
+        setIsAdLoaded(false);
+        loadRewardedAd();
+      }, 500);
     }
-  }, [isAdLoaded, isAdLoading, loadRewardedAd, incrementAdWatchCount, unlockMultiple, t]);
+  }, [loadRewardedAd, incrementAdWatchCount, unlockMultiple, t]);
 
   // 광고 시청 Alert 표시
   const showUnlockAlert = useCallback((featureId, onUnlock) => {

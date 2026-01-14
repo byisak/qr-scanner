@@ -1393,6 +1393,7 @@ export default {
       photoSave: 'スキャン写真保存',
       icloudBackup: 'iCloudバックアップ',
       googleDriveBackup: 'Google Driveバックアップ',
+      lotteryScan: '宝くじスキャン',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

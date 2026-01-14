@@ -16,6 +16,7 @@ export default {
     notice: '알림',
     success: '성공',
     copied: '복사됨',
+    later: '나중에',
   },
 
   // 기능 잠금
@@ -29,11 +30,14 @@ export default {
     watchAdProgress: '광고 {current}/{total} 시청 완료\n{remaining}회 더 시청하면 해제됩니다.',
     adWatched: '광고 시청 완료',
     remainingAds: '해제까지 {remaining}회 더 시청해주세요.',
+    remainingAdsWithProgress: '광고 {current}/{total} 시청 완료!\n{remaining}회 더 시청하면 해제됩니다.',
+    watchNextAd: '계속 시청',
     featureUnlocked: '기능이 해제되었습니다!',
     allStylesUnlocked: '모든 QR 스타일이 해제되었습니다!',
     // 광고 로딩/에러 관련
     adNotReady: '광고 준비 중',
     adNotReadyMessage: '광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요.',
+    adNotReadyRetry: '광고 로딩에 시간이 걸리고 있습니다. 잠시 후 다시 시도해주세요.',
     adError: '광고 오류',
     adErrorMessage: '광고를 표시하는 중 오류가 발생했습니다.',
     loadingAd: '로딩 중...',
@@ -1431,6 +1435,7 @@ export default {
       photoSave: '스캔 사진 저장',
       icloudBackup: 'iCloud 백업',
       googleDriveBackup: 'Google Drive 백업',
+      lotteryScan: '복권 인식',
     },
     themes: {
       oceanBreeze: 'Ocean Breeze',

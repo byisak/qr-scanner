@@ -45,7 +45,7 @@ export default function SettingsScreen() {
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true);
-  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(false); // 기본값: 끔
+  const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
   const [continuousScanEnabled, setContinuousScanEnabled] = useState(false);
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
@@ -57,7 +57,7 @@ export default function SettingsScreen() {
   // URL 열기 방식 상태
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   // 사진 압축률 상태
-  const [photoQuality, setPhotoQuality] = useState('0.8');
+  const [photoQuality, setPhotoQuality] = useState('0.5'); // 기본값: 중간
   // 제품 검색 자동 실행 상태
   const [productAutoSearch, setProductAutoSearch] = useState(false);
   // 스캔 연동 URL 목록
@@ -761,7 +761,13 @@ export default function SettingsScreen() {
           {/* 복권 인식 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/lottery-scan-settings')}
+            onPress={() => {
+              if (isLocked('lotteryScan')) {
+                showUnlockAlert('lotteryScan', () => router.push('/lottery-scan-settings'));
+              } else {
+                router.push('/lottery-scan-settings');
+              }
+            }}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -769,6 +775,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.lotteryScanDesc')}</Text>
             </View>
             <View style={s.menuItemRight}>
+              <LockIcon featureId="lotteryScan" size={12} badge />
               <Text style={[s.statusText, { color: lotteryScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
                 {lotteryScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
               </Text>

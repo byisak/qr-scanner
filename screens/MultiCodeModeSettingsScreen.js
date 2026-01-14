@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -49,6 +50,15 @@ export default function MultiCodeModeSettingsScreen() {
     setMultiCodeModeEnabled(value);
     try {
       await AsyncStorage.setItem('multiCodeModeEnabled', value.toString());
+
+      // 다른 고급 스캔 기능 비활성화 (상호 배타적)
+      if (value) {
+        await AsyncStorage.setItem('continuousScanEnabled', 'false');
+        await AsyncStorage.setItem('batchScanEnabled', 'false');
+        await SecureStore.setItemAsync('scanLinkEnabled', 'false');
+        await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
+        await AsyncStorage.setItem('lotteryScanEnabled', 'false');
+      }
     } catch (error) {
       console.error('Save multi-code mode enabled error:', error);
     }
