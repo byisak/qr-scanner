@@ -29,8 +29,11 @@ import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 분석 타임아웃 (30초)
-const ANALYSIS_TIMEOUT = 30000;
+// 분석 타임아웃 (15초)
+const ANALYSIS_TIMEOUT = 15000;
+
+// 분석용 이미지 최대 크기 (너무 크면 느림)
+const MAX_ANALYSIS_SIZE = 1920;
 
 // zxing-wasm 라이브러리 로컬 파일 (텍스트 파일로 번들링)
 const zxingWasmAsset = require('../assets/js/zxing-wasm.txt');
@@ -126,32 +129,49 @@ const getWebViewHTML = (zxingScript) => `
 
       sendLog('Image blob created, analyzing...');
 
-      // 바코드 읽기 옵션
-      var readerOptions = {
-        tryHarder: true,
-        tryRotate: true,
-        tryInvert: true,
-        tryDownscale: true,
+      // 지원 포맷
+      var formats = [
+        'QRCode',
+        'EAN-13',
+        'EAN-8',
+        'Code128',
+        'Code39',
+        'Code93',
+        'UPC-A',
+        'UPC-E',
+        'ITF',
+        'Codabar',
+        'DataMatrix',
+        'Aztec',
+        'PDF417',
+      ];
+
+      // 1단계: 빠른 분석 (기본 옵션)
+      var fastOptions = {
+        tryHarder: false,
+        tryRotate: false,
+        tryInvert: false,
+        tryDownscale: false,
         maxNumberOfSymbols: 20,
-        formats: [
-          'QRCode',
-          'EAN-13',
-          'EAN-8',
-          'Code128',
-          'Code39',
-          'Code93',
-          'UPC-A',
-          'UPC-E',
-          'ITF',
-          'Codabar',
-          'DataMatrix',
-          'Aztec',
-          'PDF417',
-        ],
+        formats: formats,
       };
 
-      // zxing-wasm readBarcodes 호출
-      var barcodes = await ZXingWASM.readBarcodes(blob, readerOptions);
+      sendLog('Phase 1: Fast analysis...');
+      var barcodes = await ZXingWASM.readBarcodes(blob, fastOptions);
+
+      // 결과가 없으면 2단계: 적극적 분석
+      if (barcodes.length === 0) {
+        sendLog('Phase 2: Deep analysis (trying harder)...');
+        var deepOptions = {
+          tryHarder: true,
+          tryRotate: true,
+          tryInvert: true,
+          tryDownscale: false,
+          maxNumberOfSymbols: 20,
+          formats: formats,
+        };
+        barcodes = await ZXingWASM.readBarcodes(blob, deepOptions);
+      }
 
       sendLog('Analysis complete, found ' + barcodes.length + ' codes');
 
@@ -299,13 +319,37 @@ function ImageAnalysisScreen() {
         // 원본 이미지 크기 로그 (디버깅용)
         console.log('[ImageAnalysis] Original image:', imageUri, 'size:', fileInfo.size ? `${(fileInfo.size / 1024).toFixed(1)}KB` : 'unknown');
 
-        // EXIF 회전 정규화 - 빈 actions로 manipulateAsync 호출하면 EXIF orientation이 적용됨
-        // 바코드 인식률 향상을 위해 무압축 사용
-        console.log('Normalizing image orientation (high quality)...');
+        // EXIF 회전 정규화 및 크기 조정
+        // 너무 큰 이미지는 분석 속도가 느리므로 리사이즈
+        console.log('Normalizing image orientation and size...');
+
+        // 먼저 원본 이미지 크기 확인
+        const originalImage = await ImageManipulator.manipulateAsync(
+          imageUri,
+          [],
+          { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
+        );
+
+        const actions = [];
+        const origWidth = originalImage.width;
+        const origHeight = originalImage.height;
+
+        // 이미지가 너무 크면 리사이즈 (분석 속도 향상)
+        if (origWidth > MAX_ANALYSIS_SIZE || origHeight > MAX_ANALYSIS_SIZE) {
+          const scale = MAX_ANALYSIS_SIZE / Math.max(origWidth, origHeight);
+          actions.push({
+            resize: {
+              width: Math.round(origWidth * scale),
+              height: Math.round(origHeight * scale),
+            },
+          });
+          console.log(`Resizing image: ${origWidth}x${origHeight} -> ${Math.round(origWidth * scale)}x${Math.round(origHeight * scale)}`);
+        }
+
         const manipulatedImage = await ImageManipulator.manipulateAsync(
           imageUri,
-          [], // 빈 actions - EXIF rotation만 적용
-          { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
+          actions,
+          { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
         );
 
         const normalizedUri = manipulatedImage.uri;
