@@ -24,7 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
-import { Swipeable } from 'react-native-gesture-handler';
+import { Swipeable, GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -230,7 +230,7 @@ export default function HistoryScreen() {
   };
 
   return (
-    <View style={[s.c, { backgroundColor: colors.background }]}>
+    <GestureHandlerRootView style={[s.c, { backgroundColor: colors.background }]}>
       {/* 상단 그라데이션 */}
       <LinearGradient
         colors={
@@ -467,7 +467,7 @@ export default function HistoryScreen() {
           contentContainerStyle={s.listContent}
         />
       )}
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
