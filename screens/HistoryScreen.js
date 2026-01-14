@@ -1,5 +1,5 @@
 // screens/HistoryScreen.js - 그룹별 히스토리 관리
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
+import { Swipeable } from 'react-native-gesture-handler';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -153,6 +155,38 @@ export default function HistoryScreen() {
         },
       },
     ]);
+  };
+
+  // 개별 항목 삭제
+  const deleteHistoryItem = async (item) => {
+    const currentHistory = scanHistory[selectedGroupId] || [];
+    const updatedHistory = currentHistory.filter(h => h.timestamp !== item.timestamp);
+    const newScanHistory = { ...scanHistory, [selectedGroupId]: updatedHistory };
+    setScanHistory(newScanHistory);
+    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(newScanHistory));
+    triggerSync();
+  };
+
+  // 스와이프 삭제 버튼 렌더링
+  const renderRightActions = (progress, dragX, item) => {
+    const scale = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [1, 0.5],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <TouchableOpacity
+        style={s.deleteAction}
+        onPress={() => deleteHistoryItem(item)}
+        activeOpacity={0.8}
+      >
+        <Animated.View style={[s.deleteActionContent, { transform: [{ scale }] }]}>
+          <Ionicons name="trash-outline" size={24} color="#fff" />
+          <Text style={s.deleteActionText}>{t('common.delete')}</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
   };
 
   const formatDateTime = (timestamp) => {
@@ -327,102 +361,107 @@ export default function HistoryScreen() {
             };
 
             return (
-              <TouchableOpacity
-                style={[s.item, { backgroundColor: colors.surface }]}
-                onPress={() => handleItemPress(item)}
-                activeOpacity={0.7}
-                accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
-                accessibilityRole="button"
+              <Swipeable
+                renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}
+                overshootRight={false}
               >
-                <View style={s.itemContent}>
-                  {/* 사진 썸네일 - 클릭시 이미지 분석 */}
-                  {hasPhoto && (
-                    <TouchableOpacity
-                      onPress={() => !imageErrors[item.timestamp] && router.push({
-                        pathname: '/image-analysis',
-                        params: { imageUri: item.photos[0] }
-                      })}
-                      activeOpacity={imageErrors[item.timestamp] ? 1 : 0.7}
-                    >
-                      {imageErrors[item.timestamp] ? (
-                        <View style={[s.photoThumbnail, s.photoPlaceholder, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-                          <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
-                        </View>
-                      ) : (
-                        <>
-                          <Image
-                            source={{ uri: item.photos[0] }}
-                            style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
-                            resizeMode="cover"
-                            onError={() => setImageErrors(prev => ({ ...prev, [item.timestamp]: true }))}
-                          />
-                          <View style={[s.analyzeIconOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-                            <Ionicons name="scan" size={16} color="#fff" />
+                <TouchableOpacity
+                  style={[s.item, { backgroundColor: colors.surface }]}
+                  onPress={() => handleItemPress(item)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
+                  accessibilityRole="button"
+                >
+                  <View style={s.itemContent}>
+                    {/* 사진 썸네일 - 클릭시 이미지 분석 */}
+                    {hasPhoto && (
+                      <TouchableOpacity
+                        onPress={() => !imageErrors[item.timestamp] && router.push({
+                          pathname: '/image-analysis',
+                          params: { imageUri: item.photos[0] }
+                        })}
+                        activeOpacity={imageErrors[item.timestamp] ? 1 : 0.7}
+                      >
+                        {imageErrors[item.timestamp] ? (
+                          <View style={[s.photoThumbnail, s.photoPlaceholder, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                            <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
                           </View>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
-                    {/* 1줄: 스캔값 */}
-                    <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
-                      {item.code}
-                    </Text>
+                        ) : (
+                          <>
+                            <Image
+                              source={{ uri: item.photos[0] }}
+                              style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                              resizeMode="cover"
+                              onError={() => setImageErrors(prev => ({ ...prev, [item.timestamp]: true }))}
+                            />
+                            <View style={[s.analyzeIconOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+                              <Ionicons name="scan" size={16} color="#fff" />
+                            </View>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                    <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
+                      {/* 1줄: 스캔값 */}
+                      <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
+                        {item.code}
+                      </Text>
 
-                    {/* 2줄: 바코드타입, 콘텐츠타입, 반복횟수, 에러레벨 */}
-                    <View style={s.badgeRow}>
-                      {/* 바코드 타입 */}
-                      <View style={[s.badge, { backgroundColor: colors.primary + '15' }]}>
-                        <Ionicons
-                          name={isQRCode ? 'qr-code' : 'barcode'}
-                          size={11}
-                          color={colors.primary}
-                        />
-                        <Text style={[s.badgeText, { color: colors.primary }]}>
-                          {isQRCode ? 'QR' : item.type.toUpperCase()}
-                        </Text>
+                      {/* 2줄: 바코드타입, 콘텐츠타입, 반복횟수, 에러레벨 */}
+                      <View style={s.badgeRow}>
+                        {/* 바코드 타입 */}
+                        <View style={[s.badge, { backgroundColor: colors.primary + '15' }]}>
+                          <Ionicons
+                            name={isQRCode ? 'qr-code' : 'barcode'}
+                            size={11}
+                            color={colors.primary}
+                          />
+                          <Text style={[s.badgeText, { color: colors.primary }]}>
+                            {isQRCode ? 'QR' : item.type.toUpperCase()}
+                          </Text>
+                        </View>
+
+                        {/* 콘텐츠 타입 (QR 코드이고 TEXT가 아닌 경우만) */}
+                        {parsedContent && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+                          <View style={[s.badge, { backgroundColor: parsedContent.color + '15' }]}>
+                            <Ionicons name={parsedContent.icon} size={11} color={parsedContent.color} />
+                            <Text style={[s.badgeText, { color: parsedContent.color }]}>
+                              {getContentTypeLabel(parsedContent.type)}
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* 반복 횟수 */}
+                        {item.count && item.count > 1 && (
+                          <View style={[s.badge, { backgroundColor: 'rgba(255, 149, 0, 0.15)' }]}>
+                            <Ionicons name="repeat" size={11} color="#FF9500" />
+                            <Text style={[s.badgeText, { color: '#FF9500' }]}>{item.count}</Text>
+                          </View>
+                        )}
+
+                        {/* EC 레벨 (QR 코드만) */}
+                        {isQRCode && ecLevel && (
+                          <View style={[s.badge, { backgroundColor: getECLevelColor(ecLevel) + '15' }]}>
+                            <Ionicons name="shield-checkmark" size={11} color={getECLevelColor(ecLevel)} />
+                            <Text style={[s.badgeText, { color: getECLevelColor(ecLevel) }]}>
+                              EC:{ecLevel.toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
                       </View>
 
-                      {/* 콘텐츠 타입 (QR 코드이고 TEXT가 아닌 경우만) */}
-                      {parsedContent && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
-                        <View style={[s.badge, { backgroundColor: parsedContent.color + '15' }]}>
-                          <Ionicons name={parsedContent.icon} size={11} color={parsedContent.color} />
-                          <Text style={[s.badgeText, { color: parsedContent.color }]}>
-                            {getContentTypeLabel(parsedContent.type)}
-                          </Text>
-                        </View>
-                      )}
+                      {/* 3줄: 스캔 시간 */}
+                      <Text style={[s.time, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{formatDateTime(item.timestamp)}</Text>
 
-                      {/* 반복 횟수 */}
-                      {item.count && item.count > 1 && (
-                        <View style={[s.badge, { backgroundColor: 'rgba(255, 149, 0, 0.15)' }]}>
-                          <Ionicons name="repeat" size={11} color="#FF9500" />
-                          <Text style={[s.badgeText, { color: '#FF9500' }]}>{item.count}</Text>
-                        </View>
-                      )}
-
-                      {/* EC 레벨 (QR 코드만) */}
-                      {isQRCode && ecLevel && (
-                        <View style={[s.badge, { backgroundColor: getECLevelColor(ecLevel) + '15' }]}>
-                          <Ionicons name="shield-checkmark" size={11} color={getECLevelColor(ecLevel)} />
-                          <Text style={[s.badgeText, { color: getECLevelColor(ecLevel) }]}>
-                            EC:{ecLevel.toUpperCase()}
-                          </Text>
-                        </View>
+                      {item.url && (
+                        <Text style={[s.url, { color: colors.primary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                          {item.url}
+                        </Text>
                       )}
                     </View>
-
-                    {/* 3줄: 스캔 시간 */}
-                    <Text style={[s.time, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{formatDateTime(item.timestamp)}</Text>
-
-                    {item.url && (
-                      <Text style={[s.url, { color: colors.primary, fontFamily: fonts.regular }]} numberOfLines={1}>
-                        {item.url}
-                      </Text>
-                    )}
                   </View>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
+              </Swipeable>
             );
           }}
           contentContainerStyle={s.listContent}
@@ -651,5 +690,24 @@ const s = StyleSheet.create({
   url: {
     fontSize: 12,
     marginTop: 8,
+  },
+  deleteAction: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    marginVertical: 6,
+    marginRight: 15,
+    borderRadius: 12,
+  },
+  deleteActionContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteActionText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });
