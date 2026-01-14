@@ -22,7 +22,6 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -1301,47 +1300,45 @@ export default function GeneratorScreen() {
     }
   };
 
-  // 로고 이미지 선택
+  // 로고 이미지 선택 (MediaLibrary 사용)
   const handlePickLogo = async () => {
-    // ImagePicker 모듈 체크
-    if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
-      Alert.alert(
-        '앱 재빌드 필요',
-        '이미지 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\n터미널에서 실행:\nnpx expo prebuild --clean --platform ios\nnpx expo run:ios',
-        [{ text: '확인' }]
-      );
-      return;
-    }
-
     try {
       // 권한 요청
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permissionResult.granted) {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted' && status !== 'limited') {
         Alert.alert(t('common.error'), '갤러리 접근 권한이 필요합니다.');
         return;
       }
 
-      // 이미지 선택
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        base64: true,
+      // 최근 이미지 가져오기
+      const assets = await MediaLibrary.getAssetsAsync({
+        mediaType: 'photo',
+        first: 1,
+        sortBy: [MediaLibrary.SortBy.creationTime],
       });
 
-      if (!result.canceled && result.assets[0]) {
-        const asset = result.assets[0];
-        const base64Image = `data:image/png;base64,${asset.base64}`;
-        setLogoImage(base64Image);
-
-        // qrStyle에 로고 추가
-        setQrStyle(prev => ({
-          ...prev,
-          logo: base64Image,
-        }));
+      if (assets.assets.length === 0) {
+        Alert.alert(t('common.error'), '갤러리에 이미지가 없습니다.');
+        return;
       }
+
+      // 첫 번째 이미지 선택 (간단한 구현 - 추후 선택 UI 추가 가능)
+      const asset = assets.assets[0];
+      const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
+      const imageUri = assetInfo.localUri || asset.uri;
+
+      // Base64로 변환
+      const base64 = await FileSystem.readAsStringAsync(imageUri, {
+        encoding: 'base64',
+      });
+      const base64Image = `data:image/png;base64,${base64}`;
+      setLogoImage(base64Image);
+
+      // qrStyle에 로고 추가
+      setQrStyle(prev => ({
+        ...prev,
+        logo: base64Image,
+      }));
     } catch (error) {
       console.error('Error picking logo:', error);
       Alert.alert(
