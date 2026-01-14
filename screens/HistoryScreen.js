@@ -169,33 +169,31 @@ export default function HistoryScreen() {
 
   // iOS 네이티브 스타일 스와이프 삭제 버튼
   const renderRightActions = (progress, dragX, item) => {
-    // 스와이프 양에 따른 너비 변화 (iOS 메일처럼)
-    const width = dragX.interpolate({
-      inputRange: [-200, -80, 0],
-      outputRange: [200, 80, 0],
+    // 스케일 애니메이션 (width 대신 사용)
+    const scale = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.8, 1],
       extrapolate: 'clamp',
     });
 
     // 아이콘/텍스트 투명도
-    const opacity = dragX.interpolate({
-      inputRange: [-80, -40, 0],
-      outputRange: [1, 0.5, 0],
+    const opacity = progress.interpolate({
+      inputRange: [0, 0.5, 1],
+      outputRange: [0, 0.5, 1],
       extrapolate: 'clamp',
     });
 
     return (
-      <Animated.View style={[s.deleteAction, { width }]}>
-        <TouchableOpacity
-          style={s.deleteActionTouchable}
-          onPress={() => deleteHistoryItem(item)}
-          activeOpacity={0.8}
-        >
-          <Animated.View style={[s.deleteActionContent, { opacity }]}>
-            <Ionicons name="trash" size={22} color="#fff" />
-            <Text style={s.deleteActionText}>{t('common.delete')}</Text>
-          </Animated.View>
-        </TouchableOpacity>
-      </Animated.View>
+      <TouchableOpacity
+        style={s.deleteAction}
+        onPress={() => deleteHistoryItem(item)}
+        activeOpacity={0.8}
+      >
+        <Animated.View style={[s.deleteActionContent, { opacity, transform: [{ scale }] }]}>
+          <Ionicons name="trash" size={22} color="#fff" />
+          <Text style={s.deleteActionText}>{t('common.delete')}</Text>
+        </Animated.View>
+      </TouchableOpacity>
     );
   };
 
@@ -714,14 +712,9 @@ const s = StyleSheet.create({
   deleteAction: {
     backgroundColor: '#FF3B30',
     justifyContent: 'center',
-    alignItems: 'flex-end',
-    marginVertical: 6,
-  },
-  deleteActionTouchable: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    width: 80,
+    marginVertical: 6,
   },
   deleteActionContent: {
     alignItems: 'center',
