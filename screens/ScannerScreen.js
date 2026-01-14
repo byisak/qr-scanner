@@ -2010,6 +2010,7 @@ function ScannerScreen() {
   const [galleryEndCursor, setGalleryEndCursor] = useState(null);
   const [galleryHasMore, setGalleryHasMore] = useState(true);
   const [galleryLoadingMore, setGalleryLoadingMore] = useState(false);
+  const [selectedPhotoId, setSelectedPhotoId] = useState(null); // 선택된 사진 로딩 표시용
 
   // 갤러리 열기
   const handlePickImage = useCallback(async () => {
@@ -2076,7 +2077,8 @@ function ScannerScreen() {
   // 사진 선택 시
   const handleSelectPhoto = useCallback(async (asset) => {
     try {
-      setGalleryModalVisible(false);
+      // 선택한 사진에 로딩 표시 (모달은 아직 열어둠)
+      setSelectedPhotoId(asset.id);
 
       // 에셋 정보 가져오기 (로컬 URI 포함)
       const assetInfo = await MediaLibrary.getAssetInfoAsync(asset.id);
@@ -2086,6 +2088,10 @@ function ScannerScreen() {
       isNavigatingRef.current = true;
       setIsActive(false);
 
+      // 모달 닫기 및 로딩 상태 초기화
+      setGalleryModalVisible(false);
+      setSelectedPhotoId(null);
+
       // 이미지 분석 화면으로 이동
       router.push({
         pathname: '/image-analysis',
@@ -2093,6 +2099,7 @@ function ScannerScreen() {
       });
     } catch (error) {
       console.error('Photo select error:', error);
+      setSelectedPhotoId(null);
       Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
     }
   }, [router, t]);
@@ -2400,11 +2407,17 @@ function ScannerScreen() {
                     style={styles.galleryPhotoItem}
                     onPress={() => handleSelectPhoto(item)}
                     activeOpacity={0.7}
+                    disabled={selectedPhotoId !== null}
                   >
                     <Image
                       source={{ uri: item.uri }}
                       style={styles.galleryPhotoImage}
                     />
+                    {selectedPhotoId === item.id && (
+                      <View style={styles.galleryPhotoLoading}>
+                        <ActivityIndicator size="small" color="#fff" />
+                      </View>
+                    )}
                   </TouchableOpacity>
                 )}
                 onEndReached={handleLoadMorePhotos}
@@ -2880,6 +2893,13 @@ const styles = StyleSheet.create({
   galleryPhotoImage: {
     flex: 1,
     borderRadius: 4,
+  },
+  galleryPhotoLoading: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   galleryEmpty: {
     flex: 1,
