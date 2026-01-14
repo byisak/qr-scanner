@@ -146,9 +146,9 @@ const getWebViewHTML = (zxingScript) => `
         'PDF417',
       ];
 
-      // 1단계: 빠른 분석 (기본 옵션)
+      // 1단계: 기본 분석 (tryHarder 활성화로 인식률 유지)
       var fastOptions = {
-        tryHarder: false,
+        tryHarder: true,
         tryRotate: false,
         tryInvert: false,
         tryDownscale: false,
@@ -156,12 +156,12 @@ const getWebViewHTML = (zxingScript) => `
         formats: formats,
       };
 
-      sendLog('Phase 1: Fast analysis...');
+      sendLog('Phase 1: Standard analysis...');
       var barcodes = await ZXingWASM.readBarcodes(blob, fastOptions);
 
-      // 결과가 없으면 2단계: 적극적 분석
+      // 결과가 없으면 2단계: 회전/반전 시도
       if (barcodes.length === 0) {
-        sendLog('Phase 2: Deep analysis (trying harder)...');
+        sendLog('Phase 2: Trying rotation and inversion...');
         var deepOptions = {
           tryHarder: true,
           tryRotate: true,
