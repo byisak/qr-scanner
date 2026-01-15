@@ -417,12 +417,13 @@ export default function HistoryScreen() {
                   <View style={s.itemContent}>
                     {/* 복권 아이콘 (복주머니만) */}
                     <View style={s.lotteryIcon}>
-                      <LotteryIcon type={isLotto ? 'lotto' : 'pension'} size={44} iconOnly />
+                      <LotteryIcon type={isLotto ? 'lotto' : 'pension'} size={36} iconOnly />
                     </View>
                     <View style={[s.itemInfo, { marginLeft: 12 }]}>
-                      {/* 1줄: 복권 종류 */}
+                      {/* 1줄: 복권 종류 및 회차 */}
                       <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
                         {lotteryInfo.typeName} {lotteryInfo.round}회
+                        {!isLotto && lotteryInfo.displayNumber && ` (${lotteryInfo.displayNumber})`}
                       </Text>
 
                       {/* 2줄: 배지들 */}
@@ -760,8 +761,8 @@ const s = StyleSheet.create({
     padding: 4,
   },
   lotteryIcon: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     justifyContent: 'center',
     alignItems: 'center',
   },

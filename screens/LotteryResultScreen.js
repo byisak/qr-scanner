@@ -277,7 +277,7 @@ export default function LotteryResultScreen() {
                 {/* 게임 라벨 */}
                 <View style={styles.gameLabel}>
                   <Text style={[styles.gameLabelText, { color: colors.text, fontFamily: fonts.bold }]}>
-                    {String.fromCharCode(65 + index)}
+                    {lotteryData.type === 'pension' ? game.label : String.fromCharCode(65 + index)}
                   </Text>
                 </View>
 
@@ -288,27 +288,35 @@ export default function LotteryResultScreen() {
 
                 {/* 번호들 */}
                 <View style={styles.gameNumbers}>
-                  {(game.numbers || []).map((num) => {
-                    const bgColor = getLottoNumberColor(num);
-                    return (
-                      <View
-                        key={num}
-                        style={[
-                          styles.numberBall,
-                          {
-                            width: 32,
-                            height: 32,
-                            borderRadius: 16,
-                            backgroundColor: bgColor,
-                          }
-                        ]}
-                      >
-                        <Text style={[styles.numberText, { color: '#fff', fontSize: 13 }]}>
-                          {num}
-                        </Text>
-                      </View>
-                    );
-                  })}
+                  {lotteryData.type === 'pension' ? (
+                    /* 연금복권: 조+번호 표시 */
+                    <Text style={[styles.pensionNumber, { color: colors.text, fontFamily: fonts.bold }]}>
+                      {game.displayNumber}
+                    </Text>
+                  ) : (
+                    /* 로또: 번호공 표시 */
+                    (game.numbers || []).map((num) => {
+                      const bgColor = getLottoNumberColor(num);
+                      return (
+                        <View
+                          key={num}
+                          style={[
+                            styles.numberBall,
+                            {
+                              width: 32,
+                              height: 32,
+                              borderRadius: 16,
+                              backgroundColor: bgColor,
+                            }
+                          ]}
+                        >
+                          <Text style={[styles.numberText, { color: '#fff', fontSize: 13 }]}>
+                            {num}
+                          </Text>
+                        </View>
+                      );
+                    })
+                  )}
                 </View>
               </View>
             ))}
@@ -505,6 +513,10 @@ const styles = StyleSheet.create({
   },
   numberText: {
     fontWeight: 'bold',
+  },
+  pensionNumber: {
+    fontSize: 16,
+    letterSpacing: 1,
   },
   plusSign: {
     fontSize: 20,

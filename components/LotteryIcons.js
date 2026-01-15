@@ -51,8 +51,8 @@ export function Lotto645Icon({ size = 40, iconOnly = false }) {
  */
 export function Pension720Icon({ size = 40, iconOnly = false }) {
   if (iconOnly) {
-    // 복주머니만 표시 (원본에서 x=27~53 영역, y=0~40, 크기 약 26x40)
-    const iconSvgWidth = 26;
+    // 복주머니만 표시 (원본에서 x=27~55 영역, y=0~40, 크기 약 28x40)
+    const iconSvgWidth = 28;
     const iconSvgHeight = 40;
     const iconSvgX = 27;
 
