@@ -31,9 +31,22 @@ export async function requestNotificationPermission() {
 }
 
 /**
- * 다음 토요일 오후 7시 10분 구하기
+ * 다음 토요일 알림 시간 구하기 (저장된 시간 사용)
  */
-function getNextSaturdayNotificationTime() {
+async function getNextSaturdayNotificationTime() {
+  // 저장된 알림 시간 로드 (기본값: 19시 10분)
+  let hour = 19;
+  let minute = 10;
+
+  try {
+    const savedHour = await AsyncStorage.getItem('lotteryNotificationHour');
+    const savedMinute = await AsyncStorage.getItem('lotteryNotificationMinute');
+    if (savedHour !== null) hour = parseInt(savedHour, 10);
+    if (savedMinute !== null) minute = parseInt(savedMinute, 10);
+  } catch (error) {
+    console.log('[LotteryNotification] Failed to load saved time, using default');
+  }
+
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0: 일, 1: 월, ..., 6: 토
 
@@ -42,7 +55,7 @@ function getNextSaturdayNotificationTime() {
   if (daysUntilSaturday === 0) {
     // 오늘이 토요일인 경우
     const currentTime = now.getHours() * 60 + now.getMinutes();
-    const notificationTime = 19 * 60 + 10; // 19:10
+    const notificationTime = hour * 60 + minute;
 
     if (currentTime >= notificationTime) {
       // 이미 알림 시간이 지났으면 다음 주 토요일
@@ -55,7 +68,7 @@ function getNextSaturdayNotificationTime() {
 
   const nextSaturday = new Date(now);
   nextSaturday.setDate(now.getDate() + daysUntilSaturday);
-  nextSaturday.setHours(19, 10, 0, 0); // 오후 7시 10분
+  nextSaturday.setHours(hour, minute, 0, 0);
 
   return nextSaturday;
 }
@@ -145,7 +158,7 @@ export async function scheduleLotteryNotification() {
     }
 
     const count = await getUncheckedLotteryCount();
-    const triggerDate = getNextSaturdayNotificationTime();
+    const triggerDate = await getNextSaturdayNotificationTime();
 
     // 알림 스케줄 (Expo SDK 50+ 형식)
     const notificationId = await Notifications.scheduleNotificationAsync({

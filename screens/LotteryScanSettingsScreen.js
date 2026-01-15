@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Modal,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +21,7 @@ import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
 import { requestNotificationPermission, scheduleLotteryNotification, cancelLotteryNotification } from '../utils/lotteryNotification';
+import { Picker } from '@react-native-picker/picker';
 
 // 지원 복권 목록
 const SUPPORTED_LOTTERIES = [
@@ -46,6 +49,11 @@ export default function LotteryScanSettingsScreen() {
   // 상태
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false);
   const [winningNotificationEnabled, setWinningNotificationEnabled] = useState(false);
+  const [notificationHour, setNotificationHour] = useState(19); // 기본값 19시
+  const [notificationMinute, setNotificationMinute] = useState(10); // 기본값 10분
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
+  const [tempHour, setTempHour] = useState(19);
+  const [tempMinute, setTempMinute] = useState(10);
 
   // 설정 로드
   useEffect(() => {
@@ -56,6 +64,18 @@ export default function LotteryScanSettingsScreen() {
 
         const winningNotif = await AsyncStorage.getItem('lotteryWinningNotificationEnabled');
         if (winningNotif !== null) setWinningNotificationEnabled(winningNotif === 'true');
+
+        // 알림 시간 로드
+        const savedHour = await AsyncStorage.getItem('lotteryNotificationHour');
+        const savedMinute = await AsyncStorage.getItem('lotteryNotificationMinute');
+        if (savedHour !== null) {
+          setNotificationHour(parseInt(savedHour, 10));
+          setTempHour(parseInt(savedHour, 10));
+        }
+        if (savedMinute !== null) {
+          setNotificationMinute(parseInt(savedMinute, 10));
+          setTempMinute(parseInt(savedMinute, 10));
+        }
       } catch (error) {
         console.error('Load lottery scan settings error:', error);
       }
@@ -137,6 +157,39 @@ export default function LotteryScanSettingsScreen() {
     }
   };
 
+  // 시간 선택 열기
+  const openTimePicker = () => {
+    setTempHour(notificationHour);
+    setTempMinute(notificationMinute);
+    setTimePickerVisible(true);
+  };
+
+  // 시간 저장
+  const handleSaveTime = async () => {
+    setNotificationHour(tempHour);
+    setNotificationMinute(tempMinute);
+    setTimePickerVisible(false);
+
+    try {
+      await AsyncStorage.setItem('lotteryNotificationHour', tempHour.toString());
+      await AsyncStorage.setItem('lotteryNotificationMinute', tempMinute.toString());
+
+      // 알림이 활성화되어 있으면 새 시간으로 재스케줄링
+      if (winningNotificationEnabled) {
+        await scheduleLotteryNotification();
+      }
+    } catch (error) {
+      console.error('Save notification time error:', error);
+    }
+  };
+
+  // 시간 포맷팅
+  const formatTime = (hour, minute) => {
+    const period = hour >= 12 ? '오후' : '오전';
+    const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    return `${period} ${displayHour}:${String(minute).padStart(2, '0')}`;
+  };
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
@@ -207,6 +260,35 @@ export default function LotteryScanSettingsScreen() {
                 thumbColor="#fff"
               />
             </View>
+
+            {/* 알림 시간 설정 - 알림이 켜져있을 때만 표시 */}
+            {winningNotificationEnabled && (
+              <TouchableOpacity
+                style={[s.row, { marginTop: 16, borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: 16 }]}
+                onPress={openTimePicker}
+                activeOpacity={0.7}
+              >
+                <View style={s.rowLeft}>
+                  <View style={[s.iconContainer, { backgroundColor: '#3498db20' }]}>
+                    <Ionicons name="time" size={22} color="#3498db" />
+                  </View>
+                  <View style={s.rowTextContainer}>
+                    <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                      알림 시간
+                    </Text>
+                    <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                      매주 토요일 추첨 후 알림
+                    </Text>
+                  </View>
+                </View>
+                <View style={s.timeDisplay}>
+                  <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                    {formatTime(notificationHour, notificationMinute)}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -246,6 +328,84 @@ export default function LotteryScanSettingsScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* 시간 선택 모달 */}
+      <Modal
+        visible={timePickerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTimePickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setTimePickerVisible(false)}
+        >
+          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              알림 시간 설정
+            </Text>
+            <Text style={[s.modalSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              매주 토요일 설정한 시간에 알림
+            </Text>
+
+            <View style={s.pickerContainer}>
+              <View style={s.pickerWrapper}>
+                <Text style={[s.pickerLabel, { color: colors.textSecondary }]}>시</Text>
+                <View style={[s.picker, { backgroundColor: colors.inputBackground }]}>
+                  <Picker
+                    selectedValue={tempHour}
+                    onValueChange={(value) => setTempHour(value)}
+                    style={{ width: 100 }}
+                    itemStyle={{ fontSize: 20 }}
+                  >
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <Picker.Item key={i} label={`${i}시`} value={i} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+
+              <Text style={[s.pickerSeparator, { color: colors.text }]}>:</Text>
+
+              <View style={s.pickerWrapper}>
+                <Text style={[s.pickerLabel, { color: colors.textSecondary }]}>분</Text>
+                <View style={[s.picker, { backgroundColor: colors.inputBackground }]}>
+                  <Picker
+                    selectedValue={tempMinute}
+                    onValueChange={(value) => setTempMinute(value)}
+                    style={{ width: 100 }}
+                    itemStyle={{ fontSize: 20 }}
+                  >
+                    {Array.from({ length: 60 }, (_, i) => (
+                      <Picker.Item key={i} label={`${i}분`} value={i} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+
+            <View style={s.modalButtons}>
+              <TouchableOpacity
+                style={[s.modalButton, { backgroundColor: colors.inputBackground }]}
+                onPress={() => setTimePickerVisible(false)}
+              >
+                <Text style={[s.modalButtonText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                  취소
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modalButton, { backgroundColor: colors.primary }]}
+                onPress={handleSaveTime}
+              >
+                <Text style={[s.modalButtonText, { color: '#fff', fontFamily: fonts.semiBold }]}>
+                  저장
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -351,5 +511,74 @@ const s = StyleSheet.create({
   lotteryName: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  timeDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  timeText: {
+    fontSize: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 20,
+    padding: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  pickerWrapper: {
+    alignItems: 'center',
+  },
+  pickerLabel: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  picker: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  pickerSeparator: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginHorizontal: 12,
+    marginTop: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -98,13 +98,12 @@ export default function LotteryResultScreen() {
     }
   };
 
-  const renderNumberBall = (num, isWin = false, isBonus = false, size = 36) => {
-    const bgColor = isWin ? getLottoNumberColor(num) : (isDark ? '#333' : '#E0E0E0');
-    const textColor = isWin ? '#fff' : colors.textSecondary;
+  const renderNumberBall = (num, isBonus = false, size = 40) => {
+    const bgColor = getLottoNumberColor(num);
 
     return (
       <View
-        key={num}
+        key={`${num}-${isBonus ? 'bonus' : 'main'}`}
         style={[
           styles.numberBall,
           {
@@ -112,12 +111,12 @@ export default function LotteryResultScreen() {
             height: size,
             borderRadius: size / 2,
             backgroundColor: bgColor,
-            borderWidth: isBonus ? 2 : 0,
-            borderColor: isBonus ? '#FFD700' : 'transparent',
+            borderWidth: isBonus ? 3 : 0,
+            borderColor: isBonus ? '#333' : 'transparent',
           }
         ]}
       >
-        <Text style={[styles.numberText, { color: textColor, fontSize: size * 0.4 }]}>
+        <Text style={[styles.numberText, { color: '#fff', fontSize: size * 0.4, fontWeight: 'bold' }]}>
           {num}
         </Text>
       </View>
@@ -127,6 +126,7 @@ export default function LotteryResultScreen() {
   const renderGameResult = (game, winNumbers, bonusNumber) => {
     const isWinner = game.rank > 0;
     const rankColor = game.rankColor || colors.textSecondary;
+    const rankLabel = isWinner ? `${game.rank}등당첨` : '낙첨';
 
     return (
       <View
@@ -134,8 +134,8 @@ export default function LotteryResultScreen() {
         style={[
           styles.gameRow,
           {
-            backgroundColor: isWinner ? (rankColor + '15') : colors.surface,
-            borderColor: isWinner ? rankColor : colors.border,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
           }
         ]}
       >
@@ -146,26 +146,40 @@ export default function LotteryResultScreen() {
           </Text>
         </View>
 
-        {/* 등수 */}
-        <View style={[styles.rankBadge, { backgroundColor: rankColor }]}>
-          <Text style={styles.rankText}>{game.rankName}</Text>
+        {/* 등수 배지 */}
+        <View style={[styles.rankBadge, { backgroundColor: isWinner ? rankColor : '#9E9E9E' }]}>
+          <Text style={styles.rankText}>{rankLabel}</Text>
         </View>
 
-        {/* 번호들 */}
+        {/* 번호들 - 항상 색상 표시 */}
         <View style={styles.gameNumbers}>
           {game.numbers.map((num) => {
+            const bgColor = getLottoNumberColor(num);
             const isMatch = winNumbers.includes(num);
             const isBonusMatch = num === bonusNumber && game.hasBonus;
-            return renderNumberBall(num, isMatch, isBonusMatch, 32);
+            return (
+              <View
+                key={num}
+                style={[
+                  styles.numberBall,
+                  {
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: bgColor,
+                    opacity: isMatch || isBonusMatch ? 1 : 0.4,
+                    borderWidth: isBonusMatch ? 2 : 0,
+                    borderColor: isBonusMatch ? '#FFD700' : 'transparent',
+                  }
+                ]}
+              >
+                <Text style={[styles.numberText, { color: '#fff', fontSize: 13 }]}>
+                  {num}
+                </Text>
+              </View>
+            );
           })}
         </View>
-
-        {/* 당첨금 */}
-        {game.prize > 0 && (
-          <Text style={[styles.prizeText, { color: rankColor, fontFamily: fonts.bold }]}>
-            {formatPrize(game.prize)}
-          </Text>
-        )}
       </View>
     );
   };
@@ -178,7 +192,7 @@ export default function LotteryResultScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {lotteryData?.type === 'lotto' ? '로또 당첨결과' : '연금복권 당첨결과'}
+          구매복권 당첨결과
         </Text>
         <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
           <Ionicons name="share-outline" size={24} color={colors.primary} />
@@ -223,9 +237,9 @@ export default function LotteryResultScreen() {
               당첨번호
             </Text>
             <View style={styles.winNumbersRow}>
-              {result.winNumbers.map((num) => renderNumberBall(num, true))}
+              {result.winNumbers.map((num) => renderNumberBall(num, false, 40))}
               <Text style={[styles.plusSign, { color: colors.textSecondary }]}>+</Text>
-              {renderNumberBall(result.bonusNumber, true, true)}
+              {renderNumberBall(result.bonusNumber, true, 40)}
             </View>
           </View>
 
