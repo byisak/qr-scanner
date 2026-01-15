@@ -44,6 +44,10 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
+// 복권 유틸리티
+import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
+import { updateLotteryNotificationOnScan } from '../utils/lotteryNotification';
+
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation'; // 플러스 표시만 활성화
 import BatchScanControls from '../components/BatchScanControls';
@@ -848,6 +852,109 @@ function ScannerScreen() {
     }
   }, [currentGroupId]);
 
+  // 복권 그룹 자동 생성 및 복권 데이터 저장
+  const ensureLotteryGroup = useCallback(async (lotteryType) => {
+    const groupInfo = LOTTERY_GROUPS[lotteryType];
+    if (!groupInfo) return null;
+
+    try {
+      const groupsData = await AsyncStorage.getItem('scanGroups');
+      let groups = groupsData ? JSON.parse(groupsData) : [];
+
+      // 해당 복권 그룹이 이미 있는지 확인
+      const existingGroup = groups.find(g => g.id === groupInfo.id && !g.isDeleted);
+      if (existingGroup) {
+        return groupInfo.id;
+      }
+
+      // 새 복권 그룹 생성
+      const newGroup = {
+        id: groupInfo.id,
+        name: groupInfo.name,
+        icon: groupInfo.icon,
+        color: groupInfo.color,
+        createdAt: Date.now(),
+        isLotteryGroup: true,
+      };
+
+      groups.push(newGroup);
+      await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+
+      // 그룹 목록 UI 업데이트
+      setAvailableGroups(prev => [...prev, newGroup]);
+
+      console.log('[ScannerScreen] Created lottery group:', groupInfo.name);
+      return groupInfo.id;
+    } catch (error) {
+      console.error('Failed to create lottery group:', error);
+      return null;
+    }
+  }, []);
+
+  // 복권 기록 저장 (lotteryData 포함)
+  const saveLotteryRecord = useCallback(async (code, lotteryData, photoUri = null) => {
+    try {
+      const groupId = await ensureLotteryGroup(lotteryData.type);
+      if (!groupId) {
+        console.error('[ScannerScreen] Failed to get lottery group');
+        return null;
+      }
+
+      // 그룹별 히스토리 가져오기
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : {};
+
+      if (!historyByGroup[groupId]) {
+        historyByGroup[groupId] = [];
+      }
+
+      const currentHistory = historyByGroup[groupId];
+      const now = Date.now();
+
+      // 중복 체크 (같은 복권 코드)
+      const existingIndex = currentHistory.findIndex(item => item.code === code);
+
+      if (existingIndex !== -1) {
+        // 중복 - 이미 스캔된 복권
+        console.log('[ScannerScreen] Lottery already scanned:', code);
+        return {
+          isDuplicate: true,
+          record: currentHistory[existingIndex],
+          groupId,
+        };
+      }
+
+      // 새 복권 기록
+      const record = {
+        code,
+        timestamp: now,
+        count: 1,
+        scanTimes: [now],
+        photos: photoUri ? [photoUri] : [],
+        type: 'qr',
+        lotteryData: {
+          ...lotteryData,
+          isChecked: false,
+          checkedAt: null,
+        },
+      };
+
+      historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      triggerSync();
+
+      console.log('[ScannerScreen] Saved lottery record:', lotteryData.typeName, lotteryData.round);
+      return {
+        isDuplicate: false,
+        record,
+        groupId,
+      };
+    } catch (error) {
+      console.error('Save lottery record error:', error);
+      return null;
+    }
+  }, [ensureLotteryGroup, triggerSync]);
+
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(
     (cornerPoints) => {
@@ -1446,6 +1553,92 @@ function ScannerScreen() {
         trackQRScanned(normalizedType, data.startsWith('http') ? 'url' : 'text');
       } else {
         trackBarcodeScanned(normalizedType);
+      }
+
+      // 복권 QR 코드 감지 및 처리
+      if (isLotteryQR(data)) {
+        const lotteryData = parseLotteryQR(data);
+        if (lotteryData) {
+          console.log('[ScannerScreen] Lottery QR detected:', lotteryData.typeName, lotteryData.round);
+
+          // 스캔 즉시 차단
+          isProcessingRef.current = true;
+          setCanScan(false);
+
+          // 햅틱 피드백
+          if (hapticEnabledRef.current) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+
+          // 스캔 소리
+          if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+            try {
+              beepSoundPlayerRef.current.seekTo(0);
+              beepSoundPlayerRef.current.play();
+            } catch (e) {
+              console.log('Sound play error:', e);
+            }
+          }
+
+          // 복권 기록 저장
+          const result = await saveLotteryRecord(data, lotteryData, null);
+
+          if (result) {
+            // 새 복권이 저장된 경우 알림 스케줄링
+            if (!result.isDuplicate) {
+              updateLotteryNotificationOnScan();
+            }
+
+            if (result.isDuplicate) {
+              // 중복 복권 - 기존 결과 화면으로 이동
+              Alert.alert(
+                '이미 스캔된 복권',
+                `${lotteryData.typeName} ${lotteryData.round}회 복권이 이미 저장되어 있습니다.\n당첨 결과를 확인하시겠습니까?`,
+                [
+                  {
+                    text: '취소',
+                    style: 'cancel',
+                    onPress: () => {
+                      isProcessingRef.current = false;
+                      setCanScan(true);
+                    },
+                  },
+                  {
+                    text: '결과 확인',
+                    onPress: () => {
+                      router.push({
+                        pathname: '/lottery-result',
+                        params: { code: data },
+                      });
+                      setTimeout(() => {
+                        isProcessingRef.current = false;
+                        setCanScan(true);
+                      }, 500);
+                    },
+                  },
+                ],
+                { cancelable: false }
+              );
+            } else {
+              // 새 복권 - 결과 화면으로 이동
+              router.push({
+                pathname: '/lottery-result',
+                params: { code: data },
+              });
+              setTimeout(() => {
+                isProcessingRef.current = false;
+                setCanScan(true);
+              }, 500);
+            }
+          } else {
+            // 저장 실패
+            Alert.alert('오류', '복권 정보 저장에 실패했습니다.');
+            isProcessingRef.current = false;
+            setCanScan(true);
+          }
+
+          return; // 복권 처리 완료, 일반 스캔 로직 스킵
+        }
       }
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리

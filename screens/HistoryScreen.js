@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 import { SwipeListView } from 'react-native-swipe-list-view';
+import { updateLotteryNotificationOnCheck } from '../utils/lotteryNotification';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -230,7 +231,40 @@ export default function HistoryScreen() {
     return `${year}.${month}.${day}  ${hours}:${minutes}:${seconds}`;
   };
 
-  const handleItemPress = (item) => {
+  const handleItemPress = async (item) => {
+    // 복권 아이템인 경우 복권 결과 화면으로 이동
+    if (item.lotteryData) {
+      // 결과 확인 시 isChecked를 true로 업데이트
+      if (!item.lotteryData.isChecked) {
+        try {
+          const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+          if (historyData) {
+            const historyByGroup = JSON.parse(historyData);
+            const currentHistory = historyByGroup[selectedGroupId] || [];
+            const index = currentHistory.findIndex(h => h.code === item.code);
+            if (index !== -1) {
+              currentHistory[index].lotteryData.isChecked = true;
+              currentHistory[index].lotteryData.checkedAt = Date.now();
+              historyByGroup[selectedGroupId] = currentHistory;
+              await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+              triggerSync();
+              // 알림 업데이트 (미확인 복권 없으면 취소)
+              updateLotteryNotificationOnCheck();
+            }
+          }
+        } catch (error) {
+          console.error('Failed to mark lottery as checked:', error);
+        }
+      }
+
+      router.push({
+        pathname: '/lottery-result',
+        params: { code: item.code },
+      });
+      return;
+    }
+
+    // 일반 QR/바코드 결과 화면
     router.push({
       pathname: '/result',
       params: {
@@ -360,6 +394,73 @@ export default function HistoryScreen() {
 
             // QR 콘텐츠 파싱 (QR 코드인 경우에만)
             const parsedContent = isQRCode ? parseQRContent(item.code) : null;
+
+            // 복권 아이템인 경우 특별 렌더링
+            if (item.lotteryData) {
+              const lotteryInfo = item.lotteryData;
+              const isLotto = lotteryInfo.type === 'lotto';
+              const typeColor = isLotto ? '#FFC107' : '#4CAF50';
+
+              return (
+                <TouchableOpacity
+                  style={[s.item, { backgroundColor: colors.surface }]}
+                  onPress={() => handleItemPress(item)}
+                  activeOpacity={0.7}
+                  accessibilityLabel={`${lotteryInfo.typeName} ${lotteryInfo.round}회`}
+                  accessibilityRole="button"
+                >
+                  <View style={s.itemContent}>
+                    {/* 복권 아이콘 */}
+                    <View style={[s.lotteryIcon, { backgroundColor: typeColor + '20' }]}>
+                      <Text style={{ fontSize: 24 }}>{isLotto ? '🎱' : '💰'}</Text>
+                    </View>
+                    <View style={[s.itemInfo, { marginLeft: 12 }]}>
+                      {/* 1줄: 복권 종류 */}
+                      <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
+                        {lotteryInfo.typeName} {lotteryInfo.round}회
+                      </Text>
+
+                      {/* 2줄: 배지들 */}
+                      <View style={s.badgeRow}>
+                        {/* 복권 타입 배지 */}
+                        <View style={[s.badge, { backgroundColor: typeColor + '15' }]}>
+                          <Text style={[s.badgeText, { color: typeColor }]}>
+                            {isLotto ? '로또' : '연금복권'}
+                          </Text>
+                        </View>
+
+                        {/* 게임 수 (로또만) */}
+                        {isLotto && lotteryInfo.gameCount && (
+                          <View style={[s.badge, { backgroundColor: colors.primary + '15' }]}>
+                            <Text style={[s.badgeText, { color: colors.primary }]}>
+                              {lotteryInfo.gameCount}게임
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* 확인 상태 */}
+                        <View style={[s.badge, { backgroundColor: lotteryInfo.isChecked ? '#34C759' + '15' : '#FF9500' + '15' }]}>
+                          <Ionicons
+                            name={lotteryInfo.isChecked ? 'checkmark-circle' : 'time-outline'}
+                            size={11}
+                            color={lotteryInfo.isChecked ? '#34C759' : '#FF9500'}
+                          />
+                          <Text style={[s.badgeText, { color: lotteryInfo.isChecked ? '#34C759' : '#FF9500' }]}>
+                            {lotteryInfo.isChecked ? '확인완료' : '미확인'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* 3줄: 스캔 날짜 */}
+                      <Text style={[s.time, { color: colors.textSecondary }]}>
+                        {formatDate(item.timestamp)}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                  </View>
+                </TouchableOpacity>
+              );
+            }
 
             // 콘텐츠 타입 레이블
             const getContentTypeLabel = (type) => {
@@ -652,6 +753,13 @@ const s = StyleSheet.create({
     borderTopLeftRadius: 8,
     borderBottomRightRadius: 7,
     padding: 4,
+  },
+  lotteryIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   itemInfo: {
     flex: 1,
