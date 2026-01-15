@@ -275,9 +275,18 @@ export default function LotteryResultScreen() {
                 ]}
               >
                 {/* 게임 라벨 */}
-                <View style={styles.gameLabel}>
-                  <Text style={[styles.gameLabelText, { color: colors.text, fontFamily: fonts.bold }]}>
-                    {lotteryData.type === 'pension' ? game.label : String.fromCharCode(65 + index)}
+                <View style={[
+                  styles.gameLabel,
+                  lotteryData.type === 'pension' && styles.pensionGameLabel
+                ]}>
+                  <Text style={[
+                    styles.gameLabelText,
+                    { color: colors.text, fontFamily: fonts.bold },
+                    lotteryData.type === 'pension' && styles.pensionGameLabelText
+                  ]}>
+                    {lotteryData.type === 'pension'
+                      ? (game.label === '본 추첨' ? '본' : '보너스')
+                      : String.fromCharCode(65 + index)}
                   </Text>
                 </View>
 
@@ -560,6 +569,14 @@ const styles = StyleSheet.create({
   gameLabelText: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  pensionGameLabel: {
+    width: 'auto',
+    paddingHorizontal: 8,
+    borderRadius: 12,
+  },
+  pensionGameLabelText: {
+    fontSize: 11,
   },
   rankBadge: {
     paddingHorizontal: 8,
