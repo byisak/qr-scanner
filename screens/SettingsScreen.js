@@ -784,7 +784,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 제품 검색 */}
+        {/* 제품 검색 - 임시 비활성화
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.productSearchSection')}</Text>
 
@@ -812,6 +812,7 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
+        */}
 
         {/* 데이터 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
