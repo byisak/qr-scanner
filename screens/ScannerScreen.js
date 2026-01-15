@@ -2345,7 +2345,9 @@ function ScannerScreen() {
           <BlurView intensity={80} tint="light" style={styles.groupBadgeBlur}>
             <Ionicons name="folder" size={16} color="rgba(255,255,255,0.95)" />
             <Text style={[styles.groupBadgeText, { color: 'rgba(255,255,255,0.95)' }]}>
-              {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
+              {currentGroupId === 'default' ? t('groupEdit.defaultGroup') :
+               currentGroupId === 'lottery-lotto' ? '로또 6/45' :
+               currentGroupId === 'lottery-pension' ? '연금복권720+' : currentGroupName}
             </Text>
             <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.95)" style={{ marginLeft: 4 }} />
           </BlurView>
@@ -2524,7 +2526,9 @@ function ScannerScreen() {
                       { color: colors.text },
                       currentGroupId === group.id && { color: colors.primary }
                     ]}>
-                      {group.name}
+                      {group.id === 'default' ? t('groupEdit.defaultGroup') :
+                       group.id === 'lottery-lotto' ? '로또 6/45' :
+                       group.id === 'lottery-pension' ? '연금복권720+' : group.name}
                     </Text>
                   </View>
                   {currentGroupId === group.id && (
