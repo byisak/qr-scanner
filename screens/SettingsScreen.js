@@ -997,7 +997,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 개발자 옵션 - TODO: 배포 시 제거 또는 숨김 처리 */}
+        {/* 개발자 옵션 - 배포 시 주석 처리됨
         <TouchableOpacity
           style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}
           onPress={() => router.push('/developer-options')}
@@ -1025,6 +1025,7 @@ export default function SettingsScreen() {
             </View>
           </View>
         </TouchableOpacity>
+        */}
         </ScrollView>
       </TouchableWithoutFeedback>
     </View>

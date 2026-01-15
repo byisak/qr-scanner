@@ -29,8 +29,10 @@ export const FeatureLockProvider = ({ children }) => {
   const { t } = useLanguage();
   const [unlockedFeatures, setUnlockedFeatures] = useState([]);
   const [adWatchCounts, setAdWatchCounts] = useState({}); // { featureId: count }
-  // 개발 모드 비활성화 (프로덕션)
+  // 개발 모드 비활성화 (프로덕션) - 배포 시 항상 false 유지
   const [devModeEnabled, setDevModeEnabled] = useState(false);
+  // eslint-disable-next-line no-unused-vars
+  const _devModeDisabledForProduction = true; // 배포용 플래그
   const [isLoading, setIsLoading] = useState(true);
 
   // 광고 관련 상태
@@ -61,9 +63,10 @@ export const FeatureLockProvider = ({ children }) => {
       if (adCounts) {
         setAdWatchCounts(JSON.parse(adCounts));
       }
-      if (devMode === 'true') {
-        setDevModeEnabled(true);
-      }
+      // 배포용: devMode 로딩 비활성화 - 항상 잠금 유지
+      // if (devMode === 'true') {
+      //   setDevModeEnabled(true);
+      // }
     } catch (error) {
       console.error('Load settings error:', error);
     } finally {
