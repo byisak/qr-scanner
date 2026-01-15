@@ -57,7 +57,7 @@ export default function LotteryResultScreen() {
       const drawCompleted = isDrawCompleted(parsed.round, parsed.type);
       if (!drawCompleted) {
         const nextDraw = getNextDrawTime(parsed.type);
-        setError(`아직 추첨 전입니다.\n추첨 예정: ${formatDate(nextDraw)}`);
+        setError(`아직 추첨 전입니다.\n추첨 예정: ${formatDate(nextDraw)}\n\n복권 번호가 기록탭에 저장되었습니다.`);
         setLoading(false);
         return;
       }

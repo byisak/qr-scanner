@@ -7,6 +7,7 @@ import {
   Switch,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -17,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
+import { requestNotificationPermission, scheduleLotteryNotification, cancelLotteryNotification } from '../utils/lotteryNotification';
 
 // 지원 복권 목록
 const SUPPORTED_LOTTERIES = [
@@ -103,11 +105,35 @@ export default function LotteryScanSettingsScreen() {
 
   // 당첨 알림 활성화 저장
   const handleWinningNotificationToggle = async (value) => {
-    setWinningNotificationEnabled(value);
-    try {
-      await AsyncStorage.setItem('lotteryWinningNotificationEnabled', value.toString());
-    } catch (error) {
-      console.error('Save winning notification enabled error:', error);
+    if (value) {
+      // 활성화 시 알림 권한 요청
+      const hasPermission = await requestNotificationPermission();
+      if (!hasPermission) {
+        Alert.alert(
+          '알림 권한 필요',
+          '당첨 알림을 받으려면 알림 권한이 필요합니다. 설정에서 알림을 허용해주세요.',
+          [{ text: '확인' }]
+        );
+        return;
+      }
+
+      setWinningNotificationEnabled(true);
+      try {
+        await AsyncStorage.setItem('lotteryWinningNotificationEnabled', 'true');
+        // 알림 스케줄링
+        await scheduleLotteryNotification();
+      } catch (error) {
+        console.error('Save winning notification enabled error:', error);
+      }
+    } else {
+      // 비활성화 시 알림 취소
+      setWinningNotificationEnabled(false);
+      try {
+        await AsyncStorage.setItem('lotteryWinningNotificationEnabled', 'false');
+        await cancelLotteryNotification();
+      } catch (error) {
+        console.error('Save winning notification enabled error:', error);
+      }
     }
   };
 

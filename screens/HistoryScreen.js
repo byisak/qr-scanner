@@ -453,7 +453,7 @@ export default function HistoryScreen() {
 
                       {/* 3줄: 스캔 날짜 */}
                       <Text style={[s.time, { color: colors.textSecondary }]}>
-                        {formatDate(item.timestamp)}
+                        {formatDateTime(item.timestamp)}
                       </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />

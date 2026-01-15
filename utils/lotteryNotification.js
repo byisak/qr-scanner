@@ -147,7 +147,7 @@ export async function scheduleLotteryNotification() {
     const count = await getUncheckedLotteryCount();
     const triggerDate = getNextSaturdayNotificationTime();
 
-    // 알림 스케줄
+    // 알림 스케줄 (Expo SDK 50+ 형식)
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title: '🎱 복권 당첨 확인하세요!',
@@ -156,6 +156,7 @@ export async function scheduleLotteryNotification() {
         sound: true,
       },
       trigger: {
+        type: 'date',
         date: triggerDate,
       },
     });
