@@ -872,9 +872,31 @@ function ScannerScreen() {
       const groupsData = await AsyncStorage.getItem('scanGroups');
       let groups = groupsData ? JSON.parse(groupsData) : [];
 
+      // 기본 그룹이 없으면 추가 (scanGroups 스토리지에도 저장)
+      const hasDefaultGroup = groups.some(g => g.id === 'default' && !g.isDeleted);
+      if (!hasDefaultGroup) {
+        const defaultGroup = {
+          id: 'default',
+          name: '기본 그룹',
+          createdAt: Date.now(),
+        };
+        groups.unshift(defaultGroup);
+      }
+
       // 해당 복권 그룹이 이미 있는지 확인
       const existingGroup = groups.find(g => g.id === groupInfo.id && !g.isDeleted);
       if (existingGroup) {
+        // 기본 그룹만 추가된 경우에도 저장
+        if (!hasDefaultGroup) {
+          await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+          setAvailableGroups(prev => {
+            const hasDefault = prev.some(g => g.id === 'default');
+            if (!hasDefault) {
+              return [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }, ...prev];
+            }
+            return prev;
+          });
+        }
         return groupInfo.id;
       }
 
@@ -892,7 +914,19 @@ function ScannerScreen() {
       await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
 
       // 그룹 목록 UI 업데이트
-      setAvailableGroups(prev => [...prev, newGroup]);
+      setAvailableGroups(prev => {
+        const hasDefault = prev.some(g => g.id === 'default');
+        const hasLotteryGroup = prev.some(g => g.id === groupInfo.id);
+
+        let updated = [...prev];
+        if (!hasDefault) {
+          updated = [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }, ...updated];
+        }
+        if (!hasLotteryGroup) {
+          updated = [...updated, newGroup];
+        }
+        return updated;
+      });
 
       console.log('[ScannerScreen] Created lottery group:', groupInfo.name);
       return groupInfo.id;

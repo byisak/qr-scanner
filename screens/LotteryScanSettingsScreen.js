@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   Platform,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -48,6 +49,8 @@ export default function LotteryScanSettingsScreen() {
 
   // 상태
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false);
+  const [koreaExpanded, setKoreaExpanded] = useState(false);
+  const [koreaEnabled, setKoreaEnabled] = useState(true); // 대한민국 복권 활성화
   const [winningNotificationEnabled, setWinningNotificationEnabled] = useState(false);
   const [notificationHour, setNotificationHour] = useState(19); // 기본값 19시
   const [notificationMinute, setNotificationMinute] = useState(10); // 기본값 10분
@@ -236,62 +239,6 @@ export default function LotteryScanSettingsScreen() {
           </View>
         </View>
 
-        {/* 당첨 알림 - 복권 인식이 켜져있을 때만 표시 */}
-        {lotteryScanEnabled && (
-          <View style={[s.section, { backgroundColor: colors.surface }]}>
-            <View style={s.row}>
-              <View style={s.rowLeft}>
-                <View style={[s.iconContainer, { backgroundColor: '#e74c3c20' }]}>
-                  <Ionicons name="notifications" size={22} color="#e74c3c" />
-                </View>
-                <View style={s.rowTextContainer}>
-                  <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                    {t('lotteryScan.winningNotification')}
-                  </Text>
-                  <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    {t('lotteryScan.winningNotificationDesc')}
-                  </Text>
-                </View>
-              </View>
-              <Switch
-                value={winningNotificationEnabled}
-                onValueChange={handleWinningNotificationToggle}
-                trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                thumbColor="#fff"
-              />
-            </View>
-
-            {/* 알림 시간 설정 - 알림이 켜져있을 때만 표시 */}
-            {winningNotificationEnabled && (
-              <TouchableOpacity
-                style={[s.row, { marginTop: 16, borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: 16 }]}
-                onPress={openTimePicker}
-                activeOpacity={0.7}
-              >
-                <View style={s.rowLeft}>
-                  <View style={[s.iconContainer, { backgroundColor: '#3498db20' }]}>
-                    <Ionicons name="time" size={22} color="#3498db" />
-                  </View>
-                  <View style={s.rowTextContainer}>
-                    <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                      알림 시간
-                    </Text>
-                    <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                      매주 토요일 추첨 후 알림
-                    </Text>
-                  </View>
-                </View>
-                <View style={s.timeDisplay}>
-                  <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
-                    {formatTime(notificationHour, notificationMinute)}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                </View>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
         {/* 안내 메시지 */}
         <View style={[s.infoBox, { backgroundColor: '#f39c1210' }]}>
           <Ionicons name="information-circle" size={20} color="#f39c12" />
@@ -307,22 +254,85 @@ export default function LotteryScanSettingsScreen() {
               {t('lotteryScan.supportedLotteries')}
             </Text>
 
-            {SUPPORTED_LOTTERIES.map((item, index) => (
-              <View
-                key={item.country}
-                style={[
-                  s.lotteryItem,
-                  index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight }
-                ]}
+            {/* 대한민국 - 확장 가능한 항목 */}
+            <View>
+              <TouchableOpacity
+                style={s.lotteryItem}
+                onPress={() => setKoreaExpanded(!koreaExpanded)}
+                activeOpacity={0.7}
               >
-                <Text style={[s.countryName, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  {t(`lotteryScan.countries.${item.country}`)}
-                </Text>
-                <Text style={[s.lotteryName, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {t(`lotteryScan.lotteryTypes.${item.lotteries}`)}
-                </Text>
-              </View>
-            ))}
+                <View style={s.lotteryItemLeft}>
+                  <Text style={[s.countryName, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                    {t('lotteryScan.countries.korea')}
+                  </Text>
+                  <Text style={[s.lotteryName, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                    {t('lotteryScan.lotteryTypes.lotto645')}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={koreaExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={colors.textTertiary}
+                />
+              </TouchableOpacity>
+
+              {/* 확장된 설정 */}
+              {koreaExpanded && (
+                <View style={[s.expandedContent, { borderTopColor: colors.borderLight }]}>
+                  {/* 당첨 알림 */}
+                  <View style={s.subRow}>
+                    <View style={s.subRowLeft}>
+                      <View style={[s.subIconContainer, { backgroundColor: '#e74c3c20' }]}>
+                        <Ionicons name="notifications" size={18} color="#e74c3c" />
+                      </View>
+                      <View style={s.subRowTextContainer}>
+                        <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                          {t('lotteryScan.winningNotification')}
+                        </Text>
+                        <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                          {t('lotteryScan.winningNotificationDesc')}
+                        </Text>
+                      </View>
+                    </View>
+                    <Switch
+                      value={winningNotificationEnabled}
+                      onValueChange={handleWinningNotificationToggle}
+                      trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+
+                  {/* 알림 시간 설정 - 알림이 켜져있을 때만 표시 */}
+                  {winningNotificationEnabled && (
+                    <TouchableOpacity
+                      style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
+                      onPress={openTimePicker}
+                      activeOpacity={0.7}
+                    >
+                      <View style={s.subRowLeft}>
+                        <View style={[s.subIconContainer, { backgroundColor: '#3498db20' }]}>
+                          <Ionicons name="time" size={18} color="#3498db" />
+                        </View>
+                        <View style={s.subRowTextContainer}>
+                          <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                            알림 시간
+                          </Text>
+                          <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                            매주 토요일 추첨 후 알림
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={s.timeDisplay}>
+                        <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                          {formatTime(notificationHour, notificationMinute)}
+                        </Text>
+                        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
           </View>
         )}
 
@@ -336,12 +346,14 @@ export default function LotteryScanSettingsScreen() {
         animationType="fade"
         onRequestClose={() => setTimePickerVisible(false)}
       >
-        <TouchableOpacity
+        <Pressable
           style={s.modalOverlay}
-          activeOpacity={1}
           onPress={() => setTimePickerVisible(false)}
         >
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+          <Pressable
+            style={[s.modalContent, { backgroundColor: colors.surface }]}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
               알림 시간 설정
             </Text>
@@ -356,8 +368,8 @@ export default function LotteryScanSettingsScreen() {
                   <Picker
                     selectedValue={tempHour}
                     onValueChange={(value) => setTempHour(value)}
-                    style={{ width: 100 }}
-                    itemStyle={{ fontSize: 20 }}
+                    style={{ width: 100, height: 150 }}
+                    itemStyle={{ fontSize: 20, height: 150 }}
                   >
                     {Array.from({ length: 24 }, (_, i) => (
                       <Picker.Item key={i} label={`${i}시`} value={i} />
@@ -374,8 +386,8 @@ export default function LotteryScanSettingsScreen() {
                   <Picker
                     selectedValue={tempMinute}
                     onValueChange={(value) => setTempMinute(value)}
-                    style={{ width: 100 }}
-                    itemStyle={{ fontSize: 20 }}
+                    style={{ width: 100, height: 150 }}
+                    itemStyle={{ fontSize: 20, height: 150 }}
                   >
                     {Array.from({ length: 60 }, (_, i) => (
                       <Picker.Item key={i} label={`${i}분`} value={i} />
@@ -403,8 +415,8 @@ export default function LotteryScanSettingsScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
@@ -501,7 +513,13 @@ const s = StyleSheet.create({
     lineHeight: 20,
   },
   lotteryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingVertical: 12,
+  },
+  lotteryItemLeft: {
+    flex: 1,
   },
   countryName: {
     fontSize: 15,
@@ -511,6 +529,43 @@ const s = StyleSheet.create({
   lotteryName: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  expandedContent: {
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderTopWidth: 1,
+    marginTop: 8,
+  },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  subRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 12,
+  },
+  subIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  subRowTextContainer: {
+    flex: 1,
+  },
+  subRowTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  subRowDesc: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   timeDisplay: {
     flexDirection: 'row',
@@ -560,6 +615,7 @@ const s = StyleSheet.create({
   picker: {
     borderRadius: 12,
     overflow: 'hidden',
+    height: 150,
   },
   pickerSeparator: {
     fontSize: 24,
