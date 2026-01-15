@@ -223,7 +223,7 @@ export default function LotteryResultScreen() {
         {/* 게임 라벨 */}
         <View style={[styles.gameLabel, styles.pensionGameLabel]}>
           <Text style={[styles.gameLabelText, styles.pensionGameLabelText, { color: colors.text, fontFamily: fonts.bold }]}>
-            {game.label === '본 추첨' ? '본' : '보너스'}
+            {game.label === '본 추첨' ? '본추첨' : '보너스'}
           </Text>
         </View>
 
@@ -346,7 +346,7 @@ export default function LotteryResultScreen() {
                     lotteryData.type === 'pension' && styles.pensionGameLabelText
                   ]}>
                     {lotteryData.type === 'pension'
-                      ? (game.label === '본 추첨' ? '본' : '보너스')
+                      ? (game.label === '본 추첨' ? '본추첨' : '보너스')
                       : String.fromCharCode(65 + index)}
                   </Text>
                 </View>
@@ -502,6 +502,35 @@ export default function LotteryResultScreen() {
               </Text>
             </View>
           )}
+
+          {/* 당첨 조건 설명 */}
+          <View style={[styles.prizeConditionBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.prizeConditionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              당첨 조건
+            </Text>
+            {lotteryData?.type === 'pension' ? (
+              /* 연금복권 당첨 조건 */
+              <View style={styles.prizeConditionList}>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>1등: 조 + 6자리 번호 모두 일치 (월 700만원 x 20년)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>2등: 끝 6자리 일치 (월 100만원 x 10년)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>3등: 끝 5자리 일치 (100만원)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>4등: 끝 4자리 일치 (10만원)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>5등: 끝 3자리 일치 (5만원)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>6등: 끝 2자리 일치 (5천원)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>7등: 끝 1자리 일치 (1천원)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>보너스: 보너스 번호 6자리 일치 (월 100만원 x 10년)</Text>
+              </View>
+            ) : (
+              /* 로또 당첨 조건 */
+              <View style={styles.prizeConditionList}>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>1등: 6개 번호 모두 일치</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>2등: 5개 번호 + 보너스 번호 일치</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>3등: 5개 번호 일치</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>4등: 4개 번호 일치 (5만원)</Text>
+                <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>5등: 3개 번호 일치 (5천원)</Text>
+              </View>
+            )}
+          </View>
 
           <View style={{ height: 40 }} />
         </ScrollView>
@@ -744,5 +773,21 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
+  },
+  prizeConditionBox: {
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  prizeConditionTitle: {
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  prizeConditionList: {
+    gap: 6,
+  },
+  prizeConditionItem: {
+    fontSize: 12,
+    lineHeight: 18,
   },
 });
