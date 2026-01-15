@@ -119,6 +119,14 @@ export async function getUncheckedLotteryCount() {
  */
 export async function scheduleLotteryNotification() {
   try {
+    // 알림 설정 확인
+    const notificationEnabled = await AsyncStorage.getItem('lotteryWinningNotificationEnabled');
+    if (notificationEnabled !== 'true') {
+      console.log('[LotteryNotification] Notification disabled in settings');
+      await cancelLotteryNotification();
+      return false;
+    }
+
     // 권한 확인
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {

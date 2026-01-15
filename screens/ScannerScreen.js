@@ -127,6 +127,7 @@ function ScannerScreen() {
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
+  const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식 활성화 여부
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -148,6 +149,7 @@ function ScannerScreen() {
   const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
   const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
   const resultWindowAutoOpenRef = useRef(true); // 결과창 자동 열림 ref
+  const lotteryScanEnabledRef = useRef(false); // 복권 인식 활성화 ref
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -200,6 +202,11 @@ function ScannerScreen() {
       setLastScannedCode(null);
     }
   }, [resultWindowAutoOpen]);
+
+  // lotteryScanEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    lotteryScanEnabledRef.current = lotteryScanEnabled;
+  }, [lotteryScanEnabled]);
 
   // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
   useEffect(() => {
@@ -538,6 +545,10 @@ function ScannerScreen() {
           // 결과창 자동 열림 설정 로드
           const autoOpen = await AsyncStorage.getItem('resultWindowAutoOpen');
           setResultWindowAutoOpen(autoOpen === null ? true : autoOpen === 'true');
+
+          // 복권 인식 활성화 설정 로드
+          const lotteryScan = await AsyncStorage.getItem('lotteryScanEnabled');
+          setLotteryScanEnabled(lotteryScan === 'true');
 
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
@@ -1555,8 +1566,8 @@ function ScannerScreen() {
         trackBarcodeScanned(normalizedType);
       }
 
-      // 복권 QR 코드 감지 및 처리
-      if (isLotteryQR(data)) {
+      // 복권 QR 코드 감지 및 처리 (설정에서 활성화된 경우에만)
+      if (lotteryScanEnabledRef.current && isLotteryQR(data)) {
         const lotteryData = parseLotteryQR(data);
         if (lotteryData) {
           console.log('[ScannerScreen] Lottery QR detected:', lotteryData.typeName, lotteryData.round);
