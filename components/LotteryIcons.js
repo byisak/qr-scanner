@@ -51,19 +51,24 @@ export function Lotto645Icon({ size = 40, iconOnly = false }) {
  */
 export function Pension720Icon({ size = 40, iconOnly = false }) {
   if (iconOnly) {
-    // 복주머니만 표시 (원본에서 x=27~54 영역, 원본 비율 27x40)
-    const iconWidth = size;
-    const iconHeight = size * (40 / 27);
-    // 전체 SVG를 크게 그리고 왼쪽으로 이동시켜 복주머니만 보이게
-    const scale = size / 27;
+    // 복주머니만 표시 (원본에서 x=27~53 영역, y=0~40, 크기 약 26x40)
+    const iconSvgWidth = 26;
+    const iconSvgHeight = 40;
+    const iconSvgX = 27;
+
+    // 높이 기준으로 스케일 계산 (세로로 긴 아이콘)
+    const scale = size / iconSvgHeight;
+    const displayWidth = iconSvgWidth * scale;
+    const displayHeight = size;
+
     const fullWidth = 204 * scale;
     const fullHeight = 40 * scale;
-    const offsetX = -27 * scale;
+    const offsetX = -iconSvgX * scale;
 
     return (
       <View style={{
-        width: iconWidth,
-        height: iconWidth, // 정사각형으로
+        width: displayWidth,
+        height: displayHeight,
         overflow: 'hidden',
       }}>
         <View style={{ marginLeft: offsetX }}>

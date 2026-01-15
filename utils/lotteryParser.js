@@ -39,12 +39,12 @@ export function parseLotteryQR(url) {
 
 /**
  * 연금복권720+ 파싱
- * 형식: pd{회차4자리}{조3자리}s{번호6자리}
- * 예: pd1203004s619968
+ * 형식: pd{코드2자리}{회차4자리}{조1자리}s{번호6자리}
+ * 예: pd1203005s619968 → 코드12, 회차0300(300회), 조5, 번호619968
  */
 function parsePensionLottery(params, originalUrl) {
-  // pd1203004s619968
-  const match = params.match(/^pd(\d{4})(\d{3})s(\d{6})/);
+  // pd1203005s619968 → prefix=12, round=0300, group=5, number=619968
+  const match = params.match(/^pd\d{2}(\d{4})(\d)s(\d{6})/);
   if (!match) return null;
 
   const round = parseInt(match[1]);
@@ -57,12 +57,17 @@ function parsePensionLottery(params, originalUrl) {
     round,
     group,
     number,
-    displayNumber: `${group}조 ${number}`,
+    displayNumber: `${group}조${number}`,
     games: [{
-      label: 'A',
+      label: '본 추첨',
       group,
       number,
-      displayNumber: `${group}조 ${number}`,
+      displayNumber: `${group}조${number}`,
+    }, {
+      label: '보너스 추첨',
+      group,
+      number,
+      displayNumber: `${group}조${number}`,
     }],
     isChecked: false,
     checkedAt: null,
