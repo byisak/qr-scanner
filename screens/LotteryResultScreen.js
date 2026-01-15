@@ -92,9 +92,17 @@ export default function LotteryResultScreen() {
     if (!result) return;
 
     try {
-      const message = `🎱 로또 ${result.round}회 당첨 결과\n\n` +
-        `당첨번호: ${result.winNumbers.join(', ')} + ${result.bonusNumber}\n\n` +
-        `${getWinMessage(result.bestRank, result.totalPrize)}`;
+      let message;
+      if (lotteryData?.type === 'pension') {
+        message = `연금복권720+ ${result.round}회 당첨 결과\n\n` +
+          `당첨번호: ${result.winGroup}조 ${result.winNumber}\n` +
+          `보너스: ${result.bonusNumber}\n\n` +
+          `${getWinMessage(result.bestRank, result.totalPrize, 'pension')}`;
+      } else {
+        message = `로또 ${result.round}회 당첨 결과\n\n` +
+          `당첨번호: ${result.winNumbers.join(', ')} + ${result.bonusNumber}\n\n` +
+          `${getWinMessage(result.bestRank, result.totalPrize, 'lotto')}`;
+      }
 
       await Share.share({ message });
     } catch (err) {
@@ -184,6 +192,59 @@ export default function LotteryResultScreen() {
             );
           })}
         </View>
+      </View>
+    );
+  };
+
+  // 연금복권 게임 결과 렌더링
+  const renderPensionGameResult = (game) => {
+    const isWinner = game.rank > 0 || game.rank === 'bonus';
+    const rankColor = game.rankColor || colors.textSecondary;
+    let rankLabel;
+    if (game.rank === 'bonus') {
+      rankLabel = '보너스당첨';
+    } else if (game.rank > 0) {
+      rankLabel = `${game.rank}등당첨`;
+    } else {
+      rankLabel = '낙첨';
+    }
+
+    return (
+      <View
+        key={game.label}
+        style={[
+          styles.gameRow,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }
+        ]}
+      >
+        {/* 게임 라벨 */}
+        <View style={[styles.gameLabel, styles.pensionGameLabel]}>
+          <Text style={[styles.gameLabelText, styles.pensionGameLabelText, { color: colors.text, fontFamily: fonts.bold }]}>
+            {game.label === '본 추첨' ? '본' : '보너스'}
+          </Text>
+        </View>
+
+        {/* 등수 배지 */}
+        <View style={[styles.rankBadge, { backgroundColor: isWinner ? rankColor : '#9E9E9E' }]}>
+          <Text style={styles.rankText}>{rankLabel}</Text>
+        </View>
+
+        {/* 번호 + 당첨금 */}
+        <View style={styles.gameNumbers}>
+          <Text style={[styles.pensionNumber, { color: colors.text, fontFamily: fonts.bold }]}>
+            {game.displayNumber}
+          </Text>
+        </View>
+
+        {/* 당첨금 표시 */}
+        {isWinner && game.prizeText && (
+          <Text style={[styles.prizeText, { color: rankColor }]}>
+            {game.prizeText}
+          </Text>
+        )}
       </View>
     );
   };
@@ -349,9 +410,11 @@ export default function LotteryResultScreen() {
             <Text style={[styles.roundText, { color: colors.primary, fontFamily: fonts.bold }]}>
               {result.round}회
             </Text>
-            <Text style={[styles.drawDate, { color: colors.textSecondary }]}>
-              추첨일: {result.drawDate}
-            </Text>
+            {lotteryData?.type === 'lotto' && result.drawDate && (
+              <Text style={[styles.drawDate, { color: colors.textSecondary }]}>
+                추첨일: {result.drawDate}
+              </Text>
+            )}
           </View>
 
           {/* 당첨 번호 */}
@@ -359,11 +422,30 @@ export default function LotteryResultScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
               당첨번호
             </Text>
-            <View style={styles.winNumbersRow}>
-              {result.winNumbers.map((num) => renderNumberBall(num, false, 40))}
-              <Text style={[styles.plusSign, { color: colors.textSecondary }]}>+</Text>
-              {renderNumberBall(result.bonusNumber, true, 40)}
-            </View>
+            {lotteryData?.type === 'pension' ? (
+              /* 연금복권 당첨번호 */
+              <View style={styles.pensionWinNumbers}>
+                <View style={styles.pensionWinRow}>
+                  <Text style={[styles.pensionWinLabel, { color: colors.textSecondary }]}>1등</Text>
+                  <Text style={[styles.pensionWinNumber, { color: colors.text, fontFamily: fonts.bold }]}>
+                    {result.winGroup}조 {result.winNumber}
+                  </Text>
+                </View>
+                <View style={styles.pensionWinRow}>
+                  <Text style={[styles.pensionWinLabel, { color: colors.textSecondary }]}>보너스</Text>
+                  <Text style={[styles.pensionWinNumber, { color: colors.text, fontFamily: fonts.bold }]}>
+                    각 조 {result.bonusNumber}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              /* 로또 당첨번호 */
+              <View style={styles.winNumbersRow}>
+                {(result.winNumbers || []).map((num) => renderNumberBall(num, false, 40))}
+                <Text style={[styles.plusSign, { color: colors.textSecondary }]}>+</Text>
+                {renderNumberBall(result.bonusNumber, true, 40)}
+              </View>
+            )}
           </View>
 
           {/* 총 당첨금 */}
@@ -377,7 +459,7 @@ export default function LotteryResultScreen() {
               styles.totalPrizeLabel,
               { color: result.hasWin ? '#fff' : colors.textSecondary }
             ]}>
-              {result.hasWin ? '🎉 축하합니다!' : '😢 아쉽습니다'}
+              {result.hasWin ? '축하합니다!' : '아쉽습니다'}
             </Text>
             <Text style={[
               styles.totalPrizeAmount,
@@ -386,7 +468,7 @@ export default function LotteryResultScreen() {
                 fontFamily: fonts.bold,
               }
             ]}>
-              총 {formatPrize(result.totalPrize)} 당첨
+              {getWinMessage(result.bestRank, result.totalPrize, lotteryData?.type)}
             </Text>
           </View>
 
@@ -395,13 +477,19 @@ export default function LotteryResultScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold, marginBottom: 12 }]}>
               게임별 결과
             </Text>
-            {(result?.games || []).map((game) =>
-              renderGameResult(game, result.winNumbers, result.bonusNumber)
+            {lotteryData?.type === 'pension' ? (
+              /* 연금복권 게임별 결과 */
+              (result?.games || []).map((game) => renderPensionGameResult(game))
+            ) : (
+              /* 로또 게임별 결과 */
+              (result?.games || []).map((game) =>
+                renderGameResult(game, result.winNumbers || [], result.bonusNumber)
+              )
             )}
           </View>
 
-          {/* 1등 당첨 정보 */}
-          {result.firstWinAmount > 0 && (
+          {/* 1등 당첨 정보 (로또만) */}
+          {lotteryData?.type === 'lotto' && result.firstWinAmount > 0 && (
             <View style={[styles.firstPrizeInfo, { backgroundColor: colors.surface }]}>
               <Text style={[styles.firstPrizeTitle, { color: colors.textSecondary }]}>
                 이번 회차 1등 당첨금
@@ -526,6 +614,24 @@ const styles = StyleSheet.create({
   pensionNumber: {
     fontSize: 16,
     letterSpacing: 1,
+  },
+  pensionWinNumbers: {
+    alignItems: 'center',
+  },
+  pensionWinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 6,
+    gap: 12,
+  },
+  pensionWinLabel: {
+    fontSize: 14,
+    width: 50,
+    textAlign: 'right',
+  },
+  pensionWinNumber: {
+    fontSize: 20,
+    letterSpacing: 2,
   },
   plusSign: {
     fontSize: 20,

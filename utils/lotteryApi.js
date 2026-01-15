@@ -3,7 +3,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LOTTO_API_URL = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber';
-const PENSION_RESULT_URL = 'https://dhlottery.co.kr/gameResult.do?method=win720';
+const PENSION_API_URL = 'https://www.dhlottery.co.kr/pt720/selectPstPt720WnList.do';
 
 // 캐시 키
 const LOTTO_CACHE_KEY = 'lotteryCache_lotto';
@@ -58,8 +58,7 @@ export async function getLottoWinNumbers(round) {
 }
 
 /**
- * 연금복권 당첨번호 조회 (웹 스크래핑 필요)
- * 현재는 기본 구조만 제공
+ * 연금복권720+ 당첨번호 조회
  * @param {number} round - 회차
  * @returns {object|null} 당첨번호 정보
  */
@@ -69,10 +68,32 @@ export async function getPensionWinNumbers(round) {
     const cached = await getCachedResult('pension', round);
     if (cached) return cached;
 
-    // TODO: 연금복권은 공식 API가 없어서 웹 스크래핑 또는 별도 서버 필요
-    // 현재는 null 반환
-    console.warn('연금복권 API는 아직 구현되지 않았습니다.');
-    return null;
+    // API 호출
+    const response = await fetch(`${PENSION_API_URL}?_=${Date.now()}`);
+    const data = await response.json();
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return null;
+    }
+
+    // 해당 회차 찾기
+    const roundData = data.find(item => item.psltEpsd === round);
+    if (!roundData) {
+      // 최신 회차라면 아직 추첨 전일 수 있음
+      return null;
+    }
+
+    const result = {
+      round: roundData.psltEpsd,
+      winGroup: parseInt(roundData.wnBndNo, 10), // 당첨 조
+      winNumber: roundData.wnRnkVl, // 당첨 번호 (6자리 문자열)
+      bonusNumber: roundData.bnsRnkVl, // 보너스 번호 (6자리 문자열)
+    };
+
+    // 캐시 저장
+    await setCachedResult('pension', round, result);
+
+    return result;
   } catch (error) {
     console.error('Failed to fetch pension win numbers:', error);
     return null;
@@ -215,7 +236,7 @@ async function setCachedResult(type, round, data) {
 }
 
 /**
- * 등수별 당첨금 정보
+ * 로또 등수별 당첨금 정보
  */
 export const LOTTO_PRIZE_INFO = {
   1: { name: '1등', description: '6개 번호 일치', color: '#FFD700' },
@@ -226,6 +247,24 @@ export const LOTTO_PRIZE_INFO = {
   0: { name: '낙첨', description: '2개 이하 일치', prize: 0, color: '#9E9E9E' },
 };
 
+/**
+ * 연금복권720+ 등수별 당첨금 정보
+ * 1등: 월 700만원 x 20년 = 16.8억원
+ * 2등: 월 100만원 x 10년 = 1.2억원
+ * 보너스: 월 100만원 x 10년 = 1.2억원
+ */
+export const PENSION_PRIZE_INFO = {
+  1: { name: '1등', description: '조+6자리 일치', prize: 1680000000, prizeText: '월 700만원 x 20년', color: '#FFD700' },
+  2: { name: '2등', description: '끝 6자리 일치', prize: 120000000, prizeText: '월 100만원 x 10년', color: '#C0C0C0' },
+  3: { name: '3등', description: '끝 5자리 일치', prize: 1000000, prizeText: '100만원', color: '#CD7F32' },
+  4: { name: '4등', description: '끝 4자리 일치', prize: 100000, prizeText: '10만원', color: '#4CAF50' },
+  5: { name: '5등', description: '끝 3자리 일치', prize: 50000, prizeText: '5만원', color: '#2196F3' },
+  6: { name: '6등', description: '끝 2자리 일치', prize: 5000, prizeText: '5천원', color: '#9C27B0' },
+  7: { name: '7등', description: '끝 1자리 일치', prize: 1000, prizeText: '1천원', color: '#607D8B' },
+  bonus: { name: '보너스', description: '보너스 6자리 일치', prize: 120000000, prizeText: '월 100만원 x 10년', color: '#E91E63' },
+  0: { name: '낙첨', description: '미당첨', prize: 0, prizeText: '0원', color: '#9E9E9E' },
+};
+
 export default {
   getLottoWinNumbers,
   getPensionWinNumbers,
@@ -233,4 +272,5 @@ export default {
   isDrawCompleted,
   getNextDrawTime,
   LOTTO_PRIZE_INFO,
+  PENSION_PRIZE_INFO,
 };
