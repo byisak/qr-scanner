@@ -346,16 +346,9 @@ export default function HistoryScreen() {
                 {group.isScanUrlGroup && (
                   <Ionicons name="link" size={16} color={isActive ? '#fff' : '#2E7D32'} style={{ marginRight: 6 }} />
                 )}
-                {group.isLotteryGroup && (
-                  <View style={{ marginRight: 6 }}>
-                    <LotteryIcon type={group.id === 'lottery-lotto' ? 'lotto' : 'pension'} size={20} />
-                  </View>
-                )}
-                {!group.isLotteryGroup && (
-                  <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
-                    {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
-                  </Text>
-                )}
+                <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
+                  {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
+                </Text>
                 {scanCount > 0 && (
                   <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
                     <Text style={[s.groupCountBadgeText, { color: isActive ? colors.primary : '#fff', fontFamily: fonts.bold }, isActive && s.groupCountBadgeTextActive]}>
@@ -375,22 +368,9 @@ export default function HistoryScreen() {
 
       {/* 헤더 */}
       <View style={s.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {currentGroup?.isLotteryGroup ? (
-            <>
-              <LotteryIcon type={currentGroup.id === 'lottery-lotto' ? 'lotto' : 'pension'} size={28} />
-              {filteredList.length > 0 && (
-                <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold, marginLeft: 8 }]}>
-                  ({filteredList.length})
-                </Text>
-              )}
-            </>
-          ) : (
-            <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
-              {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
-            </Text>
-          )}
-        </View>
+        <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
+          {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
+        </Text>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
             <Text style={[s.del, { color: colors.error, fontFamily: fonts.semiBold }]}>{t('history.deleteAll')}</Text>
@@ -431,9 +411,9 @@ export default function HistoryScreen() {
                   accessibilityRole="button"
                 >
                   <View style={s.itemContent}>
-                    {/* 복권 아이콘 */}
+                    {/* 복권 아이콘 (복주머니만) */}
                     <View style={s.lotteryIcon}>
-                      <LotteryIcon type={isLotto ? 'lotto' : 'pension'} size={44} />
+                      <LotteryIcon type={isLotto ? 'lotto' : 'pension'} size={44} iconOnly />
                     </View>
                     <View style={[s.itemInfo, { marginLeft: 12 }]}>
                       {/* 1줄: 복권 종류 */}
