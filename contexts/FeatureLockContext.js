@@ -57,12 +57,16 @@ export const FeatureLockProvider = ({ children }) => {
         AsyncStorage.getItem(AD_WATCH_COUNT_KEY),
         AsyncStorage.getItem(DEV_MODE_KEY),
       ]);
-      if (saved) {
-        setUnlockedFeatures(JSON.parse(saved));
-      }
-      if (adCounts) {
-        setAdWatchCounts(JSON.parse(adCounts));
-      }
+
+      // 배포용: 모든 잠금 상태 초기화 - 기존 해제된 기능 무시
+      // 프로덕션에서는 항상 잠금 상태로 시작
+      // if (saved) {
+      //   setUnlockedFeatures(JSON.parse(saved));
+      // }
+      // if (adCounts) {
+      //   setAdWatchCounts(JSON.parse(adCounts));
+      // }
+
       // 배포용: devMode 로딩 비활성화 - 항상 잠금 유지
       // if (devMode === 'true') {
       //   setDevModeEnabled(true);
