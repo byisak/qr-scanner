@@ -351,9 +351,11 @@ export default function HistoryScreen() {
                     <LotteryIcon type={group.id === 'lottery-lotto' ? 'lotto' : 'pension'} size={20} />
                   </View>
                 )}
-                <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
-                  {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
-                </Text>
+                {!group.isLotteryGroup && (
+                  <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
+                    {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
+                  </Text>
+                )}
                 {scanCount > 0 && (
                   <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
                     <Text style={[s.groupCountBadgeText, { color: isActive ? colors.primary : '#fff', fontFamily: fonts.bold }, isActive && s.groupCountBadgeTextActive]}>
@@ -373,9 +375,22 @@ export default function HistoryScreen() {
 
       {/* 헤더 */}
       <View style={s.header}>
-        <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
-          {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {currentGroup?.isLotteryGroup ? (
+            <>
+              <LotteryIcon type={currentGroup.id === 'lottery-lotto' ? 'lotto' : 'pension'} size={28} />
+              {filteredList.length > 0 && (
+                <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold, marginLeft: 8 }]}>
+                  ({filteredList.length})
+                </Text>
+              )}
+            </>
+          ) : (
+            <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
+              {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
+            </Text>
+          )}
+        </View>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
             <Text style={[s.del, { color: colors.error, fontFamily: fonts.semiBold }]}>{t('history.deleteAll')}</Text>
