@@ -152,8 +152,8 @@ export default function LotteryResultScreen() {
         ]}
       >
         {/* 게임 라벨 */}
-        <View style={styles.gameLabel}>
-          <Text style={[styles.gameLabelText, { color: colors.text, fontFamily: fonts.bold }]}>
+        <View style={[styles.gameLabel, { backgroundColor: '#FF9800' }]}>
+          <Text style={[styles.gameLabelText, { color: '#fff', fontFamily: fonts.bold }]}>
             {game.label}
           </Text>
         </View>
@@ -343,12 +343,14 @@ export default function LotteryResultScreen() {
                 <View style={[
                   styles.gameLabel,
                   lotteryData.type === 'pension' && styles.pensionGameLabel,
-                  lotteryData.type === 'pension' && { backgroundColor: game.label === '본 추첨' ? '#3498db' : '#9b59b6' }
+                  lotteryData.type === 'pension'
+                    ? { backgroundColor: game.label === '본 추첨' ? '#3498db' : '#9b59b6' }
+                    : { backgroundColor: '#FF9800' }
                 ]}>
                   <Text style={[
                     styles.gameLabelText,
-                    { color: colors.text, fontFamily: fonts.bold },
-                    lotteryData.type === 'pension' && [styles.pensionGameLabelText, { color: '#fff' }]
+                    { color: '#fff', fontFamily: fonts.bold },
+                    lotteryData.type === 'pension' && styles.pensionGameLabelText
                   ]}>
                     {lotteryData.type === 'pension'
                       ? (game.label === '본 추첨' ? '본추첨' : '보너스')
