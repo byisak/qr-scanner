@@ -22,14 +22,7 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-
-// ImagePicker는 네이티브 모듈이 필요하므로 동적 로딩
-let ImagePicker = null;
-try {
-  ImagePicker = require('expo-image-picker');
-} catch (e) {
-  console.log('expo-image-picker not available - rebuild required');
-}
+import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
@@ -56,9 +49,9 @@ import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved,
 import PresetSaveModal from '../components/PresetSaveModal';
 import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 
-// 기본 표시되는 바코드 타입 bcid 목록 (2개)
+// 기본 표시되는 바코드 타입 bcid 목록 (1개)
 const DEFAULT_BARCODE_BCIDS = [
-  'code128', 'ean13',
+  'code128',
 ];
 
 // 카테고리 순서 (2D 바코드 제외 - QR코드는 별도 탭에서 생성)
@@ -94,7 +87,7 @@ export default function GeneratorScreen() {
   // 세그먼트 탭: 'qr' 또는 'barcode'
   const [codeMode, setCodeMode] = useState(params.initialMode || 'qr');
 
-  const [selectedType, setSelectedType] = useState(params.initialType || 'website');
+  const [selectedType, setSelectedType] = useState(params.initialType || 'text');
   // bcid 형태로 저장 (예: 'code128', 'ean13')
   const [selectedBarcodeFormat, setSelectedBarcodeFormat] = useState(params.initialBarcodeFormat || 'code128');
   const [barcodeValue, setBarcodeValue] = useState(params.initialBarcodeValue || '');
@@ -1310,25 +1303,7 @@ export default function GeneratorScreen() {
 
   // 로고 이미지 선택
   const handlePickLogo = async () => {
-    // ImagePicker 모듈 체크
-    if (!ImagePicker || !ImagePicker.requestMediaLibraryPermissionsAsync) {
-      Alert.alert(
-        '앱 재빌드 필요',
-        '이미지 피커를 사용하려면 앱을 다시 빌드해야 합니다.\n\n터미널에서 실행:\nnpx expo prebuild --clean --platform ios\nnpx expo run:ios',
-        [{ text: '확인' }]
-      );
-      return;
-    }
-
     try {
-      // 권한 요청
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-      if (!permissionResult.granted) {
-        Alert.alert(t('common.error'), '갤러리 접근 권한이 필요합니다.');
-        return;
-      }
-
       // 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],

@@ -29,8 +29,8 @@ import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 분석 타임아웃 (30초)
-const ANALYSIS_TIMEOUT = 30000;
+// 분석 타임아웃 (15초)
+const ANALYSIS_TIMEOUT = 15000;
 
 // zxing-wasm 라이브러리 로컬 파일 (텍스트 파일로 번들링)
 const zxingWasmAsset = require('../assets/js/zxing-wasm.txt');
@@ -126,32 +126,49 @@ const getWebViewHTML = (zxingScript) => `
 
       sendLog('Image blob created, analyzing...');
 
-      // 바코드 읽기 옵션
-      var readerOptions = {
+      // 지원 포맷
+      var formats = [
+        'QRCode',
+        'EAN-13',
+        'EAN-8',
+        'Code128',
+        'Code39',
+        'Code93',
+        'UPC-A',
+        'UPC-E',
+        'ITF',
+        'Codabar',
+        'DataMatrix',
+        'Aztec',
+        'PDF417',
+      ];
+
+      // 1단계: 기본 분석 (tryHarder 활성화로 인식률 유지)
+      var fastOptions = {
         tryHarder: true,
-        tryRotate: true,
-        tryInvert: true,
-        tryDownscale: true,
+        tryRotate: false,
+        tryInvert: false,
+        tryDownscale: false,
         maxNumberOfSymbols: 20,
-        formats: [
-          'QRCode',
-          'EAN-13',
-          'EAN-8',
-          'Code128',
-          'Code39',
-          'Code93',
-          'UPC-A',
-          'UPC-E',
-          'ITF',
-          'Codabar',
-          'DataMatrix',
-          'Aztec',
-          'PDF417',
-        ],
+        formats: formats,
       };
 
-      // zxing-wasm readBarcodes 호출
-      var barcodes = await ZXingWASM.readBarcodes(blob, readerOptions);
+      sendLog('Phase 1: Standard analysis...');
+      var barcodes = await ZXingWASM.readBarcodes(blob, fastOptions);
+
+      // 결과가 없으면 2단계: 회전/반전 시도
+      if (barcodes.length === 0) {
+        sendLog('Phase 2: Trying rotation and inversion...');
+        var deepOptions = {
+          tryHarder: true,
+          tryRotate: true,
+          tryInvert: true,
+          tryDownscale: false,
+          maxNumberOfSymbols: 20,
+          formats: formats,
+        };
+        barcodes = await ZXingWASM.readBarcodes(blob, deepOptions);
+      }
 
       sendLog('Analysis complete, found ' + barcodes.length + ' codes');
 
@@ -216,18 +233,32 @@ function ImageAnalysisScreen() {
   const timeoutRef = useRef(null);
   const analysisStartedRef = useRef(false);
 
-  // zxing-wasm 라이브러리 로드
+  // zxing-wasm 라이브러리 로드 (오프라인 지원)
   useEffect(() => {
     const loadZxingScript = async () => {
       try {
         const asset = Asset.fromModule(zxingWasmAsset);
-        await asset.downloadAsync();
-        const scriptContent = await FileSystem.readAsStringAsync(asset.localUri);
+
+        // 이미 로컬에 있으면 downloadAsync 건너뛰기 (오프라인 지원)
+        if (!asset.localUri) {
+          try {
+            await asset.downloadAsync();
+          } catch (downloadErr) {
+            console.log('Asset download failed (offline?), trying local:', downloadErr.message);
+          }
+        }
+
+        // localUri가 있으면 사용, 없으면 uri 사용 (번들된 에셋)
+        const assetUri = asset.localUri || asset.uri;
+        if (!assetUri) {
+          throw new Error('Asset URI not available');
+        }
+
+        const scriptContent = await FileSystem.readAsStringAsync(assetUri);
         setZxingScript(scriptContent);
         console.log('ZXing WASM script loaded, size:', scriptContent.length);
       } catch (err) {
         console.error('Failed to load ZXing script:', err);
-        // CDN 폴백
         setZxingScript(null);
       }
     };
@@ -285,12 +316,11 @@ function ImageAnalysisScreen() {
         // 원본 이미지 크기 로그 (디버깅용)
         console.log('[ImageAnalysis] Original image:', imageUri, 'size:', fileInfo.size ? `${(fileInfo.size / 1024).toFixed(1)}KB` : 'unknown');
 
-        // EXIF 회전 정규화 - 빈 actions로 manipulateAsync 호출하면 EXIF orientation이 적용됨
-        // 바코드 인식률 향상을 위해 무압축 사용
-        console.log('Normalizing image orientation (high quality)...');
+        // EXIF 회전 정규화 (원본 크기 유지)
+        console.log('Normalizing image orientation...');
         const manipulatedImage = await ImageManipulator.manipulateAsync(
           imageUri,
-          [], // 빈 actions - EXIF rotation만 적용
+          [], // EXIF rotation만 적용
           { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
         );
 

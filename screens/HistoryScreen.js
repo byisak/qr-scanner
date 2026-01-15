@@ -1,5 +1,5 @@
 // screens/HistoryScreen.js - 그룹별 히스토리 관리
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
+import { SwipeListView } from 'react-native-swipe-list-view';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -45,6 +47,13 @@ export default function HistoryScreen() {
   const [filteredList, setFilteredList] = useState([]);
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
+  const [swipeValues, setSwipeValues] = useState({});
+
+  // 스와이프 값 변경 핸들러
+  const onSwipeValueChange = (swipeData) => {
+    const { key, value } = swipeData;
+    setSwipeValues(prev => ({ ...prev, [key]: Math.abs(value) }));
+  };
 
   // 그룹 데이터 로드
   const loadGroups = async () => {
@@ -153,6 +162,60 @@ export default function HistoryScreen() {
         },
       },
     ]);
+  };
+
+  // 개별 항목 삭제
+  const deleteHistoryItem = async (item) => {
+    const currentHistory = scanHistory[selectedGroupId] || [];
+    const updatedHistory = currentHistory.filter(h => h.timestamp !== item.timestamp);
+    const newScanHistory = { ...scanHistory, [selectedGroupId]: updatedHistory };
+    setScanHistory(newScanHistory);
+    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(newScanHistory));
+    triggerSync();
+  };
+
+  // SwipeListView에서 숨겨진 삭제 버튼 렌더링
+  const renderHiddenItem = (data, rowMap) => {
+    const item = data.item;
+    const swipeValue = swipeValues[item.timestamp.toString()] || 0;
+
+    // 스와이프 거리에 따라 버튼 크기 계산 (20px에서 시작해서 56px까지)
+    const minSize = 20;
+    const maxSize = 56;
+    // 스와이프 값에 따라 더 빠르게 커지도록
+    const progress = Math.min(1, swipeValue / 80);
+    const buttonSize = minSize + (maxSize - minSize) * progress;
+
+    // 스와이프 거리에 따라 투명도 계산
+    const opacity = Math.min(1, swipeValue / 40);
+
+    // 아이콘 크기도 함께 변화
+    const iconSize = Math.round(14 + (8 * progress));
+
+    return (
+      <View style={s.rowBack}>
+        <TouchableOpacity
+          style={[
+            s.deleteBtn,
+            {
+              width: buttonSize,
+              height: buttonSize,
+              borderRadius: buttonSize / 2,
+              opacity: opacity,
+              transform: [{ scale: 0.9 + (0.1 * progress) }],
+            }
+          ]}
+          onPress={() => {
+            if (rowMap[item.timestamp]) {
+              rowMap[item.timestamp].closeRow();
+            }
+            deleteHistoryItem(item);
+          }}
+        >
+          <Ionicons name="trash" size={iconSize} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const formatDateTime = (timestamp) => {
@@ -287,9 +350,9 @@ export default function HistoryScreen() {
           <Text style={[s.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
         </View>
       ) : (
-        <FlatList
+        <SwipeListView
           data={filteredList}
-          keyExtractor={(_, i) => i.toString()}
+          keyExtractor={(item) => item.timestamp.toString()}
           renderItem={({ item }) => {
             const hasPhoto = item.photos && item.photos.length > 0;
             const isQRCode = !item.type || item.type === 'qr' || item.type === 'qrcode';
@@ -425,6 +488,14 @@ export default function HistoryScreen() {
               </TouchableOpacity>
             );
           }}
+          renderHiddenItem={renderHiddenItem}
+          rightOpenValue={-90}
+          disableRightSwipe
+          closeOnRowPress
+          closeOnRowOpen
+          closeOnScroll
+          onSwipeValueChange={onSwipeValueChange}
+          useNativeDriver={false}
           contentContainerStyle={s.listContent}
         />
       )}
@@ -651,5 +722,24 @@ const s = StyleSheet.create({
   url: {
     fontSize: 12,
     marginTop: 8,
+  },
+  rowBack: {
+    alignItems: 'center',
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingRight: 8,
+    marginHorizontal: 15,
+    marginVertical: 6,
+  },
+  deleteBtn: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

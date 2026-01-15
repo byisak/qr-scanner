@@ -46,8 +46,8 @@ const getBannerAdUnitId = () => {
   return __DEV__
     ? TestIds.BANNER
     : Platform.select({
-        ios: 'ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY', // 실제 iOS 광고 단위 ID
-        android: 'ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY', // 실제 Android 광고 단위 ID
+        ios: 'ca-app-pub-9431243505417325/4203500046',
+        android: 'ca-app-pub-9431243505417325/4203500046', // Android도 동일 ID 사용 (필요시 변경)
       });
 };
 
