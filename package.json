@@ -20,6 +20,7 @@
     "@mgcrea/vision-camera-barcode-scanner": "^0.12.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "^5.1.1",
+    "@react-native-picker/picker": "^2.9.0",
     "@react-native-firebase/analytics": "^23.7.0",
     "@react-native-firebase/app": "^23.7.0",
     "expo": "~54.0.25",
