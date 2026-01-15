@@ -58,16 +58,15 @@ export const FeatureLockProvider = ({ children }) => {
         AsyncStorage.getItem(DEV_MODE_KEY),
       ]);
 
-      // 배포용: 모든 잠금 상태 초기화 - 기존 해제된 기능 무시
-      // 프로덕션에서는 항상 잠금 상태로 시작
-      // if (saved) {
-      //   setUnlockedFeatures(JSON.parse(saved));
-      // }
-      // if (adCounts) {
-      //   setAdWatchCounts(JSON.parse(adCounts));
-      // }
+      // 배포용: 사용자 광고 시청 기록은 유지 (진행 상황 보존)
+      if (saved) {
+        setUnlockedFeatures(JSON.parse(saved));
+      }
+      if (adCounts) {
+        setAdWatchCounts(JSON.parse(adCounts));
+      }
 
-      // 배포용: devMode 로딩 비활성화 - 항상 잠금 유지
+      // 배포용: devMode 로딩 비활성화 - 개발자 모드 우회 방지
       // if (devMode === 'true') {
       //   setDevModeEnabled(true);
       // }
