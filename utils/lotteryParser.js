@@ -163,14 +163,14 @@ export function getLotteryGroupId(type) {
 export const LOTTERY_GROUPS = {
   lotto: {
     id: 'lottery-lotto',
-    name: '🎱 로또 6/45',
-    icon: 'dice-outline',
+    name: '로또 6/45',
+    icon: 'lotto645',
     color: '#FFC107',
   },
   pension: {
     id: 'lottery-pension',
-    name: '💰 연금복권720+',
-    icon: 'cash-outline',
+    name: '연금복권720+',
+    icon: 'pension720',
     color: '#4CAF50',
   },
 };

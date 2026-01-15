@@ -26,6 +26,7 @@ import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import { updateLotteryNotificationOnCheck } from '../utils/lotteryNotification';
+import { LotteryIcon } from '../components/LotteryIcons';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -345,6 +346,11 @@ export default function HistoryScreen() {
                 {group.isScanUrlGroup && (
                   <Ionicons name="link" size={16} color={isActive ? '#fff' : '#2E7D32'} style={{ marginRight: 6 }} />
                 )}
+                {group.isLotteryGroup && (
+                  <View style={{ marginRight: 6 }}>
+                    <LotteryIcon type={group.id === 'lottery-lotto' ? 'lotto' : 'pension'} size={20} />
+                  </View>
+                )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
                   {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
                 </Text>
@@ -411,8 +417,8 @@ export default function HistoryScreen() {
                 >
                   <View style={s.itemContent}>
                     {/* 복권 아이콘 */}
-                    <View style={[s.lotteryIcon, { backgroundColor: typeColor + '20' }]}>
-                      <Text style={{ fontSize: 24 }}>{isLotto ? '🎱' : '💰'}</Text>
+                    <View style={s.lotteryIcon}>
+                      <LotteryIcon type={isLotto ? 'lotto' : 'pension'} size={44} />
                     </View>
                     <View style={[s.itemInfo, { marginLeft: 12 }]}>
                       {/* 1줄: 복권 종류 */}
@@ -755,9 +761,8 @@ const s = StyleSheet.create({
     padding: 4,
   },
   lotteryIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
