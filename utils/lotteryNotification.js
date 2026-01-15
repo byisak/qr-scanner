@@ -13,7 +13,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const LOTTERY_NOTIFICATION_KEY = 'lotteryNotificationId';
+const LOTTO_NOTIFICATION_KEY = 'lottoNotificationId';
+const PENSION_NOTIFICATION_KEY = 'pensionNotificationId';
 
 /**
  * 알림 권한 요청
@@ -31,20 +32,20 @@ export async function requestNotificationPermission() {
 }
 
 /**
- * 다음 토요일 알림 시간 구하기 (저장된 시간 사용)
+ * 다음 토요일 알림 시간 구하기 (로또 6/45)
  */
 async function getNextSaturdayNotificationTime() {
-  // 저장된 알림 시간 로드 (기본값: 19시 10분)
-  let hour = 19;
-  let minute = 10;
+  // 저장된 알림 시간 로드 (기본값: 20시 50분 - 추첨 후)
+  let hour = 20;
+  let minute = 50;
 
   try {
-    const savedHour = await AsyncStorage.getItem('lotteryNotificationHour');
-    const savedMinute = await AsyncStorage.getItem('lotteryNotificationMinute');
+    const savedHour = await AsyncStorage.getItem('lottoNotificationHour');
+    const savedMinute = await AsyncStorage.getItem('lottoNotificationMinute');
     if (savedHour !== null) hour = parseInt(savedHour, 10);
     if (savedMinute !== null) minute = parseInt(savedMinute, 10);
   } catch (error) {
-    console.log('[LotteryNotification] Failed to load saved time, using default');
+    console.log('[LotteryNotification] Failed to load saved lotto time, using default');
   }
 
   const now = new Date();
@@ -74,17 +75,68 @@ async function getNextSaturdayNotificationTime() {
 }
 
 /**
- * 미확인 복권이 있는지 확인
+ * 다음 목요일 알림 시간 구하기 (연금복권720+)
  */
-export async function hasUncheckedLotteries() {
+async function getNextThursdayNotificationTime() {
+  // 저장된 알림 시간 로드 (기본값: 19시 10분 - 추첨 후)
+  let hour = 19;
+  let minute = 10;
+
+  try {
+    const savedHour = await AsyncStorage.getItem('pensionNotificationHour');
+    const savedMinute = await AsyncStorage.getItem('pensionNotificationMinute');
+    if (savedHour !== null) hour = parseInt(savedHour, 10);
+    if (savedMinute !== null) minute = parseInt(savedMinute, 10);
+  } catch (error) {
+    console.log('[LotteryNotification] Failed to load saved pension time, using default');
+  }
+
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0: 일, 1: 월, ..., 4: 목
+
+  // 목요일까지 남은 일수 계산
+  let daysUntilThursday = 4 - dayOfWeek;
+  if (daysUntilThursday === 0) {
+    // 오늘이 목요일인 경우
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const notificationTime = hour * 60 + minute;
+
+    if (currentTime >= notificationTime) {
+      // 이미 알림 시간이 지났으면 다음 주 목요일
+      daysUntilThursday = 7;
+    }
+  }
+  if (daysUntilThursday < 0) {
+    daysUntilThursday += 7;
+  }
+
+  const nextThursday = new Date(now);
+  nextThursday.setDate(now.getDate() + daysUntilThursday);
+  nextThursday.setHours(hour, minute, 0, 0);
+
+  return nextThursday;
+}
+
+/**
+ * 미확인 복권이 있는지 확인
+ * @param {string} type - 'lotto', 'pension', 또는 'all'
+ */
+export async function hasUncheckedLotteries(type = 'all') {
   try {
     const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
     if (!historyData) return false;
 
     const historyByGroup = JSON.parse(historyData);
 
-    // 로또 그룹과 연금복권 그룹 확인
-    const lotteryGroups = ['lottery-lotto', 'lottery-pension'];
+    // 복권 타입별 그룹 확인
+    let lotteryGroups;
+    if (type === 'lotto') {
+      lotteryGroups = ['lottery-lotto'];
+    } else if (type === 'pension') {
+      lotteryGroups = ['lottery-pension'];
+    } else {
+      lotteryGroups = ['lottery-lotto', 'lottery-pension'];
+    }
 
     for (const groupId of lotteryGroups) {
       const history = historyByGroup[groupId] || [];
@@ -103,14 +155,23 @@ export async function hasUncheckedLotteries() {
 
 /**
  * 미확인 복권 개수 조회
+ * @param {string} type - 'lotto', 'pension', 또는 'all'
  */
-export async function getUncheckedLotteryCount() {
+export async function getUncheckedLotteryCount(type = 'all') {
   try {
     const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
     if (!historyData) return 0;
 
     const historyByGroup = JSON.parse(historyData);
-    const lotteryGroups = ['lottery-lotto', 'lottery-pension'];
+
+    let lotteryGroups;
+    if (type === 'lotto') {
+      lotteryGroups = ['lottery-lotto'];
+    } else if (type === 'pension') {
+      lotteryGroups = ['lottery-pension'];
+    } else {
+      lotteryGroups = ['lottery-lotto', 'lottery-pension'];
+    }
 
     let count = 0;
     for (const groupId of lotteryGroups) {
@@ -128,44 +189,44 @@ export async function getUncheckedLotteryCount() {
 }
 
 /**
- * 복권 알림 스케줄링 (매주 토요일 오후 7시 10분)
+ * 로또 6/45 알림 스케줄링 (매주 토요일)
  */
-export async function scheduleLotteryNotification() {
+export async function scheduleLottoNotification() {
   try {
     // 알림 설정 확인
     const notificationEnabled = await AsyncStorage.getItem('lotteryWinningNotificationEnabled');
     if (notificationEnabled !== 'true') {
-      console.log('[LotteryNotification] Notification disabled in settings');
-      await cancelLotteryNotification();
+      console.log('[LottoNotification] Notification disabled in settings');
+      await cancelLottoNotification();
       return false;
     }
 
     // 권한 확인
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      console.log('[LotteryNotification] Permission not granted');
+      console.log('[LottoNotification] Permission not granted');
       return false;
     }
 
     // 기존 알림 취소
-    await cancelLotteryNotification();
+    await cancelLottoNotification();
 
-    // 미확인 복권이 없으면 알림 스케줄링하지 않음
-    const hasUnchecked = await hasUncheckedLotteries();
+    // 미확인 로또 복권이 없으면 알림 스케줄링하지 않음
+    const hasUnchecked = await hasUncheckedLotteries('lotto');
     if (!hasUnchecked) {
-      console.log('[LotteryNotification] No unchecked lotteries');
+      console.log('[LottoNotification] No unchecked lotto tickets');
       return false;
     }
 
-    const count = await getUncheckedLotteryCount();
+    const count = await getUncheckedLotteryCount('lotto');
     const triggerDate = await getNextSaturdayNotificationTime();
 
-    // 알림 스케줄 (Expo SDK 50+ 형식)
+    // 알림 스케줄
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: '🎱 복권 당첨 확인하세요!',
-        body: `미확인 복권이 ${count}개 있습니다. 당첨 여부를 확인해보세요!`,
-        data: { type: 'lottery_check' },
+        title: '로또 6/45 당첨 확인하세요!',
+        body: `미확인 로또가 ${count}개 있습니다. 당첨 여부를 확인해보세요!`,
+        data: { type: 'lottery_check', lotteryType: 'lotto' },
         sound: true,
       },
       trigger: {
@@ -175,30 +236,121 @@ export async function scheduleLotteryNotification() {
     });
 
     // 알림 ID 저장
-    await AsyncStorage.setItem(LOTTERY_NOTIFICATION_KEY, notificationId);
+    await AsyncStorage.setItem(LOTTO_NOTIFICATION_KEY, notificationId);
 
-    console.log('[LotteryNotification] Scheduled for:', triggerDate.toLocaleString());
+    console.log('[LottoNotification] Scheduled for:', triggerDate.toLocaleString());
     return true;
   } catch (error) {
-    console.error('Failed to schedule lottery notification:', error);
+    console.error('Failed to schedule lotto notification:', error);
     return false;
   }
 }
 
 /**
- * 복권 알림 취소
+ * 연금복권720+ 알림 스케줄링 (매주 목요일)
  */
-export async function cancelLotteryNotification() {
+export async function schedulePensionNotification() {
   try {
-    const notificationId = await AsyncStorage.getItem(LOTTERY_NOTIFICATION_KEY);
+    // 알림 설정 확인
+    const notificationEnabled = await AsyncStorage.getItem('lotteryWinningNotificationEnabled');
+    if (notificationEnabled !== 'true') {
+      console.log('[PensionNotification] Notification disabled in settings');
+      await cancelPensionNotification();
+      return false;
+    }
+
+    // 권한 확인
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) {
+      console.log('[PensionNotification] Permission not granted');
+      return false;
+    }
+
+    // 기존 알림 취소
+    await cancelPensionNotification();
+
+    // 미확인 연금복권이 없으면 알림 스케줄링하지 않음
+    const hasUnchecked = await hasUncheckedLotteries('pension');
+    if (!hasUnchecked) {
+      console.log('[PensionNotification] No unchecked pension tickets');
+      return false;
+    }
+
+    const count = await getUncheckedLotteryCount('pension');
+    const triggerDate = await getNextThursdayNotificationTime();
+
+    // 알림 스케줄
+    const notificationId = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '연금복권720+ 당첨 확인하세요!',
+        body: `미확인 연금복권이 ${count}개 있습니다. 당첨 여부를 확인해보세요!`,
+        data: { type: 'lottery_check', lotteryType: 'pension' },
+        sound: true,
+      },
+      trigger: {
+        type: 'date',
+        date: triggerDate,
+      },
+    });
+
+    // 알림 ID 저장
+    await AsyncStorage.setItem(PENSION_NOTIFICATION_KEY, notificationId);
+
+    console.log('[PensionNotification] Scheduled for:', triggerDate.toLocaleString());
+    return true;
+  } catch (error) {
+    console.error('Failed to schedule pension notification:', error);
+    return false;
+  }
+}
+
+/**
+ * 모든 복권 알림 스케줄링
+ */
+export async function scheduleLotteryNotification() {
+  const lottoResult = await scheduleLottoNotification();
+  const pensionResult = await schedulePensionNotification();
+  return lottoResult || pensionResult;
+}
+
+/**
+ * 로또 알림 취소
+ */
+export async function cancelLottoNotification() {
+  try {
+    const notificationId = await AsyncStorage.getItem(LOTTO_NOTIFICATION_KEY);
     if (notificationId) {
       await Notifications.cancelScheduledNotificationAsync(notificationId);
-      await AsyncStorage.removeItem(LOTTERY_NOTIFICATION_KEY);
-      console.log('[LotteryNotification] Cancelled:', notificationId);
+      await AsyncStorage.removeItem(LOTTO_NOTIFICATION_KEY);
+      console.log('[LottoNotification] Cancelled:', notificationId);
     }
   } catch (error) {
-    console.error('Failed to cancel lottery notification:', error);
+    console.error('Failed to cancel lotto notification:', error);
   }
+}
+
+/**
+ * 연금복권 알림 취소
+ */
+export async function cancelPensionNotification() {
+  try {
+    const notificationId = await AsyncStorage.getItem(PENSION_NOTIFICATION_KEY);
+    if (notificationId) {
+      await Notifications.cancelScheduledNotificationAsync(notificationId);
+      await AsyncStorage.removeItem(PENSION_NOTIFICATION_KEY);
+      console.log('[PensionNotification] Cancelled:', notificationId);
+    }
+  } catch (error) {
+    console.error('Failed to cancel pension notification:', error);
+  }
+}
+
+/**
+ * 모든 복권 알림 취소
+ */
+export async function cancelLotteryNotification() {
+  await cancelLottoNotification();
+  await cancelPensionNotification();
 }
 
 /**
@@ -243,7 +395,11 @@ export default {
   hasUncheckedLotteries,
   getUncheckedLotteryCount,
   scheduleLotteryNotification,
+  scheduleLottoNotification,
+  schedulePensionNotification,
   cancelLotteryNotification,
+  cancelLottoNotification,
+  cancelPensionNotification,
   updateLotteryNotificationOnScan,
   updateLotteryNotificationOnCheck,
   setupNotificationListeners,

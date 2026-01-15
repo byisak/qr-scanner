@@ -52,11 +52,20 @@ export default function LotteryScanSettingsScreen() {
   const [koreaExpanded, setKoreaExpanded] = useState(false);
   const [koreaEnabled, setKoreaEnabled] = useState(true); // 대한민국 복권 활성화
   const [winningNotificationEnabled, setWinningNotificationEnabled] = useState(false);
-  const [notificationHour, setNotificationHour] = useState(19); // 기본값 19시
-  const [notificationMinute, setNotificationMinute] = useState(10); // 기본값 10분
+
+  // 로또 6/45 알림 시간 (토요일 추첨)
+  const [lottoNotificationHour, setLottoNotificationHour] = useState(20); // 기본값 20시 50분
+  const [lottoNotificationMinute, setLottoNotificationMinute] = useState(50);
+
+  // 연금복권720+ 알림 시간 (목요일 추첨)
+  const [pensionNotificationHour, setPensionNotificationHour] = useState(19); // 기본값 19시 10분
+  const [pensionNotificationMinute, setPensionNotificationMinute] = useState(10);
+
+  // 시간 선택 모달
   const [timePickerVisible, setTimePickerVisible] = useState(false);
-  const [tempHour, setTempHour] = useState(19);
-  const [tempMinute, setTempMinute] = useState(10);
+  const [timePickerType, setTimePickerType] = useState('lotto'); // 'lotto' or 'pension'
+  const [tempHour, setTempHour] = useState(20);
+  const [tempMinute, setTempMinute] = useState(50);
 
   // 설정 로드
   useEffect(() => {
@@ -68,17 +77,17 @@ export default function LotteryScanSettingsScreen() {
         const winningNotif = await AsyncStorage.getItem('lotteryWinningNotificationEnabled');
         if (winningNotif !== null) setWinningNotificationEnabled(winningNotif === 'true');
 
-        // 알림 시간 로드
-        const savedHour = await AsyncStorage.getItem('lotteryNotificationHour');
-        const savedMinute = await AsyncStorage.getItem('lotteryNotificationMinute');
-        if (savedHour !== null) {
-          setNotificationHour(parseInt(savedHour, 10));
-          setTempHour(parseInt(savedHour, 10));
-        }
-        if (savedMinute !== null) {
-          setNotificationMinute(parseInt(savedMinute, 10));
-          setTempMinute(parseInt(savedMinute, 10));
-        }
+        // 로또 알림 시간 로드
+        const lottoHour = await AsyncStorage.getItem('lottoNotificationHour');
+        const lottoMinute = await AsyncStorage.getItem('lottoNotificationMinute');
+        if (lottoHour !== null) setLottoNotificationHour(parseInt(lottoHour, 10));
+        if (lottoMinute !== null) setLottoNotificationMinute(parseInt(lottoMinute, 10));
+
+        // 연금복권 알림 시간 로드
+        const pensionHour = await AsyncStorage.getItem('pensionNotificationHour');
+        const pensionMinute = await AsyncStorage.getItem('pensionNotificationMinute');
+        if (pensionHour !== null) setPensionNotificationHour(parseInt(pensionHour, 10));
+        if (pensionMinute !== null) setPensionNotificationMinute(parseInt(pensionMinute, 10));
       } catch (error) {
         console.error('Load lottery scan settings error:', error);
       }
@@ -160,22 +169,38 @@ export default function LotteryScanSettingsScreen() {
     }
   };
 
-  // 시간 선택 열기
-  const openTimePicker = () => {
-    setTempHour(notificationHour);
-    setTempMinute(notificationMinute);
+  // 로또 시간 선택 열기
+  const openLottoTimePicker = () => {
+    setTimePickerType('lotto');
+    setTempHour(lottoNotificationHour);
+    setTempMinute(lottoNotificationMinute);
+    setTimePickerVisible(true);
+  };
+
+  // 연금복권 시간 선택 열기
+  const openPensionTimePicker = () => {
+    setTimePickerType('pension');
+    setTempHour(pensionNotificationHour);
+    setTempMinute(pensionNotificationMinute);
     setTimePickerVisible(true);
   };
 
   // 시간 저장
   const handleSaveTime = async () => {
-    setNotificationHour(tempHour);
-    setNotificationMinute(tempMinute);
     setTimePickerVisible(false);
 
     try {
-      await AsyncStorage.setItem('lotteryNotificationHour', tempHour.toString());
-      await AsyncStorage.setItem('lotteryNotificationMinute', tempMinute.toString());
+      if (timePickerType === 'lotto') {
+        setLottoNotificationHour(tempHour);
+        setLottoNotificationMinute(tempMinute);
+        await AsyncStorage.setItem('lottoNotificationHour', tempHour.toString());
+        await AsyncStorage.setItem('lottoNotificationMinute', tempMinute.toString());
+      } else {
+        setPensionNotificationHour(tempHour);
+        setPensionNotificationMinute(tempMinute);
+        await AsyncStorage.setItem('pensionNotificationHour', tempHour.toString());
+        await AsyncStorage.setItem('pensionNotificationMinute', tempMinute.toString());
+      }
 
       // 알림이 활성화되어 있으면 새 시간으로 재스케줄링
       if (winningNotificationEnabled) {
@@ -304,31 +329,61 @@ export default function LotteryScanSettingsScreen() {
 
                   {/* 알림 시간 설정 - 알림이 켜져있을 때만 표시 */}
                   {winningNotificationEnabled && (
-                    <TouchableOpacity
-                      style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
-                      onPress={openTimePicker}
-                      activeOpacity={0.7}
-                    >
-                      <View style={s.subRowLeft}>
-                        <View style={[s.subIconContainer, { backgroundColor: '#3498db20' }]}>
-                          <Ionicons name="time" size={18} color="#3498db" />
+                    <>
+                      {/* 로또 6/45 알림 시간 */}
+                      <TouchableOpacity
+                        style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
+                        onPress={openLottoTimePicker}
+                        activeOpacity={0.7}
+                      >
+                        <View style={s.subRowLeft}>
+                          <View style={[s.subIconContainer, { backgroundColor: '#3498db20' }]}>
+                            <Ionicons name="time" size={18} color="#3498db" />
+                          </View>
+                          <View style={s.subRowTextContainer}>
+                            <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                              로또 6/45 알림
+                            </Text>
+                            <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                              매주 토요일 추첨 후 알림
+                            </Text>
+                          </View>
                         </View>
-                        <View style={s.subRowTextContainer}>
-                          <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                            알림 시간
+                        <View style={s.timeDisplay}>
+                          <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                            {formatTime(lottoNotificationHour, lottoNotificationMinute)}
                           </Text>
-                          <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                            매주 토요일 추첨 후 알림
-                          </Text>
+                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                         </View>
-                      </View>
-                      <View style={s.timeDisplay}>
-                        <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
-                          {formatTime(notificationHour, notificationMinute)}
-                        </Text>
-                        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                      </View>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
+
+                      {/* 연금복권720+ 알림 시간 */}
+                      <TouchableOpacity
+                        style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
+                        onPress={openPensionTimePicker}
+                        activeOpacity={0.7}
+                      >
+                        <View style={s.subRowLeft}>
+                          <View style={[s.subIconContainer, { backgroundColor: '#9b59b620' }]}>
+                            <Ionicons name="time" size={18} color="#9b59b6" />
+                          </View>
+                          <View style={s.subRowTextContainer}>
+                            <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                              연금복권720+ 알림
+                            </Text>
+                            <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                              매주 목요일 추첨 후 알림
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={s.timeDisplay}>
+                          <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                            {formatTime(pensionNotificationHour, pensionNotificationMinute)}
+                          </Text>
+                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                        </View>
+                      </TouchableOpacity>
+                    </>
                   )}
                 </View>
               )}
@@ -355,10 +410,12 @@ export default function LotteryScanSettingsScreen() {
             onPress={(e) => e.stopPropagation()}
           >
             <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-              알림 시간 설정
+              {timePickerType === 'lotto' ? '로또 6/45' : '연금복권720+'} 알림 시간
             </Text>
             <Text style={[s.modalSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              매주 토요일 설정한 시간에 알림
+              {timePickerType === 'lotto'
+                ? '매주 토요일 설정한 시간에 알림'
+                : '매주 목요일 설정한 시간에 알림'}
             </Text>
 
             <View style={s.pickerContainer}>
