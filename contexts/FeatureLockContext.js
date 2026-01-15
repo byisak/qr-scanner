@@ -8,7 +8,7 @@ import {
   AdEventType,
   TestIds,
 } from 'react-native-google-mobile-ads';
-import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_TYPES, FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
+import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_TYPES, FREE_QR_STYLE_INDEX, DEV_MODE_UNLOCK_ALL } from '../config/lockedFeatures';
 import { useLanguage } from './LanguageContext';
 
 const FeatureLockContext = createContext();
@@ -215,8 +215,9 @@ export const FeatureLockProvider = ({ children }) => {
 
   // 기능이 잠겨있는지 확인
   const isLocked = useCallback((featureId) => {
-    // 개발 모드: 모든 기능 잠금 해제
-    if (devModeEnabled) return false;
+    // 개발 모드: 모든 기능 잠금 해제 (config 설정 또는 런타임 설정)
+    // DEV_MODE_UNLOCK_ALL은 배포 시 false로 설정해야 함
+    if (DEV_MODE_UNLOCK_ALL || devModeEnabled) return false;
     if (!LOCKED_FEATURES[featureId]) return false;
     return !unlockedFeatures.includes(featureId);
   }, [unlockedFeatures, devModeEnabled]);
@@ -224,7 +225,7 @@ export const FeatureLockProvider = ({ children }) => {
   // 바코드 타입이 잠겨있는지 확인 (bcid로 개별 체크)
   const isBarcodeTypeLocked = useCallback((bcid) => {
     // 개발 모드: 모든 기능 잠금 해제
-    if (devModeEnabled) return false;
+    if (DEV_MODE_UNLOCK_ALL || devModeEnabled) return false;
     // FREE_BARCODE_TYPES에 있으면 무료
     if (FREE_BARCODE_TYPES.includes(bcid)) return false;
     // bcid로 해당 바코드 feature 찾기
@@ -253,7 +254,7 @@ export const FeatureLockProvider = ({ children }) => {
   // QR 타입이 잠겨있는지 확인 (qrType으로 개별 체크)
   const isQrTypeLocked = useCallback((qrType) => {
     // 개발 모드: 모든 기능 잠금 해제
-    if (devModeEnabled) return false;
+    if (DEV_MODE_UNLOCK_ALL || devModeEnabled) return false;
     if (FREE_QR_TYPES.includes(qrType)) return false;
     // qrType으로 해당 feature 찾기
     const qrTypeFeature = Object.values(LOCKED_FEATURES).find(
@@ -274,7 +275,7 @@ export const FeatureLockProvider = ({ children }) => {
   // QR 스타일이 잠겨있는지 확인 (인덱스 기반)
   const isQrStyleLocked = useCallback((styleIndex) => {
     // 개발 모드: 모든 기능 잠금 해제
-    if (devModeEnabled) return false;
+    if (DEV_MODE_UNLOCK_ALL || devModeEnabled) return false;
     if (styleIndex === FREE_QR_STYLE_INDEX) return false;
     // 각 스타일별 잠금 ID 매핑
     const styleKeys = [
