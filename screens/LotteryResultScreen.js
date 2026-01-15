@@ -157,7 +157,7 @@ export default function LotteryResultScreen() {
 
         {/* 번호들 - 항상 색상 표시 */}
         <View style={styles.gameNumbers}>
-          {game.numbers.map((num) => {
+          {(game.numbers || []).map((num) => {
             const bgColor = getLottoNumberColor(num);
             const isMatch = winNumbers.includes(num);
             const isBonusMatch = num === bonusNumber && game.hasBonus;
@@ -263,7 +263,7 @@ export default function LotteryResultScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold, marginBottom: 12 }]}>
               내 복권 번호
             </Text>
-            {lotteryData.games.map((game, index) => (
+            {(lotteryData?.games || []).map((game, index) => (
               <View
                 key={index}
                 style={[
@@ -288,7 +288,7 @@ export default function LotteryResultScreen() {
 
                 {/* 번호들 */}
                 <View style={styles.gameNumbers}>
-                  {game.numbers.map((num) => {
+                  {(game.numbers || []).map((num) => {
                     const bgColor = getLottoNumberColor(num);
                     return (
                       <View
@@ -378,7 +378,7 @@ export default function LotteryResultScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold, marginBottom: 12 }]}>
               게임별 결과
             </Text>
-            {result.games.map((game) =>
+            {(result?.games || []).map((game) =>
               renderGameResult(game, result.winNumbers, result.bonusNumber)
             )}
           </View>
