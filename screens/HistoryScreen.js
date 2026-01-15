@@ -347,7 +347,9 @@ export default function HistoryScreen() {
                   <Ionicons name="link" size={16} color={isActive ? '#fff' : '#2E7D32'} style={{ marginRight: 6 }} />
                 )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
-                  {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : group.name}
+                  {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') :
+                   group.id === 'lottery-lotto' ? '로또 6/45' :
+                   group.id === 'lottery-pension' ? '연금복권720+' : group.name}
                 </Text>
                 {scanCount > 0 && (
                   <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
@@ -369,7 +371,9 @@ export default function HistoryScreen() {
       {/* 헤더 */}
       <View style={s.header}>
         <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
-          {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
+          {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') :
+           currentGroup?.id === 'lottery-lotto' ? '로또 6/45' :
+           currentGroup?.id === 'lottery-pension' ? '연금복권720+' : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
