@@ -26,6 +26,7 @@ import { trackScreenView, trackHistoryViewed } from '../utils/analytics';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 import { SwipeListView } from 'react-native-swipe-list-view';
 import { updateLotteryNotificationOnCheck } from '../utils/lotteryNotification';
+import { isDrawCompleted } from '../utils/lotteryApi';
 import { LotteryIcon } from '../components/LotteryIcons';
 
 const DEFAULT_GROUP_ID = 'default';
@@ -444,17 +445,35 @@ export default function HistoryScreen() {
                           </View>
                         )}
 
-                        {/* 확인 상태 */}
-                        <View style={[s.badge, { backgroundColor: lotteryInfo.isChecked ? '#34C759' + '15' : '#FF9500' + '15' }]}>
-                          <Ionicons
-                            name={lotteryInfo.isChecked ? 'checkmark-circle' : 'time-outline'}
-                            size={11}
-                            color={lotteryInfo.isChecked ? '#34C759' : '#FF9500'}
-                          />
-                          <Text style={[s.badgeText, { color: lotteryInfo.isChecked ? '#34C759' : '#FF9500' }]}>
-                            {lotteryInfo.isChecked ? '확인완료' : '미확인'}
-                          </Text>
-                        </View>
+                        {/* 확인 상태 - 추첨 완료 여부에 따라 다르게 표시 */}
+                        {(() => {
+                          const drawCompleted = isDrawCompleted(lotteryInfo.round, lotteryInfo.type);
+                          if (lotteryInfo.isChecked) {
+                            // 확인 완료
+                            return (
+                              <View style={[s.badge, { backgroundColor: '#34C759' + '15' }]}>
+                                <Ionicons name="checkmark-circle" size={11} color="#34C759" />
+                                <Text style={[s.badgeText, { color: '#34C759' }]}>확인완료</Text>
+                              </View>
+                            );
+                          } else if (drawCompleted) {
+                            // 추첨 완료 + 미확인
+                            return (
+                              <View style={[s.badge, { backgroundColor: '#FF3B30' + '15' }]}>
+                                <Ionicons name="alert-circle" size={11} color="#FF3B30" />
+                                <Text style={[s.badgeText, { color: '#FF3B30' }]}>미확인</Text>
+                              </View>
+                            );
+                          } else {
+                            // 추첨 전 대기중
+                            return (
+                              <View style={[s.badge, { backgroundColor: '#FF9500' + '15' }]}>
+                                <Ionicons name="time-outline" size={11} color="#FF9500" />
+                                <Text style={[s.badgeText, { color: '#FF9500' }]}>대기중</Text>
+                              </View>
+                            );
+                          }
+                        })()}
                       </View>
 
                       {/* 3줄: 스캔 날짜 */}
