@@ -33,6 +33,8 @@ export default function LotteryResultScreen() {
   const [lotteryData, setLotteryData] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isBeforeDraw, setIsBeforeDraw] = useState(false);
+  const [nextDrawTime, setNextDrawTime] = useState(null);
 
   useEffect(() => {
     loadLotteryResult();
@@ -42,6 +44,7 @@ export default function LotteryResultScreen() {
     try {
       setLoading(true);
       setError(null);
+      setIsBeforeDraw(false);
 
       // QR 코드 파싱
       const parsed = parseLotteryQR(params.code);
@@ -57,7 +60,8 @@ export default function LotteryResultScreen() {
       const drawCompleted = isDrawCompleted(parsed.round, parsed.type);
       if (!drawCompleted) {
         const nextDraw = getNextDrawTime(parsed.type);
-        setError(`아직 추첨 전입니다.\n추첨 예정: ${formatDate(nextDraw)}\n\n복권 번호가 기록탭에 저장되었습니다.`);
+        setNextDrawTime(nextDraw);
+        setIsBeforeDraw(true);
         setLoading(false);
         return;
       }
@@ -219,6 +223,108 @@ export default function LotteryResultScreen() {
             <Text style={styles.retryButtonText}>다시 시도</Text>
           </TouchableOpacity>
         </View>
+      ) : isBeforeDraw && lotteryData ? (
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* 회차 정보 */}
+          <View style={[styles.roundInfo, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.roundText, { color: colors.primary, fontFamily: fonts.bold }]}>
+              {lotteryData.round}회
+            </Text>
+            <Text style={[styles.drawDate, { color: colors.textSecondary }]}>
+              추첨 예정: {formatDate(nextDrawTime)}
+            </Text>
+          </View>
+
+          {/* 당첨 번호 - 추첨 전 */}
+          <View style={[styles.winNumbersCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              당첨번호
+            </Text>
+            <View style={styles.beforeDrawContainer}>
+              <Ionicons name="time-outline" size={32} color={colors.textSecondary} />
+              <Text style={[styles.beforeDrawText, { color: colors.textSecondary }]}>
+                추첨 전입니다
+              </Text>
+            </View>
+          </View>
+
+          {/* 대기중 안내 */}
+          <View style={[styles.totalPrizeCard, { backgroundColor: '#FF9800' }]}>
+            <Text style={[styles.totalPrizeLabel, { color: '#fff' }]}>
+              ⏰ 추첨 대기중
+            </Text>
+            <Text style={[styles.totalPrizeAmount, { color: '#fff', fontFamily: fonts.bold, fontSize: 18 }]}>
+              추첨 후 당첨 결과를 확인하세요
+            </Text>
+          </View>
+
+          {/* 내 복권 번호 */}
+          <View style={styles.gamesSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold, marginBottom: 12 }]}>
+              내 복권 번호
+            </Text>
+            {lotteryData.games.map((game, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.gameRow,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  }
+                ]}
+              >
+                {/* 게임 라벨 */}
+                <View style={styles.gameLabel}>
+                  <Text style={[styles.gameLabelText, { color: colors.text, fontFamily: fonts.bold }]}>
+                    {String.fromCharCode(65 + index)}
+                  </Text>
+                </View>
+
+                {/* 대기중 배지 */}
+                <View style={[styles.rankBadge, { backgroundColor: '#FF9800' }]}>
+                  <Text style={styles.rankText}>대기중</Text>
+                </View>
+
+                {/* 번호들 */}
+                <View style={styles.gameNumbers}>
+                  {game.numbers.map((num) => {
+                    const bgColor = getLottoNumberColor(num);
+                    return (
+                      <View
+                        key={num}
+                        style={[
+                          styles.numberBall,
+                          {
+                            width: 32,
+                            height: 32,
+                            borderRadius: 16,
+                            backgroundColor: bgColor,
+                          }
+                        ]}
+                      >
+                        <Text style={[styles.numberText, { color: '#fff', fontSize: 13 }]}>
+                          {num}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* 안내 메시지 */}
+          <View style={[styles.infoBox, { backgroundColor: colors.surface }]}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+              복권 번호가 기록탭에 저장되었습니다.{'\n'}
+              추첨 후 다시 확인하시면 당첨 결과를 볼 수 있습니다.
+            </Text>
+          </View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
       ) : result ? (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {/* 회차 정보 */}
@@ -483,5 +589,25 @@ const styles = StyleSheet.create({
   firstPrizeCount: {
     fontSize: 14,
     marginTop: 4,
+  },
+  beforeDrawContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  beforeDrawText: {
+    fontSize: 16,
+    marginTop: 8,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
