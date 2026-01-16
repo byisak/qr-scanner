@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useFeatureLock } from '../../contexts/FeatureLockContext';
@@ -29,14 +30,21 @@ export default function TabLayout() {
   const { isDark } = useTheme();
   const { autoSync } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
+  const lastSyncedTabRef = useRef<string | null>(null);
 
   return (
     <Tabs
       screenListeners={{
-        focus: () => {
-          // 탭 이동 시 강제 동기화 (관리자 변경사항 즉시 반영)
-          if (autoSync) {
-            autoSync(true);
+        focus: (e) => {
+          // 탭 이름 추출 (예: "history-abc123" -> "history")
+          const currentTab = e.target?.split('-')[0] || null;
+
+          // 실제 탭이 변경되었을 때만 동기화 (같은 탭에서 반복 호출 방지)
+          if (currentTab && currentTab !== lastSyncedTabRef.current) {
+            lastSyncedTabRef.current = currentTab;
+            if (autoSync) {
+              autoSync(true);
+            }
           }
         },
       }}
