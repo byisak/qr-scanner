@@ -50,7 +50,7 @@ export default function SettingsScreen() {
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
-  const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
+  const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(13); // 기본값: 모든 바코드 타입 (13개)
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
@@ -208,7 +208,7 @@ export default function SettingsScreen() {
 
         if (b) {
           const parsed = JSON.parse(b);
-          setSelectedBarcodesCount(parsed.length || 6);
+          setSelectedBarcodesCount(parsed.length || 13);
         }
 
         // 실시간 서버전송 설정 로드
@@ -246,7 +246,7 @@ export default function SettingsScreen() {
           const b = await AsyncStorage.getItem('selectedBarcodes');
           if (b) {
             const parsed = JSON.parse(b);
-            setSelectedBarcodesCount(parsed.length || 6);
+            setSelectedBarcodesCount(parsed.length || 13);
           }
         } catch (error) {
           console.error('Load settings error:', error);

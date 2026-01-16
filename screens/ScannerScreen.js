@@ -89,14 +89,21 @@ function ScannerScreen() {
   const [currentGroupId, setCurrentGroupId] = useState('default'); // 현재 선택된 그룹 ID
   const [groupModalVisible, setGroupModalVisible] = useState(false); // 그룹 선택 모달 표시 여부
   const [availableGroups, setAvailableGroups] = useState([{ id: 'default', name: '기본 그룹', createdAt: Date.now() }]); // 사용 가능한 그룹 목록
-  // 기본값: 자주 사용되는 바코드 타입들
+  // 기본값: 모든 바코드 타입 (BarcodeSelectionScreen과 일치)
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
     'ean13',
     'ean8',
     'code128',
+    'code39',
+    'code93',
     'upce',
     'upca',
+    'pdf417',
+    'aztec',
+    'datamatrix',
+    'itf14',
+    'codabar',
   ]);
 
   // 1차원 바코드 선택 시 전체 화면 스캔 모드 활성화 (QR만 선택 시 기존 스캔 방식 유지)
@@ -274,7 +281,7 @@ function ScannerScreen() {
           setBarcodeTypes(
             parsed.length > 0
               ? parsed
-              : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+              : ['qr', 'ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'pdf417', 'aztec', 'datamatrix', 'itf14', 'codabar']
           );
         }
 
@@ -470,7 +477,7 @@ function ScannerScreen() {
             setBarcodeTypes(
               parsed.length > 0
                 ? parsed
-                : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+                : ['qr', 'ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'pdf417', 'aztec', 'datamatrix', 'itf14', 'codabar']
             );
           }
 
@@ -2317,7 +2324,7 @@ function ScannerScreen() {
       {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
       {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
       <NativeQRScanner
-        key={multiCodeModeEnabled ? 'multi-code-mode' : 'single-code-mode'}
+        key={`${multiCodeModeEnabled ? 'multi' : 'single'}-${[...barcodeTypes].sort().join(',')}`}
         ref={cameraRef}
         isActive={isActive}
         facing={cameraFacing}
