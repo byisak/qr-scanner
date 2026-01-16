@@ -17,13 +17,15 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { register, checkEmailExists } = useAuth();
+  const { register, checkEmailExists, getToken } = useAuth();
+  const { syncWithServer } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [email, setEmail] = useState('');
@@ -133,6 +135,17 @@ export default function RegisterScreen() {
     try {
       const result = await register(email, password, nickname);
       if (result.success) {
+        // 광고 기록 서버 동기화 (회원가입 후)
+        try {
+          const token = await getToken();
+          if (result.user?.id && token) {
+            await syncWithServer(result.user.id, token);
+            console.log('[AdSync] Post-register sync completed');
+          }
+        } catch (syncError) {
+          console.warn('[AdSync] Post-register sync failed:', syncError);
+          // 동기화 실패해도 회원가입은 유지
+        }
         Alert.alert(t('settings.success'), t('auth.signupSuccess'), [
           {
             text: t('common.confirm'),

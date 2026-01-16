@@ -35,7 +35,7 @@ export default function SettingsScreen() {
   const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
   const { user, isLoggedIn } = useAuth();
-  const { isLocked, showUnlockAlert, devModeEnabled, toggleDevMode, resetAllLocks } = useFeatureLock();
+  const { isLocked, showUnlockAlert, devModeEnabled, toggleDevMode, resetAllLocks, autoSync } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
@@ -50,7 +50,7 @@ export default function SettingsScreen() {
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
-  const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(6);
+  const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(13); // 기본값: 모든 바코드 타입 (13개)
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
@@ -208,7 +208,7 @@ export default function SettingsScreen() {
 
         if (b) {
           const parsed = JSON.parse(b);
-          setSelectedBarcodesCount(parsed.length || 6);
+          setSelectedBarcodesCount(parsed.length || 13);
         }
 
         // 실시간 서버전송 설정 로드
@@ -246,7 +246,7 @@ export default function SettingsScreen() {
           const b = await AsyncStorage.getItem('selectedBarcodes');
           if (b) {
             const parsed = JSON.parse(b);
-            setSelectedBarcodesCount(parsed.length || 6);
+            setSelectedBarcodesCount(parsed.length || 13);
           }
         } catch (error) {
           console.error('Load settings error:', error);
@@ -331,11 +331,20 @@ export default function SettingsScreen() {
 
           // 캐시 크기 계산
           calculateCacheSize();
+
+          // 서버와 광고 기록 자동 동기화 (로그인된 경우)
+          if (autoSync) {
+            autoSync(false).then((result) => {
+              if (result.success) {
+                console.log('[Settings] Auto sync completed on focus');
+              }
+            });
+          }
         } catch (error) {
           console.error('Load settings error:', error);
         }
       })();
-    }, [calculateCacheSize])
+    }, [calculateCacheSize, autoSync])
   );
 
   useEffect(() => {
@@ -784,7 +793,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 제품 검색 */}
+        {/* 제품 검색 - 임시 비활성화
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.productSearchSection')}</Text>
 
@@ -812,6 +821,7 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
+        */}
 
         {/* 데이터 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
@@ -996,7 +1006,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 개발자 옵션 - TODO: 배포 시 제거 또는 숨김 처리 */}
+        {/* 개발자 옵션 - 배포 시 주석 처리됨
         <TouchableOpacity
           style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}
           onPress={() => router.push('/developer-options')}
@@ -1024,6 +1034,7 @@ export default function SettingsScreen() {
             </View>
           </View>
         </TouchableOpacity>
+        */}
         </ScrollView>
       </TouchableWithoutFeedback>
     </View>

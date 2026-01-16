@@ -44,6 +44,10 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 
+// 복권 유틸리티
+import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
+import { updateLotteryNotificationOnScan } from '../utils/lotteryNotification';
+
 // 분리된 컴포넌트
 import ScanAnimation from '../components/ScanAnimation'; // 플러스 표시만 활성화
 import BatchScanControls from '../components/BatchScanControls';
@@ -85,14 +89,21 @@ function ScannerScreen() {
   const [currentGroupId, setCurrentGroupId] = useState('default'); // 현재 선택된 그룹 ID
   const [groupModalVisible, setGroupModalVisible] = useState(false); // 그룹 선택 모달 표시 여부
   const [availableGroups, setAvailableGroups] = useState([{ id: 'default', name: '기본 그룹', createdAt: Date.now() }]); // 사용 가능한 그룹 목록
-  // 기본값: 자주 사용되는 바코드 타입들
+  // 기본값: 모든 바코드 타입 (BarcodeSelectionScreen과 일치)
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
     'ean13',
     'ean8',
     'code128',
+    'code39',
+    'code93',
     'upce',
     'upca',
+    'pdf417',
+    'aztec',
+    'datamatrix',
+    'itf14',
+    'codabar',
   ]);
 
   // 1차원 바코드 선택 시 전체 화면 스캔 모드 활성화 (QR만 선택 시 기존 스캔 방식 유지)
@@ -123,6 +134,7 @@ function ScannerScreen() {
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
+  const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식 활성화 여부
 
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
@@ -144,6 +156,7 @@ function ScannerScreen() {
   const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
   const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
   const resultWindowAutoOpenRef = useRef(true); // 결과창 자동 열림 ref
+  const lotteryScanEnabledRef = useRef(false); // 복권 인식 활성화 ref
 
   // photoSaveEnabled 상태를 ref에 동기화
   useEffect(() => {
@@ -196,6 +209,11 @@ function ScannerScreen() {
       setLastScannedCode(null);
     }
   }, [resultWindowAutoOpen]);
+
+  // lotteryScanEnabled 상태를 ref에 동기화
+  useEffect(() => {
+    lotteryScanEnabledRef.current = lotteryScanEnabled;
+  }, [lotteryScanEnabled]);
 
   // user 변경 시 WebSocket에 userId 동기화 (인증 로딩 완료 후 반영)
   useEffect(() => {
@@ -263,7 +281,7 @@ function ScannerScreen() {
           setBarcodeTypes(
             parsed.length > 0
               ? parsed
-              : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+              : ['qr', 'ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'pdf417', 'aztec', 'datamatrix', 'itf14', 'codabar']
           );
         }
 
@@ -459,7 +477,7 @@ function ScannerScreen() {
             setBarcodeTypes(
               parsed.length > 0
                 ? parsed
-                : ['qr', 'ean13', 'ean8', 'code128', 'upce', 'upca']
+                : ['qr', 'ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'pdf417', 'aztec', 'datamatrix', 'itf14', 'codabar']
             );
           }
 
@@ -534,6 +552,10 @@ function ScannerScreen() {
           // 결과창 자동 열림 설정 로드
           const autoOpen = await AsyncStorage.getItem('resultWindowAutoOpen');
           setResultWindowAutoOpen(autoOpen === null ? true : autoOpen === 'true');
+
+          // 복권 인식 활성화 설정 로드
+          const lotteryScan = await AsyncStorage.getItem('lotteryScanEnabled');
+          setLotteryScanEnabled(lotteryScan === 'true');
 
           // 현재 선택된 그룹 이름 로드
           const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
@@ -847,6 +869,143 @@ function ScannerScreen() {
       console.error('Update history with photo error:', e);
     }
   }, [currentGroupId]);
+
+  // 복권 그룹 자동 생성 및 복권 데이터 저장
+  const ensureLotteryGroup = useCallback(async (lotteryType) => {
+    const groupInfo = LOTTERY_GROUPS[lotteryType];
+    if (!groupInfo) return null;
+
+    try {
+      const groupsData = await AsyncStorage.getItem('scanGroups');
+      let groups = groupsData ? JSON.parse(groupsData) : [];
+
+      // 기본 그룹이 없으면 추가 (scanGroups 스토리지에도 저장)
+      const hasDefaultGroup = groups.some(g => g.id === 'default' && !g.isDeleted);
+      if (!hasDefaultGroup) {
+        const defaultGroup = {
+          id: 'default',
+          name: '기본 그룹',
+          createdAt: Date.now(),
+        };
+        groups.unshift(defaultGroup);
+      }
+
+      // 해당 복권 그룹이 이미 있는지 확인
+      const existingGroup = groups.find(g => g.id === groupInfo.id && !g.isDeleted);
+      if (existingGroup) {
+        // 기본 그룹만 추가된 경우에도 저장
+        if (!hasDefaultGroup) {
+          await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+          setAvailableGroups(prev => {
+            const hasDefault = prev.some(g => g.id === 'default');
+            if (!hasDefault) {
+              return [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }, ...prev];
+            }
+            return prev;
+          });
+        }
+        return groupInfo.id;
+      }
+
+      // 새 복권 그룹 생성
+      const newGroup = {
+        id: groupInfo.id,
+        name: groupInfo.name,
+        icon: groupInfo.icon,
+        color: groupInfo.color,
+        createdAt: Date.now(),
+        isLotteryGroup: true,
+      };
+
+      groups.push(newGroup);
+      await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+
+      // 그룹 목록 UI 업데이트
+      setAvailableGroups(prev => {
+        const hasDefault = prev.some(g => g.id === 'default');
+        const hasLotteryGroup = prev.some(g => g.id === groupInfo.id);
+
+        let updated = [...prev];
+        if (!hasDefault) {
+          updated = [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }, ...updated];
+        }
+        if (!hasLotteryGroup) {
+          updated = [...updated, newGroup];
+        }
+        return updated;
+      });
+
+      console.log('[ScannerScreen] Created lottery group:', groupInfo.name);
+      return groupInfo.id;
+    } catch (error) {
+      console.error('Failed to create lottery group:', error);
+      return null;
+    }
+  }, []);
+
+  // 복권 기록 저장 (lotteryData 포함)
+  const saveLotteryRecord = useCallback(async (code, lotteryData, photoUri = null) => {
+    try {
+      const groupId = await ensureLotteryGroup(lotteryData.type);
+      if (!groupId) {
+        console.error('[ScannerScreen] Failed to get lottery group');
+        return null;
+      }
+
+      // 그룹별 히스토리 가져오기
+      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      let historyByGroup = historyData ? JSON.parse(historyData) : {};
+
+      if (!historyByGroup[groupId]) {
+        historyByGroup[groupId] = [];
+      }
+
+      const currentHistory = historyByGroup[groupId];
+      const now = Date.now();
+
+      // 중복 체크 (같은 복권 코드)
+      const existingIndex = currentHistory.findIndex(item => item.code === code);
+
+      if (existingIndex !== -1) {
+        // 중복 - 이미 스캔된 복권
+        console.log('[ScannerScreen] Lottery already scanned:', code);
+        return {
+          isDuplicate: true,
+          record: currentHistory[existingIndex],
+          groupId,
+        };
+      }
+
+      // 새 복권 기록
+      const record = {
+        code,
+        timestamp: now,
+        count: 1,
+        scanTimes: [now],
+        photos: photoUri ? [photoUri] : [],
+        type: 'qr',
+        lotteryData: {
+          ...lotteryData,
+          isChecked: false,
+          checkedAt: null,
+        },
+      };
+
+      historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
+      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      triggerSync();
+
+      console.log('[ScannerScreen] Saved lottery record:', lotteryData.typeName, lotteryData.round);
+      return {
+        isDuplicate: false,
+        record,
+        groupId,
+      };
+    } catch (error) {
+      console.error('Save lottery record error:', error);
+      return null;
+    }
+  }, [ensureLotteryGroup, triggerSync]);
 
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(
@@ -1446,6 +1605,92 @@ function ScannerScreen() {
         trackQRScanned(normalizedType, data.startsWith('http') ? 'url' : 'text');
       } else {
         trackBarcodeScanned(normalizedType);
+      }
+
+      // 복권 QR 코드 감지 및 처리 (설정에서 활성화된 경우에만)
+      if (lotteryScanEnabledRef.current && isLotteryQR(data)) {
+        const lotteryData = parseLotteryQR(data);
+        if (lotteryData) {
+          console.log('[ScannerScreen] Lottery QR detected:', lotteryData.typeName, lotteryData.round);
+
+          // 스캔 즉시 차단
+          isProcessingRef.current = true;
+          setCanScan(false);
+
+          // 햅틱 피드백
+          if (hapticEnabledRef.current) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+
+          // 스캔 소리
+          if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+            try {
+              beepSoundPlayerRef.current.seekTo(0);
+              beepSoundPlayerRef.current.play();
+            } catch (e) {
+              console.log('Sound play error:', e);
+            }
+          }
+
+          // 복권 기록 저장
+          const result = await saveLotteryRecord(data, lotteryData, null);
+
+          if (result) {
+            // 새 복권이 저장된 경우 알림 스케줄링
+            if (!result.isDuplicate) {
+              updateLotteryNotificationOnScan();
+            }
+
+            if (result.isDuplicate) {
+              // 중복 복권 - 기존 결과 화면으로 이동
+              Alert.alert(
+                '이미 스캔된 복권',
+                `${lotteryData.typeName} ${lotteryData.round}회 복권이 이미 저장되어 있습니다.\n당첨 결과를 확인하시겠습니까?`,
+                [
+                  {
+                    text: '취소',
+                    style: 'cancel',
+                    onPress: () => {
+                      isProcessingRef.current = false;
+                      setCanScan(true);
+                    },
+                  },
+                  {
+                    text: '결과 확인',
+                    onPress: () => {
+                      router.push({
+                        pathname: '/lottery-result',
+                        params: { code: data },
+                      });
+                      setTimeout(() => {
+                        isProcessingRef.current = false;
+                        setCanScan(true);
+                      }, 500);
+                    },
+                  },
+                ],
+                { cancelable: false }
+              );
+            } else {
+              // 새 복권 - 결과 화면으로 이동
+              router.push({
+                pathname: '/lottery-result',
+                params: { code: data },
+              });
+              setTimeout(() => {
+                isProcessingRef.current = false;
+                setCanScan(true);
+              }, 500);
+            }
+          } else {
+            // 저장 실패
+            Alert.alert('오류', '복권 정보 저장에 실패했습니다.');
+            isProcessingRef.current = false;
+            setCanScan(true);
+          }
+
+          return; // 복권 처리 완료, 일반 스캔 로직 스킵
+        }
       }
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
@@ -2079,7 +2324,7 @@ function ScannerScreen() {
       {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
       {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
       <NativeQRScanner
-        key={multiCodeModeEnabled ? 'multi-code-mode' : 'single-code-mode'}
+        key={`${multiCodeModeEnabled ? 'multi' : 'single'}-${[...barcodeTypes].sort().join(',')}`}
         ref={cameraRef}
         isActive={isActive}
         facing={cameraFacing}
@@ -2107,7 +2352,9 @@ function ScannerScreen() {
           <BlurView intensity={80} tint="light" style={styles.groupBadgeBlur}>
             <Ionicons name="folder" size={16} color="rgba(255,255,255,0.95)" />
             <Text style={[styles.groupBadgeText, { color: 'rgba(255,255,255,0.95)' }]}>
-              {currentGroupId === 'default' ? t('groupEdit.defaultGroup') : currentGroupName}
+              {currentGroupId === 'default' ? t('groupEdit.defaultGroup') :
+               currentGroupId === 'lottery-lotto' ? '로또 6/45' :
+               currentGroupId === 'lottery-pension' ? '연금복권720+' : currentGroupName}
             </Text>
             <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.95)" style={{ marginLeft: 4 }} />
           </BlurView>
@@ -2286,7 +2533,9 @@ function ScannerScreen() {
                       { color: colors.text },
                       currentGroupId === group.id && { color: colors.primary }
                     ]}>
-                      {group.name}
+                      {group.id === 'default' ? t('groupEdit.defaultGroup') :
+                       group.id === 'lottery-lotto' ? '로또 6/45' :
+                       group.id === 'lottery-pension' ? '연금복권720+' : group.name}
                     </Text>
                   </View>
                   {currentGroupId === group.id && (

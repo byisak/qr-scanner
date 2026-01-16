@@ -6,7 +6,7 @@
 // true: 모든 기능 잠금 해제 (개발용)
 // false: 정상 잠금 동작 (배포용)
 // ========================================
-export const DEV_MODE_UNLOCK_ALL = true;
+export const DEV_MODE_UNLOCK_ALL = false;
 
 // ========================================
 // 광고 횟수 기준:
