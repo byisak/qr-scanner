@@ -29,8 +29,8 @@ const AUTH_STORAGE_KEY = 'auth_data';
 const TOKEN_STORAGE_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 
-// 자동 동기화 최소 간격 (5분)
-const AUTO_SYNC_MIN_INTERVAL = 5 * 60 * 1000;
+// 자동 동기화 간격 (3분)
+const AUTO_SYNC_INTERVAL = 3 * 60 * 1000;
 
 // 리워드 광고 ID
 const REWARDED_AD_UNIT_ID = __DEV__
@@ -578,18 +578,8 @@ export const FeatureLockProvider = ({ children }) => {
   }, []);
 
   // 자동 동기화 (SecureStore에서 인증 정보 가져와서 동기화)
-  const autoSync = useCallback(async (force = false) => {
+  const autoSync = useCallback(async () => {
     try {
-      // 마지막 동기화 시간 확인 (강제 동기화가 아닌 경우)
-      if (!force && lastSyncedAt) {
-        const lastSyncTime = new Date(lastSyncedAt).getTime();
-        const now = Date.now();
-        if (now - lastSyncTime < AUTO_SYNC_MIN_INTERVAL) {
-          console.log('[AdSync] Skip auto sync - too soon (last sync:', lastSyncedAt, ')');
-          return { success: false, error: 'Too soon since last sync' };
-        }
-      }
-
       // SecureStore에서 인증 정보 가져오기
       const [authData, accessToken] = await Promise.all([
         SecureStore.getItemAsync(AUTH_STORAGE_KEY),
@@ -628,27 +618,44 @@ export const FeatureLockProvider = ({ children }) => {
       console.error('[AdSync] Auto sync error:', error);
       return { success: false, error: error.message };
     }
-  }, [lastSyncedAt, syncWithServer, refreshAccessToken]);
+  }, [syncWithServer, refreshAccessToken]);
 
   // autoSync ref 업데이트
   useEffect(() => {
     autoSyncRef.current = autoSync;
   }, [autoSync]);
 
-  // 앱 시작 시 자동 동기화 (로딩 완료 후)
+  // 앱 시작 시 자동 동기화 및 3분 주기 동기화
   useEffect(() => {
     if (!isLoading && !hasAutoSyncedRef.current) {
       hasAutoSyncedRef.current = true;
-      // 약간 지연 후 동기화 (UI 렌더링 후)
+
+      // 초기 동기화 (UI 렌더링 후 2초 지연)
       setTimeout(() => {
         if (autoSyncRef.current) {
-          autoSyncRef.current(false).then((result) => {
+          autoSyncRef.current().then((result) => {
             if (result.success) {
               console.log('[AdSync] Initial auto sync completed');
             }
           });
         }
       }, 2000);
+
+      // 3분마다 자동 동기화
+      const intervalId = setInterval(() => {
+        if (autoSyncRef.current) {
+          console.log('[AdSync] Periodic sync triggered (3 min interval)');
+          autoSyncRef.current().then((result) => {
+            if (result.success) {
+              console.log('[AdSync] Periodic sync completed');
+            }
+          });
+        }
+      }, AUTO_SYNC_INTERVAL);
+
+      return () => {
+        clearInterval(intervalId);
+      };
     }
   }, [isLoading]);
 

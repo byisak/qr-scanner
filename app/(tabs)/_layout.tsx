@@ -1,10 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useFeatureLock } from '../../contexts/FeatureLockContext';
 import { Colors } from '../../constants/Colors';
 
 // Fallback 탭바 배경 컴포넌트 (web 및 기타 플랫폼용)
@@ -28,24 +26,10 @@ function TabBarBackground() {
 export default function TabLayout() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
-  const { autoSync } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
-  const lastSyncTimeRef = useRef<number>(0);
 
   return (
     <Tabs
-      screenListeners={{
-        focus: () => {
-          const now = Date.now();
-          // 2초 이내 중복 호출 방지
-          if (now - lastSyncTimeRef.current > 2000) {
-            lastSyncTimeRef.current = now;
-            if (autoSync) {
-              autoSync(true);
-            }
-          }
-        },
-      }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
