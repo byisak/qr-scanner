@@ -27,6 +27,7 @@ const API_URL = `${config.serverUrl}/api/users`;
 // SecureStore 키 (AuthContext와 동일)
 const AUTH_STORAGE_KEY = 'auth_data';
 const TOKEN_STORAGE_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 
 // 자동 동기화 최소 간격 (5분)
 const AUTO_SYNC_MIN_INTERVAL = 5 * 60 * 1000;
@@ -455,6 +456,10 @@ export const FeatureLockProvider = ({ children }) => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[AdSync] Server error:', errorText);
+        // 401 에러는 특별 처리 (토큰 만료)
+        if (response.status === 401) {
+          return { success: false, error: 'Unauthorized', needsRefresh: true };
+        }
         return { success: false, error: 'Server error' };
       }
 
@@ -535,6 +540,43 @@ export const FeatureLockProvider = ({ children }) => {
     }
   }, []);
 
+  // 토큰 갱신 함수
+  const refreshAccessToken = useCallback(async () => {
+    try {
+      const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      if (!refreshToken) {
+        console.log('[AdSync] No refresh token available');
+        return null;
+      }
+
+      console.log('[AdSync] Refreshing access token...');
+      const response = await fetch(`${config.serverUrl}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        console.log('[AdSync] Token refresh failed:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.accessToken) {
+        await SecureStore.setItemAsync(TOKEN_STORAGE_KEY, data.accessToken);
+        if (data.refreshToken) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken);
+        }
+        console.log('[AdSync] Token refreshed successfully');
+        return data.accessToken;
+      }
+      return null;
+    } catch (error) {
+      console.error('[AdSync] Token refresh error:', error);
+      return null;
+    }
+  }, []);
+
   // 자동 동기화 (SecureStore에서 인증 정보 가져와서 동기화)
   const autoSync = useCallback(async (force = false) => {
     try {
@@ -566,12 +608,27 @@ export const FeatureLockProvider = ({ children }) => {
       }
 
       console.log('[AdSync] Starting auto sync for user:', user.id);
-      return await syncWithServer(user.id, accessToken);
+      let result = await syncWithServer(user.id, accessToken);
+
+      // 401 에러(토큰 만료)인 경우 토큰 갱신 후 재시도
+      if (result.needsRefresh) {
+        console.log('[AdSync] Token expired, attempting refresh...');
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          console.log('[AdSync] Retrying sync with new token...');
+          result = await syncWithServer(user.id, newToken);
+        } else {
+          console.log('[AdSync] Token refresh failed, sync aborted');
+          return { success: false, error: 'Token refresh failed' };
+        }
+      }
+
+      return result;
     } catch (error) {
       console.error('[AdSync] Auto sync error:', error);
       return { success: false, error: error.message };
     }
-  }, [lastSyncedAt, syncWithServer]);
+  }, [lastSyncedAt, syncWithServer, refreshAccessToken]);
 
   // autoSync ref 업데이트
   useEffect(() => {
