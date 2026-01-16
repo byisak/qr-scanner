@@ -25,7 +25,7 @@ const LAST_SYNC_KEY = 'lastAdRecordSync';
 const API_URL = `${config.serverUrl}/api/users`;
 
 // SecureStore 키 (AuthContext와 동일)
-const AUTH_STORAGE_KEY = 'auth_user';
+const AUTH_STORAGE_KEY = 'auth_data';
 const TOKEN_STORAGE_KEY = 'auth_token';
 
 // 자동 동기화 최소 간격 (5분)
