@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFeatureLock } from '../../contexts/FeatureLockContext';
 import { Colors } from '../../constants/Colors';
 
 // Android: 탭바 배경 컴포넌트
@@ -26,10 +27,19 @@ function TabBarBackground() {
 export default function TabLayout() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
+  const { autoSync } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
 
   return (
     <Tabs
+      screenListeners={{
+        focus: () => {
+          // 탭 이동 시 강제 동기화 (관리자 변경사항 즉시 반영)
+          if (autoSync) {
+            autoSync(true);
+          }
+        },
+      }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
