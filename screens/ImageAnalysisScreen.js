@@ -1017,7 +1017,7 @@ function ImageAnalysisScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -1365,7 +1365,7 @@ function ImageAnalysisScreen() {
           />
         </View>
       )}
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
