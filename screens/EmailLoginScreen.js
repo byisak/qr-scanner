@@ -17,13 +17,15 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 
 export default function EmailLoginScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { loginWithEmail } = useAuth();
+  const { loginWithEmail, getToken } = useAuth();
+  const { syncWithServer } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [email, setEmail] = useState('');
@@ -55,6 +57,17 @@ export default function EmailLoginScreen() {
     try {
       const result = await loginWithEmail(email, password);
       if (result.success) {
+        // 광고 기록 서버 동기화 (로그인 성공 후)
+        try {
+          const token = await getToken();
+          if (result.user?.id && token) {
+            await syncWithServer(result.user.id, token);
+            console.log('[AdSync] Post-login sync completed');
+          }
+        } catch (syncError) {
+          console.warn('[AdSync] Post-login sync failed:', syncError);
+          // 동기화 실패해도 로그인은 유지
+        }
         // 설정 화면으로 돌아가기
         router.dismissAll();
       } else {

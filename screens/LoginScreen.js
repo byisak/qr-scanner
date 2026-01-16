@@ -21,6 +21,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import {
   useGoogleLogin,
@@ -33,7 +34,8 @@ export default function LoginScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { loginWithEmail, loginWithGoogle, loginWithApple } = useAuth();
+  const { loginWithEmail, loginWithGoogle, loginWithApple, getToken } = useAuth();
+  const { syncWithServer } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
 
   // 소셜 로그인 훅
@@ -193,6 +195,20 @@ export default function LoginScreen() {
     return emailRegex.test(email);
   };
 
+  // 광고 기록 서버 동기화 (로그인 후 호출)
+  const syncAdRecords = async (userId) => {
+    try {
+      const token = await getToken();
+      if (userId && token) {
+        await syncWithServer(userId, token);
+        console.log('[AdSync] Post-login sync completed');
+      }
+    } catch (syncError) {
+      console.warn('[AdSync] Post-login sync failed:', syncError);
+      // 동기화 실패해도 로그인은 유지
+    }
+  };
+
   // 이메일 로그인 핸들러
   const handleEmailLogin = async () => {
     if (!email.trim()) {
@@ -212,6 +228,8 @@ export default function LoginScreen() {
     try {
       const result = await loginWithEmail(email, password);
       if (result.success) {
+        // 광고 기록 서버 동기화
+        await syncAdRecords(result.user?.id);
         router.dismissAll();
       } else {
         // 서버에서 받은 구체적인 에러 메시지 표시
@@ -242,6 +260,8 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
+        // 광고 기록 서버 동기화
+        await syncAdRecords(result.user?.id);
         router.back();
       } else {
         Alert.alert(t('settings.error'), result.error || t('auth.errorLoginFailed'));
@@ -271,6 +291,8 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
+        // 광고 기록 서버 동기화
+        await syncAdRecords(result.user?.id);
         router.back();
       } else {
         Alert.alert(t('settings.error'), result.error || t('auth.errorLoginFailed'));

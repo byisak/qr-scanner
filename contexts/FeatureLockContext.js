@@ -1,6 +1,7 @@
 // contexts/FeatureLockContext.js - 기능 잠금 상태 관리
 import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Alert, Platform } from 'react-native';
 import {
   RewardedAd,
@@ -10,12 +11,18 @@ import {
 } from 'react-native-google-mobile-ads';
 import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_TYPES, FREE_QR_STYLE_INDEX, DEV_MODE_UNLOCK_ALL } from '../config/lockedFeatures';
 import { useLanguage } from './LanguageContext';
+import config from '../config/config';
 
 const FeatureLockContext = createContext();
 
 const UNLOCKED_FEATURES_KEY = 'unlockedFeatures';
 const AD_WATCH_COUNT_KEY = 'adWatchCounts';
+const BANNER_SETTINGS_KEY = 'bannerSettings';
 const DEV_MODE_KEY = 'devModeEnabled';
+const LAST_SYNC_KEY = 'lastAdRecordSync';
+
+// 서버 API URL
+const API_URL = `${config.serverUrl}/api/users`;
 
 // 리워드 광고 ID
 const REWARDED_AD_UNIT_ID = __DEV__
@@ -29,11 +36,14 @@ export const FeatureLockProvider = ({ children }) => {
   const { t } = useLanguage();
   const [unlockedFeatures, setUnlockedFeatures] = useState([]);
   const [adWatchCounts, setAdWatchCounts] = useState({}); // { featureId: count }
+  const [bannerSettings, setBannerSettings] = useState({}); // { screenId: boolean } 화면별 배너 광고 표시 설정
   // 개발 모드 비활성화 (프로덕션) - 배포 시 항상 false 유지
   const [devModeEnabled, setDevModeEnabled] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const _devModeDisabledForProduction = true; // 배포용 플래그
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
   // 광고 관련 상태
   const [isAdLoaded, setIsAdLoaded] = useState(false);
@@ -52,9 +62,11 @@ export const FeatureLockProvider = ({ children }) => {
 
   const loadSettings = async () => {
     try {
-      const [saved, adCounts, devMode] = await Promise.all([
+      const [saved, adCounts, bannerSettingsData, lastSync, devMode] = await Promise.all([
         AsyncStorage.getItem(UNLOCKED_FEATURES_KEY),
         AsyncStorage.getItem(AD_WATCH_COUNT_KEY),
+        AsyncStorage.getItem(BANNER_SETTINGS_KEY),
+        AsyncStorage.getItem(LAST_SYNC_KEY),
         AsyncStorage.getItem(DEV_MODE_KEY),
       ]);
 
@@ -64,6 +76,12 @@ export const FeatureLockProvider = ({ children }) => {
       }
       if (adCounts) {
         setAdWatchCounts(JSON.parse(adCounts));
+      }
+      if (bannerSettingsData) {
+        setBannerSettings(JSON.parse(bannerSettingsData));
+      }
+      if (lastSync) {
+        setLastSyncedAt(lastSync);
       }
 
       // 배포용: devMode 로딩 비활성화 - 개발자 모드 우회 방지
@@ -355,14 +373,153 @@ export const FeatureLockProvider = ({ children }) => {
     try {
       setUnlockedFeatures([]);
       setAdWatchCounts({});
+      setBannerSettings({});
       await Promise.all([
         AsyncStorage.setItem(UNLOCKED_FEATURES_KEY, JSON.stringify([])),
         AsyncStorage.setItem(AD_WATCH_COUNT_KEY, JSON.stringify({})),
+        AsyncStorage.setItem(BANNER_SETTINGS_KEY, JSON.stringify({})),
       ]);
       return true;
     } catch (error) {
       console.error('Reset locks error:', error);
       return false;
+    }
+  }, []);
+
+  // ============================================================
+  // 서버 동기화 기능 (bannerSettings 포함)
+  // ============================================================
+
+  // 배너 광고 표시 여부 확인
+  const isBannerEnabled = useCallback((screenId) => {
+    // bannerSettings에 설정이 없으면 기본값 true (광고 표시)
+    return bannerSettings[screenId] !== false;
+  }, [bannerSettings]);
+
+  // 배너 설정 업데이트 (로컬)
+  const updateBannerSetting = useCallback(async (screenId, enabled) => {
+    try {
+      const newSettings = { ...bannerSettings, [screenId]: enabled };
+      setBannerSettings(newSettings);
+      await AsyncStorage.setItem(BANNER_SETTINGS_KEY, JSON.stringify(newSettings));
+      return true;
+    } catch (error) {
+      console.error('Update banner setting error:', error);
+      return false;
+    }
+  }, [bannerSettings]);
+
+  // 서버와 양방향 동기화
+  const syncWithServer = useCallback(async (userId, accessToken) => {
+    if (!userId || !accessToken) {
+      console.log('[AdSync] No userId or accessToken, skip sync');
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    if (isSyncing) {
+      console.log('[AdSync] Already syncing, skip');
+      return { success: false, error: 'Already syncing' };
+    }
+
+    setIsSyncing(true);
+    console.log('[AdSync] Starting server sync...');
+
+    try {
+      const response = await fetch(`${API_URL}/${userId}/ad-records/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          unlockedFeatures,
+          adWatchCounts,
+          bannerSettings,
+        }),
+      });
+
+      console.log('[AdSync] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[AdSync] Server error:', errorText);
+        return { success: false, error: 'Server error' };
+      }
+
+      const data = await response.json();
+      console.log('[AdSync] Response data:', JSON.stringify(data, null, 2));
+
+      if (data.success && data.data) {
+        const serverData = data.data;
+
+        // 서버에서 받은 데이터로 로컬 업데이트
+        const mergedUnlocked = serverData.unlockedFeatures || [];
+        const mergedCounts = serverData.adWatchCounts || {};
+        const mergedBannerSettings = serverData.bannerSettings || {};
+        const syncTime = serverData.lastSyncedAt || new Date().toISOString();
+
+        setUnlockedFeatures(mergedUnlocked);
+        setAdWatchCounts(mergedCounts);
+        setBannerSettings(mergedBannerSettings);
+        setLastSyncedAt(syncTime);
+
+        // AsyncStorage에 저장
+        await Promise.all([
+          AsyncStorage.setItem(UNLOCKED_FEATURES_KEY, JSON.stringify(mergedUnlocked)),
+          AsyncStorage.setItem(AD_WATCH_COUNT_KEY, JSON.stringify(mergedCounts)),
+          AsyncStorage.setItem(BANNER_SETTINGS_KEY, JSON.stringify(mergedBannerSettings)),
+          AsyncStorage.setItem(LAST_SYNC_KEY, syncTime),
+        ]);
+
+        console.log('[AdSync] Sync completed successfully');
+        console.log('[AdSync] Merged features:', mergedUnlocked.length);
+        console.log('[AdSync] Merged counts:', Object.keys(mergedCounts).length);
+        console.log('[AdSync] Banner settings:', Object.keys(mergedBannerSettings).length);
+
+        return {
+          success: true,
+          data: serverData,
+          merged: data.merged,
+        };
+      }
+
+      return { success: false, error: 'Invalid response' };
+    } catch (error) {
+      console.error('[AdSync] Sync error:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [unlockedFeatures, adWatchCounts, bannerSettings, isSyncing]);
+
+  // 서버에서 광고 기록 가져오기 (읽기 전용)
+  const fetchFromServer = useCallback(async (userId, accessToken) => {
+    if (!userId || !accessToken) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/${userId}/ad-records`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        return { success: false, error: 'Server error' };
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        return { success: true, data: data.data };
+      }
+
+      return { success: false, error: 'Invalid response' };
+    } catch (error) {
+      console.error('[AdSync] Fetch error:', error);
+      return { success: false, error: error.message };
     }
   }, []);
 
@@ -737,6 +894,15 @@ export const FeatureLockProvider = ({ children }) => {
     isAdLoaded,
     isAdLoading,
     loadRewardedAd,
+    // 배너 광고 설정
+    bannerSettings,
+    isBannerEnabled,
+    updateBannerSetting,
+    // 서버 동기화
+    syncWithServer,
+    fetchFromServer,
+    isSyncing,
+    lastSyncedAt,
   };
 
   return (
