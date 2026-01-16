@@ -143,27 +143,27 @@ const getWebViewHTML = (zxingScript) => `
         'PDF417',
       ];
 
-      // 1단계: 기본 분석 (tryHarder 활성화로 인식률 유지)
+      // 1단계: 기본 분석 (tryHarder, tryDownscale 활성화로 인식률 향상)
       var fastOptions = {
         tryHarder: true,
         tryRotate: false,
         tryInvert: false,
-        tryDownscale: false,
+        tryDownscale: true,
         maxNumberOfSymbols: 20,
         formats: formats,
       };
 
-      sendLog('Phase 1: Standard analysis...');
+      sendLog('Phase 1: Standard analysis with downscale...');
       var barcodes = await ZXingWASM.readBarcodes(blob, fastOptions);
 
       // 결과가 없으면 2단계: 회전/반전 시도
       if (barcodes.length === 0) {
-        sendLog('Phase 2: Trying rotation and inversion...');
+        sendLog('Phase 2: Trying rotation, inversion and downscale...');
         var deepOptions = {
           tryHarder: true,
           tryRotate: true,
           tryInvert: true,
-          tryDownscale: false,
+          tryDownscale: true,
           maxNumberOfSymbols: 20,
           formats: formats,
         };
