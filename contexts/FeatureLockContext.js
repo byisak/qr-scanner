@@ -446,6 +446,7 @@ export const FeatureLockProvider = ({ children }) => {
           unlockedFeatures,
           adWatchCounts,
           bannerSettings,
+          lastSyncedAt,  // 관리자 변경 감지용
         }),
       });
 
