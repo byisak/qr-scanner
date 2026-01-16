@@ -28,6 +28,7 @@ const API_URL = `${config.serverUrl}/api/users`;
 const AUTH_STORAGE_KEY = 'auth_data';
 const TOKEN_STORAGE_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const DEVICE_ID_KEY = 'device_id';
 
 // 자동 동기화 간격 (3분)
 const AUTO_SYNC_INTERVAL = 3 * 60 * 1000;
@@ -563,7 +564,10 @@ export const FeatureLockProvider = ({ children }) => {
   // 토큰 갱신 함수
   const refreshAccessToken = useCallback(async () => {
     try {
-      const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+      const [refreshToken, deviceId] = await Promise.all([
+        SecureStore.getItemAsync(REFRESH_TOKEN_KEY),
+        SecureStore.getItemAsync(DEVICE_ID_KEY),
+      ]);
       if (!refreshToken) {
         console.log('[AdSync] No refresh token available');
         return null;
@@ -573,11 +577,20 @@ export const FeatureLockProvider = ({ children }) => {
       const response = await fetch(`${config.serverUrl}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ refreshToken, deviceId: deviceId || 'mobile' }),
       });
 
       if (!response.ok) {
         console.log('[AdSync] Token refresh failed:', response.status);
+        // 리프레시 토큰도 만료/무효 → 인증 정보 삭제 (다음 앱 재시작 시 로그아웃 상태)
+        console.log('[AdSync] Clearing expired auth data...');
+        try {
+          await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
+          await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
+          await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+        } catch (clearError) {
+          console.error('[AdSync] Failed to clear auth data:', clearError);
+        }
         return null;
       }
 
@@ -629,7 +642,13 @@ export const FeatureLockProvider = ({ children }) => {
           result = await syncWithServer(user.id, newToken);
         } else {
           console.log('[AdSync] Token refresh failed, sync aborted');
-          return { success: false, error: 'Token refresh failed' };
+          // 사용자에게 세션 만료 알림 (앱 재시작 필요)
+          Alert.alert(
+            t('auth.sessionExpired') || '세션 만료',
+            t('auth.sessionExpiredMessage') || '로그인이 만료되었습니다. 앱을 재시작하거나 다시 로그인해주세요.',
+            [{ text: t('common.confirm') || '확인' }]
+          );
+          return { success: false, error: 'Token refresh failed', sessionExpired: true };
         }
       }
 

@@ -10,6 +10,7 @@ const AuthContext = createContext();
 const AUTH_STORAGE_KEY = 'auth_data';
 const TOKEN_STORAGE_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
+const DEVICE_ID_KEY = 'device_id';
 
 // API 기본 URL
 const API_URL = `${config.serverUrl}/api/auth`;
@@ -47,6 +48,31 @@ const DEV_ACCOUNTS = [
   },
 ];
 // ============================================================
+
+// 기기 ID 생성 (UUID v4)
+const generateDeviceId = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+// 기기 ID 가져오기 (없으면 생성)
+const getOrCreateDeviceId = async () => {
+  try {
+    let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+    if (!deviceId) {
+      deviceId = `mobile-${generateDeviceId()}`;
+      await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
+      console.log('[Auth] 새 기기 ID 생성:', deviceId);
+    }
+    return deviceId;
+  } catch (error) {
+    console.error('[Auth] 기기 ID 생성 오류:', error);
+    return `mobile-${generateDeviceId()}`; // fallback
+  }
+};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -112,12 +138,14 @@ export const AuthProvider = ({ children }) => {
       const token = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
       if (token) {
         try {
+          const deviceId = await getOrCreateDeviceId();
           await fetch(`${API_URL}/logout`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
+            body: JSON.stringify({ deviceId }),
           });
         } catch (e) {
           // 서버 로그아웃 실패해도 로컬은 정리
@@ -149,12 +177,13 @@ export const AuthProvider = ({ children }) => {
     console.log('[Auth] Name:', name);
 
     try {
+      const deviceId = await getOrCreateDeviceId();
       const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, deviceId }),
       });
 
       console.log('[Auth] 응답 상태:', response.status, response.statusText);
@@ -216,12 +245,13 @@ export const AuthProvider = ({ children }) => {
     console.log('[Auth] URL:', requestUrl);
 
     try {
+      const deviceId = await getOrCreateDeviceId();
       const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, deviceId }),
       });
 
       console.log('[Auth] 응답 상태:', response.status, response.statusText);
@@ -260,6 +290,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'No authorization code or access token provided' };
       }
 
+      const deviceId = await getOrCreateDeviceId();
       const response = await fetch(`${API_URL}/social/kakao`, {
         method: 'POST',
         headers: {
@@ -268,6 +299,7 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({
           ...(authorizationCode && { code: authorizationCode }),
           ...(accessToken && { accessToken }),
+          deviceId,
         }),
       });
 
@@ -299,12 +331,13 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'No authorization code provided' };
       }
 
+      const deviceId = await getOrCreateDeviceId();
       const response = await fetch(`${API_URL}/social/naver`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code: authorizationCode }),
+        body: JSON.stringify({ code: authorizationCode, deviceId }),
       });
 
       const data = await response.json();
@@ -335,6 +368,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'No access token or ID token provided' };
       }
 
+      const deviceId = await getOrCreateDeviceId();
       const response = await fetch(`${API_URL}/social/google`, {
         method: 'POST',
         headers: {
@@ -343,6 +377,7 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({
           ...(accessToken && { accessToken }),
           ...(idToken && { idToken }),
+          deviceId,
         }),
       });
 
@@ -374,6 +409,7 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'No ID token provided' };
       }
 
+      const deviceId = await getOrCreateDeviceId();
       const response = await fetch(`${API_URL}/social/apple`, {
         method: 'POST',
         headers: {
@@ -383,6 +419,7 @@ export const AuthProvider = ({ children }) => {
           idToken,
           ...(authorizationCode && { authorizationCode }),
           ...(appleUser && { appleUser }),
+          deviceId,
         }),
       });
 
@@ -604,13 +641,14 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'No refresh token' };
       }
 
+      const deviceId = await getOrCreateDeviceId();
       console.log('🔄 refreshAccessToken: API 호출 시작...');
       const response = await fetch(`${API_URL}/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify({ refreshToken, deviceId }),
       });
 
       const data = await response.json();
