@@ -30,18 +30,16 @@ export default function TabLayout() {
   const { isDark } = useTheme();
   const { autoSync } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
-  const lastSyncedTabRef = useRef<string | null>(null);
+  const lastSyncTimeRef = useRef<number>(0);
 
   return (
     <Tabs
       screenListeners={{
-        focus: (e) => {
-          // 탭 이름 추출 (예: "history-abc123" -> "history")
-          const currentTab = e.target?.split('-')[0] || null;
-
-          // 실제 탭이 변경되었을 때만 동기화 (같은 탭에서 반복 호출 방지)
-          if (currentTab && currentTab !== lastSyncedTabRef.current) {
-            lastSyncedTabRef.current = currentTab;
+        focus: () => {
+          const now = Date.now();
+          // 2초 이내 중복 호출 방지
+          if (now - lastSyncTimeRef.current > 2000) {
+            lastSyncTimeRef.current = now;
             if (autoSync) {
               autoSync(true);
             }
