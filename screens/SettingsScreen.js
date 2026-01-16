@@ -35,7 +35,7 @@ export default function SettingsScreen() {
   const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
   const { user, isLoggedIn } = useAuth();
-  const { isLocked, showUnlockAlert, devModeEnabled, toggleDevMode, resetAllLocks } = useFeatureLock();
+  const { isLocked, showUnlockAlert, devModeEnabled, toggleDevMode, resetAllLocks, autoSync } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
@@ -331,11 +331,20 @@ export default function SettingsScreen() {
 
           // 캐시 크기 계산
           calculateCacheSize();
+
+          // 서버와 광고 기록 자동 동기화 (로그인된 경우)
+          if (autoSync) {
+            autoSync(false).then((result) => {
+              if (result.success) {
+                console.log('[Settings] Auto sync completed on focus');
+              }
+            });
+          }
         } catch (error) {
           console.error('Load settings error:', error);
         }
       })();
-    }, [calculateCacheSize])
+    }, [calculateCacheSize, autoSync])
   );
 
   useEffect(() => {

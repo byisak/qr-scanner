@@ -24,6 +24,13 @@ const LAST_SYNC_KEY = 'lastAdRecordSync';
 // 서버 API URL
 const API_URL = `${config.serverUrl}/api/users`;
 
+// SecureStore 키 (AuthContext와 동일)
+const AUTH_STORAGE_KEY = 'auth_user';
+const TOKEN_STORAGE_KEY = 'auth_token';
+
+// 자동 동기화 최소 간격 (5분)
+const AUTO_SYNC_MIN_INTERVAL = 5 * 60 * 1000;
+
 // 리워드 광고 ID
 const REWARDED_AD_UNIT_ID = __DEV__
   ? TestIds.REWARDED
@@ -59,6 +66,10 @@ export const FeatureLockProvider = ({ children }) => {
   useEffect(() => {
     loadSettings();
   }, []);
+
+  // 앱 시작 시 자동 동기화용 ref
+  const hasAutoSyncedRef = useRef(false);
+  const autoSyncRef = useRef(null);
 
   const loadSettings = async () => {
     try {
@@ -523,6 +534,66 @@ export const FeatureLockProvider = ({ children }) => {
     }
   }, []);
 
+  // 자동 동기화 (SecureStore에서 인증 정보 가져와서 동기화)
+  const autoSync = useCallback(async (force = false) => {
+    try {
+      // 마지막 동기화 시간 확인 (강제 동기화가 아닌 경우)
+      if (!force && lastSyncedAt) {
+        const lastSyncTime = new Date(lastSyncedAt).getTime();
+        const now = Date.now();
+        if (now - lastSyncTime < AUTO_SYNC_MIN_INTERVAL) {
+          console.log('[AdSync] Skip auto sync - too soon (last sync:', lastSyncedAt, ')');
+          return { success: false, error: 'Too soon since last sync' };
+        }
+      }
+
+      // SecureStore에서 인증 정보 가져오기
+      const [authData, accessToken] = await Promise.all([
+        SecureStore.getItemAsync(AUTH_STORAGE_KEY),
+        SecureStore.getItemAsync(TOKEN_STORAGE_KEY),
+      ]);
+
+      if (!authData || !accessToken) {
+        console.log('[AdSync] Not logged in, skip auto sync');
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      const user = JSON.parse(authData);
+      if (!user?.id) {
+        console.log('[AdSync] No user ID, skip auto sync');
+        return { success: false, error: 'No user ID' };
+      }
+
+      console.log('[AdSync] Starting auto sync for user:', user.id);
+      return await syncWithServer(user.id, accessToken);
+    } catch (error) {
+      console.error('[AdSync] Auto sync error:', error);
+      return { success: false, error: error.message };
+    }
+  }, [lastSyncedAt, syncWithServer]);
+
+  // autoSync ref 업데이트
+  useEffect(() => {
+    autoSyncRef.current = autoSync;
+  }, [autoSync]);
+
+  // 앱 시작 시 자동 동기화 (로딩 완료 후)
+  useEffect(() => {
+    if (!isLoading && !hasAutoSyncedRef.current) {
+      hasAutoSyncedRef.current = true;
+      // 약간 지연 후 동기화 (UI 렌더링 후)
+      setTimeout(() => {
+        if (autoSyncRef.current) {
+          autoSyncRef.current(false).then((result) => {
+            if (result.success) {
+              console.log('[AdSync] Initial auto sync completed');
+            }
+          });
+        }
+      }, 2000);
+    }
+  }, [isLoading]);
+
   // 개별 기능 잠금/해제 토글 (개발자 옵션용)
   const toggleFeatureLock = useCallback(async (featureId, unlocked) => {
     try {
@@ -901,6 +972,7 @@ export const FeatureLockProvider = ({ children }) => {
     // 서버 동기화
     syncWithServer,
     fetchFromServer,
+    autoSync,
     isSyncing,
     lastSyncedAt,
   };
