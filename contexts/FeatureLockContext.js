@@ -360,6 +360,16 @@ export const FeatureLockProvider = ({ children }) => {
       const newUnlocked = [...unlockedFeatures, featureId];
       setUnlockedFeatures(newUnlocked);
       await AsyncStorage.setItem(UNLOCKED_FEATURES_KEY, JSON.stringify(newUnlocked));
+
+      // 서버에 즉시 동기화 (로그인된 경우)
+      if (autoSyncRef.current) {
+        autoSyncRef.current().then((result) => {
+          if (result.success) {
+            console.log('[AdSync] Feature unlocked and synced:', featureId);
+          }
+        });
+      }
+
       return true;
     } catch (error) {
       console.error('Unlock feature error:', error);
@@ -373,6 +383,16 @@ export const FeatureLockProvider = ({ children }) => {
       const newUnlocked = [...new Set([...unlockedFeatures, ...featureIds])];
       setUnlockedFeatures(newUnlocked);
       await AsyncStorage.setItem(UNLOCKED_FEATURES_KEY, JSON.stringify(newUnlocked));
+
+      // 서버에 즉시 동기화 (로그인된 경우)
+      if (autoSyncRef.current) {
+        autoSyncRef.current().then((result) => {
+          if (result.success) {
+            console.log('[AdSync] Features unlocked and synced:', featureIds);
+          }
+        });
+      }
+
       return true;
     } catch (error) {
       console.error('Unlock features error:', error);

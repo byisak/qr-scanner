@@ -3,6 +3,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import config from '../config/config';
+import { useFeatureLock } from './FeatureLockContext';
 
 const AuthContext = createContext();
 
@@ -51,6 +52,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { autoSync } = useFeatureLock();
 
   // 저장된 인증 정보 로드
   useEffect(() => {
@@ -84,6 +86,18 @@ export const AuthProvider = ({ children }) => {
       }
       setUser(userData);
       setIsLoggedIn(true);
+
+      // 로그인 성공 후 광고 기록 동기화 (로컬 데이터를 서버에 업로드)
+      if (autoSync) {
+        setTimeout(() => {
+          autoSync().then((result) => {
+            if (result.success) {
+              console.log('[Auth] Ad records synced after login');
+            }
+          });
+        }, 1000); // 1초 후 동기화 (상태 안정화 후)
+      }
+
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
