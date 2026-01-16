@@ -247,9 +247,7 @@ export const FeatureLockProvider = ({ children }) => {
     // DEV_MODE_UNLOCK_ALL은 배포 시 false로 설정해야 함
     if (DEV_MODE_UNLOCK_ALL || devModeEnabled) return false;
     if (!LOCKED_FEATURES[featureId]) return false;
-    const isUnlocked = unlockedFeatures.includes(featureId);
-    console.log(`[FeatureLock] isLocked(${featureId}): unlocked=${isUnlocked}, unlockedFeatures:`, unlockedFeatures);
-    return !isUnlocked;
+    return !unlockedFeatures.includes(featureId);
   }, [unlockedFeatures, devModeEnabled]);
 
   // 바코드 타입이 잠겨있는지 확인 (bcid로 개별 체크)

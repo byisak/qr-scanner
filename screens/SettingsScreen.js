@@ -332,9 +332,9 @@ export default function SettingsScreen() {
           // 캐시 크기 계산
           calculateCacheSize();
 
-          // 서버와 광고 기록 자동 동기화 (로그인된 경우)
+          // 서버와 광고 기록 자동 동기화 (로그인된 경우) - 설정 화면에서는 강제 동기화
           if (autoSync) {
-            autoSync(false).then((result) => {
+            autoSync(true).then((result) => {
               if (result.success) {
                 console.log('[Settings] Auto sync completed on focus');
               }
