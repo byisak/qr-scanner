@@ -36,13 +36,18 @@ export default function TabLayout() {
     <Tabs
       screenListeners={{
         focus: () => {
+          console.log('[TabLayout] focus event, autoSync exists:', !!autoSync);
           const now = Date.now();
+          const elapsed = now - lastSyncTimeRef.current;
           // 2초 이내 중복 호출 방지
-          if (now - lastSyncTimeRef.current > 2000) {
+          if (elapsed > 2000) {
+            console.log('[TabLayout] calling autoSync, elapsed:', elapsed);
             lastSyncTimeRef.current = now;
             if (autoSync) {
               autoSync(true);
             }
+          } else {
+            console.log('[TabLayout] skipped, elapsed:', elapsed);
           }
         },
       }}
