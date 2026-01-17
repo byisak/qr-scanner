@@ -19,7 +19,7 @@ import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parseLotteryQR, getLottoNumberColor } from '../utils/lotteryParser';
 import { checkLotteryResult, formatPrize, getWinMessage } from '../utils/lotteryChecker';
-import { isDrawCompleted, getDrawDateForRound } from '../utils/lotteryApi';
+import { getLottoWinNumbers, getPensionWinNumbers } from '../utils/lotteryApi';
 
 export default function LotteryResultScreen() {
   const router = useRouter();
@@ -56,15 +56,22 @@ export default function LotteryResultScreen() {
 
       setLotteryData(parsed);
 
-      // 추첨 완료 여부 확인
-      const drawCompleted = isDrawCompleted(parsed.round, parsed.type);
-      if (!drawCompleted) {
-        // 해당 회차의 정확한 추첨일 계산
-        const drawDate = getDrawDateForRound(parsed.round, parsed.type);
-        setNextDrawTime(drawDate);
+      // API에서 당첨번호 조회 시도 (drwNoDate 포함)
+      const winData = parsed.type === 'lotto'
+        ? await getLottoWinNumbers(parsed.round)
+        : await getPensionWinNumbers(parsed.round);
+
+      // API에서 데이터를 가져오지 못한 경우 (추첨 전)
+      if (!winData) {
         setIsBeforeDraw(true);
+        setNextDrawTime(null); // API에서 추첨일을 가져올 수 없음
         setLoading(false);
         return;
+      }
+
+      // API에서 drwNoDate를 가져왔으면 사용
+      if (winData.drawDate) {
+        setNextDrawTime(new Date(winData.drawDate + 'T20:45:00+09:00'));
       }
 
       // 당첨 확인
@@ -296,9 +303,11 @@ export default function LotteryResultScreen() {
             <Text style={[styles.roundText, { color: colors.primary, fontFamily: fonts.bold }]}>
               {lotteryData.round}회
             </Text>
-            <Text style={[styles.drawDate, { color: colors.textSecondary }]}>
-              추첨 예정: {formatDate(nextDrawTime)}
-            </Text>
+            {nextDrawTime && (
+              <Text style={[styles.drawDate, { color: colors.textSecondary }]}>
+                추첨 예정: {formatDate(nextDrawTime)}
+              </Text>
+            )}
           </View>
 
           {/* 당첨 번호 - 추첨 전 */}
