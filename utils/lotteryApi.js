@@ -23,7 +23,24 @@ export async function getLottoWinNumbers(round) {
 
     // API 호출
     const response = await fetch(`${LOTTO_API_URL}&drwNo=${round}`);
-    const data = await response.json();
+
+    // 응답 상태 확인
+    if (!response.ok) {
+      console.warn(`Lotto API HTTP error: ${response.status}`);
+      return null;
+    }
+
+    // 응답 텍스트 먼저 확인
+    const text = await response.text();
+
+    // JSON 파싱 시도
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (parseError) {
+      console.warn('Lotto API returned non-JSON response');
+      return null;
+    }
 
     if (data.returnValue !== 'success') {
       return null;
