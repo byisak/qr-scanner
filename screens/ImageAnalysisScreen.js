@@ -245,8 +245,8 @@ function ImageAnalysisScreen() {
   const [isZoomed, setIsZoomed] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
 
-  // 재분석 시 크롭 영역 정보 (결과 좌표 변환용)
-  const [cropInfo, setCropInfo] = useState(null);
+  // 재분석 시 크롭 영역 정보 (결과 좌표 변환용) - useRef로 클로저 문제 방지
+  const cropInfoRef = useRef(null);
 
   // 줌/팬 상태 업데이트 함수 (JS thread에서 실행)
   const updateZoomState = useCallback((zoomed) => {
@@ -390,7 +390,7 @@ function ImageAnalysisScreen() {
       console.log('Sending image to WebView for analysis...');
 
       // 초기 분석이므로 cropInfo 초기화
-      setCropInfo(null);
+      cropInfoRef.current = null;
 
       // WebView에 base64 이미지 전송
       const message = JSON.stringify({ type: 'analyze', base64: base64Image });
@@ -420,6 +420,7 @@ function ImageAnalysisScreen() {
       } else if (data.type === 'results') {
         clearTimeoutRef();
         let results = data.data || [];
+        const cropInfo = cropInfoRef.current;
 
         // 재분석인 경우 (cropInfo 존재), 좌표를 원본 이미지 기준으로 변환
         if (cropInfo && results.length > 0) {
@@ -457,7 +458,7 @@ function ImageAnalysisScreen() {
           setIsZoomed(false);
 
           // cropInfo 초기화
-          setCropInfo(null);
+          cropInfoRef.current = null;
         }
 
         setResults(results);
@@ -469,12 +470,12 @@ function ImageAnalysisScreen() {
         setError(t('imageAnalysis.analysisError'));
         setIsLoading(false);
         setLoadingMessage('');
-        setCropInfo(null);
+        cropInfoRef.current = null;
       }
     } catch (err) {
       console.error('Message parse error:', err);
     }
-  }, [t, clearTimeoutRef, cropInfo, scale, translateX, translateY]);
+  }, [t, clearTimeoutRef, scale, translateX, translateY]);
 
   // WebView 에러 처리
   const handleWebViewError = useCallback((syntheticEvent) => {
@@ -604,12 +605,12 @@ function ImageAnalysisScreen() {
       console.log('[Reanalyze] Crop region (original):', { cropX, cropY, cropWidth, cropHeight });
 
       // 크롭 정보 저장 (결과 좌표 변환용)
-      setCropInfo({
+      cropInfoRef.current = {
         offsetX: cropX,
         offsetY: cropY,
         width: cropWidth,
         height: cropHeight,
-      });
+      };
 
       // 이미지 크롭
       const croppedImage = await ImageManipulator.manipulateAsync(
@@ -650,7 +651,7 @@ function ImageAnalysisScreen() {
       console.error('Reanalyze error:', err);
       setIsReanalyzing(false);
       setIsLoading(false);
-      setCropInfo(null);
+      cropInfoRef.current = null;
       Alert.alert(t('common.error'), t('imageAnalysis.analysisError'));
     }
   };
@@ -661,7 +662,7 @@ function ImageAnalysisScreen() {
     translateX.value = withSpring(0);
     translateY.value = withSpring(0);
     setIsZoomed(false);
-    setCropInfo(null);
+    cropInfoRef.current = null;
   };
 
   // 결과 항목 복사
