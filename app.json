@@ -14,7 +14,7 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.cubion.qrscanner",
       "usesIcloudStorage": true,
       "googleServicesFile": "./GoogleService-Info.plist",
