@@ -28,6 +28,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 
 // 분석 타임아웃 (15초)
 const ANALYSIS_TIMEOUT = 15000;
@@ -143,27 +145,27 @@ const getWebViewHTML = (zxingScript) => `
         'PDF417',
       ];
 
-      // 1단계: 기본 분석 (tryHarder 활성화로 인식률 유지)
+      // 1단계: 기본 분석 (tryHarder, tryDownscale 활성화로 인식률 향상)
       var fastOptions = {
         tryHarder: true,
         tryRotate: false,
         tryInvert: false,
-        tryDownscale: false,
+        tryDownscale: true,
         maxNumberOfSymbols: 20,
         formats: formats,
       };
 
-      sendLog('Phase 1: Standard analysis...');
+      sendLog('Phase 1: Standard analysis with downscale...');
       var barcodes = await ZXingWASM.readBarcodes(blob, fastOptions);
 
       // 결과가 없으면 2단계: 회전/반전 시도
       if (barcodes.length === 0) {
-        sendLog('Phase 2: Trying rotation and inversion...');
+        sendLog('Phase 2: Trying rotation, inversion and downscale...');
         var deepOptions = {
           tryHarder: true,
           tryRotate: true,
           tryInvert: true,
-          tryDownscale: false,
+          tryDownscale: true,
           maxNumberOfSymbols: 20,
           formats: formats,
         };
@@ -232,6 +234,21 @@ function ImageAnalysisScreen() {
   const webViewRef = useRef(null);
   const timeoutRef = useRef(null);
   const analysisStartedRef = useRef(false);
+
+  // 핀치줌/팬 제스처 관련 상태
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
+
+  // 줌/팬 상태 업데이트 함수 (JS thread에서 실행)
+  const updateZoomState = useCallback((zoomed) => {
+    setIsZoomed(zoomed);
+  }, []);
 
   // zxing-wasm 라이브러리 로드 (오프라인 지원)
   useEffect(() => {
@@ -419,6 +436,156 @@ function ImageAnalysisScreen() {
     setError(t('imageAnalysis.analysisError'));
     setIsLoading(false);
   }, [t, clearTimeoutRef]);
+
+  // 핀치줌 제스처
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      savedScale.value = scale.value;
+    })
+    .onUpdate((event) => {
+      const newScale = savedScale.value * event.scale;
+      scale.value = Math.min(Math.max(newScale, 1), 5); // 1x ~ 5x
+    })
+    .onEnd(() => {
+      if (scale.value <= 1.1) {
+        scale.value = withSpring(1);
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+        runOnJS(updateZoomState)(false);
+      } else {
+        runOnJS(updateZoomState)(true);
+      }
+    });
+
+  // 팬(이동) 제스처
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      if (scale.value > 1) {
+        const maxTranslateX = (displaySize.width * (scale.value - 1)) / 2;
+        const maxTranslateY = (displaySize.height * (scale.value - 1)) / 2;
+        translateX.value = Math.min(Math.max(savedTranslateX.value + event.translationX, -maxTranslateX), maxTranslateX);
+        translateY.value = Math.min(Math.max(savedTranslateY.value + event.translationY, -maxTranslateY), maxTranslateY);
+      }
+    });
+
+  // 더블탭 제스처 (리셋)
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      scale.value = withSpring(1);
+      translateX.value = withSpring(0);
+      translateY.value = withSpring(0);
+      runOnJS(updateZoomState)(false);
+    });
+
+  // 제스처 조합
+  const composedGesture = Gesture.Simultaneous(
+    pinchGesture,
+    Gesture.Race(doubleTapGesture, panGesture)
+  );
+
+  // 애니메이션 스타일
+  const animatedImageStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+    };
+  });
+
+  // 줌 영역 크롭 후 재분석
+  const handleReanalyze = async () => {
+    if (!normalizedImageUri || !imageSize.width || !displaySize.width) return;
+
+    try {
+      setIsReanalyzing(true);
+      setIsLoading(true);
+      setLoadingMessage(t('imageAnalysis.cropping') || '이미지 크롭 중...');
+
+      // 현재 줌/팬 상태에서 보이는 영역 계산
+      const currentScale = scale.value;
+      const currentTranslateX = translateX.value;
+      const currentTranslateY = translateY.value;
+
+      // 화면에 보이는 영역을 원본 이미지 좌표로 변환
+      const scaleRatio = imageSize.width / displaySize.width;
+      const visibleWidth = displaySize.width / currentScale;
+      const visibleHeight = displaySize.height / currentScale;
+
+      // 중심점에서 translate 적용
+      const centerX = displaySize.width / 2 - currentTranslateX / currentScale;
+      const centerY = displaySize.height / 2 - currentTranslateY / currentScale;
+
+      // 크롭 영역 계산 (원본 이미지 좌표)
+      let cropX = (centerX - visibleWidth / 2) * scaleRatio;
+      let cropY = (centerY - visibleHeight / 2) * scaleRatio;
+      let cropWidth = visibleWidth * scaleRatio;
+      let cropHeight = visibleHeight * scaleRatio;
+
+      // 경계 체크
+      cropX = Math.max(0, Math.min(cropX, imageSize.width - 10));
+      cropY = Math.max(0, Math.min(cropY, imageSize.height - 10));
+      cropWidth = Math.min(cropWidth, imageSize.width - cropX);
+      cropHeight = Math.min(cropHeight, imageSize.height - cropY);
+
+      console.log('[Reanalyze] Crop region:', { cropX, cropY, cropWidth, cropHeight });
+
+      // 이미지 크롭
+      const croppedImage = await ImageManipulator.manipulateAsync(
+        normalizedImageUri,
+        [{ crop: { originX: cropX, originY: cropY, width: cropWidth, height: cropHeight } }],
+        { compress: 1.0, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      console.log('[Reanalyze] Cropped image:', croppedImage.width, 'x', croppedImage.height);
+
+      // 크롭된 이미지를 Base64로 변환
+      const croppedBase64 = await FileSystem.readAsStringAsync(croppedImage.uri, {
+        encoding: 'base64',
+      });
+
+      // 임시 파일 삭제
+      await FileSystem.deleteAsync(croppedImage.uri, { idempotent: true });
+
+      // WebView에 재분석 요청
+      setLoadingMessage(t('imageAnalysis.analyzing'));
+      analysisStartedRef.current = false; // 재분석을 위해 리셋
+
+      if (webViewRef.current) {
+        const message = JSON.stringify({ type: 'analyze', base64: croppedBase64 });
+        webViewRef.current.postMessage(message);
+        startTimeout();
+      }
+
+      setIsReanalyzing(false);
+
+      // 햅틱 피드백
+      if (Platform.OS === 'ios') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+    } catch (err) {
+      console.error('Reanalyze error:', err);
+      setIsReanalyzing(false);
+      setIsLoading(false);
+      Alert.alert(t('common.error'), t('imageAnalysis.analysisError'));
+    }
+  };
+
+  // 줌 리셋
+  const handleResetZoom = () => {
+    scale.value = withSpring(1);
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+    setIsZoomed(false);
+  };
 
   // 결과 항목 복사
   const handleCopyResult = async (text) => {
@@ -850,7 +1017,7 @@ function ImageAnalysisScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -870,53 +1037,103 @@ function ImageAnalysisScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!isZoomed}
       >
         {/* 이미지 영역 */}
         <View style={styles.imageSection}>
-          <View style={[styles.imageContainer, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }]}>
-            {(normalizedImageUri || imageUri) && (
-              <Image
-                source={{ uri: normalizedImageUri || imageUri }}
-                style={[styles.image, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }]}
-                resizeMode="contain"
-              />
-            )}
+          {/* 줌 상태 안내 */}
+          {isZoomed && (
+            <View style={styles.zoomHint}>
+              <Ionicons name="scan-outline" size={16} color="#fff" />
+              <Text style={styles.zoomHintText}>
+                {t('imageAnalysis.zoomHint') || '확대된 영역을 재분석하려면 버튼을 누르세요'}
+              </Text>
+            </View>
+          )}
 
-            {/* 바코드 박스 오버레이 */}
-            {!isLoading && results.map((result, index) => {
-              const displayCoords = convertToDisplayCoords(result.position);
-              if (!displayCoords) return null;
+          <GestureDetector gesture={composedGesture}>
+            <View style={[styles.imageContainer, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300, overflow: 'hidden' }]}>
+              {(normalizedImageUri || imageUri) && (
+                <Animated.Image
+                  source={{ uri: normalizedImageUri || imageUri }}
+                  style={[styles.image, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }, animatedImageStyle]}
+                  resizeMode="contain"
+                />
+              )}
 
-              const color = getBarcodeColor(index);
-              return (
-                <View
-                  key={result.id}
-                  style={[
-                    styles.barcodeBox,
-                    {
-                      left: displayCoords.left,
-                      top: displayCoords.top,
-                      width: displayCoords.width,
-                      height: displayCoords.height,
-                      borderColor: color,
-                    },
-                  ]}
-                >
-                  <View style={[styles.barcodeLabel, { backgroundColor: color }]}>
-                    <Text style={styles.barcodeLabelText}>{index + 1}</Text>
+              {/* 바코드 박스 오버레이 (줌되지 않은 상태에서만 표시) */}
+              {!isLoading && !isZoomed && results.map((result, index) => {
+                const displayCoords = convertToDisplayCoords(result.position);
+                if (!displayCoords) return null;
+
+                const color = getBarcodeColor(index);
+                return (
+                  <View
+                    key={result.id}
+                    style={[
+                      styles.barcodeBox,
+                      {
+                        left: displayCoords.left,
+                        top: displayCoords.top,
+                        width: displayCoords.width,
+                        height: displayCoords.height,
+                        borderColor: color,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.barcodeLabel, { backgroundColor: color }]}>
+                      <Text style={styles.barcodeLabelText}>{index + 1}</Text>
+                    </View>
                   </View>
-                </View>
-              );
-            })}
+                );
+              })}
 
-            {/* 로딩 오버레이 */}
-            {isLoading && (
-              <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="large" color="#007AFF" />
-                <Text style={styles.loadingText}>{loadingMessage || t('imageAnalysis.analyzing')}</Text>
-              </View>
-            )}
-          </View>
+              {/* 로딩 오버레이 */}
+              {isLoading && (
+                <View style={styles.loadingOverlay}>
+                  <ActivityIndicator size="large" color="#007AFF" />
+                  <Text style={styles.loadingText}>{loadingMessage || t('imageAnalysis.analyzing')}</Text>
+                </View>
+              )}
+            </View>
+          </GestureDetector>
+
+          {/* 줌 컨트롤 버튼 */}
+          {isZoomed && (
+            <View style={styles.zoomControls}>
+              <TouchableOpacity
+                style={[styles.zoomButton, styles.resetButton]}
+                onPress={handleResetZoom}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="contract-outline" size={20} color="#fff" />
+                <Text style={styles.zoomButtonText}>{t('imageAnalysis.resetZoom') || '리셋'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.zoomButton, styles.reanalyzeButton]}
+                onPress={handleReanalyze}
+                activeOpacity={0.7}
+                disabled={isLoading || isReanalyzing}
+              >
+                {isReanalyzing ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="scan" size={20} color="#fff" />
+                    <Text style={styles.zoomButtonText}>{t('imageAnalysis.reanalyze') || '재분석'}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* 줌 사용법 안내 (줌되지 않은 상태에서만 표시) */}
+          {!isZoomed && !isLoading && (
+            <Text style={[styles.gestureHint, { color: colors.textSecondary }]}>
+              {t('imageAnalysis.gestureHint') || '핀치로 확대, 더블탭으로 리셋'}
+            </Text>
+          )}
         </View>
 
         {/* 스캐너에서 감지된 바코드 섹션 (상단에 먼저 표시) */}
@@ -1148,7 +1365,7 @@ function ImageAnalysisScreen() {
           />
         </View>
       )}
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -1394,6 +1611,54 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  // 줌 관련 스타일
+  zoomHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  zoomHintText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
+  },
+  zoomControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 12,
+  },
+  zoomButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 6,
+  },
+  resetButton: {
+    backgroundColor: '#6c757d',
+  },
+  reanalyzeButton: {
+    backgroundColor: '#007AFF',
+  },
+  zoomButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  gestureHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });
 
