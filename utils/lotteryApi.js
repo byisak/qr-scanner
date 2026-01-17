@@ -126,6 +126,28 @@ export async function getCurrentRound(type = 'lotto') {
 }
 
 /**
+ * 특정 회차의 추첨일 계산
+ * @param {number} round - 회차
+ * @param {string} type - 복권 타입 ('lotto' 또는 'pension')
+ * @returns {Date} 추첨일시
+ */
+export function getDrawDateForRound(round, type = 'lotto') {
+  if (type === 'lotto') {
+    // 로또 1회차: 2002년 12월 7일 20:45
+    const firstDrawDate = new Date('2002-12-07T20:45:00+09:00');
+    const drawDate = new Date(firstDrawDate);
+    drawDate.setDate(firstDrawDate.getDate() + (round - 1) * 7);
+    return drawDate;
+  } else {
+    // 연금복권720+ 1회차: 2020년 4월 2일 19:05 (목요일)
+    const firstDrawDate = new Date('2020-04-02T19:05:00+09:00');
+    const drawDate = new Date(firstDrawDate);
+    drawDate.setDate(firstDrawDate.getDate() + (round - 1) * 7);
+    return drawDate;
+  }
+}
+
+/**
  * 추첨 완료 여부 확인
  */
 export function isDrawCompleted(round, type = 'lotto') {
@@ -283,6 +305,7 @@ export default {
   getLottoWinNumbers,
   getPensionWinNumbers,
   getCurrentRound,
+  getDrawDateForRound,
   isDrawCompleted,
   getNextDrawTime,
   LOTTO_PRIZE_INFO,

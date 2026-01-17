@@ -19,7 +19,7 @@ import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parseLotteryQR, getLottoNumberColor } from '../utils/lotteryParser';
 import { checkLotteryResult, formatPrize, getWinMessage } from '../utils/lotteryChecker';
-import { isDrawCompleted, getNextDrawTime } from '../utils/lotteryApi';
+import { isDrawCompleted, getDrawDateForRound } from '../utils/lotteryApi';
 
 export default function LotteryResultScreen() {
   const router = useRouter();
@@ -59,8 +59,9 @@ export default function LotteryResultScreen() {
       // 추첨 완료 여부 확인
       const drawCompleted = isDrawCompleted(parsed.round, parsed.type);
       if (!drawCompleted) {
-        const nextDraw = getNextDrawTime(parsed.type);
-        setNextDrawTime(nextDraw);
+        // 해당 회차의 정확한 추첨일 계산
+        const drawDate = getDrawDateForRound(parsed.round, parsed.type);
+        setNextDrawTime(drawDate);
         setIsBeforeDraw(true);
         setLoading(false);
         return;
