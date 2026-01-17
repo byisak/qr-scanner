@@ -30,6 +30,7 @@ import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
+import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
 
 // 분석 타임아웃 (15초)
 const ANALYSIS_TIMEOUT = 15000;
@@ -822,16 +823,84 @@ function ImageAnalysisScreen() {
     }
   };
 
+  // 복권 그룹 자동 생성
+  const ensureLotteryGroup = async (lotteryType) => {
+    const groupInfo = LOTTERY_GROUPS[lotteryType];
+    if (!groupInfo) return null;
+
+    try {
+      const groupsData = await AsyncStorage.getItem('scanGroups');
+      let groups = groupsData ? JSON.parse(groupsData) : [];
+
+      // 기본 그룹이 없으면 추가
+      const hasDefaultGroup = groups.some(g => g.id === 'default' && !g.isDeleted);
+      if (!hasDefaultGroup) {
+        const defaultGroup = {
+          id: 'default',
+          name: '기본 그룹',
+          createdAt: Date.now(),
+        };
+        groups.unshift(defaultGroup);
+      }
+
+      // 해당 복권 그룹이 이미 있는지 확인
+      const existingGroup = groups.find(g => g.id === groupInfo.id && !g.isDeleted);
+      if (existingGroup) {
+        if (!hasDefaultGroup) {
+          await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+        }
+        return groupInfo.id;
+      }
+
+      // 새 복권 그룹 생성
+      const newGroup = {
+        id: groupInfo.id,
+        name: groupInfo.name,
+        icon: groupInfo.icon,
+        color: groupInfo.color,
+        createdAt: Date.now(),
+        isLotteryGroup: true,
+      };
+
+      groups.push(newGroup);
+      await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
+
+      return groupInfo.id;
+    } catch (error) {
+      console.error('Failed to create lottery group:', error);
+      return null;
+    }
+  };
+
   // 개별 바코드를 기록에 저장
   const handleSaveToHistory = async (result, index) => {
     try {
+      // 복권 인식 설정 확인
+      const lotteryScanEnabled = await AsyncStorage.getItem('lotteryScanEnabled');
+      const isLotteryEnabled = lotteryScanEnabled === 'true';
+
+      // 복권 QR 코드인지 확인
+      let targetGroupId = 'default';
+      let lotteryData = null;
+
+      if (isLotteryEnabled && isLotteryQR(result.text)) {
+        lotteryData = parseLotteryQR(result.text);
+        if (lotteryData) {
+          // 복권 그룹 생성/확인
+          const lotteryGroupId = await ensureLotteryGroup(lotteryData.type);
+          if (lotteryGroupId) {
+            targetGroupId = lotteryGroupId;
+          }
+        }
+      }
+
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      let historyByGroup = historyData ? JSON.parse(historyData) : {};
 
-      // 기본 그룹에 저장
-      if (!historyByGroup.default) {
-        historyByGroup.default = [];
+      // 대상 그룹 초기화
+      if (!historyByGroup[targetGroupId]) {
+        historyByGroup[targetGroupId] = [];
       }
 
       // 바코드 타입 정규화
@@ -846,13 +915,14 @@ function ImageAnalysisScreen() {
         type: normalizedType,
         ecLevel: null,
         count: 1,
+        ...(lotteryData && { lotteryData }), // 복권 데이터 포함
       };
 
-      historyByGroup.default.unshift(historyItem);
+      historyByGroup[targetGroupId].unshift(historyItem);
 
       // 최대 1000개까지만 저장
-      if (historyByGroup.default.length > 1000) {
-        historyByGroup.default = historyByGroup.default.slice(0, 1000);
+      if (historyByGroup[targetGroupId].length > 1000) {
+        historyByGroup[targetGroupId] = historyByGroup[targetGroupId].slice(0, 1000);
       }
 
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
@@ -880,18 +950,45 @@ function ImageAnalysisScreen() {
     try {
       setIsSavingHistory(true);
 
+      // 복권 인식 설정 확인
+      const lotteryScanEnabled = await AsyncStorage.getItem('lotteryScanEnabled');
+      const isLotteryEnabled = lotteryScanEnabled === 'true';
+
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      let historyByGroup = historyData ? JSON.parse(historyData) : {};
 
+      // 기본 그룹 초기화
       if (!historyByGroup.default) {
         historyByGroup.default = [];
       }
 
       let successCount = 0;
+      let lotteryCount = 0;
 
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
+
+        // 복권 QR 코드인지 확인
+        let targetGroupId = 'default';
+        let lotteryData = null;
+
+        if (isLotteryEnabled && isLotteryQR(result.text)) {
+          lotteryData = parseLotteryQR(result.text);
+          if (lotteryData) {
+            // 복권 그룹 생성/확인
+            const lotteryGroupId = await ensureLotteryGroup(lotteryData.type);
+            if (lotteryGroupId) {
+              targetGroupId = lotteryGroupId;
+              lotteryCount++;
+            }
+          }
+        }
+
+        // 대상 그룹 초기화
+        if (!historyByGroup[targetGroupId]) {
+          historyByGroup[targetGroupId] = [];
+        }
 
         // 바코드 타입 정규화
         const normalizedType = result.format.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -905,15 +1002,18 @@ function ImageAnalysisScreen() {
           type: normalizedType,
           ecLevel: null,
           count: 1,
+          ...(lotteryData && { lotteryData }), // 복권 데이터 포함
         };
 
-        historyByGroup.default.unshift(historyItem);
+        historyByGroup[targetGroupId].unshift(historyItem);
         successCount++;
       }
 
-      // 최대 1000개까지만 저장
-      if (historyByGroup.default.length > 1000) {
-        historyByGroup.default = historyByGroup.default.slice(0, 1000);
+      // 각 그룹별 최대 1000개까지만 저장
+      for (const groupId in historyByGroup) {
+        if (historyByGroup[groupId].length > 1000) {
+          historyByGroup[groupId] = historyByGroup[groupId].slice(0, 1000);
+        }
       }
 
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
