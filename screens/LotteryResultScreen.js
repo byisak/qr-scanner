@@ -171,31 +171,43 @@ export default function LotteryResultScreen() {
           <Text style={styles.rankText}>{rankLabel}</Text>
         </View>
 
-        {/* 번호들 - 항상 색상 표시 */}
+        {/* 번호들 - 맞춘 번호 강조 */}
         <View style={styles.gameNumbers}>
           {(game.numbers || []).map((num) => {
             const bgColor = getLottoNumberColor(num);
             const isMatch = winNumbers.includes(num);
             const isBonusMatch = num === bonusNumber && game.hasBonus;
+            const isHighlighted = isMatch || isBonusMatch;
             return (
               <View
                 key={num}
                 style={[
                   styles.numberBall,
                   {
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: bgColor,
-                    opacity: isMatch || isBonusMatch ? 1 : 0.4,
-                    borderWidth: isBonusMatch ? 2 : 0,
-                    borderColor: isBonusMatch ? '#FFD700' : 'transparent',
+                    width: isHighlighted ? 36 : 32,
+                    height: isHighlighted ? 36 : 32,
+                    borderRadius: isHighlighted ? 18 : 16,
+                    backgroundColor: isHighlighted ? bgColor : '#555',
+                    borderWidth: isHighlighted ? 3 : 0,
+                    borderColor: isBonusMatch ? '#FFD700' : (isMatch ? '#00FF00' : 'transparent'),
                   }
                 ]}
               >
-                <Text style={[styles.numberText, { color: '#fff', fontSize: 13 }]}>
+                <Text style={[
+                  styles.numberText,
+                  {
+                    color: isHighlighted ? '#fff' : '#888',
+                    fontSize: isHighlighted ? 14 : 12,
+                    fontWeight: isHighlighted ? 'bold' : 'normal',
+                  }
+                ]}>
                   {num}
                 </Text>
+                {isHighlighted && (
+                  <View style={styles.matchIndicator}>
+                    <Text style={styles.matchIndicatorText}>✓</Text>
+                  </View>
+                )}
               </View>
             );
           })}
@@ -653,8 +665,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 3,
+    position: 'relative',
   },
   numberText: {
+    fontWeight: 'bold',
+  },
+  matchIndicator: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#00C853',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  matchIndicatorText: {
+    color: '#fff',
+    fontSize: 10,
     fontWeight: 'bold',
   },
   pensionNumber: {
