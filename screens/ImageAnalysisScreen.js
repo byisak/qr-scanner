@@ -145,27 +145,33 @@ const getWebViewHTML = (zxingScript) => `
         'PDF417',
       ];
 
-      // 1단계: 기본 분석 (tryHarder, tryDownscale 활성화로 인식률 향상)
+      // 1단계: 기본 분석 (tryHarder, tryRotate, tryDownscale 활성화로 인식률 향상)
+      // LocalAverage binarizer: 그림자/그라데이션이 있는 이미지에서 더 나은 결과
+      // tryRotate: 회전된 QR 코드 인식 향상
       var fastOptions = {
         tryHarder: true,
-        tryRotate: false,
+        tryRotate: true,
         tryInvert: false,
         tryDownscale: true,
+        tryDenoise: true,
+        binarizer: 'LocalAverage',
         maxNumberOfSymbols: 20,
         formats: formats,
       };
 
-      sendLog('Phase 1: Standard analysis with downscale...');
+      sendLog('Phase 1: Enhanced analysis with rotation and LocalAverage binarizer...');
       var barcodes = await ZXingWASM.readBarcodes(blob, fastOptions);
 
-      // 결과가 없으면 2단계: 회전/반전 시도
+      // 결과가 없으면 2단계: 반전 시도 (어두운 배경에 밝은 코드)
       if (barcodes.length === 0) {
-        sendLog('Phase 2: Trying rotation, inversion and downscale...');
+        sendLog('Phase 2: Trying inversion for dark backgrounds...');
         var deepOptions = {
           tryHarder: true,
           tryRotate: true,
           tryInvert: true,
           tryDownscale: true,
+          tryDenoise: true,
+          binarizer: 'LocalAverage',
           maxNumberOfSymbols: 20,
           formats: formats,
         };
