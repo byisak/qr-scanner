@@ -120,6 +120,9 @@ export default {
     passwordChangeFailed: '비밀번호 변경에 실패했습니다',
     logout: '로그아웃',
     withdraw: '회원탈퇴',
+    withdrawDesc: '모든 데이터가 삭제됩니다',
+    accountManagement: '계정 관리',
+    dangerZone: '위험 영역',
     logoutConfirm: '정말 로그아웃 하시겠습니까?',
     withdrawConfirm: '정말 탈퇴하시겠습니까?\n탈퇴 시 모든 데이터가 삭제됩니다.',
     // 로그인된 상태

@@ -97,6 +97,9 @@ export default {
     changePassword: 'パスワード変更',
     logout: 'ログアウト',
     withdraw: '退会',
+    withdrawDesc: 'すべてのデータが削除されます',
+    accountManagement: 'アカウント管理',
+    dangerZone: '危険な操作',
     logoutConfirm: '本当にログアウトしますか？',
     withdrawConfirm: '本当に退会しますか？\n退会するとすべてのデータが削除されます。',
     // ログイン状態

@@ -97,6 +97,9 @@ export default {
     changePassword: 'Cambiar contraseña',
     logout: 'Cerrar sesión',
     withdraw: 'Eliminar cuenta',
+    withdrawDesc: 'Todos los datos serán eliminados',
+    accountManagement: 'Gestión de cuenta',
+    dangerZone: 'Zona de peligro',
     logoutConfirm: '¿Estás seguro de que quieres cerrar sesión?',
     withdrawConfirm: '¿Estás seguro de que quieres eliminar tu cuenta?\nTodos los datos serán eliminados.',
     // Estado de inicio de sesión

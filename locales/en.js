@@ -120,6 +120,9 @@ export default {
     passwordChangeFailed: 'Failed to change password',
     logout: 'Logout',
     withdraw: 'Delete Account',
+    withdrawDesc: 'All data will be deleted',
+    accountManagement: 'Account',
+    dangerZone: 'Danger Zone',
     logoutConfirm: 'Are you sure you want to logout?',
     withdrawConfirm: 'Are you sure you want to delete your account?\nAll data will be deleted.',
     // Logged in state

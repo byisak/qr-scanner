@@ -97,6 +97,9 @@ export default {
     changePassword: '修改密码',
     logout: '退出登录',
     withdraw: '注销账户',
+    withdrawDesc: '所有数据将被删除',
+    accountManagement: '账户管理',
+    dangerZone: '危险区域',
     logoutConfirm: '确定要退出登录吗？',
     withdrawConfirm: '确定要注销账户吗？\n注销后所有数据将被删除。',
     // 登录状态
