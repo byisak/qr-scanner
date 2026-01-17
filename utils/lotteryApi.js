@@ -21,8 +21,14 @@ export async function getLottoWinNumbers(round) {
     const cached = await getCachedResult('lotto', round);
     if (cached) return cached;
 
-    // API 호출
-    const response = await fetch(`${LOTTO_API_URL}&drwNo=${round}`);
+    // API 호출 (브라우저 요청처럼 헤더 추가)
+    const response = await fetch(`${LOTTO_API_URL}&drwNo=${round}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
 
     // 응답 상태 확인
     if (!response.ok) {
