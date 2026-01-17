@@ -245,6 +245,9 @@ function ImageAnalysisScreen() {
   const [isZoomed, setIsZoomed] = useState(false);
   const [isReanalyzing, setIsReanalyzing] = useState(false);
 
+  // 재분석 시 크롭 영역 정보 (결과 좌표 변환용)
+  const [cropInfo, setCropInfo] = useState(null);
+
   // 줌/팬 상태 업데이트 함수 (JS thread에서 실행)
   const updateZoomState = useCallback((zoomed) => {
     setIsZoomed(zoomed);
@@ -386,6 +389,9 @@ function ImageAnalysisScreen() {
       analysisStartedRef.current = true;
       console.log('Sending image to WebView for analysis...');
 
+      // 초기 분석이므로 cropInfo 초기화
+      setCropInfo(null);
+
       // WebView에 base64 이미지 전송
       const message = JSON.stringify({ type: 'analyze', base64: base64Image });
       webViewRef.current.postMessage(message);
@@ -413,7 +419,48 @@ function ImageAnalysisScreen() {
         }
       } else if (data.type === 'results') {
         clearTimeoutRef();
-        setResults(data.data || []);
+        let results = data.data || [];
+
+        // 재분석인 경우 (cropInfo 존재), 좌표를 원본 이미지 기준으로 변환
+        if (cropInfo && results.length > 0) {
+          console.log('[Results] Applying crop offset:', cropInfo);
+          results = results.map((result) => {
+            if (result.position) {
+              // 크롭된 이미지의 좌표에 오프셋을 더해 원본 이미지 좌표로 변환
+              const adjustedPosition = {
+                topLeft: {
+                  x: result.position.topLeft.x + cropInfo.offsetX,
+                  y: result.position.topLeft.y + cropInfo.offsetY,
+                },
+                topRight: {
+                  x: result.position.topRight.x + cropInfo.offsetX,
+                  y: result.position.topRight.y + cropInfo.offsetY,
+                },
+                bottomLeft: {
+                  x: result.position.bottomLeft.x + cropInfo.offsetX,
+                  y: result.position.bottomLeft.y + cropInfo.offsetY,
+                },
+                bottomRight: {
+                  x: result.position.bottomRight.x + cropInfo.offsetX,
+                  y: result.position.bottomRight.y + cropInfo.offsetY,
+                },
+              };
+              return { ...result, position: adjustedPosition };
+            }
+            return result;
+          });
+
+          // 줌 리셋하여 결과 테두리가 올바르게 표시되도록 함
+          scale.value = withSpring(1);
+          translateX.value = withSpring(0);
+          translateY.value = withSpring(0);
+          setIsZoomed(false);
+
+          // cropInfo 초기화
+          setCropInfo(null);
+        }
+
+        setResults(results);
         setIsLoading(false);
         setLoadingMessage('');
       } else if (data.type === 'error') {
@@ -422,11 +469,12 @@ function ImageAnalysisScreen() {
         setError(t('imageAnalysis.analysisError'));
         setIsLoading(false);
         setLoadingMessage('');
+        setCropInfo(null);
       }
     } catch (err) {
       console.error('Message parse error:', err);
     }
-  }, [t, clearTimeoutRef]);
+  }, [t, clearTimeoutRef, cropInfo, scale, translateX, translateY]);
 
   // WebView 에러 처리
   const handleWebViewError = useCallback((syntheticEvent) => {
@@ -513,28 +561,55 @@ function ImageAnalysisScreen() {
       const currentTranslateX = translateX.value;
       const currentTranslateY = translateY.value;
 
-      // 화면에 보이는 영역을 원본 이미지 좌표로 변환
-      const scaleRatio = imageSize.width / displaySize.width;
+      // 화면에 보이는 영역 크기 (디스플레이 좌표 기준)
       const visibleWidth = displaySize.width / currentScale;
       const visibleHeight = displaySize.height / currentScale;
 
-      // 중심점에서 translate 적용
-      const centerX = displaySize.width / 2 - currentTranslateX / currentScale;
-      const centerY = displaySize.height / 2 - currentTranslateY / currentScale;
+      // 스케일 비율 (원본 이미지 <-> 디스플레이)
+      const scaleRatioX = imageSize.width / displaySize.width;
+      const scaleRatioY = imageSize.height / displaySize.height;
 
-      // 크롭 영역 계산 (원본 이미지 좌표)
-      let cropX = (centerX - visibleWidth / 2) * scaleRatio;
-      let cropY = (centerY - visibleHeight / 2) * scaleRatio;
-      let cropWidth = visibleWidth * scaleRatio;
-      let cropHeight = visibleHeight * scaleRatio;
+      // 팬(translate)는 스케일된 상태에서의 픽셀 이동량
+      // 이를 스케일 전 좌표로 변환하려면 currentScale로 나눔
+      const panOffsetX = -currentTranslateX / currentScale;
+      const panOffsetY = -currentTranslateY / currentScale;
 
-      // 경계 체크
-      cropX = Math.max(0, Math.min(cropX, imageSize.width - 10));
-      cropY = Math.max(0, Math.min(cropY, imageSize.height - 10));
-      cropWidth = Math.min(cropWidth, imageSize.width - cropX);
-      cropHeight = Math.min(cropHeight, imageSize.height - cropY);
+      // 보이는 영역의 좌상단 좌표 (디스플레이 좌표)
+      // 줌 중심은 이미지 중심이므로, 중심에서 보이는 영역의 반만큼 빼기
+      const visibleLeft = (displaySize.width / 2 - visibleWidth / 2) + panOffsetX;
+      const visibleTop = (displaySize.height / 2 - visibleHeight / 2) + panOffsetY;
 
-      console.log('[Reanalyze] Crop region:', { cropX, cropY, cropWidth, cropHeight });
+      // 원본 이미지 좌표로 변환
+      let cropX = visibleLeft * scaleRatioX;
+      let cropY = visibleTop * scaleRatioY;
+      let cropWidth = visibleWidth * scaleRatioX;
+      let cropHeight = visibleHeight * scaleRatioY;
+
+      // 경계 체크 및 보정
+      cropX = Math.max(0, cropX);
+      cropY = Math.max(0, cropY);
+      if (cropX + cropWidth > imageSize.width) {
+        cropWidth = imageSize.width - cropX;
+      }
+      if (cropY + cropHeight > imageSize.height) {
+        cropHeight = imageSize.height - cropY;
+      }
+
+      // 최소 크기 보장
+      cropWidth = Math.max(10, cropWidth);
+      cropHeight = Math.max(10, cropHeight);
+
+      console.log('[Reanalyze] Scale:', currentScale, 'Translate:', currentTranslateX, currentTranslateY);
+      console.log('[Reanalyze] Visible area (display):', { visibleLeft, visibleTop, visibleWidth, visibleHeight });
+      console.log('[Reanalyze] Crop region (original):', { cropX, cropY, cropWidth, cropHeight });
+
+      // 크롭 정보 저장 (결과 좌표 변환용)
+      setCropInfo({
+        offsetX: cropX,
+        offsetY: cropY,
+        width: cropWidth,
+        height: cropHeight,
+      });
 
       // 이미지 크롭
       const croppedImage = await ImageManipulator.manipulateAsync(
@@ -575,6 +650,7 @@ function ImageAnalysisScreen() {
       console.error('Reanalyze error:', err);
       setIsReanalyzing(false);
       setIsLoading(false);
+      setCropInfo(null);
       Alert.alert(t('common.error'), t('imageAnalysis.analysisError'));
     }
   };
@@ -585,6 +661,7 @@ function ImageAnalysisScreen() {
     translateX.value = withSpring(0);
     translateY.value = withSpring(0);
     setIsZoomed(false);
+    setCropInfo(null);
   };
 
   // 결과 항목 복사
