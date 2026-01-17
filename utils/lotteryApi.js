@@ -29,6 +29,12 @@ export async function getLottoWinNumbers(round) {
       return null;
     }
 
+    // 요청한 회차와 응답 회차가 다르면 에러 (API 버그 방지)
+    if (data.drwNo !== round) {
+      console.warn(`Lotto API mismatch: requested round ${round}, got ${data.drwNo}`);
+      return null;
+    }
+
     const result = {
       round: data.drwNo,
       drawDate: data.drwNoDate,
@@ -210,7 +216,15 @@ async function getCachedResult(type, round) {
 
     if (cached) {
       const { data, timestamp } = JSON.parse(cached);
+      // 캐시 만료 및 회차 검증
       if (Date.now() - timestamp < CACHE_DURATION) {
+        // 캐시된 데이터의 회차가 요청한 회차와 일치하는지 확인
+        if (data.round && data.round !== round) {
+          console.warn(`Cache data mismatch: requested round ${round}, cached ${data.round}`);
+          // 잘못된 캐시 삭제
+          await AsyncStorage.removeItem(`${cacheKey}_${round}`);
+          return null;
+        }
         return data;
       }
     }
