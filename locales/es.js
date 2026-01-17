@@ -191,6 +191,10 @@ export default {
     jsonCopied: 'JSON copiado',
     jsonCopiedMessage: 'Los datos JSON se han copiado al portapapeles.',
     jsonError: 'Ocurrió un error al descargar JSON.',
+    zoomHint: 'Presiona el botón para reanalizar el área ampliada',
+    resetZoom: 'Restablecer',
+    reanalyze: 'Analizar área',
+    cropping: 'Recortando imagen...',
   },
 
   // Pantalla de historial

@@ -451,14 +451,8 @@ function ImageAnalysisScreen() {
             return result;
           });
 
-          // 줌 리셋하여 결과 테두리가 올바르게 표시되도록 함
-          scale.value = withSpring(1);
-          translateX.value = withSpring(0);
-          translateY.value = withSpring(0);
-          setIsZoomed(false);
-
-          // cropInfo 초기화
-          cropInfoRef.current = null;
+          // 줌 상태 유지 - 리셋하지 않음
+          // cropInfo는 유지하여 줌 상태에서 테두리 표시에 사용
         }
 
         setResults(results);
@@ -555,7 +549,7 @@ function ImageAnalysisScreen() {
     try {
       setIsReanalyzing(true);
       setIsLoading(true);
-      setLoadingMessage(t('imageAnalysis.cropping') || '이미지 크롭 중...');
+      setLoadingMessage(t('imageAnalysis.cropping'));
 
       // 현재 줌/팬 상태에서 보이는 영역 계산
       const currentScale = scale.value;
@@ -1124,47 +1118,49 @@ function ImageAnalysisScreen() {
             <View style={styles.zoomHint}>
               <Ionicons name="scan-outline" size={16} color="#fff" />
               <Text style={styles.zoomHintText}>
-                {t('imageAnalysis.zoomHint') || '확대된 영역을 재분석하려면 버튼을 누르세요'}
+                {t('imageAnalysis.zoomHint')}
               </Text>
             </View>
           )}
 
           <GestureDetector gesture={composedGesture}>
             <View style={[styles.imageContainer, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300, overflow: 'hidden' }]}>
-              {(normalizedImageUri || imageUri) && (
-                <Animated.Image
-                  source={{ uri: normalizedImageUri || imageUri }}
-                  style={[styles.image, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }, animatedImageStyle]}
-                  resizeMode="contain"
-                />
-              )}
+              <Animated.View style={[{ width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }, animatedImageStyle]}>
+                {(normalizedImageUri || imageUri) && (
+                  <Image
+                    source={{ uri: normalizedImageUri || imageUri }}
+                    style={[styles.image, { width: displaySize.width || screenWidth - 32, height: displaySize.height || 300 }]}
+                    resizeMode="contain"
+                  />
+                )}
 
-              {/* 바코드 박스 오버레이 (줌되지 않은 상태에서만 표시) */}
-              {!isLoading && !isZoomed && results.map((result, index) => {
-                const displayCoords = convertToDisplayCoords(result.position);
-                if (!displayCoords) return null;
+                {/* 바코드 박스 오버레이 (이미지와 함께 줌됨) */}
+                {!isLoading && results.map((result, index) => {
+                  const displayCoords = convertToDisplayCoords(result.position);
+                  if (!displayCoords) return null;
 
-                const color = getBarcodeColor(index);
-                return (
-                  <View
-                    key={result.id}
-                    style={[
-                      styles.barcodeBox,
-                      {
-                        left: displayCoords.left,
-                        top: displayCoords.top,
-                        width: displayCoords.width,
-                        height: displayCoords.height,
-                        borderColor: color,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.barcodeLabel, { backgroundColor: color }]}>
-                      <Text style={styles.barcodeLabelText}>{index + 1}</Text>
+                  const color = getBarcodeColor(index);
+                  return (
+                    <View
+                      key={result.id}
+                      style={[
+                        styles.barcodeBox,
+                        {
+                          left: displayCoords.left,
+                          top: displayCoords.top,
+                          width: displayCoords.width,
+                          height: displayCoords.height,
+                          borderColor: color,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.barcodeLabel, { backgroundColor: color }]}>
+                        <Text style={styles.barcodeLabelText}>{index + 1}</Text>
+                      </View>
                     </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
+              </Animated.View>
 
               {/* 로딩 오버레이 */}
               {isLoading && (
@@ -1185,7 +1181,7 @@ function ImageAnalysisScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons name="contract-outline" size={20} color="#fff" />
-                <Text style={styles.zoomButtonText}>{t('imageAnalysis.resetZoom') || '리셋'}</Text>
+                <Text style={styles.zoomButtonText}>{t('imageAnalysis.resetZoom')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1199,7 +1195,7 @@ function ImageAnalysisScreen() {
                 ) : (
                   <>
                     <Ionicons name="scan" size={20} color="#fff" />
-                    <Text style={styles.zoomButtonText}>{t('imageAnalysis.reanalyze') || '재분석'}</Text>
+                    <Text style={styles.zoomButtonText}>{t('imageAnalysis.reanalyze')}</Text>
                   </>
                 )}
               </TouchableOpacity>

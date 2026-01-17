@@ -216,6 +216,10 @@ export default {
     jsonCopied: 'JSON Copied',
     jsonCopiedMessage: 'JSON data has been copied to clipboard.',
     jsonError: 'An error occurred while downloading JSON.',
+    zoomHint: 'Press button to reanalyze zoomed area',
+    resetZoom: 'Reset',
+    reanalyze: 'Analyze Area',
+    cropping: 'Cropping image...',
   },
 
   // History screen

@@ -191,6 +191,10 @@ export default {
     jsonCopied: 'JSONコピー完了',
     jsonCopiedMessage: 'JSONデータがクリップボードにコピーされました。',
     jsonError: 'JSONダウンロード中にエラーが発生しました。',
+    zoomHint: '拡大した領域を再分析するにはボタンを押してください',
+    resetZoom: 'リセット',
+    reanalyze: '領域分析',
+    cropping: '画像をクロップ中...',
   },
 
   // 履歴画面

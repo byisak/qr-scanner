@@ -191,6 +191,10 @@ export default {
     jsonCopied: 'JSON已复制',
     jsonCopiedMessage: 'JSON数据已复制到剪贴板。',
     jsonError: 'JSON下载时发生错误。',
+    zoomHint: '按按钮重新分析放大的区域',
+    resetZoom: '重置',
+    reanalyze: '区域分析',
+    cropping: '正在裁剪图片...',
   },
 
   // 历史记录界面
