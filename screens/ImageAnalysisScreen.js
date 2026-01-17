@@ -625,7 +625,6 @@ function ImageAnalysisScreen() {
 
       // WebView에 재분석 요청
       setLoadingMessage(t('imageAnalysis.analyzing'));
-      analysisStartedRef.current = false; // 재분석을 위해 리셋
 
       if (webViewRef.current) {
         const message = JSON.stringify({ type: 'analyze', base64: croppedBase64 });
