@@ -214,6 +214,8 @@ export default {
     historyAllSaveSuccess: 'Saved to History',
     historyAllSaveSuccessMessage: '{{count}} barcodes have been saved to history.',
     saveError: 'An error occurred while saving.',
+    duplicateLottery: 'Duplicate Lottery',
+    duplicateLotteryMessage: 'This lottery ticket is already saved.',
     permissionDenied: 'Photo album access permission is required.',
     downloadJson: 'Download JSON',
     jsonCopied: 'JSON Copied',

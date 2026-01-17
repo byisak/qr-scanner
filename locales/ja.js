@@ -189,6 +189,8 @@ export default {
     historyAllSaveSuccess: '履歴に保存完了',
     historyAllSaveSuccessMessage: '{{count}}個のバーコードが履歴に保存されました。',
     saveError: '保存中にエラーが発生しました。',
+    duplicateLottery: '重複した宝くじ',
+    duplicateLotteryMessage: 'すでに保存されている宝くじです。',
     permissionDenied: '写真アルバムへのアクセス権限が必要です。',
     downloadJson: 'JSONダウンロード',
     jsonCopied: 'JSONコピー完了',

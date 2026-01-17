@@ -189,6 +189,8 @@ export default {
     historyAllSaveSuccess: '已保存到历史',
     historyAllSaveSuccessMessage: '{{count}} 个条码已保存到历史记录。',
     saveError: '保存时发生错误。',
+    duplicateLottery: '重复的彩票',
+    duplicateLotteryMessage: '该彩票已保存。',
     permissionDenied: '需要访问相册的权限。',
     downloadJson: 'JSON下载',
     jsonCopied: 'JSON已复制',

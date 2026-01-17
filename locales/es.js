@@ -189,6 +189,8 @@ export default {
     historyAllSaveSuccess: 'Guardado en historial',
     historyAllSaveSuccessMessage: '{{count}} códigos se han guardado en el historial.',
     saveError: 'Ocurrió un error al guardar.',
+    duplicateLottery: 'Lotería duplicada',
+    duplicateLotteryMessage: 'Este billete de lotería ya está guardado.',
     permissionDenied: 'Se requiere permiso de acceso al álbum de fotos.',
     downloadJson: 'Descargar JSON',
     jsonCopied: 'JSON copiado',

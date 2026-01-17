@@ -31,6 +31,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
+import { scheduleLotteryNotification } from '../utils/lotteryNotification';
 
 // 분석 타임아웃 (15초)
 const ANALYSIS_TIMEOUT = 15000;
@@ -882,10 +883,12 @@ function ImageAnalysisScreen() {
       // 복권 QR 코드인지 확인
       let targetGroupId = 'default';
       let lotteryData = null;
+      let isLotteryCode = false;
 
       if (isLotteryEnabled && isLotteryQR(result.text)) {
         lotteryData = parseLotteryQR(result.text);
         if (lotteryData) {
+          isLotteryCode = true;
           // 복권 그룹 생성/확인
           const lotteryGroupId = await ensureLotteryGroup(lotteryData.type);
           if (lotteryGroupId) {
@@ -901,6 +904,21 @@ function ImageAnalysisScreen() {
       // 대상 그룹 초기화
       if (!historyByGroup[targetGroupId]) {
         historyByGroup[targetGroupId] = [];
+      }
+
+      // 복권 중복 체크
+      if (isLotteryCode) {
+        const existingIndex = historyByGroup[targetGroupId].findIndex(
+          item => item.code === result.text
+        );
+        if (existingIndex !== -1) {
+          // 이미 존재하는 복권
+          Alert.alert(
+            t('imageAnalysis.duplicateLottery') || '중복된 복권',
+            t('imageAnalysis.duplicateLotteryMessage') || '이미 저장된 복권입니다.'
+          );
+          return;
+        }
       }
 
       // 바코드 타입 정규화
@@ -926,6 +944,11 @@ function ImageAnalysisScreen() {
       }
 
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      // 복권 저장 후 알림 스케줄링
+      if (isLotteryCode) {
+        scheduleLotteryNotification();
+      }
 
       if (Platform.OS === 'ios') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -965,6 +988,7 @@ function ImageAnalysisScreen() {
 
       let successCount = 0;
       let lotteryCount = 0;
+      let duplicateCount = 0;
 
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
@@ -972,15 +996,16 @@ function ImageAnalysisScreen() {
         // 복권 QR 코드인지 확인
         let targetGroupId = 'default';
         let lotteryData = null;
+        let isLotteryCode = false;
 
         if (isLotteryEnabled && isLotteryQR(result.text)) {
           lotteryData = parseLotteryQR(result.text);
           if (lotteryData) {
+            isLotteryCode = true;
             // 복권 그룹 생성/확인
             const lotteryGroupId = await ensureLotteryGroup(lotteryData.type);
             if (lotteryGroupId) {
               targetGroupId = lotteryGroupId;
-              lotteryCount++;
             }
           }
         }
@@ -988,6 +1013,19 @@ function ImageAnalysisScreen() {
         // 대상 그룹 초기화
         if (!historyByGroup[targetGroupId]) {
           historyByGroup[targetGroupId] = [];
+        }
+
+        // 복권 중복 체크
+        if (isLotteryCode) {
+          const existingIndex = historyByGroup[targetGroupId].findIndex(
+            item => item.code === result.text
+          );
+          if (existingIndex !== -1) {
+            // 이미 존재하는 복권 - 스킵
+            duplicateCount++;
+            continue;
+          }
+          lotteryCount++;
         }
 
         // 바코드 타입 정규화
@@ -1017,6 +1055,11 @@ function ImageAnalysisScreen() {
       }
 
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+
+      // 복권 저장 후 알림 스케줄링
+      if (lotteryCount > 0) {
+        scheduleLotteryNotification();
+      }
 
       setIsSavingHistory(false);
 

@@ -213,6 +213,8 @@ export default {
     historySaveSuccessMessage: '바코드 #{{number}}이(가) 기록에 저장되었습니다.',
     historyAllSaveSuccess: '기록 저장 완료',
     historyAllSaveSuccessMessage: '{{count}}개의 바코드가 기록에 저장되었습니다.',
+    duplicateLottery: '중복된 복권',
+    duplicateLotteryMessage: '이미 저장된 복권입니다.',
     saveError: '저장 중 오류가 발생했습니다.',
     permissionDenied: '사진 앨범 접근 권한이 필요합니다.',
     downloadJson: 'JSON 다운로드',
