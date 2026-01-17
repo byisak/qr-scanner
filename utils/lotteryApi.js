@@ -2,7 +2,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LOTTO_API_URL = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber';
+const LOTTO_API_URL = 'https://www.dhlottery.co.kr/lt645/selectPstLt645Info.do';
 const PENSION_API_URL = 'https://www.dhlottery.co.kr/pt720/selectPstPt720WnList.do';
 
 // 캐시 키
@@ -11,7 +11,7 @@ const PENSION_CACHE_KEY = 'lotteryCache_pension';
 const CACHE_DURATION = 1000 * 60 * 60; // 1시간
 
 /**
- * 로또 당첨번호 조회
+ * 로또 당첨번호 조회 (새 API)
  * @param {number} round - 회차
  * @returns {object|null} 당첨번호 정보
  */
@@ -22,7 +22,7 @@ export async function getLottoWinNumbers(round) {
     if (cached) return cached;
 
     // API 호출 (브라우저 요청처럼 헤더 추가)
-    const response = await fetch(`${LOTTO_API_URL}&drwNo=${round}`, {
+    const response = await fetch(`${LOTTO_API_URL}?srchLtEpsd=${round}`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json, text/plain, */*',
@@ -40,40 +40,49 @@ export async function getLottoWinNumbers(round) {
     const text = await response.text();
 
     // JSON 파싱 시도
-    let data;
+    let json;
     try {
-      data = JSON.parse(text);
+      json = JSON.parse(text);
     } catch (parseError) {
       console.warn('Lotto API returned non-JSON response');
       return null;
     }
 
-    if (data.returnValue !== 'success') {
+    // 데이터 확인
+    if (!json.data || !json.data.list || json.data.list.length === 0) {
       return null;
     }
+
+    const data = json.data.list[0];
 
     // 요청한 회차와 응답 회차가 다르면 에러 (API 버그 방지)
-    if (data.drwNo !== round) {
-      console.warn(`Lotto API mismatch: requested round ${round}, got ${data.drwNo}`);
+    if (data.ltEpsd !== round) {
+      console.warn(`Lotto API mismatch: requested round ${round}, got ${data.ltEpsd}`);
       return null;
     }
 
+    // 추첨일 포맷 변환 (YYYYMMDD -> YYYY-MM-DD)
+    const drawDateRaw = data.ltRflYmd;
+    const drawDate = drawDateRaw
+      ? `${drawDateRaw.slice(0, 4)}-${drawDateRaw.slice(4, 6)}-${drawDateRaw.slice(6, 8)}`
+      : null;
+
     const result = {
-      round: data.drwNo,
-      drawDate: data.drwNoDate,
+      round: data.ltEpsd,
+      drawDate: drawDate,
       numbers: [
-        data.drwtNo1,
-        data.drwtNo2,
-        data.drwtNo3,
-        data.drwtNo4,
-        data.drwtNo5,
-        data.drwtNo6,
+        data.tm1WnNo,
+        data.tm2WnNo,
+        data.tm3WnNo,
+        data.tm4WnNo,
+        data.tm5WnNo,
+        data.tm6WnNo,
       ],
-      bonusNumber: data.bnusNo,
-      totalSellAmount: data.totSellamnt,
-      firstWinAmount: data.firstWinamnt,
-      firstWinCount: data.firstPrzwnerCo,
-      firstWinAmountPerPerson: data.firstAccumamnt,
+      bonusNumber: data.bnsWnNo,
+      totalSellAmount: data.wholEpsdSumNtslAmt,
+      firstWinAmount: data.rnk1WnAmt,
+      firstWinCount: data.rnk1WnNope,
+      firstWinAmountPerPerson: data.rnk1SumWnAmt,
     };
 
     // 캐시 저장
