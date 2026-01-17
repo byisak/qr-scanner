@@ -195,6 +195,7 @@ export default {
     resetZoom: 'Restablecer',
     reanalyze: 'Analizar área',
     cropping: 'Recortando imagen...',
+    gestureHint: 'Pellizca para ampliar, doble toque para restablecer',
   },
 
   // Pantalla de historial

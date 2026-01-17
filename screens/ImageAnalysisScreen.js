@@ -1204,7 +1204,7 @@ function ImageAnalysisScreen() {
           {/* 줌 사용법 안내 (줌되지 않은 상태에서만 표시) */}
           {!isZoomed && !isLoading && (
             <Text style={[styles.gestureHint, { color: colors.textSecondary }]}>
-              {t('imageAnalysis.gestureHint') || '핀치로 확대, 더블탭으로 리셋'}
+              {t('imageAnalysis.gestureHint')}
             </Text>
           )}
         </View>

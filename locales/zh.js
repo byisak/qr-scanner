@@ -195,6 +195,7 @@ export default {
     resetZoom: '重置',
     reanalyze: '区域分析',
     cropping: '正在裁剪图片...',
+    gestureHint: '双指缩放，双击重置',
   },
 
   // 历史记录界面

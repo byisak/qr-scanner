@@ -220,6 +220,7 @@ export default {
     resetZoom: 'Reset',
     reanalyze: 'Analyze Area',
     cropping: 'Cropping image...',
+    gestureHint: 'Pinch to zoom, double tap to reset',
   },
 
   // History screen

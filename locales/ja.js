@@ -195,6 +195,7 @@ export default {
     resetZoom: 'リセット',
     reanalyze: '領域分析',
     cropping: '画像をクロップ中...',
+    gestureHint: 'ピンチでズーム、ダブルタップでリセット',
   },
 
   // 履歴画面

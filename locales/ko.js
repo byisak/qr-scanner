@@ -220,6 +220,7 @@ export default {
     resetZoom: '리셋',
     reanalyze: '영역 분석',
     cropping: '이미지 크롭 중...',
+    gestureHint: '핀치로 확대, 더블탭으로 리셋',
   },
 
   // 히스토리 화면
