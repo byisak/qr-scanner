@@ -94,11 +94,37 @@ export const AuthProvider = ({ children }) => {
         const userData = JSON.parse(authData);
         setUser(userData);
         setIsLoggedIn(true);
+
+        // 로그인된 상태로 앱 실행 시 마지막 접속 시간 업데이트
+        // 백그라운드에서 실행 (앱 시작 지연 방지)
+        setTimeout(() => {
+          updateLastActivityInternal(token);
+        }, 2000);
       }
     } catch (error) {
       console.error('Load auth data error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 내부용 마지막 접속 시간 업데이트 (loadAuthData에서 사용)
+  const updateLastActivityInternal = async (token) => {
+    try {
+      const response = await fetch(`${API_URL}/activity`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        console.log('[Auth] 마지막 접속 시간 업데이트 완료');
+      }
+    } catch (error) {
+      // 네트워크 오류는 무시
+      console.log('[Auth] 접속 시간 업데이트 실패 (무시됨)');
     }
   };
 
@@ -521,6 +547,50 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Get token error:', error);
       return null;
+    }
+  };
+
+  // 마지막 접속 시간 업데이트 (서버로 전송)
+  const updateLastActivity = async () => {
+    try {
+      const token = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+      if (!token) {
+        return { success: false, error: 'No token' };
+      }
+
+      const response = await fetch(`${API_URL}/activity`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        // 토큰 만료 시 갱신 시도
+        if (response.status === 401) {
+          const refreshResult = await refreshAccessToken();
+          if (refreshResult.success) {
+            // 갱신된 토큰으로 재시도
+            const newToken = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+            await fetch(`${API_URL}/activity`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${newToken}`,
+                'Content-Type': 'application/json',
+              },
+            });
+          }
+        }
+        return { success: false };
+      }
+
+      console.log('[Auth] 마지막 접속 시간 업데이트 완료');
+      return { success: true };
+    } catch (error) {
+      // 네트워크 오류는 무시 (앱 사용에 영향 없음)
+      console.log('[Auth] 접속 시간 업데이트 실패 (무시됨):', error.message);
+      return { success: false, error: error.message };
     }
   };
 
