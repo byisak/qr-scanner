@@ -79,6 +79,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "앱 개선 및 맞춤형 광고를 위해 익명 사용 데이터를 수집합니다."
+        }
+      ],
+      [
         "react-native-maps",
         {
           "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
