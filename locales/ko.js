@@ -216,6 +216,10 @@ export default {
     jsonCopied: 'JSON 복사됨',
     jsonCopiedMessage: 'JSON 데이터가 클립보드에 복사되었습니다.',
     jsonError: 'JSON 다운로드 중 오류가 발생했습니다.',
+    zoomHint: '확대된 영역을 재분석하려면 버튼을 누르세요',
+    resetZoom: '리셋',
+    reanalyze: '영역 분석',
+    cropping: '이미지 크롭 중...',
   },
 
   // 히스토리 화면
