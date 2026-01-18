@@ -1,5 +1,5 @@
 // contexts/AppLockContext.js - 앱 잠금 상태 관리
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
@@ -31,12 +31,22 @@ export function AppLockProvider({ children }) {
     checkBiometricAvailability();
   }, []);
 
-  // 앱 상태 변화 감지 (백그라운드에서 돌아올 때 잠금)
+  // 이전 앱 상태 저장 (Face ID 다이얼로그로 인한 재잠금 방지)
+  const appStateRef = useRef(AppState.currentState);
+
+  // 앱 상태 변화 감지 (백그라운드에서 돌아올 때만 잠금)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active' && appLockEnabled) {
+      // 'background'에서 'active'로 전환될 때만 잠금
+      // 'inactive'(Face ID 다이얼로그)에서 'active'로 전환될 때는 잠금하지 않음
+      if (
+        appStateRef.current === 'background' &&
+        nextAppState === 'active' &&
+        appLockEnabled
+      ) {
         setIsLocked(true);
       }
+      appStateRef.current = nextAppState;
     });
 
     return () => {
