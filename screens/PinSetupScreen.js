@@ -136,8 +136,6 @@ export default function PinSetupScreen() {
         shuffleKeys={true}
         colors={colors}
         fonts={fonts}
-        bottomLink={t('security.cancelSetup') || '설정 취소'}
-        onBottomLinkPress={() => router.back()}
       />
     </SafeAreaView>
   );

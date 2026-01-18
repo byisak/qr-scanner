@@ -124,8 +124,6 @@ export default function PinVerifyScreen() {
         shuffleKeys={true}
         colors={colors}
         fonts={fonts}
-        bottomLink={t('security.forgotPin') || 'PIN 비밀번호를 잊으셨나요?'}
-        onBottomLinkPress={() => router.back()}
       />
     </SafeAreaView>
   );
