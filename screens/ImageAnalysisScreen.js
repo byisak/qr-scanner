@@ -11,7 +11,9 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  Modal,
 } from 'react-native';
+import * as SecureStore from 'expo-secure-store';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -238,6 +240,9 @@ function ImageAnalysisScreen() {
   const [savedCount, setSavedCount] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingHistory, setIsSavingHistory] = useState(false);
+  const [lotteryPromptVisible, setLotteryPromptVisible] = useState(false);
+  const [pendingLotteryResult, setPendingLotteryResult] = useState(null); // { result, index, isAll }
+  const [dontAskLotteryPrompt, setDontAskLotteryPrompt] = useState(false);
 
   const webViewRef = useRef(null);
   const timeoutRef = useRef(null);
@@ -259,6 +264,15 @@ function ImageAnalysisScreen() {
   // 줌/팬 상태 업데이트 함수 (JS thread에서 실행)
   const updateZoomState = useCallback((zoomed) => {
     setIsZoomed(zoomed);
+  }, []);
+
+  // 복권 인식 다시 묻지 않기 설정 로드
+  useEffect(() => {
+    const loadLotteryPromptSetting = async () => {
+      const dontAsk = await AsyncStorage.getItem('dontAskLotteryPrompt');
+      setDontAskLotteryPrompt(dontAsk === 'true');
+    };
+    loadLotteryPromptSetting();
   }, []);
 
   // zxing-wasm 라이브러리 로드 (오프라인 지원)
@@ -885,6 +899,13 @@ function ImageAnalysisScreen() {
       let lotteryData = null;
       let isLotteryCode = false;
 
+      // 복권 인식이 꺼져있는데 복권 QR이 감지된 경우 활성화 유도 모달 표시
+      if (!isLotteryEnabled && isLotteryQR(result.text) && !dontAskLotteryPrompt) {
+        setPendingLotteryResult({ result, index, isAll: false });
+        setLotteryPromptVisible(true);
+        return;
+      }
+
       if (isLotteryEnabled && isLotteryQR(result.text)) {
         lotteryData = parseLotteryQR(result.text);
         if (lotteryData) {
@@ -971,11 +992,21 @@ function ImageAnalysisScreen() {
     if (results.length === 0) return;
 
     try {
-      setIsSavingHistory(true);
-
       // 복권 인식 설정 확인
       const lotteryScanEnabled = await AsyncStorage.getItem('lotteryScanEnabled');
       const isLotteryEnabled = lotteryScanEnabled === 'true';
+
+      // 복권 인식이 꺼져있는데 결과 중 복권 QR이 있는 경우 활성화 유도 모달 표시
+      if (!isLotteryEnabled && !dontAskLotteryPrompt) {
+        const hasLotteryCode = results.some(r => isLotteryQR(r.text));
+        if (hasLotteryCode) {
+          setPendingLotteryResult({ result: null, index: null, isAll: true });
+          setLotteryPromptVisible(true);
+          return;
+        }
+      }
+
+      setIsSavingHistory(true);
 
       // 그룹별 히스토리 가져오기
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
@@ -1587,6 +1618,81 @@ function ImageAnalysisScreen() {
           />
         </View>
       )}
+
+      {/* 복권 인식 활성화 유도 모달 */}
+      <Modal
+        visible={lotteryPromptVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setLotteryPromptVisible(false)}
+      >
+        <View style={styles.lotteryPromptOverlay}>
+          <View style={[styles.lotteryPromptContent, { backgroundColor: colors.surface }]}>
+            {/* 닫기 버튼 */}
+            <TouchableOpacity
+              style={styles.lotteryPromptCloseButton}
+              onPress={() => {
+                setLotteryPromptVisible(false);
+                setPendingLotteryResult(null);
+              }}
+            >
+              <Ionicons name="close" size={24} color={colors.textTertiary} />
+            </TouchableOpacity>
+
+            {/* 아이콘 */}
+            <View style={[styles.lotteryPromptIconContainer, { backgroundColor: '#f39c1220' }]}>
+              <Ionicons name="ticket" size={40} color="#f39c12" />
+            </View>
+
+            {/* 메시지 */}
+            <Text style={[styles.lotteryPromptTitle, { color: colors.text }]}>
+              복권이 스캔되었습니다
+            </Text>
+            <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary }]}>
+              설정에서 복권인식을 활성화 하여, 자동으로 그룹관리되도록 하겠습니까?
+            </Text>
+
+            {/* 버튼들 */}
+            <View style={styles.lotteryPromptButtons}>
+              <TouchableOpacity
+                style={[styles.lotteryPromptButton, { backgroundColor: colors.primary }]}
+                onPress={async () => {
+                  // 복권 인식 활성화
+                  await AsyncStorage.setItem('lotteryScanEnabled', 'true');
+                  // 다른 고급 스캔 기능 비활성화 (상호 배타적)
+                  await AsyncStorage.setItem('continuousScanEnabled', 'false');
+                  await AsyncStorage.setItem('batchScanEnabled', 'false');
+                  await AsyncStorage.setItem('multiCodeModeEnabled', 'false');
+                  await SecureStore.setItemAsync('scanLinkEnabled', 'false');
+                  await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
+                  setLotteryPromptVisible(false);
+                  setPendingLotteryResult(null);
+                  Alert.alert('완료', '복권 인식이 활성화되었습니다. 다시 저장 버튼을 눌러주세요.');
+                }}
+              >
+                <Text style={[styles.lotteryPromptButtonText, { color: '#fff' }]}>
+                  활성화
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.lotteryPromptButton, { backgroundColor: colors.inputBackground }]}
+                onPress={async () => {
+                  // 다시 묻지 않기 저장
+                  setDontAskLotteryPrompt(true);
+                  await AsyncStorage.setItem('dontAskLotteryPrompt', 'true');
+                  setLotteryPromptVisible(false);
+                  setPendingLotteryResult(null);
+                }}
+              >
+                <Text style={[styles.lotteryPromptButtonText, { color: colors.textSecondary }]}>
+                  다시 묻지 않기
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </GestureHandlerRootView>
   );
 }
@@ -1881,6 +1987,67 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  // 복권 인식 활성화 유도 모달 스타일
+  lotteryPromptOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  lotteryPromptContent: {
+    width: '100%',
+    maxWidth: 340,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  lotteryPromptCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lotteryPromptIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  lotteryPromptTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  lotteryPromptMessage: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  lotteryPromptButtons: {
+    width: '100%',
+    gap: 12,
+  },
+  lotteryPromptButton: {
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  lotteryPromptButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
