@@ -7,6 +7,7 @@ import {
   Platform,
   Alert,
   TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -104,7 +105,7 @@ export default function PinSetupScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -135,17 +136,10 @@ export default function PinSetupScreen() {
         shuffleKeys={true}
         colors={colors}
         fonts={fonts}
+        bottomLink={t('security.cancelSetup') || '설정 취소'}
+        onBottomLinkPress={() => router.back()}
       />
-
-      {/* 하단 링크 */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.linkText, { fontFamily: fonts.medium }]}>
-            {t('security.cancelSetup') || '설정 취소'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -157,7 +151,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 50,
+    paddingTop: Platform.OS === 'android' ? 10 : 0,
   },
   closeButton: {
     width: 44,
@@ -167,8 +161,8 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
   },
   title: {
     fontSize: 24,
@@ -180,19 +174,5 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     textAlign: 'center',
     marginTop: 12,
-  },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    paddingBottom: 100,
-    backgroundColor: '#0A2A5E',
-  },
-  linkText: {
-    fontSize: 14,
-    textDecorationLine: 'underline',
-    color: '#fff',
   },
 });

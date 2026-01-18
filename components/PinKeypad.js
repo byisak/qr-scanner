@@ -10,9 +10,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get('window');
-const KEYPAD_WIDTH = Math.min(width - 40, 360);
+const { width, height } = Dimensions.get('window');
+const KEYPAD_WIDTH = Math.min(width - 40, 320);
 const KEY_SIZE = KEYPAD_WIDTH / 3;
+const KEY_HEIGHT = Math.min(KEY_SIZE * 0.8, 70);
 
 export default function PinKeypad({
   onPinChange,
@@ -24,6 +25,8 @@ export default function PinKeypad({
   fonts,
   showBiometric = false,
   onBiometricPress,
+  bottomLink,
+  onBottomLinkPress,
 }) {
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
@@ -69,14 +72,6 @@ export default function PinKeypad({
     setPin((prev) => prev.slice(0, -1));
   };
 
-  // PIN 초기화
-  const resetPin = useCallback(() => {
-    setPin('');
-    if (shuffleKeys) {
-      setShuffledNumbers(shuffleNumbers());
-    }
-  }, [shuffleKeys, shuffleNumbers]);
-
   // PIN 입력 상태 표시 (점)
   const renderPinDots = () => {
     return (
@@ -103,7 +98,7 @@ export default function PinKeypad({
   // 숫자 키 렌더링
   const renderNumberKey = (number) => (
     <TouchableOpacity
-      key={number}
+      key={`num-${number}`}
       style={styles.key}
       onPress={() => handleKeyPress(number)}
       activeOpacity={0.6}
@@ -116,51 +111,62 @@ export default function PinKeypad({
   return (
     <View style={styles.container}>
       {renderPinDots()}
-      <View style={styles.keypadContainer}>
-        {/* Row 1: 첫 3개 숫자 */}
-        <View style={styles.row}>
-          {renderNumberKey(shuffledNumbers[0])}
-          {renderNumberKey(shuffledNumbers[1])}
-          {renderNumberKey(shuffledNumbers[2])}
-        </View>
+      <View style={styles.keypadWrapper}>
+        <View style={styles.keypadContainer}>
+          {/* Row 1 */}
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[0])}
+            {renderNumberKey(shuffledNumbers[1])}
+            {renderNumberKey(shuffledNumbers[2])}
+          </View>
 
-        {/* Row 2: 다음 3개 숫자 */}
-        <View style={styles.row}>
-          {renderNumberKey(shuffledNumbers[3])}
-          {renderNumberKey(shuffledNumbers[4])}
-          {renderNumberKey(shuffledNumbers[5])}
-        </View>
+          {/* Row 2 */}
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[3])}
+            {renderNumberKey(shuffledNumbers[4])}
+            {renderNumberKey(shuffledNumbers[5])}
+          </View>
 
-        {/* Row 3: 다음 3개 숫자 */}
-        <View style={styles.row}>
-          {renderNumberKey(shuffledNumbers[6])}
-          {renderNumberKey(shuffledNumbers[7])}
-          {renderNumberKey(shuffledNumbers[8])}
-        </View>
+          {/* Row 3 */}
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[6])}
+            {renderNumberKey(shuffledNumbers[7])}
+            {renderNumberKey(shuffledNumbers[8])}
+          </View>
 
-        {/* Row 4: 생체인증/빈칸, 마지막 숫자, 삭제 */}
-        <View style={styles.row}>
-          {showBiometric ? (
+          {/* Row 4: 생체인증, 마지막 숫자, 삭제 */}
+          <View style={styles.row}>
+            {showBiometric ? (
+              <TouchableOpacity
+                style={styles.key}
+                onPress={onBiometricPress}
+                activeOpacity={0.6}
+                disabled={disabled}
+              >
+                <Ionicons name="scan-outline" size={30} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.key} />
+            )}
+            {renderNumberKey(shuffledNumbers[9])}
             <TouchableOpacity
               style={styles.key}
-              onPress={onBiometricPress}
+              onPress={handleDelete}
               activeOpacity={0.6}
               disabled={disabled}
             >
-              <Ionicons name="scan-outline" size={32} color="#fff" />
+              <Ionicons name="backspace-outline" size={30} color="#fff" />
             </TouchableOpacity>
-          ) : (
-            <View style={styles.key} />
+          </View>
+
+          {/* 하단 링크 */}
+          {bottomLink && (
+            <TouchableOpacity style={styles.bottomLinkContainer} onPress={onBottomLinkPress}>
+              <Text style={[styles.bottomLinkText, { fontFamily: fonts?.medium }]}>
+                {bottomLink}
+              </Text>
+            </TouchableOpacity>
           )}
-          {renderNumberKey(shuffledNumbers[9])}
-          <TouchableOpacity
-            style={styles.key}
-            onPress={handleDelete}
-            activeOpacity={0.6}
-            disabled={disabled}
-          >
-            <Ionicons name="backspace-outline" size={32} color="#fff" />
-          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -178,6 +184,8 @@ export const PinKeypadWithRef = React.forwardRef(({
   fonts,
   showBiometric = false,
   onBiometricPress,
+  bottomLink,
+  onBottomLinkPress,
 }, ref) => {
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
@@ -251,7 +259,7 @@ export const PinKeypadWithRef = React.forwardRef(({
 
   const renderNumberKey = (number) => (
     <TouchableOpacity
-      key={number}
+      key={`num-${number}`}
       style={styles.key}
       onPress={() => handleKeyPress(number)}
       activeOpacity={0.6}
@@ -264,44 +272,54 @@ export const PinKeypadWithRef = React.forwardRef(({
   return (
     <View style={styles.container}>
       {renderPinDots()}
-      <View style={styles.keypadContainer}>
-        <View style={styles.row}>
-          {renderNumberKey(shuffledNumbers[0])}
-          {renderNumberKey(shuffledNumbers[1])}
-          {renderNumberKey(shuffledNumbers[2])}
-        </View>
-        <View style={styles.row}>
-          {renderNumberKey(shuffledNumbers[3])}
-          {renderNumberKey(shuffledNumbers[4])}
-          {renderNumberKey(shuffledNumbers[5])}
-        </View>
-        <View style={styles.row}>
-          {renderNumberKey(shuffledNumbers[6])}
-          {renderNumberKey(shuffledNumbers[7])}
-          {renderNumberKey(shuffledNumbers[8])}
-        </View>
-        <View style={styles.row}>
-          {showBiometric ? (
+      <View style={styles.keypadWrapper}>
+        <View style={styles.keypadContainer}>
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[0])}
+            {renderNumberKey(shuffledNumbers[1])}
+            {renderNumberKey(shuffledNumbers[2])}
+          </View>
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[3])}
+            {renderNumberKey(shuffledNumbers[4])}
+            {renderNumberKey(shuffledNumbers[5])}
+          </View>
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[6])}
+            {renderNumberKey(shuffledNumbers[7])}
+            {renderNumberKey(shuffledNumbers[8])}
+          </View>
+          <View style={styles.row}>
+            {showBiometric ? (
+              <TouchableOpacity
+                style={styles.key}
+                onPress={onBiometricPress}
+                activeOpacity={0.6}
+                disabled={disabled}
+              >
+                <Ionicons name="scan-outline" size={30} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.key} />
+            )}
+            {renderNumberKey(shuffledNumbers[9])}
             <TouchableOpacity
               style={styles.key}
-              onPress={onBiometricPress}
+              onPress={handleDelete}
               activeOpacity={0.6}
               disabled={disabled}
             >
-              <Ionicons name="scan-outline" size={32} color="#fff" />
+              <Ionicons name="backspace-outline" size={30} color="#fff" />
             </TouchableOpacity>
-          ) : (
-            <View style={styles.key} />
+          </View>
+
+          {bottomLink && (
+            <TouchableOpacity style={styles.bottomLinkContainer} onPress={onBottomLinkPress}>
+              <Text style={[styles.bottomLinkText, { fontFamily: fonts?.medium }]}>
+                {bottomLink}
+              </Text>
+            </TouchableOpacity>
           )}
-          {renderNumberKey(shuffledNumbers[9])}
-          <TouchableOpacity
-            style={styles.key}
-            onPress={handleDelete}
-            activeOpacity={0.6}
-            disabled={disabled}
-          >
-            <Ionicons name="backspace-outline" size={32} color="#fff" />
-          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -311,25 +329,28 @@ export const PinKeypadWithRef = React.forwardRef(({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
   },
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
-    paddingVertical: 40,
+    paddingVertical: 30,
   },
   dot: {
     width: 14,
     height: 14,
     borderRadius: 7,
   },
+  keypadWrapper: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   keypadContainer: {
     backgroundColor: '#0A2A5E',
-    paddingTop: 24,
+    paddingTop: 20,
     paddingBottom: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
@@ -340,13 +361,23 @@ const styles = StyleSheet.create({
   },
   key: {
     width: KEY_SIZE,
-    height: KEY_SIZE * 0.75,
+    height: KEY_HEIGHT,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keyText: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '600',
+    color: '#fff',
+  },
+  bottomLinkContainer: {
+    alignItems: 'center',
+    paddingTop: 16,
+    paddingBottom: 10,
+  },
+  bottomLinkText: {
+    fontSize: 14,
+    textDecorationLine: 'underline',
     color: '#fff',
   },
 });
