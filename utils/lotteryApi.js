@@ -2,7 +2,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const LOTTO_API_URL = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber';
+const LOTTO_API_URL = 'https://www.dhlottery.co.kr/lt645/selectPstLt645Info.do';
 const PENSION_API_URL = 'https://www.dhlottery.co.kr/pt720/selectPstPt720WnList.do';
 
 // 캐시 키
@@ -11,7 +11,7 @@ const PENSION_CACHE_KEY = 'lotteryCache_pension';
 const CACHE_DURATION = 1000 * 60 * 60; // 1시간
 
 /**
- * 로또 당첨번호 조회
+ * 로또 당첨번호 조회 (새 API)
  * @param {number} round - 회차
  * @returns {object|null} 당첨번호 정보
  */
@@ -21,30 +21,68 @@ export async function getLottoWinNumbers(round) {
     const cached = await getCachedResult('lotto', round);
     if (cached) return cached;
 
-    // API 호출
-    const response = await fetch(`${LOTTO_API_URL}&drwNo=${round}`);
-    const data = await response.json();
+    // API 호출 (브라우저 요청처럼 헤더 추가)
+    const response = await fetch(`${LOTTO_API_URL}?srchLtEpsd=${round}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
 
-    if (data.returnValue !== 'success') {
+    // 응답 상태 확인
+    if (!response.ok) {
+      console.warn(`Lotto API HTTP error: ${response.status}`);
       return null;
     }
 
+    // 응답 텍스트 먼저 확인
+    const text = await response.text();
+
+    // JSON 파싱 시도
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (parseError) {
+      console.warn('Lotto API returned non-JSON response');
+      return null;
+    }
+
+    // 데이터 확인
+    if (!json.data || !json.data.list || json.data.list.length === 0) {
+      return null;
+    }
+
+    const data = json.data.list[0];
+
+    // 요청한 회차와 응답 회차가 다르면 에러 (API 버그 방지)
+    if (data.ltEpsd !== round) {
+      console.warn(`Lotto API mismatch: requested round ${round}, got ${data.ltEpsd}`);
+      return null;
+    }
+
+    // 추첨일 포맷 변환 (YYYYMMDD -> YYYY-MM-DD)
+    const drawDateRaw = data.ltRflYmd;
+    const drawDate = drawDateRaw
+      ? `${drawDateRaw.slice(0, 4)}-${drawDateRaw.slice(4, 6)}-${drawDateRaw.slice(6, 8)}`
+      : null;
+
     const result = {
-      round: data.drwNo,
-      drawDate: data.drwNoDate,
+      round: data.ltEpsd,
+      drawDate: drawDate,
       numbers: [
-        data.drwtNo1,
-        data.drwtNo2,
-        data.drwtNo3,
-        data.drwtNo4,
-        data.drwtNo5,
-        data.drwtNo6,
+        data.tm1WnNo,
+        data.tm2WnNo,
+        data.tm3WnNo,
+        data.tm4WnNo,
+        data.tm5WnNo,
+        data.tm6WnNo,
       ],
-      bonusNumber: data.bnusNo,
-      totalSellAmount: data.totSellamnt,
-      firstWinAmount: data.firstWinamnt,
-      firstWinCount: data.firstPrzwnerCo,
-      firstWinAmountPerPerson: data.firstAccumamnt,
+      bonusNumber: data.bnsWnNo,
+      totalSellAmount: data.wholEpsdSumNtslAmt,
+      firstWinAmount: data.rnk1WnAmt,
+      firstWinCount: data.rnk1WnNope,
+      firstWinAmountPerPerson: data.rnk1SumWnAmt,
     };
 
     // 캐시 저장
@@ -116,6 +154,28 @@ export async function getCurrentRound(type = 'lotto') {
     // 연금복권은 매주 목요일 추첨
     // 대략적인 계산 (정확한 시작일 필요)
     return null;
+  }
+}
+
+/**
+ * 특정 회차의 추첨일 계산
+ * @param {number} round - 회차
+ * @param {string} type - 복권 타입 ('lotto' 또는 'pension')
+ * @returns {Date} 추첨일시
+ */
+export function getDrawDateForRound(round, type = 'lotto') {
+  if (type === 'lotto') {
+    // 로또 1회차: 2002년 12월 7일 20:45
+    const firstDrawDate = new Date('2002-12-07T20:45:00+09:00');
+    const drawDate = new Date(firstDrawDate);
+    drawDate.setDate(firstDrawDate.getDate() + (round - 1) * 7);
+    return drawDate;
+  } else {
+    // 연금복권720+ 1회차: 2020년 4월 2일 19:05 (목요일)
+    const firstDrawDate = new Date('2020-04-02T19:05:00+09:00');
+    const drawDate = new Date(firstDrawDate);
+    drawDate.setDate(firstDrawDate.getDate() + (round - 1) * 7);
+    return drawDate;
   }
 }
 
@@ -210,7 +270,15 @@ async function getCachedResult(type, round) {
 
     if (cached) {
       const { data, timestamp } = JSON.parse(cached);
+      // 캐시 만료 및 회차 검증
       if (Date.now() - timestamp < CACHE_DURATION) {
+        // 캐시된 데이터의 회차가 요청한 회차와 일치하는지 확인
+        if (data.round && data.round !== round) {
+          console.warn(`Cache data mismatch: requested round ${round}, cached ${data.round}`);
+          // 잘못된 캐시 삭제
+          await AsyncStorage.removeItem(`${cacheKey}_${round}`);
+          return null;
+        }
         return data;
       }
     }
@@ -269,6 +337,7 @@ export default {
   getLottoWinNumbers,
   getPensionWinNumbers,
   getCurrentRound,
+  getDrawDateForRound,
   isDrawCompleted,
   getNextDrawTime,
   LOTTO_PRIZE_INFO,

@@ -120,6 +120,9 @@ export default {
     passwordChangeFailed: '비밀번호 변경에 실패했습니다',
     logout: '로그아웃',
     withdraw: '회원탈퇴',
+    withdrawDesc: '모든 데이터가 삭제됩니다',
+    accountManagement: '계정 관리',
+    dangerZone: '위험 영역',
     logoutConfirm: '정말 로그아웃 하시겠습니까?',
     withdrawConfirm: '정말 탈퇴하시겠습니까?\n탈퇴 시 모든 데이터가 삭제됩니다.',
     // 로그인된 상태
@@ -210,6 +213,8 @@ export default {
     historySaveSuccessMessage: '바코드 #{{number}}이(가) 기록에 저장되었습니다.',
     historyAllSaveSuccess: '기록 저장 완료',
     historyAllSaveSuccessMessage: '{{count}}개의 바코드가 기록에 저장되었습니다.',
+    duplicateLottery: '중복된 복권',
+    duplicateLotteryMessage: '이미 저장된 복권입니다.',
     saveError: '저장 중 오류가 발생했습니다.',
     permissionDenied: '사진 앨범 접근 권한이 필요합니다.',
     downloadJson: 'JSON 다운로드',
@@ -220,6 +225,7 @@ export default {
     resetZoom: '리셋',
     reanalyze: '영역 분석',
     cropping: '이미지 크롭 중...',
+    gestureHint: '핀치로 확대, 더블탭으로 리셋',
   },
 
   // 히스토리 화면

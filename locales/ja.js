@@ -97,6 +97,9 @@ export default {
     changePassword: 'パスワード変更',
     logout: 'ログアウト',
     withdraw: '退会',
+    withdrawDesc: 'すべてのデータが削除されます',
+    accountManagement: 'アカウント管理',
+    dangerZone: '危険な操作',
     logoutConfirm: '本当にログアウトしますか？',
     withdrawConfirm: '本当に退会しますか？\n退会するとすべてのデータが削除されます。',
     // ログイン状態
@@ -186,6 +189,8 @@ export default {
     historyAllSaveSuccess: '履歴に保存完了',
     historyAllSaveSuccessMessage: '{{count}}個のバーコードが履歴に保存されました。',
     saveError: '保存中にエラーが発生しました。',
+    duplicateLottery: '重複した宝くじ',
+    duplicateLotteryMessage: 'すでに保存されている宝くじです。',
     permissionDenied: '写真アルバムへのアクセス権限が必要です。',
     downloadJson: 'JSONダウンロード',
     jsonCopied: 'JSONコピー完了',
@@ -195,6 +200,7 @@ export default {
     resetZoom: 'リセット',
     reanalyze: '領域分析',
     cropping: '画像をクロップ中...',
+    gestureHint: 'ピンチでズーム、ダブルタップでリセット',
   },
 
   // 履歴画面

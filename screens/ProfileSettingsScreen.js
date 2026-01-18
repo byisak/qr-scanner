@@ -40,6 +40,44 @@ export default function ProfileSettingsScreen() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // 프로필 이니셜 가져오기
+  const getInitials = () => {
+    const name = user?.name || user?.email || '?';
+    return name.charAt(0).toUpperCase();
+  };
+
+  // 프로바이더 아이콘 가져오기
+  const getProviderIcon = (provider) => {
+    switch (provider) {
+      case 'kakao':
+        return 'chatbubble';
+      case 'google':
+        return 'logo-google';
+      case 'apple':
+        return 'logo-apple';
+      case 'email':
+        return 'mail';
+      default:
+        return 'person';
+    }
+  };
+
+  // 프로바이더 색상 가져오기
+  const getProviderColor = (provider) => {
+    switch (provider) {
+      case 'kakao':
+        return '#FEE500';
+      case 'google':
+        return '#4285F4';
+      case 'apple':
+        return isDark ? '#FFFFFF' : '#000000';
+      case 'email':
+        return '#E67E22';
+      default:
+        return colors.primary;
+    }
+  };
+
   const handleSaveNickname = async () => {
     if (!nickname.trim()) {
       Alert.alert(t('settings.error'), t('auth.errorNicknameRequired'));
@@ -183,7 +221,7 @@ export default function ProfileSettingsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -199,107 +237,155 @@ export default function ProfileSettingsScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        {/* 프로필 정보 섹션 */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {/* 닉네임 */}
-          <View style={[styles.infoRow, { borderBottomColor: colors.borderLight }]}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-              {t('auth.nickname')}
+        {/* 프로필 카드 */}
+        <View style={[styles.profileCard, { backgroundColor: colors.surface }]}>
+          {/* 아바타 */}
+          <View style={[styles.avatarContainer, { backgroundColor: getProviderColor(user?.provider) }]}>
+            <Text style={[styles.avatarText, {
+              color: user?.provider === 'kakao' ? '#3C1E1E' : '#FFFFFF',
+              fontFamily: fonts.bold
+            }]}>
+              {getInitials()}
             </Text>
+            <View style={[styles.providerBadge, { backgroundColor: colors.surface }]}>
+              <Ionicons
+                name={getProviderIcon(user?.provider)}
+                size={14}
+                color={getProviderColor(user?.provider)}
+              />
+            </View>
+          </View>
+
+          {/* 닉네임 */}
+          <View style={styles.profileInfo}>
             {isEditingNickname ? (
-              <View style={styles.editRow}>
+              <View style={styles.editNicknameContainer}>
                 <TextInput
-                  style={[styles.nicknameInput, { color: colors.text, fontFamily: fonts.regular, borderColor: colors.borderLight }]}
+                  style={[styles.nicknameInput, {
+                    color: colors.text,
+                    fontFamily: fonts.semiBold,
+                    borderColor: colors.primary,
+                    backgroundColor: colors.background
+                  }]}
                   value={nickname}
                   onChangeText={setNickname}
                   autoFocus
+                  maxLength={20}
                 />
-                <TouchableOpacity onPress={handleSaveNickname}>
-                  <Text style={[styles.saveButton, { color: '#E67E22', fontFamily: fonts.semiBold }]}>
-                    {t('common.save')}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => {
-                  setNickname(user?.name || '');
-                  setIsEditingNickname(false);
-                }}>
-                  <Text style={[styles.cancelButton, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
-                    {t('common.cancel')}
-                  </Text>
-                </TouchableOpacity>
+                <View style={styles.editButtons}>
+                  <TouchableOpacity
+                    style={[styles.editActionButton, { backgroundColor: colors.primary }]}
+                    onPress={handleSaveNickname}
+                  >
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.editActionButton, { backgroundColor: colors.border }]}
+                    onPress={() => {
+                      setNickname(user?.name || '');
+                      setIsEditingNickname(false);
+                    }}
+                  >
+                    <Ionicons name="close" size={18} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <View style={styles.valueRow}>
-                <Text style={[styles.infoValue, { color: colors.text, fontFamily: fonts.regular }]}>
+              <TouchableOpacity
+                style={styles.nicknameRow}
+                onPress={() => setIsEditingNickname(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.nickname, { color: colors.text, fontFamily: fonts.bold }]}>
                   {user?.name || '-'}
                 </Text>
-                <TouchableOpacity onPress={() => setIsEditingNickname(true)}>
-                  <Text style={[styles.editButton, { color: '#E67E22', fontFamily: fonts.medium }]}>
-                    {t('common.edit')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                <Ionicons name="pencil" size={16} color={colors.textTertiary} style={styles.editIcon} />
+              </TouchableOpacity>
             )}
-          </View>
-
-          {/* 이메일 */}
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-              {t('auth.email')}
+            <Text style={[styles.email, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {user?.email || '-'}
             </Text>
-            <View style={styles.valueRow}>
-              <Text style={[styles.infoValue, { color: colors.text, fontFamily: fonts.regular }]}>
-                {user?.email || '-'}
+            <View style={[styles.providerTag, { backgroundColor: isDark ? colors.border : colors.borderLight }]}>
+              <Ionicons
+                name={getProviderIcon(user?.provider)}
+                size={12}
+                color={colors.textSecondary}
+              />
+              <Text style={[styles.providerTagText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+                {getProviderName(user?.provider)}
               </Text>
-              {user?.provider && (
-                <Text style={[styles.providerBadge, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  ({getProviderName(user.provider)})
-                </Text>
-              )}
             </View>
           </View>
         </View>
 
         {/* 계정 관리 섹션 */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          {/* 비밀번호 변경 (이메일 로그인만) */}
-          {user?.provider === 'email' && (
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+            {t('auth.accountManagement') || '계정 관리'}
+          </Text>
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            {/* 비밀번호 변경 (이메일 로그인만) */}
+            {user?.provider === 'email' && (
+              <TouchableOpacity
+                style={[styles.menuItem, { borderBottomColor: colors.borderLight }]}
+                onPress={() => setPasswordModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.menuIconWrapper, { backgroundColor: '#3498DB15' }]}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#3498DB" />
+                </View>
+                <Text style={[styles.menuText, { color: colors.text, fontFamily: fonts.medium }]}>
+                  {t('auth.changePassword')}
+                </Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+
+            {/* 로그아웃 */}
             <TouchableOpacity
-              style={[styles.menuItem, { borderBottomColor: colors.borderLight }]}
-              onPress={() => setPasswordModalVisible(true)}
+              style={styles.menuItem}
+              onPress={handleLogout}
               activeOpacity={0.7}
             >
+              <View style={[styles.menuIconWrapper, { backgroundColor: '#9B59B615' }]}>
+                <Ionicons name="log-out-outline" size={20} color="#9B59B6" />
+              </View>
               <Text style={[styles.menuText, { color: colors.text, fontFamily: fonts.medium }]}>
-                {t('auth.changePassword')}
+                {t('auth.logout')}
               </Text>
               <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
             </TouchableOpacity>
-          )}
+          </View>
+        </View>
 
-          {/* 로그아웃 */}
-          <TouchableOpacity
-            style={[styles.menuItem, { borderBottomColor: colors.borderLight }]}
-            onPress={handleLogout}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.menuText, { color: colors.text, fontFamily: fonts.medium }]}>
-              {t('auth.logout')}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
-
-          {/* 회원탈퇴 */}
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={handleWithdraw}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.menuText, { color: '#E74C3C', fontFamily: fonts.medium }]}>
-              {t('auth.withdraw')}
-            </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
+        {/* 위험 영역 섹션 */}
+        <View style={styles.sectionContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+            {t('auth.dangerZone') || '위험 영역'}
+          </Text>
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            {/* 회원탈퇴 */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handleWithdraw}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.menuIconWrapper, { backgroundColor: '#E74C3C15' }]}>
+                <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+              </View>
+              <View style={styles.menuTextContainer}>
+                <Text style={[styles.menuText, { color: '#E74C3C', fontFamily: fonts.medium }]}>
+                  {t('auth.withdraw')}
+                </Text>
+                <Text style={[styles.menuDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                  {t('auth.withdrawDesc') || '모든 데이터가 삭제됩니다'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
 
@@ -318,6 +404,9 @@ export default function ProfileSettingsScreen() {
           style={styles.modalOverlay}
         >
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            {/* 모달 핸들 */}
+            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+
             {/* 모달 헤더 */}
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
@@ -330,7 +419,7 @@ export default function ProfileSettingsScreen() {
                 }}
                 style={styles.modalCloseButton}
               >
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -369,7 +458,7 @@ export default function ProfileSettingsScreen() {
                   value={newPassword}
                   onChangeText={setNewPassword}
                   secureTextEntry={!showNewPassword}
-                  placeholder={t('auth.enterNewPassword') || '새 비밀번호 입력 (6자 이상)'}
+                  placeholder={t('auth.enterNewPassword') || '새 비밀번호 입력 (8자 이상)'}
                   placeholderTextColor={colors.textTertiary}
                 />
                 <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
@@ -438,7 +527,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     paddingTop: Platform.OS === 'android' ? 40 : 50,
-    paddingBottom: 10,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
   },
   backButton: {
     width: 44,
@@ -458,90 +548,141 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
+    paddingTop: 24,
     paddingBottom: 40,
   },
-  profileImageSection: {
+  // 프로필 카드
+  profileCard: {
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
-    paddingVertical: 24,
+    marginBottom: 24,
   },
-  profileImageWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+    marginBottom: 16,
+    position: 'relative',
   },
-  profileImage: {
-    width: '100%',
-    height: '100%',
-  },
-  changeImageButton: {
-    marginTop: 12,
-  },
-  changeImageText: {
-    fontSize: 15,
-  },
-  section: {
-    borderRadius: 16,
-    marginBottom: 20,
-    overflow: 'hidden',
-  },
-  infoRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-  },
-  infoLabel: {
-    fontSize: 13,
-    marginBottom: 6,
-  },
-  valueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  infoValue: {
-    fontSize: 16,
-    flex: 1,
+  avatarText: {
+    fontSize: 32,
+    fontWeight: 'bold',
   },
   providerBadge: {
-    fontSize: 13,
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  profileInfo: {
+    alignItems: 'center',
+  },
+  nicknameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  nickname: {
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  editIcon: {
     marginLeft: 8,
   },
-  editButton: {
+  email: {
     fontSize: 14,
-    paddingLeft: 12,
+    marginTop: 4,
   },
-  editRow: {
+  providerTag: {
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 12,
+    gap: 6,
+  },
+  providerTagText: {
+    fontSize: 12,
+  },
+  editNicknameContainer: {
     alignItems: 'center',
     gap: 12,
   },
   nicknameInput: {
-    flex: 1,
-    fontSize: 16,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    fontSize: 18,
+    fontWeight: '600',
+    borderWidth: 2,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    minWidth: 200,
+    textAlign: 'center',
   },
-  saveButton: {
-    fontSize: 14,
+  editButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
-  cancelButton: {
-    fontSize: 14,
+  editActionButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  // 섹션
+  sectionContainer: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  section: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  // 메뉴 아이템
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
+  },
+  menuIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  menuTextContainer: {
+    flex: 1,
   },
   menuText: {
     fontSize: 16,
+    flex: 1,
+  },
+  menuDesc: {
+    fontSize: 12,
+    marginTop: 2,
   },
   // 모달 스타일
   modalOverlay: {
@@ -553,8 +694,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   modalHeader: {
     flexDirection: 'row',

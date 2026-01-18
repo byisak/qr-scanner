@@ -97,6 +97,9 @@ export default {
     changePassword: '修改密码',
     logout: '退出登录',
     withdraw: '注销账户',
+    withdrawDesc: '所有数据将被删除',
+    accountManagement: '账户管理',
+    dangerZone: '危险区域',
     logoutConfirm: '确定要退出登录吗？',
     withdrawConfirm: '确定要注销账户吗？\n注销后所有数据将被删除。',
     // 登录状态
@@ -186,6 +189,8 @@ export default {
     historyAllSaveSuccess: '已保存到历史',
     historyAllSaveSuccessMessage: '{{count}} 个条码已保存到历史记录。',
     saveError: '保存时发生错误。',
+    duplicateLottery: '重复的彩票',
+    duplicateLotteryMessage: '该彩票已保存。',
     permissionDenied: '需要访问相册的权限。',
     downloadJson: 'JSON下载',
     jsonCopied: 'JSON已复制',
@@ -195,6 +200,7 @@ export default {
     resetZoom: '重置',
     reanalyze: '区域分析',
     cropping: '正在裁剪图片...',
+    gestureHint: '双指缩放，双击重置',
   },
 
   // 历史记录界面

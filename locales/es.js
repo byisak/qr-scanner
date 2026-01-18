@@ -97,6 +97,9 @@ export default {
     changePassword: 'Cambiar contraseña',
     logout: 'Cerrar sesión',
     withdraw: 'Eliminar cuenta',
+    withdrawDesc: 'Todos los datos serán eliminados',
+    accountManagement: 'Gestión de cuenta',
+    dangerZone: 'Zona de peligro',
     logoutConfirm: '¿Estás seguro de que quieres cerrar sesión?',
     withdrawConfirm: '¿Estás seguro de que quieres eliminar tu cuenta?\nTodos los datos serán eliminados.',
     // Estado de inicio de sesión
@@ -186,6 +189,8 @@ export default {
     historyAllSaveSuccess: 'Guardado en historial',
     historyAllSaveSuccessMessage: '{{count}} códigos se han guardado en el historial.',
     saveError: 'Ocurrió un error al guardar.',
+    duplicateLottery: 'Lotería duplicada',
+    duplicateLotteryMessage: 'Este billete de lotería ya está guardado.',
     permissionDenied: 'Se requiere permiso de acceso al álbum de fotos.',
     downloadJson: 'Descargar JSON',
     jsonCopied: 'JSON copiado',
@@ -195,6 +200,7 @@ export default {
     resetZoom: 'Restablecer',
     reanalyze: 'Analizar área',
     cropping: 'Recortando imagen...',
+    gestureHint: 'Pellizca para ampliar, doble toque para restablecer',
   },
 
   // Pantalla de historial

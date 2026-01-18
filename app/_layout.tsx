@@ -9,21 +9,23 @@ import { AuthProvider } from '../contexts/AuthContext';
 import { SyncProvider } from '../contexts/SyncContext';
 import { FeatureLockProvider } from '../contexts/FeatureLockContext';
 import { FontAssets } from '../constants/Fonts';
+import { useTrackingPermission } from '../hooks/useTrackingPermission';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FontAssets);
+  const { isLoading: isTrackingLoading } = useTrackingPermission();
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    if ((fontsLoaded || fontError) && !isTrackingLoading) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, isTrackingLoading]);
 
-  // Don't render until fonts are loaded
-  if (!fontsLoaded && !fontError) {
+  // Don't render until fonts are loaded and ATT is resolved
+  if ((!fontsLoaded && !fontError) || isTrackingLoading) {
     return null;
   }
 
