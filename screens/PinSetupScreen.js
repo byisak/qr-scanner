@@ -1,5 +1,5 @@
 // screens/PinSetupScreen.js - PIN 설정 화면
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -19,7 +19,6 @@ import * as Haptics from 'expo-haptics';
 
 export default function PinSetupScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const { enableAppLock, biometricAvailable, biometricType } = useAppLock();
@@ -38,7 +37,9 @@ export default function PinSetupScreen() {
       // 첫 번째 PIN 입력
       setFirstPin(pin);
       setStep('confirm');
-      pinKeypadRef.current?.resetPin();
+      setTimeout(() => {
+        pinKeypadRef.current?.resetPin();
+      }, 100);
     } else {
       // 확인 PIN 입력
       if (pin !== firstPin) {
@@ -47,7 +48,9 @@ export default function PinSetupScreen() {
         setErrorMessage(t('security.pinMismatch') || 'PIN이 일치하지 않습니다. 다시 시도해주세요.');
         setStep('enter');
         setFirstPin('');
-        pinKeypadRef.current?.resetPin();
+        setTimeout(() => {
+          pinKeypadRef.current?.resetPin();
+        }, 100);
         return;
       }
 
@@ -137,7 +140,7 @@ export default function PinSetupScreen() {
       {/* 하단 링크 */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Text style={[styles.linkText, { color: colors.primary, fontFamily: fonts.medium }]}>
+          <Text style={[styles.linkText, { fontFamily: fonts.medium }]}>
             {t('security.cancelSetup') || '설정 취소'}
           </Text>
         </TouchableOpacity>
@@ -184,7 +187,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: 120,
+    paddingBottom: 100,
     backgroundColor: '#0A2A5E',
   },
   linkText: {

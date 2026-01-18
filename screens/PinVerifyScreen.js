@@ -1,5 +1,5 @@
 // screens/PinVerifyScreen.js - PIN 확인 화면
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -68,7 +68,9 @@ export default function PinVerifyScreen() {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setAttempts((prev) => prev + 1);
       setErrorMessage(t('security.incorrectPin') || 'PIN이 올바르지 않습니다.');
-      pinKeypadRef.current?.resetPin();
+      setTimeout(() => {
+        pinKeypadRef.current?.resetPin();
+      }, 100);
 
       // 5회 실패 시 경고
       if (attempts >= 4) {
@@ -173,7 +175,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: 120,
+    paddingBottom: 100,
     backgroundColor: '#0A2A5E',
   },
   linkText: {

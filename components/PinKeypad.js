@@ -11,8 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
-const KEYPAD_WIDTH = Math.min(width, 400);
-const KEY_SIZE = (KEYPAD_WIDTH - 80) / 3;
+const KEYPAD_WIDTH = Math.min(width - 40, 360);
+const KEY_SIZE = KEYPAD_WIDTH / 3;
 
 export default function PinKeypad({
   onPinChange,
@@ -22,31 +22,27 @@ export default function PinKeypad({
   disabled = false,
   colors,
   fonts,
+  showBiometric = false,
+  onBiometricPress,
 }) {
   const [pin, setPin] = useState('');
-  const [shuffledKeys, setShuffledKeys] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'delete']);
+  const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
 
-  // 키 셔플
-  const shuffleArray = useCallback((array) => {
-    const numbers = array.filter((item) => item !== '' && item !== 'delete');
+  // 숫자 셔플
+  const shuffleNumbers = useCallback(() => {
+    const numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     for (let i = numbers.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
     }
-    // 셔플된 숫자를 3x4 그리드에 배치
-    return [
-      numbers[0], numbers[1], numbers[2],
-      numbers[3], numbers[4], numbers[5],
-      numbers[6], numbers[7], numbers[8],
-      '', numbers[9], 'delete'
-    ];
+    return numbers;
   }, []);
 
   useEffect(() => {
     if (shuffleKeys) {
-      setShuffledKeys(shuffleArray(['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'delete']));
+      setShuffledNumbers(shuffleNumbers());
     }
-  }, [shuffleKeys, shuffleArray]);
+  }, [shuffleKeys, shuffleNumbers]);
 
   // PIN 변경 시 콜백
   useEffect(() => {
@@ -59,32 +55,27 @@ export default function PinKeypad({
   // 키 입력
   const handleKeyPress = async (key) => {
     if (disabled) return;
-
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (key === 'delete') {
-      setPin((prev) => prev.slice(0, -1));
-    } else if (key !== '' && pin.length < pinLength) {
+    if (pin.length < pinLength) {
       setPin((prev) => prev + key);
     }
   };
 
-  // PIN 초기화
-  const resetPin = () => {
-    setPin('');
-    if (shuffleKeys) {
-      setShuffledKeys(shuffleArray(['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'delete']));
-    }
+  // 삭제
+  const handleDelete = async () => {
+    if (disabled) return;
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPin((prev) => prev.slice(0, -1));
   };
 
-  // 외부에서 리셋 호출 가능하도록
-  React.useImperativeHandle(
-    React.useRef(null),
-    () => ({
-      resetPin,
-    }),
-    []
-  );
+  // PIN 초기화
+  const resetPin = useCallback(() => {
+    setPin('');
+    if (shuffleKeys) {
+      setShuffledNumbers(shuffleNumbers());
+    }
+  }, [shuffleKeys, shuffleNumbers]);
 
   // PIN 입력 상태 표시 (점)
   const renderPinDots = () => {
@@ -98,7 +89,9 @@ export default function PinKeypad({
               style={[
                 styles.dot,
                 {
-                  backgroundColor: index < pin.length ? colors?.primary || '#0066FF' : (colors?.border || '#E5E5E5'),
+                  backgroundColor: index < pin.length
+                    ? (colors?.primary || '#0066FF')
+                    : (colors?.border || '#D1D1D6'),
                 },
               ]}
             />
@@ -107,49 +100,67 @@ export default function PinKeypad({
     );
   };
 
-  // 키 렌더링
-  const renderKey = (key, index) => {
-    if (key === '') {
-      return <View key={index} style={styles.keyEmpty} />;
-    }
-
-    if (key === 'delete') {
-      return (
-        <TouchableOpacity
-          key={index}
-          style={styles.key}
-          onPress={() => handleKeyPress(key)}
-          activeOpacity={0.7}
-          disabled={disabled}
-        >
-          <Ionicons
-            name="backspace-outline"
-            size={28}
-            color="#fff"
-          />
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        key={index}
-        style={styles.key}
-        onPress={() => handleKeyPress(key)}
-        activeOpacity={0.7}
-        disabled={disabled}
-      >
-        <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{key}</Text>
-      </TouchableOpacity>
-    );
-  };
+  // 숫자 키 렌더링
+  const renderNumberKey = (number) => (
+    <TouchableOpacity
+      key={number}
+      style={styles.key}
+      onPress={() => handleKeyPress(number)}
+      activeOpacity={0.6}
+      disabled={disabled}
+    >
+      <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{number}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
       {renderPinDots()}
       <View style={styles.keypadContainer}>
-        <View style={styles.keypad}>
-          {shuffledKeys.map((key, index) => renderKey(key, index))}
+        {/* Row 1: 첫 3개 숫자 */}
+        <View style={styles.row}>
+          {renderNumberKey(shuffledNumbers[0])}
+          {renderNumberKey(shuffledNumbers[1])}
+          {renderNumberKey(shuffledNumbers[2])}
+        </View>
+
+        {/* Row 2: 다음 3개 숫자 */}
+        <View style={styles.row}>
+          {renderNumberKey(shuffledNumbers[3])}
+          {renderNumberKey(shuffledNumbers[4])}
+          {renderNumberKey(shuffledNumbers[5])}
+        </View>
+
+        {/* Row 3: 다음 3개 숫자 */}
+        <View style={styles.row}>
+          {renderNumberKey(shuffledNumbers[6])}
+          {renderNumberKey(shuffledNumbers[7])}
+          {renderNumberKey(shuffledNumbers[8])}
+        </View>
+
+        {/* Row 4: 생체인증/빈칸, 마지막 숫자, 삭제 */}
+        <View style={styles.row}>
+          {showBiometric ? (
+            <TouchableOpacity
+              style={styles.key}
+              onPress={onBiometricPress}
+              activeOpacity={0.6}
+              disabled={disabled}
+            >
+              <Ionicons name="scan-outline" size={32} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.key} />
+          )}
+          {renderNumberKey(shuffledNumbers[9])}
+          <TouchableOpacity
+            style={styles.key}
+            onPress={handleDelete}
+            activeOpacity={0.6}
+            disabled={disabled}
+          >
+            <Ionicons name="backspace-outline" size={32} color="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -157,29 +168,34 @@ export default function PinKeypad({
 }
 
 // PIN 초기화를 위한 forwardRef 버전
-export const PinKeypadWithRef = React.forwardRef(({ onPinChange, onComplete, pinLength = 6, shuffleKeys = true, disabled = false, colors, fonts }, ref) => {
+export const PinKeypadWithRef = React.forwardRef(({
+  onPinChange,
+  onComplete,
+  pinLength = 6,
+  shuffleKeys = true,
+  disabled = false,
+  colors,
+  fonts,
+  showBiometric = false,
+  onBiometricPress,
+}, ref) => {
   const [pin, setPin] = useState('');
-  const [shuffledKeys, setShuffledKeys] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'delete']);
+  const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
 
-  const shuffleArray = useCallback((array) => {
-    const numbers = array.filter((item) => item !== '' && item !== 'delete');
+  const shuffleNumbers = useCallback(() => {
+    const numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
     for (let i = numbers.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
     }
-    return [
-      numbers[0], numbers[1], numbers[2],
-      numbers[3], numbers[4], numbers[5],
-      numbers[6], numbers[7], numbers[8],
-      '', numbers[9], 'delete'
-    ];
+    return numbers;
   }, []);
 
   useEffect(() => {
     if (shuffleKeys) {
-      setShuffledKeys(shuffleArray(['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'delete']));
+      setShuffledNumbers(shuffleNumbers());
     }
-  }, [shuffleKeys, shuffleArray]);
+  }, [shuffleKeys, shuffleNumbers]);
 
   useEffect(() => {
     onPinChange?.(pin);
@@ -191,20 +207,23 @@ export const PinKeypadWithRef = React.forwardRef(({ onPinChange, onComplete, pin
   const handleKeyPress = async (key) => {
     if (disabled) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    if (key === 'delete') {
-      setPin((prev) => prev.slice(0, -1));
-    } else if (key !== '' && pin.length < pinLength) {
+    if (pin.length < pinLength) {
       setPin((prev) => prev + key);
     }
+  };
+
+  const handleDelete = async () => {
+    if (disabled) return;
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPin((prev) => prev.slice(0, -1));
   };
 
   const resetPin = useCallback(() => {
     setPin('');
     if (shuffleKeys) {
-      setShuffledKeys(shuffleArray(['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'delete']));
+      setShuffledNumbers(shuffleNumbers());
     }
-  }, [shuffleKeys, shuffleArray]);
+  }, [shuffleKeys, shuffleNumbers]);
 
   React.useImperativeHandle(ref, () => ({
     resetPin,
@@ -220,7 +239,9 @@ export const PinKeypadWithRef = React.forwardRef(({ onPinChange, onComplete, pin
             style={[
               styles.dot,
               {
-                backgroundColor: index < pin.length ? (colors?.primary || '#0066FF') : (colors?.border || '#E5E5E5'),
+                backgroundColor: index < pin.length
+                  ? (colors?.primary || '#0066FF')
+                  : (colors?.border || '#D1D1D6'),
               },
             ]}
           />
@@ -228,44 +249,59 @@ export const PinKeypadWithRef = React.forwardRef(({ onPinChange, onComplete, pin
     </View>
   );
 
-  const renderKey = (key, index) => {
-    if (key === '') {
-      return <View key={index} style={styles.keyEmpty} />;
-    }
-
-    if (key === 'delete') {
-      return (
-        <TouchableOpacity
-          key={index}
-          style={styles.key}
-          onPress={() => handleKeyPress(key)}
-          activeOpacity={0.7}
-          disabled={disabled}
-        >
-          <Ionicons name="backspace-outline" size={28} color="#fff" />
-        </TouchableOpacity>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        key={index}
-        style={styles.key}
-        onPress={() => handleKeyPress(key)}
-        activeOpacity={0.7}
-        disabled={disabled}
-      >
-        <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{key}</Text>
-      </TouchableOpacity>
-    );
-  };
+  const renderNumberKey = (number) => (
+    <TouchableOpacity
+      key={number}
+      style={styles.key}
+      onPress={() => handleKeyPress(number)}
+      activeOpacity={0.6}
+      disabled={disabled}
+    >
+      <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{number}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
       {renderPinDots()}
       <View style={styles.keypadContainer}>
-        <View style={styles.keypad}>
-          {shuffledKeys.map((key, index) => renderKey(key, index))}
+        <View style={styles.row}>
+          {renderNumberKey(shuffledNumbers[0])}
+          {renderNumberKey(shuffledNumbers[1])}
+          {renderNumberKey(shuffledNumbers[2])}
+        </View>
+        <View style={styles.row}>
+          {renderNumberKey(shuffledNumbers[3])}
+          {renderNumberKey(shuffledNumbers[4])}
+          {renderNumberKey(shuffledNumbers[5])}
+        </View>
+        <View style={styles.row}>
+          {renderNumberKey(shuffledNumbers[6])}
+          {renderNumberKey(shuffledNumbers[7])}
+          {renderNumberKey(shuffledNumbers[8])}
+        </View>
+        <View style={styles.row}>
+          {showBiometric ? (
+            <TouchableOpacity
+              style={styles.key}
+              onPress={onBiometricPress}
+              activeOpacity={0.6}
+              disabled={disabled}
+            >
+              <Ionicons name="scan-outline" size={32} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.key} />
+          )}
+          {renderNumberKey(shuffledNumbers[9])}
+          <TouchableOpacity
+            style={styles.key}
+            onPress={handleDelete}
+            activeOpacity={0.6}
+            disabled={disabled}
+          >
+            <Ionicons name="backspace-outline" size={32} color="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
     </View>
@@ -291,30 +327,22 @@ const styles = StyleSheet.create({
   },
   keypadContainer: {
     backgroundColor: '#0A2A5E',
-    paddingTop: 30,
-    paddingBottom: 50,
+    paddingTop: 24,
+    paddingBottom: 40,
     paddingHorizontal: 20,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
   },
-  keypad: {
+  row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
-    maxWidth: KEYPAD_WIDTH,
-    alignSelf: 'center',
   },
   key: {
     width: KEY_SIZE,
-    height: KEY_SIZE * 0.7,
+    height: KEY_SIZE * 0.75,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  keyEmpty: {
-    width: KEY_SIZE,
-    height: KEY_SIZE * 0.7,
   },
   keyText: {
     fontSize: 32,

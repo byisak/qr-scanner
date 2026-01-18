@@ -21,7 +21,7 @@ export default function PinChangeScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
-  const { verifyPin, changePin, setPin } = useAppLock();
+  const { verifyPin, setPin } = useAppLock();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [step, setStep] = useState('current'); // 'current' | 'new' | 'confirm'
@@ -41,23 +41,31 @@ export default function PinChangeScreen() {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setCurrentPin(pin);
         setStep('new');
-        pinKeypadRef.current?.resetPin();
+        setTimeout(() => {
+          pinKeypadRef.current?.resetPin();
+        }, 100);
       } else {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setErrorMessage(t('security.incorrectPin') || 'PIN이 올바르지 않습니다.');
-        pinKeypadRef.current?.resetPin();
+        setTimeout(() => {
+          pinKeypadRef.current?.resetPin();
+        }, 100);
       }
     } else if (step === 'new') {
       // 새 PIN 입력
       if (pin === currentPin) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setErrorMessage(t('security.samePinError') || '현재 PIN과 다른 PIN을 입력해주세요.');
-        pinKeypadRef.current?.resetPin();
+        setTimeout(() => {
+          pinKeypadRef.current?.resetPin();
+        }, 100);
         return;
       }
       setNewPin(pin);
       setStep('confirm');
-      pinKeypadRef.current?.resetPin();
+      setTimeout(() => {
+        pinKeypadRef.current?.resetPin();
+      }, 100);
     } else {
       // 새 PIN 확인
       if (pin !== newPin) {
@@ -65,7 +73,9 @@ export default function PinChangeScreen() {
         setErrorMessage(t('security.pinMismatch') || 'PIN이 일치하지 않습니다. 다시 시도해주세요.');
         setStep('new');
         setNewPin('');
-        pinKeypadRef.current?.resetPin();
+        setTimeout(() => {
+          pinKeypadRef.current?.resetPin();
+        }, 100);
         return;
       }
 
@@ -180,7 +190,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: 120,
+    paddingBottom: 100,
     backgroundColor: '#0A2A5E',
   },
   linkText: {

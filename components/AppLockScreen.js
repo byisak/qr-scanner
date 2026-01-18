@@ -7,9 +7,7 @@ import {
   Platform,
   Modal,
   TouchableOpacity,
-  Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
@@ -17,13 +15,12 @@ import { Colors } from '../constants/Colors';
 import { PinKeypadWithRef } from './PinKeypad';
 import * as Haptics from 'expo-haptics';
 
-const { height } = Dimensions.get('window');
-
 export default function AppLockScreen() {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const {
     isLocked,
+    isLoading,
     biometricEnabled,
     biometricType,
     verifyPin,
@@ -33,15 +30,28 @@ export default function AppLockScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [errorMessage, setErrorMessage] = useState('');
-  const [attempts, setAttempts] = useState(0);
+  const [biometricAttempted, setBiometricAttempted] = useState(false);
   const pinKeypadRef = useRef(null);
 
-  // 생체인증 자동 시도
+  // 생체인증 자동 시도 (한 번만)
   useEffect(() => {
-    if (isLocked && biometricEnabled) {
-      handleBiometricAuth();
+    if (isLocked && biometricEnabled && !biometricAttempted && !isLoading) {
+      setBiometricAttempted(true);
+      // 약간의 딜레이 후 생체인증 시도
+      const timer = setTimeout(() => {
+        handleBiometricAuth();
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [isLocked, biometricEnabled]);
+  }, [isLocked, biometricEnabled, biometricAttempted, isLoading]);
+
+  // 잠금 해제 시 상태 리셋
+  useEffect(() => {
+    if (!isLocked) {
+      setBiometricAttempted(false);
+      setErrorMessage('');
+    }
+  }, [isLocked]);
 
   // 생체인증 실행
   const handleBiometricAuth = async () => {
@@ -66,20 +76,13 @@ export default function AppLockScreen() {
       unlock();
     } else {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setAttempts((prev) => prev + 1);
       setErrorMessage(t('security.incorrectPin') || 'PIN이 올바르지 않습니다.');
       pinKeypadRef.current?.resetPin();
     }
   };
 
-  const getBiometricIcon = () => {
-    if (biometricType === 'FaceID') {
-      return 'scan-outline';
-    }
-    return 'finger-print-outline';
-  };
-
-  if (!isLocked) {
+  // 로딩 중이거나 잠금 해제된 경우 렌더링하지 않음
+  if (isLoading || !isLocked) {
     return null;
   }
 
@@ -111,19 +114,12 @@ export default function AppLockScreen() {
           shuffleKeys={true}
           colors={colors}
           fonts={fonts}
+          showBiometric={biometricEnabled}
+          onBiometricPress={handleBiometricAuth}
         />
 
-        {/* 하단 - 생체인증 버튼 또는 PIN 찾기 링크 */}
+        {/* 하단 - PIN 찾기 링크 */}
         <View style={styles.bottomContainer}>
-          {biometricEnabled && (
-            <TouchableOpacity
-              style={styles.biometricButton}
-              onPress={handleBiometricAuth}
-              activeOpacity={0.7}
-            >
-              <Ionicons name={getBiometricIcon()} size={28} color="#fff" />
-            </TouchableOpacity>
-          )}
           <TouchableOpacity>
             <Text style={[styles.linkText, { fontFamily: fonts.medium }]}>
               {t('security.forgotPin') || 'PIN 비밀번호를 잊으셨나요?'}
@@ -162,19 +158,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: 120,
+    paddingBottom: 100,
     backgroundColor: '#0A2A5E',
-    gap: 20,
-  },
-  biometricButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   linkText: {
     fontSize: 14,
