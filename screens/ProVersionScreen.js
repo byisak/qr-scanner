@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Pro 기능 목록 - 실제 앱에 구현된 기능들 (11개)
@@ -30,7 +31,8 @@ const PRO_FEATURES = [
 
 export default function ProVersionScreen() {
   const router = useRouter();
-  const { t, fonts } = useLanguage();
+  const { language, t, fonts } = useLanguage();
+  const { isDark } = useTheme();
 
   const handlePurchase = () => {
     Alert.alert(
@@ -183,13 +185,19 @@ export default function ProVersionScreen() {
 
           {/* 약관 및 개인정보 */}
           <View style={s.footerLinks}>
-            <TouchableOpacity onPress={() => router.push('/terms-of-service')}>
+            <TouchableOpacity onPress={() => router.push({
+              pathname: '/webview',
+              params: { url: `https://scanview.app/legal/terms?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+            })}>
               <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
                 {t('proPurchase.terms')}
               </Text>
             </TouchableOpacity>
             <Text style={s.footerDot}>•</Text>
-            <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+            <TouchableOpacity onPress={() => router.push({
+              pathname: '/webview',
+              params: { url: `https://scanview.app/legal/privacy?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+            })}>
               <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
                 {t('proPurchase.privacy')}
               </Text>

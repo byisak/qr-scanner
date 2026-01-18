@@ -945,7 +945,10 @@ export default function SettingsScreen() {
           {/* 서비스 이용약관 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/terms-of-service')}
+            onPress={() => router.push({
+              pathname: '/webview',
+              params: { url: `https://scanview.app/legal/terms?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+            })}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -958,7 +961,10 @@ export default function SettingsScreen() {
           {/* 개인정보 처리방침 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/privacy-policy')}
+            onPress={() => router.push({
+              pathname: '/webview',
+              params: { url: `https://scanview.app/legal/privacy?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+            })}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
