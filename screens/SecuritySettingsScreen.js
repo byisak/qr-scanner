@@ -141,9 +141,6 @@ export default function SecuritySettingsScreen() {
                   <Text style={[styles.menuLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
                     {t('security.changePin') || 'PIN 비밀번호 변경'}
                   </Text>
-                  <Text style={[styles.menuDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    {t('security.changePinDesc') || 'PIN 비밀번호 분실 시 업비트 로그인을 처음부터 다시 진행해야 합니다.'}
-                  </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
               </TouchableOpacity>
