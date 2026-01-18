@@ -113,7 +113,6 @@ export default function AppLockScreen() {
           fonts={fonts}
           showBiometric={biometricEnabled}
           onBiometricPress={handleBiometricAuth}
-          bottomLink={t('security.forgotPin') || 'PIN 비밀번호를 잊으셨나요?'}
           errorMessage={errorMessage}
         />
       </SafeAreaView>
