@@ -24,6 +24,7 @@
         "NSLocationWhenInUseUsageDescription": "위치 QR 코드 생성을 위해 현재 위치 접근이 필요합니다.",
         "NSCalendarsUsageDescription": "QR 코드의 일정을 캘린더에 추가하기 위해 접근이 필요합니다.",
         "NSContactsUsageDescription": "QR 코드의 연락처 정보를 저장하기 위해 접근이 필요합니다.",
+        "NSFaceIDUsageDescription": "앱 잠금 해제를 위해 Face ID가 필요합니다.",
         "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
@@ -78,6 +79,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "앱 잠금 해제를 위해 Face ID가 필요합니다."
+        }
+      ],
       [
         "expo-tracking-transparency",
         {
