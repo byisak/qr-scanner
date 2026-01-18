@@ -1,5 +1,5 @@
 // components/PinKeypad.js - 섞인 숫자 키패드 컴포넌트
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 const KEYPAD_WIDTH = Math.min(width - 40, 320);
 const KEY_SIZE = KEYPAD_WIDTH / 3;
 const KEY_HEIGHT = Math.min(KEY_SIZE * 0.8, 70);
@@ -30,6 +30,7 @@ export default function PinKeypad({
 }) {
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
+  const completedRef = useRef(false);
 
   // 숫자 셔플
   const shuffleNumbers = useCallback(() => {
@@ -47,17 +48,18 @@ export default function PinKeypad({
     }
   }, [shuffleKeys, shuffleNumbers]);
 
-  // PIN 변경 시 콜백
+  // PIN 변경 시 콜백 - onComplete는 한 번만 호출
   useEffect(() => {
     onPinChange?.(pin);
-    if (pin.length === pinLength) {
+    if (pin.length === pinLength && !completedRef.current) {
+      completedRef.current = true;
       onComplete?.(pin);
     }
-  }, [pin, pinLength, onPinChange, onComplete]);
+  }, [pin, pinLength]);
 
   // 키 입력
   const handleKeyPress = async (key) => {
-    if (disabled) return;
+    if (disabled || completedRef.current) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (pin.length < pinLength) {
@@ -69,6 +71,7 @@ export default function PinKeypad({
   const handleDelete = async () => {
     if (disabled) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    completedRef.current = false; // 삭제 시 다시 입력 가능
     setPin((prev) => prev.slice(0, -1));
   };
 
@@ -102,7 +105,7 @@ export default function PinKeypad({
       style={styles.key}
       onPress={() => handleKeyPress(number)}
       activeOpacity={0.6}
-      disabled={disabled}
+      disabled={disabled || completedRef.current}
     >
       <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{number}</Text>
     </TouchableOpacity>
@@ -189,6 +192,7 @@ export const PinKeypadWithRef = React.forwardRef(({
 }, ref) => {
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
+  const completedRef = useRef(false);
 
   const shuffleNumbers = useCallback(() => {
     const numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -205,15 +209,17 @@ export const PinKeypadWithRef = React.forwardRef(({
     }
   }, [shuffleKeys, shuffleNumbers]);
 
+  // PIN 변경 시 콜백 - onComplete는 한 번만 호출
   useEffect(() => {
     onPinChange?.(pin);
-    if (pin.length === pinLength) {
+    if (pin.length === pinLength && !completedRef.current) {
+      completedRef.current = true;
       onComplete?.(pin);
     }
-  }, [pin, pinLength, onPinChange, onComplete]);
+  }, [pin, pinLength]);
 
   const handleKeyPress = async (key) => {
-    if (disabled) return;
+    if (disabled || completedRef.current) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (pin.length < pinLength) {
       setPin((prev) => prev + key);
@@ -223,11 +229,13 @@ export const PinKeypadWithRef = React.forwardRef(({
   const handleDelete = async () => {
     if (disabled) return;
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    completedRef.current = false;
     setPin((prev) => prev.slice(0, -1));
   };
 
   const resetPin = useCallback(() => {
     setPin('');
+    completedRef.current = false;
     if (shuffleKeys) {
       setShuffledNumbers(shuffleNumbers());
     }
@@ -263,7 +271,7 @@ export const PinKeypadWithRef = React.forwardRef(({
       style={styles.key}
       onPress={() => handleKeyPress(number)}
       activeOpacity={0.6}
-      disabled={disabled}
+      disabled={disabled || completedRef.current}
     >
       <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{number}</Text>
     </TouchableOpacity>
