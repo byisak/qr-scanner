@@ -26,6 +26,8 @@ const API_URL = `${config.serverUrl}/api/users`;
 
 // SecureStore 키 (AuthContext와 동일)
 const AUTH_STORAGE_KEY = 'auth_data';
+const TOKEN_STORAGE_KEY = 'auth_token';
+const REFRESH_TOKEN_KEY = 'refresh_token';
 const DEVICE_ID_KEY = 'device_id';
 
 // 자동 동기화 간격 (3분)
@@ -440,10 +442,10 @@ export const FeatureLockProvider = ({ children }) => {
     }
   }, [bannerSettings]);
 
-  // 서버와 양방향 동기화 - userId 헤더 사용 (토큰 없음)
-  const syncWithServer = useCallback(async (userId) => {
-    if (!userId) {
-      console.log('[AdSync] No userId, skip sync');
+  // 서버와 양방향 동기화
+  const syncWithServer = useCallback(async (userId, accessToken) => {
+    if (!userId || !accessToken) {
+      console.log('[AdSync] No userId or accessToken, skip sync');
       return { success: false, error: 'Not authenticated' };
     }
 
@@ -460,7 +462,7 @@ export const FeatureLockProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Id': userId,
+          'Authorization': `Bearer ${accessToken}`,
         },
         body: JSON.stringify({
           unlockedFeatures,
@@ -475,6 +477,10 @@ export const FeatureLockProvider = ({ children }) => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('[AdSync] Server error:', errorText);
+        // 401 에러는 특별 처리 (토큰 만료)
+        if (response.status === 401) {
+          return { success: false, error: 'Unauthorized', needsRefresh: true };
+        }
         return { success: false, error: 'Server error' };
       }
 
@@ -524,9 +530,9 @@ export const FeatureLockProvider = ({ children }) => {
     }
   }, [unlockedFeatures, adWatchCounts, bannerSettings, isSyncing]);
 
-  // 서버에서 광고 기록 가져오기 (읽기 전용) - userId 헤더 사용
-  const fetchFromServer = useCallback(async (userId) => {
-    if (!userId) {
+  // 서버에서 광고 기록 가져오기 (읽기 전용)
+  const fetchFromServer = useCallback(async (userId, accessToken) => {
+    if (!userId || !accessToken) {
       return { success: false, error: 'Not authenticated' };
     }
 
@@ -534,7 +540,7 @@ export const FeatureLockProvider = ({ children }) => {
       const response = await fetch(`${API_URL}/${userId}/ad-records`, {
         method: 'GET',
         headers: {
-          'X-User-Id': userId,
+          'Authorization': `Bearer ${accessToken}`,
         },
       });
 
@@ -555,13 +561,65 @@ export const FeatureLockProvider = ({ children }) => {
     }
   }, []);
 
-  // 자동 동기화 (SecureStore에서 인증 정보 가져와서 동기화) - 토큰 없이 userId만 사용
+  // 토큰 갱신 함수
+  const refreshAccessToken = useCallback(async () => {
+    try {
+      const [refreshToken, deviceId] = await Promise.all([
+        SecureStore.getItemAsync(REFRESH_TOKEN_KEY),
+        SecureStore.getItemAsync(DEVICE_ID_KEY),
+      ]);
+      if (!refreshToken) {
+        console.log('[AdSync] No refresh token available');
+        return null;
+      }
+
+      console.log('[AdSync] Refreshing access token...');
+      const response = await fetch(`${config.serverUrl}/api/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken, deviceId: deviceId || 'mobile' }),
+      });
+
+      if (!response.ok) {
+        console.log('[AdSync] Token refresh failed:', response.status);
+        // 리프레시 토큰도 만료/무효 → 인증 정보 삭제 (다음 앱 재시작 시 로그아웃 상태)
+        console.log('[AdSync] Clearing expired auth data...');
+        try {
+          await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
+          await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
+          await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+        } catch (clearError) {
+          console.error('[AdSync] Failed to clear auth data:', clearError);
+        }
+        return null;
+      }
+
+      const data = await response.json();
+      if (data.accessToken) {
+        await SecureStore.setItemAsync(TOKEN_STORAGE_KEY, data.accessToken);
+        if (data.refreshToken) {
+          await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, data.refreshToken);
+        }
+        console.log('[AdSync] Token refreshed successfully');
+        return data.accessToken;
+      }
+      return null;
+    } catch (error) {
+      console.error('[AdSync] Token refresh error:', error);
+      return null;
+    }
+  }, []);
+
+  // 자동 동기화 (SecureStore에서 인증 정보 가져와서 동기화)
   const autoSync = useCallback(async () => {
     try {
       // SecureStore에서 인증 정보 가져오기
-      const authData = await SecureStore.getItemAsync(AUTH_STORAGE_KEY);
+      const [authData, accessToken] = await Promise.all([
+        SecureStore.getItemAsync(AUTH_STORAGE_KEY),
+        SecureStore.getItemAsync(TOKEN_STORAGE_KEY),
+      ]);
 
-      if (!authData) {
+      if (!authData || !accessToken) {
         console.log('[AdSync] Not logged in, skip auto sync');
         return { success: false, error: 'Not authenticated' };
       }
@@ -573,14 +631,33 @@ export const FeatureLockProvider = ({ children }) => {
       }
 
       console.log('[AdSync] Starting auto sync for user:', user.id);
-      const result = await syncWithServer(user.id);
+      let result = await syncWithServer(user.id, accessToken);
+
+      // 401 에러(토큰 만료)인 경우 토큰 갱신 후 재시도
+      if (result.needsRefresh) {
+        console.log('[AdSync] Token expired, attempting refresh...');
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          console.log('[AdSync] Retrying sync with new token...');
+          result = await syncWithServer(user.id, newToken);
+        } else {
+          console.log('[AdSync] Token refresh failed, sync aborted');
+          // 사용자에게 세션 만료 알림 (앱 재시작 필요)
+          Alert.alert(
+            t('auth.sessionExpired') || '세션 만료',
+            t('auth.sessionExpiredMessage') || '로그인이 만료되었습니다. 앱을 재시작하거나 다시 로그인해주세요.',
+            [{ text: t('common.confirm') || '확인' }]
+          );
+          return { success: false, error: 'Token refresh failed', sessionExpired: true };
+        }
+      }
 
       return result;
     } catch (error) {
       console.error('[AdSync] Auto sync error:', error);
       return { success: false, error: error.message };
     }
-  }, [syncWithServer]);
+  }, [syncWithServer, refreshAccessToken]);
 
   // autoSync ref 업데이트
   useEffect(() => {
