@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   keypadContainer: {
     backgroundColor: '#0A2A5E',
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 50,
     paddingHorizontal: 10,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,

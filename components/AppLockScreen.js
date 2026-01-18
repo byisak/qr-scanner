@@ -6,8 +6,8 @@ import {
   StyleSheet,
   Platform,
   Modal,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
@@ -95,15 +95,17 @@ export default function AppLockScreen() {
       transparent={false}
       statusBarTranslucent
     >
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* 타이틀 */}
-        <View style={styles.titleContainer}>
-          <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('security.enterPin') || 'PIN 비밀번호 입력'}
-          </Text>
-        </View>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* 타이틀 (SafeArea 적용) */}
+        <SafeAreaView edges={['top']}>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
+              {t('security.enterPin') || 'PIN 비밀번호 입력'}
+            </Text>
+          </View>
+        </SafeAreaView>
 
-        {/* PIN 키패드 */}
+        {/* PIN 키패드 (하단 끝까지 채움) */}
         <PinKeypadWithRef
           ref={pinKeypadRef}
           onComplete={handlePinComplete}
@@ -115,7 +117,7 @@ export default function AppLockScreen() {
           onBiometricPress={handleBiometricAuth}
           errorMessage={errorMessage}
         />
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
