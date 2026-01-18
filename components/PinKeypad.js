@@ -27,6 +27,7 @@ export default function PinKeypad({
   onBiometricPress,
   bottomLink,
   onBottomLinkPress,
+  errorMessage,
 }) {
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
@@ -114,6 +115,11 @@ export default function PinKeypad({
   return (
     <View style={styles.container}>
       {renderPinDots()}
+      {errorMessage ? (
+        <Text style={[styles.errorText, { fontFamily: fonts?.regular }]}>
+          {errorMessage}
+        </Text>
+      ) : null}
       <View style={styles.keypadWrapper}>
         <View style={styles.keypadContainer}>
           {/* Row 1 */}
@@ -189,6 +195,7 @@ export const PinKeypadWithRef = React.forwardRef(({
   onBiometricPress,
   bottomLink,
   onBottomLinkPress,
+  errorMessage,
 }, ref) => {
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
@@ -280,6 +287,11 @@ export const PinKeypadWithRef = React.forwardRef(({
   return (
     <View style={styles.container}>
       {renderPinDots()}
+      {errorMessage ? (
+        <Text style={[styles.errorText, { fontFamily: fonts?.regular }]}>
+          {errorMessage}
+        </Text>
+      ) : null}
       <View style={styles.keypadWrapper}>
         <View style={styles.keypadContainer}>
           <View style={styles.row}>
@@ -344,6 +356,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
     paddingVertical: 30,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#E74C3C',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   dot: {
     width: 14,

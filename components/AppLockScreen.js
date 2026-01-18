@@ -101,11 +101,6 @@ export default function AppLockScreen() {
           <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
             {t('security.enterPin') || 'PIN 비밀번호 입력'}
           </Text>
-          {errorMessage ? (
-            <Text style={[styles.errorText, { fontFamily: fonts.regular }]}>
-              {errorMessage}
-            </Text>
-          ) : null}
         </View>
 
         {/* PIN 키패드 */}
@@ -119,6 +114,7 @@ export default function AppLockScreen() {
           showBiometric={biometricEnabled}
           onBiometricPress={handleBiometricAuth}
           bottomLink={t('security.forgotPin') || 'PIN 비밀번호를 잊으셨나요?'}
+          errorMessage={errorMessage}
         />
       </SafeAreaView>
     </Modal>
@@ -139,11 +135,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#E74C3C',
-    textAlign: 'center',
-    marginTop: 12,
   },
 });
