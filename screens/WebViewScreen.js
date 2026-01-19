@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 
 export default function WebViewScreen() {
   const params = useLocalSearchParams();
@@ -69,9 +70,15 @@ export default function WebViewScreen() {
         onPress={() => router.back()}
         activeOpacity={0.7}
       >
-        <View style={s.closeIconContainer}>
-          <Ionicons name="close" size={24} color="#666" />
-        </View>
+        {isGlassEffectAPIAvailable() ? (
+          <GlassView style={s.glassIconContainer} glassEffectStyle="regular" isInteractive>
+            <Ionicons name="xmark" size={28} color="rgba(0, 0, 0, 0.6)" />
+          </GlassView>
+        ) : (
+          <View style={s.fallbackIconContainer}>
+            <Ionicons name="close" size={24} color="#666" />
+          </View>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -92,7 +99,14 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: 16,
   },
-  closeIconContainer: {
+  glassIconContainer: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fallbackIconContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
