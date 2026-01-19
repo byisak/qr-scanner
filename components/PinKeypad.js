@@ -258,11 +258,9 @@ export const PinKeypadWithRef = React.forwardRef(({
       setPin('●'.repeat(count)); // 임시 문자로 채움
       if (count >= pinLength) {
         clearInterval(interval);
-        setTimeout(() => {
-          callback?.();
-        }, 80);
+        callback?.();
       }
-    }, 35); // 35ms 간격 (6개 = 210ms + 80ms = ~290ms)
+    }, 25); // 25ms 간격 (6개 = 150ms)
   }, [pinLength]);
 
   React.useImperativeHandle(ref, () => ({
