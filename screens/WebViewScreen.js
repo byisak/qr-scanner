@@ -1,11 +1,11 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform, Linking, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
-import { GlassView } from 'expo-glass-effect';
+import { BlurView } from 'expo-blur';
 
 export default function WebViewScreen() {
   const params = useLocalSearchParams();
@@ -70,9 +70,9 @@ export default function WebViewScreen() {
         onPress={() => router.back()}
         activeOpacity={0.7}
       >
-        <GlassView style={s.glassIconContainer} glassEffectStyle="regular" isInteractive>
-          <Ionicons name="xmark" size={28} color="rgba(0, 0, 0, 0.6)" />
-        </GlassView>
+        <BlurView intensity={80} tint="light" style={s.blurIconContainer}>
+          <Ionicons name="close" size={26} color="rgba(0, 0, 0, 0.6)" />
+        </BlurView>
       </TouchableOpacity>
     </View>
   );
@@ -93,14 +93,12 @@ const s = StyleSheet.create({
     position: 'absolute',
     left: 16,
   },
-  glassIconContainer: {
+  blurIconContainer: {
     width: 54,
     height: 54,
     borderRadius: 27,
     justifyContent: 'center',
     alignItems: 'center',
-    // Fallback for unsupported platforms (GlassView becomes regular View)
-    backgroundColor: Platform.OS === 'ios' ? undefined : 'rgba(242, 242, 247, 0.9)',
     overflow: 'hidden',
   },
 });
