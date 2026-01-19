@@ -139,6 +139,11 @@ function ScannerScreen() {
   const [dontAskLotteryPrompt, setDontAskLotteryPrompt] = useState(false); // 복권 인식 활성화 다시 묻지 않기
   const [pendingLotteryCode, setPendingLotteryCode] = useState(null); // 복권 인식 활성화 대기 중인 코드
 
+  // 복권 그룹에서 일반 QR 스캔 시 그룹 선택 모달
+  const [groupSelectForNonLotteryVisible, setGroupSelectForNonLotteryVisible] = useState(false);
+  const [pendingNonLotteryData, setPendingNonLotteryData] = useState(null); // { data, type, ecLevel, bounds, cornerPoints }
+  const [keepSavingToLotteryGroup, setKeepSavingToLotteryGroup] = useState(false); // 현재 그룹에 계속 저장 (앱 재시작 시 초기화)
+
   const lastScannedData = useRef(null);
   const lastScannedTime = useRef(0);
   const resetTimerRef = useRef(null);
@@ -876,6 +881,17 @@ function ScannerScreen() {
       console.error('Update history with photo error:', e);
     }
   }, [currentGroupId]);
+
+  // 현재 그룹이 복권 그룹인지 확인
+  const isCurrentGroupLottery = useCallback(() => {
+    // ID로 체크 (lottery-lotto, lottery-pension)
+    if (currentGroupId.startsWith('lottery-')) {
+      return true;
+    }
+    // availableGroups에서 isLotteryGroup 플래그 체크
+    const currentGroup = availableGroups.find(g => g.id === currentGroupId);
+    return currentGroup?.isLotteryGroup === true;
+  }, [currentGroupId, availableGroups]);
 
   // 복권 그룹 자동 생성 및 복권 데이터 저장
   const ensureLotteryGroup = useCallback(async (lotteryType) => {
@@ -1706,6 +1722,25 @@ function ScannerScreen() {
 
           return; // 복권 처리 완료, 일반 스캔 로직 스킵
         }
+      }
+
+      // 복권 그룹에서 일반 QR/바코드 스캔 시 그룹 선택 모달 표시
+      if (isCurrentGroupLottery() && !isLotteryQR(data) && !keepSavingToLotteryGroup) {
+        console.log('[ScannerScreen] Non-lottery code scanned in lottery group, showing group selection');
+        // 스캔 일시 정지
+        isProcessingRef.current = true;
+        setCanScan(false);
+        // 대기 데이터 저장
+        setPendingNonLotteryData({
+          data,
+          type: normalizedType,
+          ecLevel: errorCorrectionLevel || null,
+          bounds,
+          cornerPoints,
+        });
+        // 그룹 선택 모달 표시
+        setGroupSelectForNonLotteryVisible(true);
+        return;
       }
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
@@ -2640,6 +2675,141 @@ function ScannerScreen() {
         </View>
       </Modal>
 
+      {/* 복권 그룹에서 일반 QR/바코드 스캔 시 그룹 선택 모달 */}
+      <Modal
+        visible={groupSelectForNonLotteryVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setGroupSelectForNonLotteryVisible(false);
+          setPendingNonLotteryData(null);
+          isProcessingRef.current = false;
+          setCanScan(true);
+        }}
+      >
+        <View style={styles.lotteryPromptOverlay}>
+          <View style={[styles.lotteryPromptContent, { backgroundColor: colors.surface, maxHeight: '70%' }]}>
+            {/* 닫기 버튼 */}
+            <TouchableOpacity
+              style={styles.lotteryPromptCloseButton}
+              onPress={() => {
+                setGroupSelectForNonLotteryVisible(false);
+                setPendingNonLotteryData(null);
+                isProcessingRef.current = false;
+                setCanScan(true);
+              }}
+            >
+              <Ionicons name="close" size={24} color={colors.textTertiary} />
+            </TouchableOpacity>
+
+            {/* 아이콘 */}
+            <View style={[styles.lotteryPromptIconContainer, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="folder-open" size={40} color={colors.primary} />
+            </View>
+
+            {/* 메시지 */}
+            <Text style={[styles.lotteryPromptTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              복권 그룹이 선택되어 있습니다
+            </Text>
+            <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              일반 QR/바코드를 어디에 저장할까요?
+            </Text>
+
+            {/* 그룹 선택 리스트 */}
+            <ScrollView style={styles.groupSelectList} showsVerticalScrollIndicator={false}>
+              {/* 현재 그룹에 계속 저장 옵션 */}
+              <TouchableOpacity
+                style={[
+                  styles.groupSelectItem,
+                  { backgroundColor: colors.inputBackground, borderColor: colors.primary, borderWidth: 2 }
+                ]}
+                onPress={async () => {
+                  // 현재 그룹에 계속 저장 설정
+                  setKeepSavingToLotteryGroup(true);
+                  setGroupSelectForNonLotteryVisible(false);
+
+                  // 대기 중인 코드 저장
+                  if (pendingNonLotteryData) {
+                    const { data, type, ecLevel } = pendingNonLotteryData;
+                    await saveHistory(data, null, null, type, ecLevel);
+
+                    // 결과 화면으로 이동 (팝업 모드인 경우)
+                    if (scanResultModeRef.current === 'popup' && resultWindowAutoOpenRef.current) {
+                      router.push({
+                        pathname: '/result',
+                        params: { code: data },
+                      });
+                    }
+                  }
+
+                  setPendingNonLotteryData(null);
+                  setTimeout(() => {
+                    isProcessingRef.current = false;
+                    setCanScan(true);
+                  }, 300);
+                }}
+              >
+                <View style={styles.groupSelectItemContent}>
+                  <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                  <View style={styles.groupSelectItemTextContainer}>
+                    <Text style={[styles.groupSelectItemText, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                      현재 그룹에 계속 저장
+                    </Text>
+                    <Text style={[styles.groupSelectItemSubtext, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      다시 묻지 않고 복권 그룹에 저장합니다
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* 다른 그룹 목록 */}
+              {availableGroups
+                .filter(g => !g.isDeleted && !g.isLotteryGroup && !g.id.startsWith('lottery-'))
+                .map((group) => (
+                  <TouchableOpacity
+                    key={group.id}
+                    style={[styles.groupSelectItem, { backgroundColor: colors.inputBackground }]}
+                    onPress={async () => {
+                      setGroupSelectForNonLotteryVisible(false);
+
+                      // 선택한 그룹에 저장
+                      if (pendingNonLotteryData) {
+                        const { data, type, ecLevel } = pendingNonLotteryData;
+                        await saveHistory(data, null, null, type, ecLevel, group.id);
+
+                        // 결과 화면으로 이동 (팝업 모드인 경우)
+                        if (scanResultModeRef.current === 'popup' && resultWindowAutoOpenRef.current) {
+                          router.push({
+                            pathname: '/result',
+                            params: { code: data },
+                          });
+                        }
+                      }
+
+                      setPendingNonLotteryData(null);
+                      setTimeout(() => {
+                        isProcessingRef.current = false;
+                        setCanScan(true);
+                      }, 300);
+                    }}
+                  >
+                    <View style={styles.groupSelectItemContent}>
+                      <Ionicons
+                        name={group.icon || 'folder'}
+                        size={24}
+                        color={group.color || colors.textSecondary}
+                      />
+                      <Text style={[styles.groupSelectItemText, { color: colors.text, fontFamily: fonts.medium, marginLeft: 12 }]}>
+                        {group.id === 'default' ? t('groupEdit.defaultGroup') : group.name}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* 토스트 결과 표시 (연속 스캔 모드) */}
       <ScanToast
         visible={!!toastData}
@@ -3202,6 +3372,33 @@ const styles = StyleSheet.create({
   lotteryPromptButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  // 복권 그룹에서 일반 QR 스캔 시 그룹 선택 모달 스타일
+  groupSelectList: {
+    width: '100%',
+    maxHeight: 300,
+  },
+  groupSelectItem: {
+    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  groupSelectItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  groupSelectItemTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  groupSelectItemText: {
+    fontSize: 16,
+  },
+  groupSelectItemSubtext: {
+    fontSize: 13,
+    marginTop: 2,
   },
 });
 
