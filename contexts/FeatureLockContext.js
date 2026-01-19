@@ -476,7 +476,7 @@ export const FeatureLockProvider = ({ children }) => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('[AdSync] Server error:', errorText);
+        console.warn('[AdSync] Server error:', errorText);
         // 401 에러는 특별 처리 (토큰 만료)
         if (response.status === 401) {
           return { success: false, error: 'Unauthorized', needsRefresh: true };
