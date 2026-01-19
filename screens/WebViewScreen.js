@@ -71,7 +71,7 @@ export default function WebViewScreen() {
         activeOpacity={0.7}
       >
         <BlurView intensity={80} tint="light" style={s.blurIconContainer}>
-          <Ionicons name="close" size={26} color="rgba(0, 0, 0, 0.6)" />
+          <Ionicons name="close" size={22} color="rgba(0, 0, 0, 0.6)" />
         </BlurView>
       </TouchableOpacity>
     </View>
@@ -91,12 +91,12 @@ const s = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    left: 16,
+    right: 16,
   },
   blurIconContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
