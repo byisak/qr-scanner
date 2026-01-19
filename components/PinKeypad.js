@@ -260,9 +260,9 @@ export const PinKeypadWithRef = React.forwardRef(({
         clearInterval(interval);
         setTimeout(() => {
           callback?.();
-        }, 200);
+        }, 80);
       }
-    }, 80);
+    }, 35); // 35ms 간격 (6개 = 210ms + 80ms = ~290ms)
   }, [pinLength]);
 
   React.useImperativeHandle(ref, () => ({
