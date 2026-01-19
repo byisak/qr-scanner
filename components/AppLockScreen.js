@@ -103,8 +103,8 @@ export default function AppLockScreen() {
       statusBarTranslucent
     >
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* 타이틀 (SafeArea 적용) */}
-        <SafeAreaView edges={['top']}>
+        {/* 타이틀 영역 (SafeArea 적용) */}
+        <SafeAreaView edges={['top']} style={styles.topSection}>
           <View style={styles.titleContainer}>
             <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
               {t('security.enterPin') || 'PIN 비밀번호 입력'}
@@ -134,10 +134,13 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === 'android' ? 30 : 0,
   },
+  topSection: {
+    // 타이틀 영역
+  },
   titleContainer: {
     alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 10,
+    paddingTop: 40,
+    paddingBottom: 0,
   },
   title: {
     fontSize: 24,
