@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Platform, Linking, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, Linking, Alert, ActivityIndicator } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -64,12 +64,15 @@ export default function WebViewScreen() {
           <ActivityIndicator size="large" color="#007AFF" />
         </View>
       )}
-      <View style={[s.close, { top: Platform.OS === 'ios' ? insets.top + 10 : insets.top + 10 }]}>
-        <TouchableOpacity style={s.closeButton} onPress={() => router.back()}>
-          <Ionicons name="close" size={24} color="#333" />
-          <Text style={s.closeText}>{t('common.close')}</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={[s.closeButton, { bottom: Math.max(insets.bottom, 16) + 16 }]}
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+      >
+        <View style={s.closeIconContainer}>
+          <Ionicons name="close" size={24} color="#666" />
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -85,27 +88,23 @@ const s = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
-  close: {
+  closeButton: {
     position: 'absolute',
-    right: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
+    left: 16,
+  },
+  closeIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#F2F2F7',
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
-    shadowRadius: 4,
+    shadowRadius: 6,
     elevation: 4,
-  },
-  closeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-  },
-  closeText: {
-    marginLeft: 4,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
   },
 });
