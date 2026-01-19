@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
-    paddingTop: 20,
+    paddingTop: 30,
     paddingBottom: 10,
   },
   errorText: {

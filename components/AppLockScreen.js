@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 100,
     paddingBottom: 0,
   },
   title: {
