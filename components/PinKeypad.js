@@ -248,9 +248,27 @@ export const PinKeypadWithRef = React.forwardRef(({
     }
   }, [shuffleKeys, shuffleNumbers]);
 
+  // 생체인증 성공 시 PIN 도트 애니메이션으로 채우기
+  const fillDotsWithAnimation = useCallback((callback) => {
+    setPin('');
+    completedRef.current = true; // 입력 차단
+    let count = 0;
+    const interval = setInterval(() => {
+      count++;
+      setPin('●'.repeat(count)); // 임시 문자로 채움
+      if (count >= pinLength) {
+        clearInterval(interval);
+        setTimeout(() => {
+          callback?.();
+        }, 200);
+      }
+    }, 80);
+  }, [pinLength]);
+
   React.useImperativeHandle(ref, () => ({
     resetPin,
-  }), [resetPin]);
+    fillDotsWithAnimation,
+  }), [resetPin, fillDotsWithAnimation]);
 
   const renderPinDots = () => (
     <View style={styles.dotsContainer}>

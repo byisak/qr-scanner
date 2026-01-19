@@ -62,7 +62,14 @@ export default function AppLockScreen() {
 
     if (result.success) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      unlock();
+      // PIN 도트 애니메이션 후 잠금 해제
+      if (pinKeypadRef.current?.fillDotsWithAnimation) {
+        pinKeypadRef.current.fillDotsWithAnimation(() => {
+          unlock();
+        });
+      } else {
+        unlock();
+      }
     }
   };
 
