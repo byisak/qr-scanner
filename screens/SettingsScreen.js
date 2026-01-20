@@ -893,6 +893,21 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </TouchableOpacity>
+
+          {/* 인증/보안 */}
+          <TouchableOpacity
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/security-settings')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('security.title') || '인증/보안'}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t('security.settingsDesc') || '앱 잠금, 생체인증 설정'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </TouchableOpacity>
         </View>
 
         {/* 앱 정보 및 지원 */}
@@ -930,7 +945,10 @@ export default function SettingsScreen() {
           {/* 서비스 이용약관 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopWidth: 0 }]}
-            onPress={() => router.push('/terms-of-service')}
+            onPress={() => router.push({
+              pathname: '/webview',
+              params: { url: `https://scanview.app/legal/terms?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+            })}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>
@@ -943,7 +961,10 @@ export default function SettingsScreen() {
           {/* 개인정보 처리방침 */}
           <TouchableOpacity
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => router.push('/privacy-policy')}
+            onPress={() => router.push({
+              pathname: '/webview',
+              params: { url: `https://scanview.app/legal/privacy?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+            })}
             activeOpacity={0.7}
           >
             <View style={{ flex: 1 }}>

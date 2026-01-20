@@ -475,12 +475,14 @@ export const FeatureLockProvider = ({ children }) => {
       console.log('[AdSync] Response status:', response.status);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[AdSync] Server error:', errorText);
-        // 401 에러는 특별 처리 (토큰 만료)
+        // 401 에러는 토큰 만료 - 갱신 시도 필요 (정상적인 상황)
         if (response.status === 401) {
+          console.log('[AdSync] Token expired, will attempt refresh');
           return { success: false, error: 'Unauthorized', needsRefresh: true };
         }
+        // 다른 에러만 경고로 로그
+        const errorText = await response.text();
+        console.log('[AdSync] Server error:', response.status, errorText);
         return { success: false, error: 'Server error' };
       }
 
@@ -589,7 +591,7 @@ export const FeatureLockProvider = ({ children }) => {
           await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
           await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
         } catch (clearError) {
-          console.error('[AdSync] Failed to clear auth data:', clearError);
+          console.log('[AdSync] Failed to clear auth data:', clearError);
         }
         return null;
       }
@@ -605,7 +607,7 @@ export const FeatureLockProvider = ({ children }) => {
       }
       return null;
     } catch (error) {
-      console.error('[AdSync] Token refresh error:', error);
+      console.log('[AdSync] Token refresh error:', error);
       return null;
     }
   }, []);
@@ -654,7 +656,7 @@ export const FeatureLockProvider = ({ children }) => {
 
       return result;
     } catch (error) {
-      console.error('[AdSync] Auto sync error:', error);
+      console.log('[AdSync] Auto sync error:', error);
       return { success: false, error: error.message };
     }
   }, [syncWithServer, refreshAccessToken]);
@@ -960,11 +962,36 @@ export const FeatureLockProvider = ({ children }) => {
   }, [loadRewardedAd, incrementAdWatchCount, unlockMultiple, t]);
 
   // 광고 시청 Alert 표시
-  const showUnlockAlert = useCallback((featureId, onUnlock) => {
+  const showUnlockAlert = useCallback(async (featureId, onUnlock) => {
     const feature = LOCKED_FEATURES[featureId];
     if (!feature) return;
 
     const { current, required, remaining } = getAdProgress(featureId);
+
+    // 이미 필요한 광고를 모두 시청한 경우 - 즉시 해제
+    if (remaining === 0 && current >= required) {
+      console.log('[FeatureLock] Ad count reached, unlocking feature:', featureId);
+      const success = await unlock(featureId);
+      if (success) {
+        Alert.alert(
+          t('featureLock.unlocked') || '잠금 해제됨',
+          t('featureLock.featureUnlocked') || '기능이 해제되었습니다!',
+          [{
+            text: t('common.confirm') || '확인',
+            onPress: () => {
+              if (typeof onUnlock === 'function') {
+                try {
+                  onUnlock();
+                } catch (e) {
+                  console.error('onUnlock callback error:', e);
+                }
+              }
+            }
+          }]
+        );
+      }
+      return;
+    }
 
     // 진행 상태 메시지 생성
     let progressMessage = t('featureLock.watchAdToUnlock') || '광고를 시청하면 이 기능을 사용할 수 있습니다';
@@ -996,7 +1023,7 @@ export const FeatureLockProvider = ({ children }) => {
         },
       ]
     );
-  }, [t, getAdProgress, isAdLoaded, showRewardedAdAndProcess]);
+  }, [t, getAdProgress, isAdLoaded, showRewardedAdAndProcess, unlock]);
 
   // 바코드 타입 해제 Alert
   const showBarcodeUnlockAlert = useCallback((onUnlock) => {
@@ -1004,13 +1031,38 @@ export const FeatureLockProvider = ({ children }) => {
   }, [showUnlockAlert]);
 
   // QR 스타일 해제 Alert (모든 스타일 한번에 해제)
-  const showQrStyleUnlockAlert = useCallback((onUnlock) => {
+  const showQrStyleUnlockAlert = useCallback(async (onUnlock) => {
     const qrStyleFeatures = Object.keys(LOCKED_FEATURES).filter(
       key => LOCKED_FEATURES[key].type === 'qrStyle'
     );
 
     const firstStyleId = qrStyleFeatures[0];
     const { current, required, remaining } = getAdProgress(firstStyleId);
+
+    // 이미 필요한 광고를 모두 시청한 경우 - 즉시 해제
+    if (remaining === 0 && current >= required) {
+      console.log('[FeatureLock] Ad count reached, unlocking QR styles');
+      const success = await unlockMultiple(qrStyleFeatures);
+      if (success) {
+        Alert.alert(
+          t('featureLock.unlocked') || '잠금 해제됨',
+          t('featureLock.featureUnlocked') || '기능이 해제되었습니다!',
+          [{
+            text: t('common.confirm') || '확인',
+            onPress: () => {
+              if (typeof onUnlock === 'function') {
+                try {
+                  onUnlock();
+                } catch (e) {
+                  console.error('onUnlock callback error:', e);
+                }
+              }
+            }
+          }]
+        );
+      }
+      return;
+    }
 
     let progressMessage = t('featureLock.watchAdToUnlock') || '광고를 시청하면 이 기능을 사용할 수 있습니다';
     if (required > 1) {
@@ -1041,7 +1093,7 @@ export const FeatureLockProvider = ({ children }) => {
         },
       ]
     );
-  }, [t, getAdProgress, isAdLoaded, showRewardedAdForQrStyles]);
+  }, [t, getAdProgress, isAdLoaded, showRewardedAdForQrStyles, unlockMultiple]);
 
   const value = {
     isLocked,
