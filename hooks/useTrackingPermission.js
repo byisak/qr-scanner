@@ -1,14 +1,21 @@
 // hooks/useTrackingPermission.js - ATT (App Tracking Transparency) 훅
 import { useEffect, useState, useCallback } from 'react';
 import { Platform } from 'react-native';
-import {
-  requestTrackingPermissionsAsync,
-  getTrackingPermissionsAsync,
-  PermissionStatus,
-} from 'expo-tracking-transparency';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAnalyticsConsent } from '../utils/analytics';
 import mobileAds from 'react-native-google-mobile-ads';
+
+// 네이티브 모듈 안전한 import (빌드 문제 대응)
+let TrackingTransparency = null;
+try {
+  TrackingTransparency = require('expo-tracking-transparency');
+} catch (e) {
+  console.warn('expo-tracking-transparency not available:', e.message);
+}
+
+const requestTrackingPermissionsAsync = TrackingTransparency?.requestTrackingPermissionsAsync;
+const getTrackingPermissionsAsync = TrackingTransparency?.getTrackingPermissionsAsync;
+const PermissionStatus = TrackingTransparency?.PermissionStatus || { GRANTED: 'granted', DENIED: 'denied' };
 
 const ATT_REQUESTED_KEY = '@att_requested';
 
@@ -19,9 +26,9 @@ export function useTrackingPermission() {
   // ATT 권한 요청 (iOS 전용)
   const requestPermission = useCallback(async () => {
     try {
-      // iOS가 아니면 바로 동의 처리 (Android는 ATT 없음)
-      if (Platform.OS !== 'ios') {
-        // Android: 이전에 저장된 동의 상태 확인
+      // iOS가 아니거나 TrackingTransparency가 없으면 바로 동의 처리
+      if (Platform.OS !== 'ios' || !TrackingTransparency) {
+        // Android 또는 네이티브 모듈 없음: 이전에 저장된 동의 상태 확인
         const consent = await AsyncStorage.getItem('@analytics_consent');
         if (consent === null) {
           // 최초 실행: 기본적으로 동의 처리 (설정에서 변경 가능)

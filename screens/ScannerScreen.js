@@ -42,7 +42,14 @@ import config from '../config/config';
 import { trackScreenView, trackQRScanned, trackBarcodeScanned } from '../utils/analytics';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
+
+// 네이티브 모듈 안전한 import (빌드 문제 대응)
+let ImagePicker = null;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch (e) {
+  console.warn('expo-image-picker not available:', e.message);
+}
 
 // 복권 유틸리티
 import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
@@ -2300,6 +2307,10 @@ function ScannerScreen() {
 
   // 네이티브 이미지 피커로 갤러리 열기
   const handlePickImage = useCallback(async () => {
+    if (!ImagePicker) {
+      Alert.alert('기능 사용 불가', '이미지 선택 기능을 사용할 수 없습니다. 앱을 다시 빌드해주세요.');
+      return;
+    }
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],

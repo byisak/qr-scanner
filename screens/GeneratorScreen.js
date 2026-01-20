@@ -22,8 +22,15 @@ import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
-import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+
+// 네이티브 모듈 안전한 import (빌드 문제 대응)
+let ImagePicker = null;
+try {
+  ImagePicker = require('expo-image-picker');
+} catch (e) {
+  console.warn('expo-image-picker not available:', e.message);
+}
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -1303,6 +1310,10 @@ export default function GeneratorScreen() {
 
   // 로고 이미지 선택
   const handlePickLogo = async () => {
+    if (!ImagePicker) {
+      Alert.alert('기능 사용 불가', '이미지 선택 기능을 사용할 수 없습니다. 앱을 다시 빌드해주세요.');
+      return;
+    }
     try {
       // 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
