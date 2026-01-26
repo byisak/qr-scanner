@@ -247,6 +247,7 @@ export default {
   // 결과 화면
   result: {
     title: '스캔 결과',
+    generatedTitle: '생성 결과',
     scannedData: '스캔된 데이터',
     scanPhoto: '스캔 당시 사진',
     duplicateScan: '중복 스캔',

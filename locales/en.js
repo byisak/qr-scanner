@@ -247,6 +247,7 @@ export default {
   // Result screen
   result: {
     title: 'Scan Result',
+    generatedTitle: 'Generated Result',
     scannedData: 'Scanned Data',
     scanPhoto: 'Scan Photo',
     duplicateScan: 'Duplicate Scan',

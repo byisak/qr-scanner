@@ -603,7 +603,9 @@ export default function ResultScreen() {
         >
           <Ionicons name="chevron-down" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('result.title')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {isGeneratedCode ? (t('result.generatedTitle') || '생성 결과') : t('result.title')}
+        </Text>
         {isFromHistory ? (
           <TouchableOpacity
             style={styles.headerButton}
@@ -763,7 +765,7 @@ export default function ResultScreen() {
         )}
 
         {/* 생성 코드 미리보기 */}
-        {isGeneratedCode && thumbnail && (
+        {isGeneratedCode && (
           <View style={[styles.photoCard, { backgroundColor: colors.surface }]}>
             <View style={styles.photoHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -773,11 +775,20 @@ export default function ResultScreen() {
                 </Text>
               </View>
             </View>
-            <Image
-              source={{ uri: thumbnail }}
-              style={[styles.scanPhoto, { backgroundColor: 'white' }]}
-              resizeMode="contain"
-            />
+            {thumbnail ? (
+              <Image
+                source={{ uri: thumbnail }}
+                style={[styles.scanPhoto, { backgroundColor: 'white' }]}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={[styles.scanPhoto, styles.barcodePreviewContainer, { backgroundColor: '#9C27B0' + '10' }]}>
+                <Ionicons name="barcode-outline" size={64} color="#9C27B0" />
+                <Text style={[styles.barcodePreviewType, { color: '#9C27B0' }]}>
+                  {barcodeType?.toUpperCase() || 'BARCODE'}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -1082,6 +1093,15 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: 12,
+  },
+  barcodePreviewContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  barcodePreviewType: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   photoPlaceholder: {
     justifyContent: 'center',
