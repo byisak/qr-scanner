@@ -1321,14 +1321,18 @@ export default function GeneratorScreen() {
 
       // 생성 히스토리에 저장 (썸네일 포함)
       try {
-        await saveGeneratedCodeToHistory({
-          code: isBarcode ? finalBarcodeValue : qrData,
+        const codeToSave = isBarcode ? finalBarcodeValue : qrData;
+        const result = await saveGeneratedCodeToHistory({
+          code: codeToSave,
           type: isBarcode ? selectedBarcodeFormat : 'qr',
           imageUri: uri,
           qrStyle: !isBarcode ? qrStyle : null,
           barcodeSettings: isBarcode ? barcodeSettings : null,
           frameId: !isBarcode && selectedFrame ? selectedFrame.id : null,
         });
+        if (!result.success) {
+          console.warn('Failed to save to generated history:', result.error);
+        }
       } catch (historyError) {
         console.warn('Failed to save to generated history:', historyError);
       }

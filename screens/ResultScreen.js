@@ -25,7 +25,12 @@ export default function ResultScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
   const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed, isGenerated, generatorData, thumbnail } = params;
-  const displayText = code || url || '';
+
+  // 코드 값 안전하게 처리 (빈 문자열 또는 undefined 체크)
+  const safeCode = typeof code === 'string' && code.trim() ? code.trim() : '';
+  const safeUrl = typeof url === 'string' && url.trim() ? url.trim() : '';
+  const displayText = safeCode || safeUrl || '';
+
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
   const count = parseInt(scanCount || '1', 10);
@@ -674,9 +679,15 @@ export default function ResultScreen() {
               />
             ) : (
               <ScrollView style={styles.dataScrollView} nestedScrollEnabled>
-                <Text style={[styles.dataText, { color: colors.text }]} selectable>
-                  {displayText}
-                </Text>
+                {displayText ? (
+                  <Text style={[styles.dataText, { color: colors.text }]} selectable>
+                    {displayText}
+                  </Text>
+                ) : (
+                  <Text style={[styles.dataText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+                    {t('result.noData') || '데이터 없음'}
+                  </Text>
+                )}
               </ScrollView>
             )}
           </View>

@@ -92,6 +92,13 @@ export const saveGeneratedCodeToHistory = async ({
   frameId,        // 프레임 ID (QR용)
 }) => {
   try {
+    // 코드 값 검증 - 반드시 문자열이어야 함
+    const codeValue = String(code || '').trim();
+    if (!codeValue) {
+      console.warn('saveGeneratedCodeToHistory: code is empty, skipping save');
+      return { success: false, error: 'Code value is empty' };
+    }
+
     // 1. 생성 그룹 확인/생성
     await ensureGeneratedGroup();
 
@@ -108,11 +115,11 @@ export const saveGeneratedCodeToHistory = async ({
     const generatedHistory = historyByGroup[GENERATED_GROUP_ID] || [];
 
     // 5. 동일한 코드가 있는지 확인
-    const existingIndex = generatedHistory.findIndex(item => item.code === code);
+    const existingIndex = generatedHistory.findIndex(item => item.code === codeValue);
 
     // 6. 새 레코드 생성
     const record = {
-      code,
+      code: codeValue,
       timestamp: now,
       type: type === 'qr' ? 'qr' : type,
       isGenerated: true, // 생성된 코드 표시
