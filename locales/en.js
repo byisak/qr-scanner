@@ -240,11 +240,14 @@ export default {
     noSearchResults: 'No search results',
     editGroups: 'Edit',
     scanRecord: 'Scan record',
+    generatedGroup: 'Generated',
+    generatedBadge: 'Created',
   },
 
   // Result screen
   result: {
     title: 'Scan Result',
+    generatedTitle: 'Generated Result',
     scannedData: 'Scanned Data',
     scanPhoto: 'Scan Photo',
     duplicateScan: 'Duplicate Scan',
@@ -295,6 +298,8 @@ export default {
     ecLevelTypes: 'Error Correction Level Types',
     recoverable: 'recoverable',
     regenerateCode: 'Regenerate',
+    editCode: 'Edit',
+    generatedPreview: 'Generated Preview',
   },
 
   // Settings screen
@@ -1125,6 +1130,8 @@ export default {
     saveSuccessMessage: 'QR code saved to gallery.',
     saveError: 'Save Failed',
     saveErrorMessage: 'Failed to save QR code.',
+    featureUnavailable: 'Feature Unavailable',
+    imagePickerUnavailable: 'Image picker is not available. Please rebuild the app.',
     clipboardPasted: 'Clipboard content pasted',
     clipboardEmpty: 'Clipboard is empty',
     selectLocation: 'Select Location',

@@ -240,11 +240,14 @@ export default {
     noSearchResults: '검색 결과 없음',
     editGroups: '편집',
     scanRecord: '스캔 기록',
+    generatedGroup: '생성',
+    generatedBadge: '생성',
   },
 
   // 결과 화면
   result: {
     title: '스캔 결과',
+    generatedTitle: '생성 결과',
     scannedData: '스캔된 데이터',
     scanPhoto: '스캔 당시 사진',
     duplicateScan: '중복 스캔',
@@ -295,6 +298,8 @@ export default {
     ecLevelTypes: '오류 검증 레벨 종류',
     recoverable: '복원 가능',
     regenerateCode: '코드 재생성',
+    editCode: '편집',
+    generatedPreview: '생성 미리보기',
   },
 
   // 설정 화면
@@ -1114,6 +1119,8 @@ export default {
     saveSuccessMessage: 'QR 코드가 갤러리에 저장되었습니다.',
     saveError: '저장 실패',
     saveErrorMessage: 'QR 코드 저장에 실패했습니다.',
+    featureUnavailable: '기능 사용 불가',
+    imagePickerUnavailable: '이미지 선택 기능을 사용할 수 없습니다. 앱을 다시 빌드해주세요.',
     clipboardPasted: '클립보드 내용을 가져왔습니다',
     clipboardEmpty: '클립보드가 비어있습니다',
     selectLocation: '위치 선택',

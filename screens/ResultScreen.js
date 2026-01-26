@@ -24,8 +24,13 @@ export default function ResultScreen() {
   const { isBarcodeTypeLocked, getBarcodeFeatureId, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed } = params;
-  const displayText = code || url || '';
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed, isGenerated, generatorData, thumbnail } = params;
+
+  // 코드 값 안전하게 처리 (빈 문자열 또는 undefined 체크)
+  const safeCode = typeof code === 'string' && code.trim() ? code.trim() : '';
+  const safeUrl = typeof url === 'string' && url.trim() ? url.trim() : '';
+  const displayText = safeCode || safeUrl || '';
+
   const isUrl = displayText.startsWith('http://') || displayText.startsWith('https://');
   const showDuplicate = isDuplicate === 'true';
   const count = parseInt(scanCount || '1', 10);
@@ -36,6 +41,8 @@ export default function ResultScreen() {
   const ecLevel = errorCorrectionLevel || null;
   const ecAnalysisFailed = ecLevelAnalysisFailed === 'true';
   const isQRCode = barcodeType === 'qr' || barcodeType === 'qrcode';
+  const isGeneratedCode = isGenerated === 'true';
+  const parsedGeneratorData = generatorData ? JSON.parse(generatorData) : null;
 
   // 오류 검증 레벨 설명 함수
   const getECLevelDescription = (level) => {
@@ -482,6 +489,38 @@ export default function ResultScreen() {
 
   // 코드 재생성 - generator 페이지로 이동
   const handleRegenerateCode = () => {
+    // 생성된 코드인 경우 저장된 스타일 데이터로 편집
+    if (isGeneratedCode && parsedGeneratorData) {
+      const { codeMode, qrStyle, barcodeSettings, frameId, barcodeFormat } = parsedGeneratorData;
+
+      if (codeMode === 'qr') {
+        const { type, parsedData } = detectDataType(displayText);
+        router.push({
+          pathname: '/(tabs)/generator',
+          params: {
+            initialMode: 'qr',
+            initialType: type,
+            initialData: JSON.stringify(parsedData),
+            // 저장된 QR 스타일 전달
+            initialQrStyle: qrStyle ? JSON.stringify(qrStyle) : '',
+            initialFrameId: frameId || '',
+          },
+        });
+      } else {
+        router.push({
+          pathname: '/(tabs)/generator',
+          params: {
+            initialMode: 'barcode',
+            initialBarcodeFormat: barcodeFormat || 'code128',
+            initialBarcodeValue: displayText,
+            // 저장된 바코드 설정 전달
+            initialBarcodeSettings: barcodeSettings ? JSON.stringify(barcodeSettings) : '',
+          },
+        });
+      }
+      return;
+    }
+
     // QR 코드인 경우 데이터 타입 감지
     if (isQRCode) {
       const { type, parsedData } = detectDataType(displayText);
@@ -569,7 +608,9 @@ export default function ResultScreen() {
         >
           <Ionicons name="chevron-down" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('result.title')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          {isGeneratedCode ? (t('result.generatedTitle') || '생성 결과') : t('result.title')}
+        </Text>
         {isFromHistory ? (
           <TouchableOpacity
             style={styles.headerButton}
@@ -638,9 +679,15 @@ export default function ResultScreen() {
               />
             ) : (
               <ScrollView style={styles.dataScrollView} nestedScrollEnabled>
-                <Text style={[styles.dataText, { color: colors.text }]} selectable>
-                  {displayText}
-                </Text>
+                {displayText ? (
+                  <Text style={[styles.dataText, { color: colors.text }]} selectable>
+                    {displayText}
+                  </Text>
+                ) : (
+                  <Text style={[styles.dataText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+                    {t('result.noData') || '데이터 없음'}
+                  </Text>
+                )}
               </ScrollView>
             )}
           </View>
@@ -669,15 +716,15 @@ export default function ResultScreen() {
                 onOpenUrl={handleOpenUrl}
               />
 
-              {/* 코드 재생성 버튼 */}
+              {/* 코드 재생성/편집 버튼 */}
               <TouchableOpacity
-                style={[styles.regenerateButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
+                style={[styles.regenerateButton, { backgroundColor: isGeneratedCode ? '#9C27B0' + '15' : colors.inputBackground, borderColor: isGeneratedCode ? '#9C27B0' + '30' : colors.border }]}
                 onPress={handleRegenerateCode}
                 activeOpacity={0.7}
               >
-                <Ionicons name="qr-code-outline" size={18} color={colors.textSecondary} />
-                <Text style={[styles.regenerateButtonText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-                  {t('result.regenerateCode') || '코드 재생성'}
+                <Ionicons name={isGeneratedCode ? "create-outline" : "qr-code-outline"} size={18} color={isGeneratedCode ? '#9C27B0' : colors.textSecondary} />
+                <Text style={[styles.regenerateButtonText, { color: isGeneratedCode ? '#9C27B0' : colors.textSecondary, fontFamily: fonts.medium }]}>
+                  {isGeneratedCode ? (t('result.editCode') || '편집') : (t('result.regenerateCode') || '코드 재생성')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -723,6 +770,34 @@ export default function ResultScreen() {
                     {allScanTimes.length - index}. {formatDateTime(time)}
                   </Text>
                 ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* 생성 코드 미리보기 */}
+        {isGeneratedCode && (
+          <View style={[styles.photoCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.photoHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="create-outline" size={16} color="#9C27B0" />
+                <Text style={[styles.photoLabel, { color: colors.text }]}>
+                  {t('result.generatedPreview') || '생성 미리보기'}
+                </Text>
+              </View>
+            </View>
+            {thumbnail ? (
+              <Image
+                source={{ uri: thumbnail }}
+                style={[styles.scanPhoto, { backgroundColor: 'white' }]}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={[styles.scanPhoto, styles.barcodePreviewContainer, { backgroundColor: '#9C27B0' + '10' }]}>
+                <Ionicons name="barcode-outline" size={64} color="#9C27B0" />
+                <Text style={[styles.barcodePreviewType, { color: '#9C27B0' }]}>
+                  {barcodeType?.toUpperCase() || 'BARCODE'}
+                </Text>
               </View>
             )}
           </View>
@@ -1029,6 +1104,15 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: 12,
+  },
+  barcodePreviewContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  barcodePreviewType: {
+    fontSize: 18,
+    fontWeight: '700',
   },
   photoPlaceholder: {
     justifyContent: 'center',

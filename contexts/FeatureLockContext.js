@@ -30,8 +30,8 @@ const TOKEN_STORAGE_KEY = 'auth_token';
 const REFRESH_TOKEN_KEY = 'refresh_token';
 const DEVICE_ID_KEY = 'device_id';
 
-// 자동 동기화 간격 (3분)
-const AUTO_SYNC_INTERVAL = 3 * 60 * 1000;
+// 자동 동기화 간격 (30분) - 디스크 쓰기 최적화
+const AUTO_SYNC_INTERVAL = 30 * 60 * 1000;
 
 // 리워드 광고 ID
 const REWARDED_AD_UNIT_ID = __DEV__
@@ -682,10 +682,10 @@ export const FeatureLockProvider = ({ children }) => {
         }
       }, 2000);
 
-      // 3분마다 자동 동기화
+      // 30분마다 자동 동기화 (디스크 쓰기 최적화)
       const intervalId = setInterval(() => {
         if (autoSyncRef.current) {
-          console.log('[AdSync] Periodic sync triggered (3 min interval)');
+          console.log('[AdSync] Periodic sync triggered (30 min interval)');
           autoSyncRef.current().then((result) => {
             if (result.success) {
               console.log('[AdSync] Periodic sync completed');

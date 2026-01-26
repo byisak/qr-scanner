@@ -15,6 +15,10 @@ const SYNC_STATUS = {
   DISABLED: 'disabled',
 };
 
+// 디스크 쓰기 최적화를 위한 상수
+const SYNC_DEBOUNCE_MS = 10000; // 10초 디바운스 (기존 2초)
+const MIN_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 최소 5분 간격
+
 export function SyncProvider({ children }) {
   const [syncStatus, setSyncStatus] = useState(SYNC_STATUS.IDLE);
   const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -22,6 +26,8 @@ export function SyncProvider({ children }) {
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const syncTimeoutRef = useRef(null);
   const appState = useRef(AppState.currentState);
+  const lastSyncTimeRef = useRef(0); // 마지막 동기화 시간 (ms)
+  const pendingSyncRef = useRef(false); // 대기 중인 동기화 있음
 
   // iCloud 사용 가능 여부 확인
   useEffect(() => {
@@ -49,17 +55,27 @@ export function SyncProvider({ children }) {
     checkICloud();
   }, []);
 
-  // 앱 상태 변경 감지 (백그라운드 진입 시 동기화)
+  // 앱 상태 변경 감지 (백그라운드 진입 시 동기화 - 대기 중인 변경사항이 있을 때만)
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       if (
         appState.current.match(/active/) &&
         nextAppState.match(/inactive|background/) &&
         autoSyncEnabled &&
-        iCloudEnabled
+        iCloudEnabled &&
+        pendingSyncRef.current // 대기 중인 동기화가 있을 때만
       ) {
-        // 앱이 백그라운드로 갈 때 동기화
-        triggerSync();
+        // 앱이 백그라운드로 갈 때 동기화 (최소 간격 무시하고 즉시 실행)
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+        }
+        saveToICloud()
+          .then(() => {
+            lastSyncTimeRef.current = Date.now();
+            setLastSyncTime(new Date());
+            pendingSyncRef.current = false;
+          })
+          .catch((error) => console.log('[Sync] Background sync error:', error));
       }
       appState.current = nextAppState;
     });
@@ -69,7 +85,7 @@ export function SyncProvider({ children }) {
     };
   }, [autoSyncEnabled, iCloudEnabled]);
 
-  // 동기화 실행 (디바운스 적용)
+  // 동기화 실행 (디바운스 + 최소 간격 적용)
   const triggerSync = useCallback(async () => {
     if (!iCloudEnabled || !autoSyncEnabled || Platform.OS !== 'ios') {
       return;
@@ -80,13 +96,28 @@ export function SyncProvider({ children }) {
       clearTimeout(syncTimeoutRef.current);
     }
 
-    // 2초 디바운스
+    // 대기 중인 동기화 표시
+    pendingSyncRef.current = true;
+
+    // 10초 디바운스 (디스크 쓰기 최적화)
     syncTimeoutRef.current = setTimeout(async () => {
+      // 최소 간격 체크 (5분)
+      const now = Date.now();
+      const timeSinceLastSync = now - lastSyncTimeRef.current;
+
+      if (timeSinceLastSync < MIN_SYNC_INTERVAL_MS) {
+        console.log('[Sync] Skipping - last sync was', Math.round(timeSinceLastSync / 1000), 'seconds ago');
+        pendingSyncRef.current = false;
+        return;
+      }
+
       try {
         setSyncStatus(SYNC_STATUS.SYNCING);
         await saveToICloud();
+        lastSyncTimeRef.current = Date.now();
         setLastSyncTime(new Date());
         setSyncStatus(SYNC_STATUS.SUCCESS);
+        pendingSyncRef.current = false;
 
         // 3초 후 IDLE로 복귀
         setTimeout(() => {
@@ -95,13 +126,14 @@ export function SyncProvider({ children }) {
       } catch (error) {
         console.error('Sync error:', error);
         setSyncStatus(SYNC_STATUS.ERROR);
+        pendingSyncRef.current = false;
 
         // 5초 후 IDLE로 복귀
         setTimeout(() => {
           setSyncStatus(SYNC_STATUS.IDLE);
         }, 5000);
       }
-    }, 2000);
+    }, SYNC_DEBOUNCE_MS);
   }, [iCloudEnabled, autoSyncEnabled]);
 
   // 즉시 동기화 (수동)

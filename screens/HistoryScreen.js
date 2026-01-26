@@ -79,10 +79,13 @@ export default function HistoryScreen() {
           if (!isRealtimeSyncEnabled && g.isCloudSync) return false; // 서버전송 꺼진 경우 세션 그룹 제외
           return true;
         });
-        // 기본 그룹 이름을 현재 언어로 표시
+        // 기본 그룹 및 생성 그룹 이름을 현재 언어로 표시
         const localizedGroups = filteredGroups.map(g => {
           if (g.id === DEFAULT_GROUP_ID) {
             return { ...g, name: t('groupEdit.defaultGroup') };
+          }
+          if (g.id === 'generated') {
+            return { ...g, name: t('history.generatedGroup') || '생성' };
           }
           return g;
         });
@@ -281,6 +284,10 @@ export default function HistoryScreen() {
         fromHistory: 'true', // 히스토리에서 왔음을 표시
         type: item.type || 'qr', // 바코드 타입 전달
         errorCorrectionLevel: item.errorCorrectionLevel || '', // EC 레벨 전달
+        // 생성 코드 데이터 (편집용)
+        isGenerated: item.isGenerated ? 'true' : 'false',
+        generatorData: item.generatorData ? JSON.stringify(item.generatorData) : '',
+        thumbnail: item.thumbnail || '',
       }
     });
   };
@@ -395,7 +402,9 @@ export default function HistoryScreen() {
           keyExtractor={(item) => item.timestamp.toString()}
           renderItem={({ item }) => {
             const hasPhoto = item.photos && item.photos.length > 0;
+            const hasThumbnail = item.thumbnail && !imageErrors[item.timestamp]; // 생성 코드 썸네일
             const isQRCode = !item.type || item.type === 'qr' || item.type === 'qrcode';
+            const isGenerated = item.isGenerated === true;
             const ecLevel = item.errorCorrectionLevel;
 
             // QR 콘텐츠 파싱 (QR 코드인 경우에만)
@@ -524,8 +533,28 @@ export default function HistoryScreen() {
                 accessibilityRole="button"
               >
                 <View style={s.itemContent}>
+                  {/* 생성 코드: QR은 썸네일, 바코드는 아이콘 */}
+                  {isGenerated && isQRCode && hasThumbnail && (
+                    <View style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                      <Image
+                        source={{ uri: item.thumbnail }}
+                        style={[s.photoThumbnail, { backgroundColor: 'white' }]}
+                        resizeMode="contain"
+                        onError={() => setImageErrors(prev => ({ ...prev, [item.timestamp]: true }))}
+                      />
+                    </View>
+                  )}
+                  {/* 생성 바코드: 아이콘으로 표시 */}
+                  {isGenerated && !isQRCode && (
+                    <View style={[s.photoThumbnail, s.barcodeIconContainer, { backgroundColor: '#9C27B0' + '15', borderColor: '#9C27B0' + '30' }]}>
+                      <Ionicons name="barcode-outline" size={28} color="#9C27B0" />
+                      <Text style={[s.barcodeTypeText, { color: '#9C27B0' }]} numberOfLines={1}>
+                        {item.type?.toUpperCase() || 'BARCODE'}
+                      </Text>
+                    </View>
+                  )}
                   {/* 사진 썸네일 - 클릭시 이미지 분석 */}
-                  {hasPhoto && (
+                  {!isGenerated && hasPhoto && (
                     <TouchableOpacity
                       onPress={() => !imageErrors[item.timestamp] && router.push({
                         pathname: '/image-analysis',
@@ -552,7 +581,7 @@ export default function HistoryScreen() {
                       )}
                     </TouchableOpacity>
                   )}
-                  <View style={[s.itemInfo, hasPhoto && s.itemInfoWithPhoto]}>
+                  <View style={[s.itemInfo, (hasPhoto || hasThumbnail || isGenerated) && s.itemInfoWithPhoto]}>
                     {/* 1줄: 스캔값 */}
                     <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
                       {item.code}
@@ -560,6 +589,13 @@ export default function HistoryScreen() {
 
                     {/* 2줄: 바코드타입, 콘텐츠타입, 반복횟수, 에러레벨 */}
                     <View style={s.badgeRow}>
+                      {/* 생성 코드 배지 */}
+                      {isGenerated && (
+                        <View style={[s.badge, { backgroundColor: '#9C27B0' + '15' }]}>
+                          <Ionicons name="create-outline" size={11} color="#9C27B0" />
+                          <Text style={[s.badgeText, { color: '#9C27B0' }]}>{t('history.generatedBadge') || '생성'}</Text>
+                        </View>
+                      )}
                       {/* 바코드 타입 */}
                       <View style={[s.badge, { backgroundColor: colors.primary + '15' }]}>
                         <Ionicons
@@ -770,6 +806,16 @@ const s = StyleSheet.create({
   photoPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  barcodeIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 4,
+  },
+  barcodeTypeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 2,
   },
   analyzeIconOverlay: {
     position: 'absolute',
