@@ -55,6 +55,7 @@ import Slider from '@react-native-community/slider';
 import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved, trackQRShared } from '../utils/analytics';
 import PresetSaveModal from '../components/PresetSaveModal';
 import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
+import { saveGeneratedCodeToHistory } from '../utils/generatedHistoryStorage';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (1개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -445,6 +446,15 @@ export default function GeneratorScreen() {
       if (params.initialBarcodeValue) {
         setBarcodeValue(params.initialBarcodeValue);
       }
+      // 저장된 바코드 설정 적용 (편집 모드)
+      if (params.initialBarcodeSettings) {
+        try {
+          const savedSettings = JSON.parse(params.initialBarcodeSettings);
+          setBarcodeSettings(prev => ({ ...prev, ...savedSettings }));
+        } catch (e) {
+          console.warn('Failed to parse barcode settings:', e);
+        }
+      }
     }
 
     // QR 모드인 경우
@@ -463,7 +473,25 @@ export default function GeneratorScreen() {
         console.error('Error parsing initial data:', error);
       }
     }
-  }, [params.initialMode, params.initialType, params.initialData, params.initialBarcodeFormat, params.initialBarcodeValue]);
+
+    // 저장된 QR 스타일 적용 (편집 모드)
+    if (params.initialQrStyle) {
+      try {
+        const savedStyle = JSON.parse(params.initialQrStyle);
+        setQrStyle(prev => ({ ...prev, ...savedStyle }));
+      } catch (e) {
+        console.warn('Failed to parse QR style:', e);
+      }
+    }
+
+    // 저장된 프레임 적용 (편집 모드)
+    if (params.initialFrameId) {
+      const frameIdx = QR_FRAMES.findIndex(f => f.id === params.initialFrameId);
+      if (frameIdx !== -1) {
+        setFrameIndex(frameIdx);
+      }
+    }
+  }, [params.initialMode, params.initialType, params.initialData, params.initialBarcodeFormat, params.initialBarcodeValue, params.initialQrStyle, params.initialFrameId, params.initialBarcodeSettings]);
 
   // Load selected location from map picker when screen gets focus
   useFocusEffect(
@@ -1290,6 +1318,20 @@ export default function GeneratorScreen() {
       }
 
       await MediaLibrary.saveToLibraryAsync(uri);
+
+      // 생성 히스토리에 저장 (썸네일 포함)
+      try {
+        await saveGeneratedCodeToHistory({
+          code: isBarcode ? finalBarcodeValue : qrData,
+          type: isBarcode ? selectedBarcodeFormat : 'qr',
+          imageUri: uri,
+          qrStyle: !isBarcode ? qrStyle : null,
+          barcodeSettings: isBarcode ? barcodeSettings : null,
+          frameId: !isBarcode && selectedFrame ? selectedFrame.id : null,
+        });
+      } catch (historyError) {
+        console.warn('Failed to save to generated history:', historyError);
+      }
 
       // 프로그레스 모달 닫기
       setSaveProgress({ visible: false, progress: 0, message: '' });
