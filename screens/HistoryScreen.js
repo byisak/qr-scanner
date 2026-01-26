@@ -533,8 +533,8 @@ export default function HistoryScreen() {
                 accessibilityRole="button"
               >
                 <View style={s.itemContent}>
-                  {/* 생성 코드 썸네일 */}
-                  {hasThumbnail && (
+                  {/* 생성 코드: QR은 썸네일, 바코드는 아이콘 */}
+                  {isGenerated && isQRCode && hasThumbnail && (
                     <View style={[s.photoThumbnail, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
                       <Image
                         source={{ uri: item.thumbnail }}
@@ -544,8 +544,17 @@ export default function HistoryScreen() {
                       />
                     </View>
                   )}
+                  {/* 생성 바코드: 아이콘으로 표시 */}
+                  {isGenerated && !isQRCode && (
+                    <View style={[s.photoThumbnail, s.barcodeIconContainer, { backgroundColor: '#9C27B0' + '15', borderColor: '#9C27B0' + '30' }]}>
+                      <Ionicons name="barcode-outline" size={28} color="#9C27B0" />
+                      <Text style={[s.barcodeTypeText, { color: '#9C27B0' }]} numberOfLines={1}>
+                        {item.type?.toUpperCase() || 'BARCODE'}
+                      </Text>
+                    </View>
+                  )}
                   {/* 사진 썸네일 - 클릭시 이미지 분석 */}
-                  {!hasThumbnail && hasPhoto && (
+                  {!isGenerated && hasPhoto && (
                     <TouchableOpacity
                       onPress={() => !imageErrors[item.timestamp] && router.push({
                         pathname: '/image-analysis',
@@ -572,7 +581,7 @@ export default function HistoryScreen() {
                       )}
                     </TouchableOpacity>
                   )}
-                  <View style={[s.itemInfo, (hasPhoto || hasThumbnail) && s.itemInfoWithPhoto]}>
+                  <View style={[s.itemInfo, (hasPhoto || hasThumbnail || isGenerated) && s.itemInfoWithPhoto]}>
                     {/* 1줄: 스캔값 */}
                     <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
                       {item.code}
@@ -797,6 +806,16 @@ const s = StyleSheet.create({
   photoPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  barcodeIconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 4,
+  },
+  barcodeTypeText: {
+    fontSize: 9,
+    fontWeight: '600',
+    marginTop: 2,
   },
   analyzeIconOverlay: {
     position: 'absolute',
