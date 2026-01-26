@@ -64,14 +64,16 @@ export const saveThumbnail = async (imageSource, timestamp) => {
       await FileSystem.writeAsStringAsync(thumbnailPath, base64Data, {
         encoding: FileSystem.EncodingType.Base64,
       });
-    } else if (imageSource.startsWith('file:')) {
-      // 파일 URI - 복사
+    } else if (imageSource.startsWith('file:') || imageSource.startsWith('/')) {
+      // 파일 URI 또는 절대 경로 - 복사
+      // 절대 경로인 경우 file:// prefix 추가
+      const sourceUri = imageSource.startsWith('/') ? `file://${imageSource}` : imageSource;
       await FileSystem.copyAsync({
-        from: imageSource,
+        from: sourceUri,
         to: thumbnailPath,
       });
     } else {
-      console.warn('Unknown image source format');
+      console.warn('Unknown image source format:', imageSource?.substring(0, 50));
       return null;
     }
 
