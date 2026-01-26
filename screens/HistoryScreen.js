@@ -584,7 +584,7 @@ export default function HistoryScreen() {
                       {isGenerated && (
                         <View style={[s.badge, { backgroundColor: '#9C27B0' + '15' }]}>
                           <Ionicons name="create-outline" size={11} color="#9C27B0" />
-                          <Text style={[s.badgeText, { color: '#9C27B0' }]}>생성</Text>
+                          <Text style={[s.badgeText, { color: '#9C27B0' }]}>{t('history.generatedBadge') || '생성'}</Text>
                         </View>
                       )}
                       {/* 바코드 타입 */}

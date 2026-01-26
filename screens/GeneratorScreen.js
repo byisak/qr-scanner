@@ -1353,7 +1353,10 @@ export default function GeneratorScreen() {
   // 로고 이미지 선택
   const handlePickLogo = async () => {
     if (!ImagePicker) {
-      Alert.alert('기능 사용 불가', '이미지 선택 기능을 사용할 수 없습니다. 앱을 다시 빌드해주세요.');
+      Alert.alert(
+        t('generator.featureUnavailable') || '기능 사용 불가',
+        t('generator.imagePickerUnavailable') || '이미지 선택 기능을 사용할 수 없습니다. 앱을 다시 빌드해주세요.'
+      );
       return;
     }
     try {
