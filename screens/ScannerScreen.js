@@ -2315,6 +2315,16 @@ function ScannerScreen() {
       return;
     }
     try {
+      // 권한 요청
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('common.error') || '오류',
+          t('imageAnalysis.permissionDenied') || '사진 라이브러리 접근 권한이 필요합니다.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
