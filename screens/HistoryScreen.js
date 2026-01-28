@@ -399,7 +399,7 @@ export default function HistoryScreen() {
       ) : (
         <SwipeListView
           data={filteredList}
-          keyExtractor={(item) => item.timestamp.toString()}
+          keyExtractor={(item, index) => `${item.timestamp}_${item.code || ''}_${index}`}
           renderItem={({ item }) => {
             const hasPhoto = item.photos && item.photos.length > 0;
             const hasThumbnail = item.thumbnail && !imageErrors[item.timestamp]; // 생성 코드 썸네일
