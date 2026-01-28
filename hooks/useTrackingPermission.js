@@ -1,9 +1,9 @@
 // hooks/useTrackingPermission.js - ATT (App Tracking Transparency) 훅
 import { useEffect, useState, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAnalyticsConsent } from '../utils/analytics';
-import mobileAds from 'react-native-google-mobile-ads';
+import mobileAds, { MaxAdContentRating } from 'react-native-google-mobile-ads';
 
 // 네이티브 모듈 안전한 import (빌드 문제 대응)
 let TrackingTransparency = null;
@@ -26,15 +26,30 @@ export function useTrackingPermission() {
   // ATT 권한 요청 (iOS 전용)
   const requestPermission = useCallback(async () => {
     try {
-      // iOS가 아니거나 TrackingTransparency가 없으면 바로 동의 처리
-      if (Platform.OS !== 'ios' || !TrackingTransparency) {
-        // Android 또는 네이티브 모듈 없음: 이전에 저장된 동의 상태 확인
+      // Android: 기본 동의 처리
+      if (Platform.OS !== 'ios') {
         const consent = await AsyncStorage.getItem('@analytics_consent');
         if (consent === null) {
-          // 최초 실행: 기본적으로 동의 처리 (설정에서 변경 가능)
           await setAnalyticsConsent(true);
         }
         await mobileAds().initialize();
+        setIsLoading(false);
+        return;
+      }
+
+      // iOS: ATT 모듈이 없으면 비개인화 광고만 사용
+      if (!TrackingTransparency) {
+        console.warn('ATT module not available, using non-personalized ads only');
+        // 추적 동의 없이 비개인화 광고만 허용
+        await setAnalyticsConsent(false);
+        // 비개인화 광고 설정
+        await mobileAds().setRequestConfiguration({
+          maxAdContentRating: MaxAdContentRating.G,
+          tagForChildDirectedTreatment: false,
+          tagForUnderAgeOfConsent: false,
+        });
+        await mobileAds().initialize();
+        setPermissionStatus('denied');
         setIsLoading(false);
         return;
       }
@@ -72,7 +87,8 @@ export function useTrackingPermission() {
       setIsLoading(false);
     } catch (error) {
       console.error('ATT permission error:', error);
-      // 오류 시에도 앱 진행
+      // 오류 시 비개인화 광고만 사용
+      await setAnalyticsConsent(false);
       await mobileAds().initialize();
       setIsLoading(false);
     }
