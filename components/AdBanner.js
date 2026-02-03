@@ -21,19 +21,7 @@ if (AD_ENABLED) {
     TestIds = AdModule.TestIds;
     mobileAds = AdModule.default;
     isAdModuleAvailable = true;
-
-    // SDK 초기화
-    if (mobileAds && !isInitialized) {
-      mobileAds()
-        .initialize()
-        .then((adapterStatuses) => {
-          isInitialized = true;
-          console.log('Mobile Ads SDK initialized');
-        })
-        .catch((error) => {
-          console.log('Mobile Ads SDK initialization failed:', error);
-        });
-    }
+    // SDK 초기화는 useTrackingPermission에서 ATT 동의 후 수행
   } catch (error) {
     console.log('Google Mobile Ads module not available:', error.message);
   }
