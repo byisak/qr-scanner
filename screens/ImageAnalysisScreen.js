@@ -41,6 +41,9 @@ const ANALYSIS_TIMEOUT = 15000;
 // zxing-wasm 라이브러리 로컬 파일 (텍스트 파일로 번들링)
 const zxingWasmAsset = require('../assets/js/zxing-wasm.txt');
 
+// WASM 스크립트 메모리 캐시 (화면 재진입 시 디스크 재읽기 방지)
+let _cachedZxingScript = null;
+
 // ZXing WASM IIFE 빌드 사용 (QR 코드 + 다양한 바코드 지원)
 const getWebViewHTML = (zxingScript) => `
 <!DOCTYPE html>
@@ -315,10 +318,17 @@ function ImageAnalysisScreen() {
     return currentGroup?.isLotteryGroup === true;
   }, [currentGroupId, availableGroups]);
 
-  // zxing-wasm 라이브러리 로드 (오프라인 지원)
+  // zxing-wasm 라이브러리 로드 (메모리 캐시 + 오프라인 지원)
   useEffect(() => {
     const loadZxingScript = async () => {
       try {
+        // 메모리 캐시에 있으면 즉시 사용 (디스크 I/O 건너뛰기)
+        if (_cachedZxingScript) {
+          console.log('ZXing WASM script loaded from cache');
+          setZxingScript(_cachedZxingScript);
+          return;
+        }
+
         const asset = Asset.fromModule(zxingWasmAsset);
 
         // 이미 로컬에 있으면 downloadAsync 건너뛰기 (오프라인 지원)
@@ -337,8 +347,9 @@ function ImageAnalysisScreen() {
         }
 
         const scriptContent = await FileSystem.readAsStringAsync(assetUri);
+        _cachedZxingScript = scriptContent; // 메모리 캐시에 저장
         setZxingScript(scriptContent);
-        console.log('ZXing WASM script loaded, size:', scriptContent.length);
+        console.log('ZXing WASM script loaded from disk, size:', scriptContent.length);
       } catch (err) {
         console.error('Failed to load ZXing script:', err);
         setZxingScript(null);
@@ -409,10 +420,7 @@ function ImageAnalysisScreen() {
         const normalizedUri = manipulatedImage.uri;
         setNormalizedImageUri(normalizedUri);
 
-        // 처리된 이미지 정보 로그
-        const processedInfo = await FileSystem.getInfoAsync(normalizedUri);
-        console.log('[ImageAnalysis] Processed image:', manipulatedImage.width, 'x', manipulatedImage.height,
-          'size:', processedInfo.size ? `${(processedInfo.size / 1024).toFixed(1)}KB` : 'unknown');
+        console.log('[ImageAnalysis] Processed image:', manipulatedImage.width, 'x', manipulatedImage.height);
 
         // 정규화된 이미지 크기 사용
         const width = manipulatedImage.width;
