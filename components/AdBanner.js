@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 
-// 광고 활성화 플래그
-const AD_ENABLED = true;
+// 광고 활성화 플래그 (AdMob 승인 후 true로 변경)
+export const AD_ENABLED = false;
 
 // 네이티브 모듈 동적 로드 (Expo Go 호환성)
 let BannerAd = null;
@@ -21,19 +21,7 @@ if (AD_ENABLED) {
     TestIds = AdModule.TestIds;
     mobileAds = AdModule.default;
     isAdModuleAvailable = true;
-
-    // SDK 초기화
-    if (mobileAds && !isInitialized) {
-      mobileAds()
-        .initialize()
-        .then((adapterStatuses) => {
-          isInitialized = true;
-          console.log('Mobile Ads SDK initialized');
-        })
-        .catch((error) => {
-          console.log('Mobile Ads SDK initialization failed:', error);
-        });
-    }
+    // SDK 초기화는 useTrackingPermission에서 ATT 동의 후 수행
   } catch (error) {
     console.log('Google Mobile Ads module not available:', error.message);
   }
@@ -54,6 +42,9 @@ const getBannerAdUnitId = () => {
 export default function AdBanner({ style, containerStyle, wrapperStyle }) {
   const [adLoaded, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState(false);
+
+  // 광고 비활성화 시 빈 컴포넌트 반환
+  if (!AD_ENABLED) return null;
 
   // 네이티브 모듈이 없으면 (Expo Go) 빈 컴포넌트 반환
   if (!isAdModuleAvailable || !BannerAd) {

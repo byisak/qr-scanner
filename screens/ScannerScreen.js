@@ -124,6 +124,7 @@ function ScannerScreen() {
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState('');
   const [showSendMessage, setShowSendMessage] = useState(false); // "전송" 메시지 표시 여부
+  const [isImageLoading, setIsImageLoading] = useState(false); // 이미지 분석 화면 전환 로딩
 
   // 스캔 연동 URL 관련 상태
   const [scanUrlEnabled, setScanUrlEnabled] = useState(false);
@@ -479,6 +480,7 @@ function ScannerScreen() {
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
       isProcessingMultiRef.current = false; // 다중 바코드 처리 플래그 리셋
+      setIsImageLoading(false); // 이미지 분석 로딩 리셋
       scannedCodesRef.current = []; // 여러 코드 인식 모드 스캔 목록 리셋
       setPendingMultiScanData(null); // 다중 바코드 보류 데이터 리셋
       setContinuousScanCount(0); // 연속 스캔 카운터 리셋
@@ -2315,10 +2317,20 @@ function ScannerScreen() {
       return;
     }
     try {
+      // 권한 요청
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('common.error') || '오류',
+          t('imageAnalysis.permissionDenied') || '사진 라이브러리 접근 권한이 필요합니다.'
+        );
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
-        quality: 1,
+        quality: 0.8,
       });
 
       if (result.canceled || !result.assets || result.assets.length === 0) {
@@ -2327,15 +2339,21 @@ function ScannerScreen() {
 
       const imageUri = result.assets[0].uri;
 
+      // 즉시 로딩 표시 (화면 전환 딜레이 동안 사용자 피드백)
+      setIsImageLoading(true);
       isNavigatingRef.current = true;
       setIsActive(false);
 
-      router.push({
-        pathname: '/image-analysis',
-        params: { imageUri: imageUri },
+      // 다음 프레임에서 네비게이션 (로딩 UI가 먼저 렌더링되도록)
+      requestAnimationFrame(() => {
+        router.push({
+          pathname: '/image-analysis',
+          params: { imageUri: imageUri },
+        });
       });
     } catch (error) {
       console.error('Image picker error:', error);
+      setIsImageLoading(false);
       Alert.alert(t('settings.error'), t('imageAnalysis.pickerError'));
     }
   }, [router, t]);
@@ -2907,6 +2925,14 @@ function ScannerScreen() {
         </View>
       )}
 
+      {/* 이미지 분석 화면 전환 로딩 오버레이 */}
+      {isImageLoading && (
+        <View style={styles.imageLoadingOverlay}>
+          <ActivityIndicator size="large" color="#fff" />
+          <Text style={styles.imageLoadingText}>{t('imageAnalysis.loadingImage') || '이미지 로딩 중...'}</Text>
+        </View>
+      )}
+
       {/* 하단 배너 광고 - 탭바 바로 위 */}
       <AdBanner
         wrapperStyle={{
@@ -2926,6 +2952,19 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  imageLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  imageLoadingText: {
+    color: '#fff',
+    fontSize: 16,
+    marginTop: 12,
+    fontWeight: '500',
   },
   groupBadge: {
     position: 'absolute',

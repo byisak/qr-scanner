@@ -27,7 +27,7 @@ import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AdBanner from '../components/AdBanner';
+import AdBanner, { AD_ENABLED } from '../components/AdBanner';
 import { getAnalyticsConsent, setAnalyticsConsent } from '../utils/analytics';
 
 export default function SettingsScreen() {
@@ -441,10 +441,12 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         )}
 
-        {/* 배너 광고 */}
-        <View style={[s.adSection, { backgroundColor: colors.surface }]}>
-          <AdBanner />
-        </View>
+        {/* 배너 광고 - AD_ENABLED일 때만 표시 */}
+        {AD_ENABLED && (
+          <View style={[s.adSection, { backgroundColor: colors.surface }]}>
+            <AdBanner />
+          </View>
+        )}
 
         {/* Pro 버전 - TODO: 추후 프로버전 출시 시 주석 해제 */}
         {/* <TouchableOpacity
@@ -478,28 +480,30 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </TouchableOpacity> */}
 
-        {/* 광고보기 - 기능 잠금 해제 */}
-        <TouchableOpacity
-          style={[s.proSection, { backgroundColor: colors.surface }]}
-          onPress={() => router.push('/pro-features')}
-          activeOpacity={0.7}
-        >
-          <LinearGradient
-            colors={['#667eea', '#764ba2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.proBanner}
+        {/* 광고보기 - 기능 잠금 해제 (AD_ENABLED일 때만 표시) */}
+        {AD_ENABLED && (
+          <TouchableOpacity
+            style={[s.proSection, { backgroundColor: colors.surface }]}
+            onPress={() => router.push('/pro-features')}
+            activeOpacity={0.7}
           >
-            <View style={s.proBannerContent}>
-              <Ionicons name="play-circle" size={24} color="#fff" />
-              <View style={s.proBannerText}>
-                <Text style={[s.proTitle, { fontFamily: fonts.bold }]}>{t('proVersion.watchAd')}</Text>
-                <Text style={[s.proDesc, { fontFamily: fonts.regular }]}>{t('proVersion.freeUnlock')}</Text>
+            <LinearGradient
+              colors={['#667eea', '#764ba2']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.proBanner}
+            >
+              <View style={s.proBannerContent}>
+                <Ionicons name="play-circle" size={24} color="#fff" />
+                <View style={s.proBannerText}>
+                  <Text style={[s.proTitle, { fontFamily: fonts.bold }]}>{t('proVersion.watchAd')}</Text>
+                  <Text style={[s.proDesc, { fontFamily: fonts.regular }]}>{t('proVersion.freeUnlock')}</Text>
+                </View>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#fff" />
-          </LinearGradient>
-        </TouchableOpacity>
+              <Ionicons name="chevron-forward" size={24} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
         {/* 알림 섹션 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
@@ -998,7 +1002,7 @@ export default function SettingsScreen() {
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.versionInfo')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.currentVersion')}</Text>
             </View>
-            <Text style={[s.versionText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>0.1.0</Text>
+            <Text style={[s.versionText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>1.1.2</Text>
           </View>
 
           {/* 캐시 삭제 */}
