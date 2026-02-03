@@ -1133,8 +1133,8 @@ function ImageAnalysisScreen() {
       }
 
       Alert.alert(
-        t('imageAnalysis.historySaveAllSuccess'),
-        t('imageAnalysis.historySaveAllSuccessMessage', { count: successCount })
+        t('imageAnalysis.historyAllSaveSuccess'),
+        t('imageAnalysis.historyAllSaveSuccessMessage', { count: successCount })
       );
     } catch (err) {
       console.error('Save all to history with group error:', err);
