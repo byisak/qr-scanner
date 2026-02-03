@@ -43,6 +43,9 @@ export default function AdBanner({ style, containerStyle, wrapperStyle }) {
   const [adLoaded, setAdLoaded] = useState(false);
   const [adError, setAdError] = useState(false);
 
+  // 광고 비활성화 시 빈 컴포넌트 반환
+  if (!AD_ENABLED) return null;
+
   // 네이티브 모듈이 없으면 (Expo Go) 빈 컴포넌트 반환
   if (!isAdModuleAvailable || !BannerAd) {
     // 개발 모드에서만 플레이스홀더 표시
