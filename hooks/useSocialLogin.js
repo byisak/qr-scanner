@@ -113,8 +113,13 @@ export const useGoogleLogin = () => {
 
   // 구글 클라이언트 ID 안전하게 가져오기
   const iosClientId = config.google?.iosClientId || '';
+  const androidClientId = config.google?.androidClientId || '';
   const webClientId = config.google?.webClientId || '';
-  const clientId = Platform.OS === 'ios' ? iosClientId : webClientId;
+  const clientId = Platform.select({
+    ios: iosClientId,
+    android: androidClientId || webClientId,
+    default: webClientId,
+  });
 
   // iOS는 리버스 클라이언트 ID 사용
   const getRedirectUri = () => {

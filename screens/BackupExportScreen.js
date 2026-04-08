@@ -29,6 +29,7 @@ WebBrowser.maybeCompleteAuthSession();
 // Google OAuth 설정
 const GOOGLE_WEB_CLIENT_ID = '585698187056-3tqjnjbcdidddn9ddvp2opp0mgj7tgd4.apps.googleusercontent.com';
 const GOOGLE_IOS_CLIENT_ID = '585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot.apps.googleusercontent.com';
+const GOOGLE_ANDROID_CLIENT_ID = '585698187056-c245sfancbg2e2djpjn6q0j945f0muff.apps.googleusercontent.com';
 
 const discovery = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -75,7 +76,7 @@ export default function BackupExportScreen() {
   // Google OAuth - Authorization Code 플로우
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
-      clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID,
+      clientId: Platform.select({ ios: GOOGLE_IOS_CLIENT_ID, android: GOOGLE_ANDROID_CLIENT_ID, default: GOOGLE_WEB_CLIENT_ID }),
       scopes: ['https://www.googleapis.com/auth/drive.file'],
       redirectUri,
       responseType: AuthSession.ResponseType.Code,
@@ -91,7 +92,7 @@ export default function BackupExportScreen() {
     try {
       const tokenResponse = await AuthSession.exchangeCodeAsync(
         {
-          clientId: Platform.OS === 'ios' ? GOOGLE_IOS_CLIENT_ID : GOOGLE_WEB_CLIENT_ID,
+          clientId: Platform.select({ ios: GOOGLE_IOS_CLIENT_ID, android: GOOGLE_ANDROID_CLIENT_ID, default: GOOGLE_WEB_CLIENT_ID }),
           code,
           redirectUri,
           extraParams: {
