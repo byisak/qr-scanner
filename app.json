@@ -12,7 +12,9 @@
       "resizeMode": "cover",
       "backgroundColor": "#000000"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.cubion.qrscanner",
@@ -25,20 +27,36 @@
         "NSCalendarsUsageDescription": "QR 코드의 일정을 캘린더에 추가하기 위해 접근이 필요합니다.",
         "NSContactsUsageDescription": "QR 코드의 연락처 정보를 저장하기 위해 접근이 필요합니다.",
         "NSFaceIDUsageDescription": "앱 잠금 해제를 위해 Face ID가 필요합니다.",
-        "LSApplicationQueriesSchemes": ["googlechrome", "googlechromes", "kakaokompassauth", "kakaolink", "naversearchapp", "naversearchthirdlogin"],
+        "LSApplicationQueriesSchemes": [
+          "googlechrome",
+          "googlechromes",
+          "kakaokompassauth",
+          "kakaolink",
+          "naversearchapp",
+          "naversearchthirdlogin"
+        ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"]
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"
+            ]
           }
         ]
       },
       "entitlements": {
-        "com.apple.developer.icloud-container-identifiers": ["iCloud.com.cubion.qrscanner"],
-        "com.apple.developer.icloud-services": ["CloudDocuments", "CloudKit"],
-        "com.apple.developer.ubiquity-container-identifiers": ["iCloud.com.cubion.qrscanner"],
+        "com.apple.developer.icloud-container-identifiers": [
+          "iCloud.com.cubion.qrscanner"
+        ],
+        "com.apple.developer.icloud-services": [
+          "CloudDocuments",
+          "CloudKit"
+        ],
+        "com.apple.developer.ubiquity-container-identifiers": [
+          "iCloud.com.cubion.qrscanner"
+        ],
         "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner",
         "com.apple.developer.networking.HotspotConfiguration": true
       },
@@ -65,7 +83,11 @@
         "android.permission.READ_CONTACTS",
         "android.permission.WRITE_CONTACTS",
         "android.permission.ACCESS_WIFI_STATE",
-        "android.permission.CHANGE_WIFI_STATE"
+        "android.permission.CHANGE_WIFI_STATE",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "com.google.android.gms.permission.AD_ID",
+        "android.permission.RECORD_AUDIO"
       ],
       "config": {
         "googleMaps": {
@@ -156,6 +178,9 @@
       "typedRoutes": true
     },
     "extra": {
+      "eas": {
+        "projectId": "f6755f6e-6b03-4c81-9f5e-800228d4c0c4"
+      },
       "serverUrl": "https://scanview.app",
       "kakao": {
         "nativeAppKey": "YOUR_KAKAO_NATIVE_APP_KEY"
@@ -169,6 +194,7 @@
         "iosClientId": "585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot.apps.googleusercontent.com",
         "androidClientId": "585698187056-c245sfancbg2e2djpjn6q0j945f0muff.apps.googleusercontent.com"
       }
-    }
+    },
+    "owner": "parkwookjin"
   }
 }
