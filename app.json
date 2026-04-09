@@ -72,7 +72,7 @@
       },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a1d23"
+        "backgroundColor": "#ffffff"
       },
       "package": "com.cubion.qrscanner",
       "googleServicesFile": "./google-services.json",

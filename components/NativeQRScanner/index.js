@@ -2,7 +2,7 @@
 // @mgcrea/vision-camera-barcode-scanner 기반 네이티브 QR 스캐너 컴포넌트
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { StyleSheet, View, Text, Dimensions, Platform } from 'react-native';
+import { StyleSheet, View, Text, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -23,9 +23,6 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // 투표 기반 검증 임계값 - 최소 3번 이상 동일한 값이 감지되어야 검증됨
 const MIN_VOTE_THRESHOLD = 3;
-
-// 플랫폼 구분: iOS는 @mgcrea 프레임 프로세서, Android는 VisionCamera 내장 codeScanner 사용
-const isIOS = Platform.OS === 'ios';
 
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
 const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor }) => {
@@ -416,10 +413,6 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     selectCenterBarcodeShared.value = selectCenterBarcode;
   }, [selectCenterBarcode]);
 
-  // Android: VisionCamera 내장 codeScanner 하이라이트 상태
-  const [androidHighlights, setAndroidHighlights] = useState([]);
-  const androidScanThrottleRef = useRef(0);
-
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
@@ -561,118 +554,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const runOnJSLogCallback = Worklets.createRunOnJS(logBarcodeCount);
   const runOnJSUpdateBarcodes = Worklets.createRunOnJS(updateDetectedBarcodes);
 
-  // Android: VisionCamera 내장 codeScanner 콜백 핸들러 (JS 스레드에서 실행)
-  const handleAndroidCodeScanned = useCallback((codes) => {
-    const now = Date.now();
-    // FPS 제한 (~10fps = 100ms 간격)
-    if (now - androidScanThrottleRef.current < 100) return;
-    androidScanThrottleRef.current = now;
-
-    if (!codes || codes.length === 0) {
-      setAndroidHighlights([]);
-      return;
-    }
-
-    // 하이라이트 생성 (CustomHighlights 호환 형식)
-    const newHighlights = codes
-      .filter(code => code.frame)
-      .map(code => ({
-        origin: { x: code.frame.x, y: code.frame.y },
-        size: { width: code.frame.width, height: code.frame.height },
-      }));
-    setAndroidHighlights(newHighlights);
-
-    // 바코드 데이터 변환
-    const allBarcodesData = codes.map(code => ({
-      value: code.value || '',
-      type: code.type,
-      frame: code.frame,
-    }));
-    updateDetectedBarcodes(allBarcodesData);
-
-    // 유효한 바코드 필터링
-    const validCodes = codes.filter(code => {
-      const v = String(code.value || '').trim();
-      return v.length > 0 && v !== 'null' && v !== 'undefined';
-    });
-
-    if (validCodes.length === 0) return;
-
-    // 다중 바코드 감지 처리
-    if (validCodes.length >= multiCodeThreshold) {
-      if (selectCenterBarcode) {
-        // 중앙 바코드 선택
-        const centerX = SCREEN_WIDTH / 2;
-        const centerY = SCREEN_HEIGHT / 2;
-        let closest = validCodes[0];
-        let minDist = Number.MAX_VALUE;
-
-        for (const code of validCodes) {
-          if (code.frame) {
-            const cx = code.frame.x + code.frame.width / 2;
-            const cy = code.frame.y + code.frame.height / 2;
-            const dist = Math.sqrt(
-              Math.pow(cx - centerX, 2) + Math.pow(cy - centerY, 2)
-            );
-            if (dist < minDist) {
-              minDist = dist;
-              closest = code;
-            }
-          }
-        }
-
-        handleBarcodeDetected({
-          value: closest.value,
-          type: closest.type,
-          frame: closest.frame,
-          cornerPoints: closest.corners,
-          frameDimensions,
-        });
-        return;
-      }
-
-      // 여러 코드 인식 모드 ON
-      const validData = validCodes.map(code => ({
-        value: String(code.value || '').trim(),
-        type: code.type,
-        frame: code.frame,
-      }));
-      handleMultipleCodesDetected(validData.length, JSON.stringify(validData));
-      return;
-    }
-
-    // 단일 코드: 여러 코드 인식 모드 ON인 경우
-    if (!selectCenterBarcode && validCodes.length === 1) {
-      const code = validCodes[0];
-      handleMultipleCodesDetected(1, JSON.stringify([{
-        value: String(code.value).trim(),
-        type: code.type,
-        frame: code.frame,
-      }]));
-      return;
-    }
-
-    // 기본: 단일 코드 스캔
-    const code = validCodes[0];
-    handleBarcodeDetected({
-      value: code.value,
-      type: code.type,
-      frame: code.frame,
-      cornerPoints: code.corners,
-      frameDimensions,
-    });
-  }, [selectCenterBarcode, multiCodeThreshold, frameDimensions, handleBarcodeDetected, handleMultipleCodesDetected, updateDetectedBarcodes]);
-
-  // Android: VisionCamera 내장 codeScanner 설정
-  const androidCodeScanner = useMemo(() => {
-    if (isIOS) return undefined;
-    return {
-      codeTypes: visionCameraCodeTypes,
-      onCodeScanned: handleAndroidCodeScanned,
-    };
-  }, [visionCameraCodeTypes, handleAndroidCodeScanned]);
-
-  // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용 (iOS 전용, Android에서는 hook 규칙상 호출만 함)
+  // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
     fps: 10,
     barcodeTypes: visionCameraCodeTypes,
@@ -903,12 +785,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         photo={true}
         onError={handleCameraError}
         enableZoomGesture={true}
-        {...(isIOS ? cameraProps : {})}
-        codeScanner={!isIOS ? androidCodeScanner : undefined}
+        {...cameraProps}
       />
       {showHighlights && (
         <CustomHighlights
-          highlights={isIOS ? highlights : androidHighlights}
+          highlights={highlights}
           barcodes={detectedBarcodes}
           borderColor={highlightColor}
           fillColor={highlightFillColor}
