@@ -8,9 +8,7 @@ import {
   useCameraDevice,
   useCameraFormat,
   useCameraPermission,
-  useFrameProcessor,
 } from 'react-native-vision-camera';
-import { zxing } from 'vision-camera-zxing';
 import { useBarcodeScanner } from '@mgcrea/vision-camera-barcode-scanner';
 import { Worklets } from 'react-native-worklets-core';
 import Animated, {
@@ -27,7 +25,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // 투표 기반 검증 임계값 - 최소 3번 이상 동일한 값이 감지되어야 검증됨
 const MIN_VOTE_THRESHOLD = 3;
 
-// 플랫폼 구분: iOS는 @mgcrea 프레임 프로세서, Android는 ZXing 프레임 프로세서 사용
+// 플랫폼 구분: iOS는 @mgcrea 프레임 프로세서, Android는 VisionCamera 내장 codeScanner 사용
 const isIOS = Platform.OS === 'ios';
 
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
@@ -365,23 +363,6 @@ const BARCODE_TYPE_REVERSE_MAP = Object.fromEntries(
   Object.entries(BARCODE_TYPE_MAP).map(([k, v]) => [v, k])
 );
 
-// ZXing 바코드 포맷 -> expo-camera 타입 매핑
-const ZXING_FORMAT_MAP = {
-  'QR_CODE': 'qr',
-  'DATA_MATRIX': 'datamatrix',
-  'AZTEC': 'aztec',
-  'PDF_417': 'pdf417',
-  'CODE_128': 'code128',
-  'CODE_39': 'code39',
-  'CODE_93': 'code93',
-  'EAN_13': 'ean13',
-  'EAN_8': 'ean8',
-  'UPC_A': 'upca',
-  'UPC_E': 'upce',
-  'ITF': 'itf14',
-  'CODABAR': 'codabar',
-};
-
 export const NativeQRScanner = forwardRef(function NativeQRScanner({
   isActive = true,
   torch = 'off',
@@ -680,99 +661,14 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     });
   }, [selectCenterBarcode, multiCodeThreshold, frameDimensions, handleBarcodeDetected, handleMultipleCodesDetected, updateDetectedBarcodes]);
 
-  // Android: ZXing 프레임 프로세서 결과 처리 (JS 스레드에서 실행)
-  const processZxingResults = useCallback((resultsJson, frameW, frameH) => {
-    try {
-      const results = JSON.parse(resultsJson);
-      if (!results || results.length === 0) return;
-
-      // 프레임 좌표 → 화면 좌표 변환 (비례 스케일링)
-      const scaleX = SCREEN_WIDTH / frameW;
-      const scaleY = SCREEN_HEIGHT / frameH;
-
-      const codes = results.map(r => {
-        let frame = null;
-        if (r.frame) {
-          frame = {
-            x: r.frame.x * scaleX,
-            y: r.frame.y * scaleY,
-            width: r.frame.width * scaleX,
-            height: r.frame.height * scaleY,
-          };
-        }
-        return {
-          value: r.barcodeText,
-          type: ZXING_FORMAT_MAP[r.barcodeFormat] || r.barcodeFormat,
-          frame,
-          corners: r.points,
-        };
-      });
-
-      handleAndroidCodeScanned(codes);
-    } catch (e) {
-      console.error('[NativeQRScanner] Failed to process ZXing results:', e);
-    }
-  }, [handleAndroidCodeScanned]);
-
-  const runOnJSZxingCallback = Worklets.createRunOnJS(processZxingResults);
-
-  // ZXing 프레임 프로세서 스로틀링용 shared value
-  const zxingLastScanTime = useSharedValue(0);
-
-  // Android: ZXing 프레임 프로세서 (Data Matrix/저대비 바코드 인식 개선)
-  const zxingFrameProcessor = useFrameProcessor((frame) => {
-    'worklet';
-
-    // ~10fps 스로틀링
-    const now = Date.now();
-    if (now - zxingLastScanTime.value < 100) return;
-    zxingLastScanTime.value = now;
-
-    try {
-      const rawResults = zxing(frame, { multiple: true });
-      if (!rawResults) return;
-
-      const keys = Object.keys(rawResults);
-      if (keys.length === 0) return;
-
-      const frameW = frame.width;
-      const frameH = frame.height;
-
-      const results = [];
-      for (let i = 0; i < keys.length; i++) {
-        const result = rawResults[keys[i]];
-        if (!result || !result.barcodeText) continue;
-
-        // points로부터 bounding box 계산
-        let frameBox = null;
-        if (result.points && result.points.length >= 2) {
-          let minX = 999999, minY = 999999;
-          let maxX = 0, maxY = 0;
-          for (let j = 0; j < result.points.length; j++) {
-            const p = result.points[j];
-            if (p.x < minX) minX = p.x;
-            if (p.y < minY) minY = p.y;
-            if (p.x > maxX) maxX = p.x;
-            if (p.y > maxY) maxY = p.y;
-          }
-          frameBox = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-        }
-
-        results.push({
-          barcodeText: result.barcodeText,
-          barcodeFormat: result.barcodeFormat,
-          frame: frameBox,
-          points: result.points,
-        });
-      }
-
-      if (results.length > 0) {
-        runOnJSZxingCallback(JSON.stringify(results), frameW, frameH);
-      }
-    } catch (e) {
-      // 프레임 프로세서 에러 무시
-    }
-  }, [zxingLastScanTime, runOnJSZxingCallback]);
+  // Android: VisionCamera 내장 codeScanner 설정
+  const androidCodeScanner = useMemo(() => {
+    if (isIOS) return undefined;
+    return {
+      codeTypes: visionCameraCodeTypes,
+      onCodeScanned: handleAndroidCodeScanned,
+    };
+  }, [visionCameraCodeTypes, handleAndroidCodeScanned]);
 
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용 (iOS 전용, Android에서는 hook 규칙상 호출만 함)
   const { props: cameraProps, highlights } = useBarcodeScanner({
@@ -1006,7 +902,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         photo={true}
         onError={handleCameraError}
         enableZoomGesture={true}
-        {...(isIOS ? cameraProps : { frameProcessor: zxingFrameProcessor })}
+        {...(isIOS ? cameraProps : {})}
+        codeScanner={!isIOS ? androidCodeScanner : undefined}
       />
       {showHighlights && (
         <CustomHighlights

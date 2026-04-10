@@ -74,7 +74,6 @@
     "react-native-worklets-core": "^1.6.2",
     "reanimated-color-picker": "^4.1.1",
     "socket.io-client": "^4.8.1",
-    "vision-camera-zxing": "^0.1.1",
     "zxing-wasm": "^2.2.4"
   },
   "private": true,
