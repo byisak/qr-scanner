@@ -6,7 +6,6 @@ import { StyleSheet, View, Text, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
-  useCameraFormat,
   useCameraPermission,
 } from 'react-native-vision-camera';
 import { useBarcodeScanner } from '@mgcrea/vision-camera-barcode-scanner';
@@ -417,11 +416,6 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
-  // 고해상도 포맷 선택 (1080p → 소형/저대비 바코드 인식 개선)
-  const format = useCameraFormat(device, [
-    { videoResolution: { width: 1920, height: 1080 } },
-  ]);
-
   // 바코드 타입 변환 (expo-camera 형식 -> vision-camera-barcode-scanner 형식)
   const visionCameraCodeTypes = useMemo(() => {
     const types = barcodeTypes
@@ -432,15 +426,24 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
   // 카메라 프레임 크기 가져오기 (코드 스캐너 좌표 변환용)
   const frameDimensions = useMemo(() => {
-    if (format) {
+    if (!device) return null;
+
+    const formats = device.formats;
+    if (formats && formats.length > 0) {
+      const bestFormat = formats.reduce((best, current) => {
+        const bestPixels = (best.videoWidth || 0) * (best.videoHeight || 0);
+        const currentPixels = (current.videoWidth || 0) * (current.videoHeight || 0);
+        return currentPixels > bestPixels ? current : best;
+      }, formats[0]);
+
       return {
-        width: format.videoWidth || 1920,
-        height: format.videoHeight || 1080,
+        width: bestFormat.videoWidth || 1920,
+        height: bestFormat.videoHeight || 1440,
       };
     }
-    if (!device) return null;
-    return { width: 1920, height: 1080 };
-  }, [device, format]);
+
+    return { width: 1920, height: 1440 };
+  }, [device]);
 
   // 바코드 스캔 콜백 핸들러 (JS 스레드에서 실행)
   const handleBarcodeDetected = useCallback((barcodeData) => {
@@ -777,7 +780,6 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         device={device}
-        format={format}
         isActive={isActive}
         torch={torch}
         photo={true}

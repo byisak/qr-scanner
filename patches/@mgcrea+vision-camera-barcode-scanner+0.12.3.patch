@@ -1,22 +1,7 @@
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store b/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store
 new file mode 100644
-index 0000000..e69de29
-diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..0540374 100644
---- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-+++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-@@ -77,7 +77,10 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
-   private InputImage getInputImageFromFrame(@NotNull Frame frame) {
-     try {
-       Image mediaImage = frame.getImage();
--      return InputImage.fromMediaImage(mediaImage, 0);
-+      // frame.getImageProxy().getImageInfo().getRotationDegrees() returns the rotation
-+      // needed to make the image appear upright — exactly what ML Kit needs.
-+      int rotationDegrees = frame.getImageProxy().getImageInfo().getRotationDegrees();
-+      return InputImage.fromMediaImage(mediaImage, rotationDegrees);
-     } catch (FrameInvalidError e) {
-       Log.e(TAG, "Received an invalid frame.");
-       return null;
+index 0000000..b873fbb
+Binary files /dev/null and b/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store differ
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 index 28f1634..fc257fe 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
