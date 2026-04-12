@@ -1,7 +1,6 @@
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store b/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store
 new file mode 100644
-index 0000000..b873fbb
-Binary files /dev/null and b/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store differ
+index 0000000..e69de29
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 index 28f1634..fc257fe 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
