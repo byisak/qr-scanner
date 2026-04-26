@@ -80,6 +80,7 @@ function ScannerScreen() {
 
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
+  const [exposure, setExposure] = useState(0); // 노출 보정 (-1 ~ +1)
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
@@ -2411,6 +2412,7 @@ function ScannerScreen() {
         isActive={isActive}
         facing={cameraFacing}
         torch={torchOn ? 'on' : 'off'}
+        exposure={exposure}
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
@@ -2532,6 +2534,59 @@ function ScannerScreen() {
           </View>
         )}
       </TouchableOpacity>
+
+      {/* 노출 조절 버튼 (torch 아래) */}
+      <View style={[styles.exposureContainer, { top: topOffset + 52 }]}>
+        <TouchableOpacity
+          onPress={() => setExposure(prev => Math.min(prev + 0.3, 1))}
+          activeOpacity={0.8}
+          style={styles.exposureButton}
+        >
+          {Platform.OS === 'ios' ? (
+            <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
+              <Ionicons name="sunny" size={16} color={exposure > 0 ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+            </BlurView>
+          ) : (
+            <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
+              <Ionicons name="sunny" size={16} color={exposure > 0 ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {exposure !== 0 && (
+          <TouchableOpacity
+            onPress={() => setExposure(0)}
+            activeOpacity={0.8}
+            style={styles.exposureButton}
+          >
+            {Platform.OS === 'ios' ? (
+              <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>EV0</Text>
+              </BlurView>
+            ) : (
+              <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>EV0</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          onPress={() => setExposure(prev => Math.max(prev - 0.3, -1))}
+          activeOpacity={0.8}
+          style={styles.exposureButton}
+        >
+          {Platform.OS === 'ios' ? (
+            <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
+              <Ionicons name="moon" size={16} color={exposure < 0 ? '#7B9CFF' : 'rgba(255,255,255,0.95)'} />
+            </BlurView>
+          ) : (
+            <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
+              <Ionicons name="moon" size={16} color={exposure < 0 ? '#7B9CFF' : 'rgba(255,255,255,0.95)'} />
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
 
       {/* 이미지 업로드 버튼 */}
       <TouchableOpacity
@@ -3166,6 +3221,24 @@ const styles = StyleSheet.create({
   },
   torchButtonActive: {
     backgroundColor: 'rgba(255,214,10,0.15)',
+  },
+  exposureContainer: {
+    position: 'absolute',
+    left: 20,
+    flexDirection: 'column',
+    gap: 4,
+  },
+  exposureButton: {
+  },
+  exposureButtonInner: {
+    padding: 8,
+    borderRadius: 18,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  exposureButtonAndroid: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   imagePickerButtonContainer: {
     position: 'absolute',

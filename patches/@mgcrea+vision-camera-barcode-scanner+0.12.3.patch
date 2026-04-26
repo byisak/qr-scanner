@@ -1,9 +1,177 @@
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store b/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store
 new file mode 100644
-index 0000000..b873fbb
-Binary files /dev/null and b/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store differ
+index 0000000..e69de29
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
+index 54ea5ab..367e115 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
+@@ -1,6 +1,15 @@
+ package com.visioncameracodescanner;
+ 
++import android.graphics.Bitmap;
++import android.graphics.BitmapFactory;
++import android.graphics.Canvas;
++import android.graphics.ColorMatrix;
++import android.graphics.ColorMatrixColorFilter;
+ import android.graphics.ImageFormat;
++import android.graphics.Matrix;
++import android.graphics.Paint;
++import android.graphics.Rect;
++import android.graphics.YuvImage;
+ import android.media.Image;
+ import android.util.Log;
+ import com.google.android.gms.tasks.Tasks;
+@@ -14,6 +23,8 @@ import com.mrousavy.camera.frameprocessors.Frame;
+ import com.mrousavy.camera.frameprocessors.FrameProcessorPlugin;
+ import com.mrousavy.camera.frameprocessors.VisionCameraProxy;
+ import com.mrousavy.camera.core.types.Orientation;
++import java.io.ByteArrayOutputStream;
++import java.nio.ByteBuffer;
+ import java.util.ArrayList;
+ import java.util.HashSet;
+ import java.util.List;
+@@ -65,6 +76,16 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+       List<Barcode> barcodeList = Tasks.await(scanner.process(inputImage));
+       barcodeList.forEach(
+           barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
++
++      // 결과가 없으면 반전 이미지로 재시도 (어두운 배경 + 밝은 코드)
++      if (barcodes.isEmpty()) {
++        InputImage invertedImage = getInvertedInputImage(frame);
++        if (invertedImage != null) {
++          List<Barcode> invertedList = Tasks.await(scanner.process(invertedImage));
++          invertedList.forEach(
++              barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
++        }
++      }
+     } catch (ExecutionException | InterruptedException e) {
+       Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
+       return null;
+@@ -77,13 +98,121 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+   private InputImage getInputImageFromFrame(@NotNull Frame frame) {
+     try {
+       Image mediaImage = frame.getImage();
+-      return InputImage.fromMediaImage(mediaImage, 0);
++      Orientation orientation = frame.getOrientation();
++      int rotationDegrees = orientationToDegrees(orientation);
++
++      if (rotationDegrees == 0) {
++        return InputImage.fromMediaImage(mediaImage, 0);
++      }
++
++      Bitmap bitmap = yuvToBitmap(mediaImage);
++      if (bitmap == null) {
++        return InputImage.fromMediaImage(mediaImage, rotationDegrees);
++      }
++
++      Matrix matrix = new Matrix();
++      matrix.postRotate(rotationDegrees);
++      Bitmap rotated = Bitmap.createBitmap(
++          bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
++      if (rotated != bitmap) {
++        bitmap.recycle();
++      }
++
++      return InputImage.fromBitmap(rotated, 0);
+     } catch (FrameInvalidError e) {
+       Log.e(TAG, "Received an invalid frame.");
+       return null;
+     }
+   }
+ 
++  private int orientationToDegrees(Orientation orientation) {
++    if (orientation == Orientation.LANDSCAPE_RIGHT) return 90;
++    if (orientation == Orientation.PORTRAIT_UPSIDE_DOWN) return 180;
++    if (orientation == Orientation.LANDSCAPE_LEFT) return 270;
++    return 0;
++  }
++
++  private Bitmap yuvToBitmap(Image image) {
++    try {
++      int width = image.getWidth();
++      int height = image.getHeight();
++
++      Image.Plane[] planes = image.getPlanes();
++      ByteBuffer yBuffer = planes[0].getBuffer();
++      ByteBuffer uBuffer = planes[1].getBuffer();
++      ByteBuffer vBuffer = planes[2].getBuffer();
++
++      int yRowStride = planes[0].getRowStride();
++      int uvRowStride = planes[1].getRowStride();
++      int uvPixelStride = planes[1].getPixelStride();
++
++      byte[] nv21 = new byte[width * height * 3 / 2];
++      int pos = 0;
++
++      if (yRowStride == width) {
++        yBuffer.position(0);
++        yBuffer.get(nv21, 0, width * height);
++        pos = width * height;
++      } else {
++        for (int row = 0; row < height; row++) {
++          yBuffer.position(row * yRowStride);
++          yBuffer.get(nv21, pos, width);
++          pos += width;
++        }
++      }
++
++      int uvHeight = height / 2;
++      int uvWidth = width / 2;
++      for (int row = 0; row < uvHeight; row++) {
++        for (int col = 0; col < uvWidth; col++) {
++          int bufferIndex = row * uvRowStride + col * uvPixelStride;
++          nv21[pos++] = vBuffer.get(bufferIndex);
++          nv21[pos++] = uBuffer.get(bufferIndex);
++        }
++      }
++
++      YuvImage yuvImage = new YuvImage(nv21, ImageFormat.NV21, width, height, null);
++      ByteArrayOutputStream out = new ByteArrayOutputStream();
++      yuvImage.compressToJpeg(new Rect(0, 0, width, height), 85, out);
++      byte[] jpegBytes = out.toByteArray();
++      return BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.length);
++    } catch (Exception e) {
++      Log.e(TAG, "Failed to convert YUV to Bitmap: " + e.getMessage());
++      return null;
++    }
++  }
++
++  /**
++   * 반전 이미지 생성 (어두운 배경 + 밝은 바코드/QR코드용)
++   */
++  @Nullable
++  private InputImage getInvertedInputImage(@NotNull Frame frame) {
++    try {
++      Image mediaImage = frame.getImage();
++      Bitmap bitmap = yuvToBitmap(mediaImage);
++      if (bitmap == null) return null;
++
++      // 색상 반전
++      Bitmap inverted = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
++      Canvas canvas = new Canvas(inverted);
++      Paint paint = new Paint();
++      ColorMatrix colorMatrix = new ColorMatrix(new float[]{
++          -1, 0, 0, 0, 255,
++          0, -1, 0, 0, 255,
++          0, 0, -1, 0, 255,
++          0, 0, 0, 1, 0
++      });
++      paint.setColorFilter(new ColorMatrixColorFilter(colorMatrix));
++      canvas.drawBitmap(bitmap, 0, 0, paint);
++      bitmap.recycle();
++
++      return InputImage.fromBitmap(inverted, 0);
++    } catch (Exception e) {
++      Log.e(TAG, "Failed to create inverted image: " + e.getMessage());
++      return null;
++    }
++  }
++
+   private synchronized BarcodeScanner
+   getBarcodeScannerClient(@Nullable Map<String, Object> params) {
+     int formatsBitmap = getFormatsBitmapFromParams(params);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-index 28f1634..fc257fe 100644
+index 28f1634..cc2f372 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 @@ -1,6 +1,7 @@
@@ -14,7 +182,100 @@ index 28f1634..fc257fe 100644
  
  static RCTEventEmitter* eventEmitter = nil;
  
-@@ -174,6 +175,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
+@@ -98,19 +99,33 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+           return;
+         }
+ 
+-        completion(request.results);
++        NSArray* results = request.results;
++
++        // 결과가 없으면 반전 이미지로 재시도 (어두운 배경 + 밝은 코드)
++        if (results.count == 0) {
++          [self detectBarcodeInInvertedBuffer:pixelBuffer
++                                 symbologies:symbologies
++                            regionOfInterest:regionOfInterest
++                                  completion:completion];
++          return;
++        }
++
++        completion(results);
+       }];
+ 
++  // iOS 16+ revision 3 사용 (반전 바코드 개선 지원)
++  if (@available(iOS 16.0, *)) {
++    request.revision = VNDetectBarcodesRequestRevision3;
++  }
++
+   // Set the symbologies to be detected
+   if (symbologies.count > 0) {
+     request.symbologies = symbologies;
+-    RCTLogInfo(@"Filtering with symbologies: %@", request.symbologies);
+   }
+ 
+   // Set the region of interest
+   if (!CGRectEqualToRect(regionOfInterest, CGRectZero)) {
+     request.regionOfInterest = regionOfInterest;
+-    RCTLogInfo(@"Filtering with regionOfInterest: %@", NSStringFromCGRect(request.regionOfInterest));
+   }
+ 
+   NSError* error;
+@@ -121,6 +136,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+   }
+ }
+ 
++/**
++ * 반전 이미지에서 바코드 감지 (어두운 배경 + 밝은 바코드/QR코드용)
++ */
++- (void)detectBarcodeInInvertedBuffer:(CVPixelBufferRef)pixelBuffer
++                          symbologies:(NSArray*)symbologies
++                     regionOfInterest:(CGRect)regionOfInterest
++                           completion:(void (^)(NSArray*))completion {
++  CIImage* ciImage = [CIImage imageWithCVPixelBuffer:pixelBuffer];
++  CIFilter* invertFilter = [CIFilter filterWithName:@"CIColorInvert"];
++  [invertFilter setValue:ciImage forKey:kCIInputImageKey];
++  CIImage* invertedImage = invertFilter.outputImage;
++
++  if (!invertedImage) {
++    completion(@[]);
++    return;
++  }
++
++  VNImageRequestHandler* handler =
++      [[VNImageRequestHandler alloc] initWithCIImage:invertedImage
++                                             options:@{}];
++  VNDetectBarcodesRequest* request = [[VNDetectBarcodesRequest alloc]
++      initWithCompletionHandler:^(VNRequest* _Nonnull request,
++                                  NSError* _Nullable error) {
++        if (error) {
++          completion(@[]);
++          return;
++        }
++        completion(request.results);
++      }];
++
++  if (@available(iOS 16.0, *)) {
++    request.revision = VNDetectBarcodesRequestRevision3;
++  }
++
++  if (symbologies.count > 0) {
++    request.symbologies = symbologies;
++  }
++
++  if (!CGRectEqualToRect(regionOfInterest, CGRectZero)) {
++    request.regionOfInterest = regionOfInterest;
++  }
++
++  NSError* error;
++  [handler performRequests:@[ request ] error:&error];
++  if (error) {
++    completion(@[]);
++  }
++}
++
+ /**
+  * Converts a barcode observation to a dictionary representation.
+  *
+@@ -174,6 +238,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
  

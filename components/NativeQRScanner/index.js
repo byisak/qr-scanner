@@ -377,6 +377,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   showHighlights = false, // 하이라이트 표시 여부 (기본값: false)
   highlightColor = 'lime',
   highlightFillColor = 'rgba(0, 255, 0, 0.2)', // 하이라이트 내부 채우기 색상
+  exposure = 0, // 노출 보정 (-1 ~ +1, 0이 기본)
 }, ref) {
   const cameraRef = useRef(null);
 
@@ -556,7 +557,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
-    fps: 10,
+    fps: 30,
     barcodeTypes: visionCameraCodeTypes,
     scanMode: 'continuous',
     onBarcodeScanned: (barcodes) => {
@@ -782,6 +783,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         device={device}
         isActive={isActive}
         torch={torch}
+        exposure={exposure}
         photo={true}
         onError={handleCameraError}
         enableZoomGesture={true}
