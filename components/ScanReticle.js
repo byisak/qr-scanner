@@ -4,6 +4,7 @@
 // 중복이면 amber로 좌우 2번 흔들린다(shake). 모든 움직임은 UI 스레드(reanimated)
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { View, StyleSheet, AccessibilityInfo } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -14,12 +15,22 @@ import Animated, {
   withDelay,
   cancelAnimation,
   interpolateColor,
+  useAnimatedProps,
   Easing,
 } from 'react-native-reanimated';
 import { SCAN_THEME as T } from '../constants/scanTheme';
 
 const WHITE = 'rgba(255,255,255,0.92)';
 const TARGET_PADDING = 6;
+const CORNER_SVG = 64;                 // 코너 하나를 그리는 SVG 캔버스 한 변
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+// 둥근 L자 코너 path (왼쪽 위 기준, 나머지는 회전). r = 모서리 반경, len = 변 길이
+function cornerPath(len, r) {
+  'worklet';
+  const radius = Math.min(r, len);
+  return `M0,${len} V${radius} A${radius},${radius} 0 0 1 ${radius},0 H${len}`;
+}
 
 const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = null, target = null }, ref) {
   const [layout, setLayout] = useState({ width: 0, height: 0 });
@@ -158,21 +169,21 @@ const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = 
     backgroundColor: T.primaryFill,
     opacity: fillOpacity.value,
   }));
-  const barColor = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(colorT.value, [0, 1, 2], [WHITE, T.primary, T.warning]),
+  // 코너 반경: 타겟에 붙었을 땐 작게(8), 대기·영역에선 영역과 같은 16
+  const cornerProps = useAnimatedProps(() => ({
+    d: cornerPath(Math.min(cornerLen.value, CORNER_SVG - 2), target ? 8 : T.regionRadius),
+    stroke: interpolateColor(colorT.value, [0, 1, 2], [WHITE, T.primary, T.warning]),
   }));
-  const hBar = useAnimatedStyle(() => ({ width: cornerLen.value }));
-  const vBar = useAnimatedStyle(() => ({ height: cornerLen.value }));
   const dotStyle = useAnimatedStyle(() => ({
     opacity: dotOpacity.value * intro.value,
     backgroundColor: interpolateColor(colorT.value, [0, 1, 2], [WHITE, T.primary, T.warning]),
   }));
 
   const corners = [
-    { key: 'tl', style: { top: 0, left: 0 }, h: { top: 0, left: 0 }, v: { top: 0, left: 0 } },
-    { key: 'tr', style: { top: 0, right: 0 }, h: { top: 0, right: 0 }, v: { top: 0, right: 0 } },
-    { key: 'bl', style: { bottom: 0, left: 0 }, h: { bottom: 0, left: 0 }, v: { bottom: 0, left: 0 } },
-    { key: 'br', style: { bottom: 0, right: 0 }, h: { bottom: 0, right: 0 }, v: { bottom: 0, right: 0 } },
+    { key: 'tl', style: { top: -1.5, left: -1.5 }, rotate: '0deg' },
+    { key: 'tr', style: { top: -1.5, right: -1.5 }, rotate: '90deg' },
+    { key: 'br', style: { bottom: -1.5, right: -1.5 }, rotate: '180deg' },
+    { key: 'bl', style: { bottom: -1.5, left: -1.5 }, rotate: '270deg' },
   ];
 
   return (
@@ -192,9 +203,10 @@ const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = 
       <Animated.View style={[boxStyle, introOpacity]}>
         <Animated.View style={fillStyle} />
         {corners.map(c => (
-          <View key={c.key} style={[styles.corner, c.style]}>
-            <Animated.View style={[styles.bar, { height: T.cornerWidth }, c.h, hBar, barColor]} />
-            <Animated.View style={[styles.bar, { width: T.cornerWidth }, c.v, vBar, barColor]} />
+          <View key={c.key} style={[styles.corner, c.style, { transform: [{ rotate: c.rotate }] }]}>
+            <Svg width={CORNER_SVG} height={CORNER_SVG} viewBox={`0 0 ${CORNER_SVG} ${CORNER_SVG}`}>
+              <AnimatedPath animatedProps={cornerProps} fill="none" strokeWidth={T.cornerWidth} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
           </View>
         ))}
       </Animated.View>
@@ -206,16 +218,8 @@ const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = 
 const styles = StyleSheet.create({
   corner: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-  },
-  bar: {
-    position: 'absolute',
-    borderRadius: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
+    width: CORNER_SVG,
+    height: CORNER_SVG,
   },
   dot: {
     position: 'absolute',
