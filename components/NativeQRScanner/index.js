@@ -693,6 +693,15 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return; // 다중 감지 시 개별 스캔 콜백 호출 안 함
       }
 
+      // 코드가 1개일 때도 하이라이트 아래 값 표시용 목록을 넘긴다.
+      // 예전엔 2개 이상일 때만 넘겨서, "인식된 코드 값 표시"를 켜도 1개면 값이 안 보였다
+      if (barcodes.length === 1) {
+        const only = barcodes[0];
+        const onlyRaw = only.value || only.displayValue || only.rawValue || only.data || '';
+        const onlyValue = String(onlyRaw).trim();
+        runOnJSUpdateBarcodes([{ value: onlyValue || null, type: only.type, frame: only.frame }]);
+      }
+
       // 여러 코드 인식 모드 ON이고 1개만 감지된 경우에도 멀티 콜백 호출
       if (!selectCenterBarcodeShared.value && barcodes.length === 1) {
         const barcode = barcodes[0];

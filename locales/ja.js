@@ -348,6 +348,8 @@ export default {
 
   // 設定画面
   settings: {
+    singleCodeShowValueDesc: '通常スキャンでもコードの枠の下に値を表示します',
+    singleCodeShowValue: '認識したコードの値を表示',
     saveFailed: '設定を保存できませんでした',
     normalScanMode: '通常スキャン',
     scanModeExclusiveHint: '以下のモードは一度に1つだけオンにできます。1つをオンにすると他はオフになります。',

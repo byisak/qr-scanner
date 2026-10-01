@@ -50,6 +50,7 @@ export default function SettingsScreen() {
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
+  const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 인식된 값 표시
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(13); // 기본값: 모든 바코드 타입 (13개)
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
@@ -314,6 +315,7 @@ export default function SettingsScreen() {
           const rwa = await AsyncStorage.getItem('resultWindowAutoOpen');
           // null이면 기본값 true 유지
           setResultWindowAutoOpen(rwa === null ? true : rwa === 'true');
+          setSingleCodeShowValue((await AsyncStorage.getItem('singleCodeShowValue')) === 'true');
 
           // 제품 검색 자동 실행 설정 로드
           const pas = await AsyncStorage.getItem('productAutoSearch');
@@ -795,6 +797,29 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </MaterialPressable>
+
+          {/* 인식된 코드 값 표시 (일반 스캔) */}
+          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.singleCodeShowValue')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.singleCodeShowValueDesc')}</Text>
+            </View>
+            <Switch
+              value={singleCodeShowValue}
+              onValueChange={async (value) => {
+                setSingleCodeShowValue(value);
+                try {
+                  await AsyncStorage.setItem('singleCodeShowValue', value.toString());
+                } catch (error) {
+                  console.error('Save singleCodeShowValue error:', error);
+                  setSingleCodeShowValue(!value);
+                }
+              }}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('settings.singleCodeShowValue')}
+            />
+          </View>
 
           {/* 결과창 자동 열림 */}
           <MaterialPressable accessibilityRole="button"

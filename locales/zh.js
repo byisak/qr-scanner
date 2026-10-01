@@ -348,6 +348,8 @@ export default {
 
   // 设置界面
   settings: {
+    singleCodeShowValueDesc: '普通扫描时也在代码边框下显示值',
+    singleCodeShowValue: '显示识别到的值',
     saveFailed: '无法保存设置',
     normalScanMode: '普通扫描',
     scanModeExclusiveHint: '以下模式一次只能开启一个，开启一个后其他会自动关闭。',

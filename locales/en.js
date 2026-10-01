@@ -351,6 +351,8 @@ export default {
 
   // Settings screen
   settings: {
+    singleCodeShowValueDesc: 'Show the value under the code outline in standard scan too',
+    singleCodeShowValue: 'Show recognized value',
     saveFailed: 'Couldn\'t save the setting',
     normalScanMode: 'Standard scan',
     scanModeExclusiveHint: 'Only one of the modes below can be on at a time. Turning one on turns the others off.',

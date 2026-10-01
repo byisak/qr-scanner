@@ -351,6 +351,8 @@ export default {
 
   // 설정 화면
   settings: {
+    singleCodeShowValueDesc: '일반 스캔에서도 코드 테두리 아래에 값을 보여줍니다',
+    singleCodeShowValue: '인식된 코드 값 표시',
     saveFailed: '설정을 저장하지 못했습니다',
     normalScanMode: '일반 스캔',
     scanModeExclusiveHint: '아래 모드는 한 번에 하나만 켤 수 있어요. 하나를 켜면 나머지는 꺼집니다.',

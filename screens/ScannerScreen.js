@@ -200,7 +200,8 @@ function ScannerScreen() {
   const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
   const [visibleHighlightsCount, setVisibleHighlightsCount] = useState(0); // 화면에 표시되는 하이라이트 개수
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
-  const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부
+  const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부 (여러 코드 모드)
+  const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 값 표시
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식 활성화 여부
@@ -583,7 +584,7 @@ function ScannerScreen() {
             'selectedBarcodes', 'hapticEnabled', 'scanSoundEnabled', 'photoSaveEnabled',
             'batchScanEnabled', 'continuousScanEnabled', 'batchShowScanCounter',
             'batchDuplicateDetection', 'batchDuplicateAction', 'selectedCamera',
-            'scanResultMode', 'multiCodeModeEnabled', 'multiCodeShowValues',
+            'scanResultMode', 'multiCodeModeEnabled', 'multiCodeShowValues', 'singleCodeShowValue',
             'resultWindowAutoOpen', 'lotteryScanEnabled', 'dontAskLotteryPrompt',
             'selectedGroupId', 'scanGroups', 'realtimeSyncEnabled',
           ];
@@ -660,6 +661,7 @@ function ScannerScreen() {
           setMultiCodeModeEnabled(multiCodeMode === 'true');
 
           // 바코드 값 표시 설정 로드
+          setSingleCodeShowValue(settings['singleCodeShowValue'] === 'true');
           const showValues = settings['multiCodeShowValues'];
           setShowBarcodeValues(showValues === null ? true : showValues === 'true');
 
@@ -2627,7 +2629,7 @@ function ScannerScreen() {
         onVerifiedBarcodesChange={handleVerifiedBarcodesChange}
         onVisibleHighlightsChange={handleVisibleHighlightsChange}
         selectCenterBarcode={!multiCodeModeEnabled}
-        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!resultWindowAutoOpen && lastScannedCode)}
+        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!multiCodeModeEnabled && singleCodeShowValue) || (!resultWindowAutoOpen && lastScannedCode)}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"

@@ -348,6 +348,8 @@ export default {
 
   // Pantalla de configuración
   settings: {
+    singleCodeShowValueDesc: 'Muestra el valor bajo el contorno también en el escaneo normal',
+    singleCodeShowValue: 'Mostrar valor reconocido',
     saveFailed: 'No se pudo guardar el ajuste',
     normalScanMode: 'Escaneo normal',
     scanModeExclusiveHint: 'Solo uno de los modos de abajo puede estar activo. Al activar uno, los demás se desactivan.',
