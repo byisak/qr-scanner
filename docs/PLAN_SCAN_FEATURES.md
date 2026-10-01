@@ -3,6 +3,14 @@
 작성일: 2026-10-01
 대상: 라벨 내용 자동 분리 · 스캔 영역 제한 · 볼륨 키로 스캔 확정 · 스캔 후 자동 동작 규칙
 
+## 결정 사항 (2026-10-01 사용자 답변)
+
+1. 라벨 필드 의미는 라벨마다 다르다 → **패턴(구분자+칸 수)별 "카테고리"를 자동으로 만들고**, 새 패턴이 처음 보이면 카테고리를 만들지 묻는다. 필드 이름은 카테고리마다 `필드1..n`에서 바꿀 수 있다.
+2. 선반 QR 형식은 미정 → 위치 규칙 기본값은 넣지 않는다 (규칙 화면에서 사용자가 만든다).
+3. 볼륨 키는 **키 매핑**으로: 볼륨 위/아래 각각에 동작을 지정. 네이티브에서 키를 가로채므로 볼륨은 바뀌지 않는다.
+4. 새 기능은 모두 무료.
+5. 위치 지정은 그룹 변경·스캐너 이탈 시 자동 해제.
+
 ## 0. 전제와 순서
 
 - 네 기능은 모두 `screens/ScannerScreen.js`의 `handleBarCodeScanned`(약 1723행)와 `saveHistory`(841행)를 지나간다.
@@ -16,14 +24,16 @@
 
 | 키 | 값 | 단계 |
 |---|---|---|
-| `labelTemplates` | `LabelTemplate[]` JSON | 1 |
+| `labelCategories` | `LabelCategory[]` JSON | 1 |
+| `labelIgnoredPatterns` | `string[]` ("묻지 않기"한 패턴 서명) | 1 |
 | `labelAutoSplit` | `'true' \| 'false'` (기본 true) | 1 |
 | `scanRegionMode` | `'full' \| 'center' \| 'band'` (기본 full) | 2 |
-| `scanConfirmMode` | `'auto' \| 'volume'` (기본 auto) | 3 |
+| `scanConfirmMode` | `'auto' \| 'manual'` (기본 auto) | 3 |
+| `hardwareKeyMap` | `{ volumeUp: Action, volumeDown: Action }` (기본 둘 다 'none') | 3 |
 | `scanRules` | `ScanRule[]` JSON | 4 |
 | `scanRulesEnabled` | `'true' \| 'false'` (기본 true) | 4 |
 
-iCloud 동기화 허용 키 목록(`services/iCloudService.js`의 `SYNC_ALLOWED_PREFIXES`)에도 `labelTemplates`, `scanRules`, `scanRegionMode`, `scanConfirmMode`를 추가한다.
+iCloud 동기화 허용 키 목록(`services/iCloudService.js`의 `SYNC_ALLOWED_PREFIXES`)에도 `labelCategories`, `labelIgnoredPatterns`, `scanRules`, `scanRegionMode`, `scanConfirmMode`, `hardwareKeyMap`을 추가한다.
 
 ---
 
@@ -55,65 +65,72 @@ handleBarCodeScanned(scanResult)
 ### 1-1. 데이터 모델
 
 ```js
-// 라벨 형식 (사용자 등록)
-LabelTemplate = {
-  id: 'tpl_1696…',
-  name: '입고 박스 라벨',
-  delimiter: '|',            // '|' ';' ',' '\t' 또는 임의 1~3글자
-  fields: ['품목코드', '수량', '비고', '순번'],
-  keyField: 0,               // 대표로 보여줄 필드 인덱스 (목록·카드 한 줄 표시용)
-  matchMode: 'count',        // 'count': 칸 수가 같으면 일치 / 'prefix': 첫 칸이 prefix로 시작
-  prefix: '',                // matchMode==='prefix'일 때
-  createdAt: 1696…,
+// 라벨 카테고리: 같은 패턴(구분자 + 칸 수)의 코드를 묶는다. 패턴이 처음 보이면 자동 생성(사용자 확인 후)
+LabelCategory = {
+  id: 'cat_1696…',
+  signature: '|:4',          // 구분자 + ':' + 칸 수. 패턴 매칭 키
+  delimiter: '|',
+  fieldCount: 4,
+  name: '라벨 A',            // 기본 "라벨 A, B, C…" 순서로 자동 이름. 사용자가 바꿀 수 있음
+  fields: ['필드1','필드2','필드3','필드4'],  // 사용자가 이름을 바꿀 수 있음
+  keyField: 0,               // 대표 필드 (목록·카드 한 줄 표시)
+  sample: '180100048|91163||0014',  // 처음 만든 코드 (설정 화면 미리보기용)
+  createdAt, count: 0,       // count: 이 카테고리로 저장된 횟수
 }
 
 // 기록 항목에 추가되는 필드 (saveHistory extra)
-{ ...record, fields: { 품목코드: '180100048', 수량: '91163', 비고: '', 순번: '0014' }, templateId: 'tpl_1696…' }
+{ ...record, categoryId: 'cat_1696…', values: ['180100048','91163','','0014'] }
+// 필드 이름은 저장하지 않고 카테고리에서 가져온다 → 나중에 이름을 바꿔도 모든 기록에 반영된다
 ```
 
-- 기본 템플릿 1개를 미리 넣어 둔다: 사용자가 알려 준 박스 QR 형식(`|` 4칸). 필드 이름은 답을 받으면 확정, 그 전엔 `필드1~4`.
-- 이전 기록(`fields` 없음)은 화면에 띄울 때 `parseLabel(code)`로 그 자리에서 분리한다(저장 안 함).
+**패턴 감지와 카테고리 생성 흐름**
+1. 스캔 값에서 구분자(`|` `;` `\t` `,` 순으로 2칸 이상 나뉘는 것)를 찾는다 → 서명 `구분자:칸수`.
+2. 서명이 기존 카테고리와 같으면 그 카테고리로 저장(`categoryId`, `values`).
+3. 처음 보는 서명이면 **스캔 직후 모달**: "새 라벨 형식을 찾았어요 · `|`로 나뉜 4칸 · 180100048 | 91163 | (빈칸) | 0014 → [카테고리 만들기] [이번만 건너뛰기] [이 형식은 묻지 않기]".
+   - 만들기: 이름 입력(기본 "라벨 A") → 생성 후 이 스캔부터 적용. 필드 이름은 나중에 설정에서.
+   - 건너뛰기: 이번 스캔은 분리 없이 저장.
+   - 묻지 않기: `labelIgnoredPatterns`에 서명 추가 → 이후 같은 패턴은 분리 없이 저장(설정에서 되돌릴 수 있음).
+   - 연속·배치 모드에서는 스캔을 막지 않도록 모달 대신 스낵바 "새 라벨 형식 발견 · 설정에서 추가"로 알리고, 설정 → 라벨 카테고리 상단에 "발견된 형식" 목록으로 쌓아 둔다.
+4. 기존 기록(`categoryId` 없음)은 화면에 띄울 때 서명으로 카테고리를 찾아 그 자리에서 분리한다.
 
 ### 1-2. 파서 `utils/labelParser.js`
 
 ```js
-splitLabel(code, delimiter) → string[]        // 구분자 분리, 앞뒤 공백 제거, 빈 칸 유지
-detectDelimiter(code) → '|' | ';' | '\t' | null  // 2칸 이상으로 나뉘는 첫 구분자
-matchTemplate(code, templates) → { template, values } | null
-   // count: splitLabel(code, tpl.delimiter).length === tpl.fields.length
-   // prefix: values[0].startsWith(tpl.prefix)
-   // 여러 개 맞으면 등록 순서가 앞선 것
-parseLabel(code, templates) → { templateId, delimiter, fields: {name: value}, values: [] } | null
-   // 템플릿 일치 → 그 이름으로. 없으면 detectDelimiter로 '필드1..n'. 구분자 없으면 null
-formatLabelSummary(parsed, maxFields = 3) → '품목코드 180100048 · 수량 91163'
+detectDelimiter(code) → '|' | ';' | '\t' | ',' | null   // 2칸 이상으로 나뉘는 첫 구분자 (URL·WiFi·vCard 등 특수 QR은 null)
+signatureOf(code) → '|:4' | null
+splitLabel(code, delimiter) → string[]                  // 앞뒤 공백 제거, 빈 칸 유지
+resolveCategory(code, categories) → { category, values } | null
+parseLabel(code, categories) → { categoryId, values, fields: {이름: 값} } | null
+formatLabelSummary(parsed, category, max = 3) → '필드1 180100048 · 필드2 91163'
+nextCategoryName(categories) → '라벨 A' … '라벨 Z', '라벨 AA'
 ```
 
-- 규칙: URL(`http`로 시작)·vCard·WiFi 등 `parseQRContent`가 TEXT 외로 분류하는 값은 분리하지 않는다(`|`가 들어가는 WIFI 문법 오탐 방지).
-- 한 칸 값에 구분자가 들어가는 경우(따옴표 감싸기)는 1차에서 지원하지 않는다. 필요해지면 CSV 규칙 추가.
+- 한 칸 값 안에 구분자가 들어가는 경우(따옴표)는 1차 미지원.
+- 같은 구분자라도 칸 수가 다르면 다른 카테고리다 (`|:4`와 `|:5`).
 
 ### 1-3. 화면
 
 | 위치 | 변경 | 파일 |
 |---|---|---|
-| 설정 → 스캔 → **라벨 형식** | 새 화면. 템플릿 목록(이름·구분자·필드 수·대표 필드), 추가/편집/삭제/순서. 편집 화면: 이름, 구분자(칩: `\|` `;` `,` 탭 + 직접 입력), 필드 이름 목록(추가·삭제·드래그 정렬), 대표 필드 선택, "최근 스캔 값으로 미리보기"(히스토리 최근 20개 중 선택 → 분리 결과 표). "자동 분리" 토글(`labelAutoSplit`) | `screens/LabelTemplatesScreen.js`, `screens/LabelTemplateEditScreen.js`, `app/label-templates.tsx`, `app/label-template-edit.tsx`, `SettingsScreen` 스캔 섹션에 행 추가 |
+| 설정 → 스캔 → **라벨 카테고리** | 새 화면. 상단 "발견된 형식"(연속 모드에서 쌓인 것, 만들기/묻지 않기), 카테고리 목록(이름·서명·저장 횟수·대표 필드), 삭제(기록은 남고 분리만 안 됨). 편집 화면: 이름, 필드 이름 목록(각 줄 바로 편집), 대표 필드 선택, 샘플 값으로 미리보기 표. 하단 "묻지 않기한 형식" 목록(되돌리기). "자동 분리" 토글(`labelAutoSplit`) | `screens/LabelCategoriesScreen.js`, `screens/LabelCategoryEditScreen.js`, `app/label-categories.tsx`, `app/label-category-edit.tsx`, `SettingsScreen` 스캔 섹션에 행 추가 |
 | 스캐너 하단 결과 카드 (자동열기 OFF) | 값 아래 한 줄: `formatLabelSummary` (최대 3필드). 길면 가운데 말줄임 | `ScannerScreen` 결과 카드 |
 | 스캔 토스트 (연속 모드) | 값 대신 대표 필드 + 두 번째 필드 ("180100048 · 수량 91163") | `components/ScanToast.js` |
-| 결과 화면 | 값 카드 아래 "라벨 내용" 카드: 필드명 / 값 표, 줄마다 복사 버튼, 템플릿 이름 배지. 템플릿 미일치면 "필드1…" + "라벨 형식 등록" 링크 | `screens/ResultScreen.js` |
+| 결과 화면 | 값 카드 아래 "라벨 내용" 카드: 필드명 / 값 표, 줄마다 복사 버튼, 카테고리 이름 배지(탭하면 편집 화면). 카테고리가 없는데 패턴이 있으면 "이 형식으로 카테고리 만들기" 버튼 | `screens/ResultScreen.js` |
 | 기록 목록 | 코드 값 아래 보조 줄에 요약 한 줄(`textSecondary`, 1줄 말줄임) | `screens/HistoryScreen.js` |
 | 여러 코드 결과 | 각 행에 요약 한 줄 | `screens/MultiCodeResultsScreen.js` |
-| 내보내기 | CSV 열 추가: 기존 4열 + 템플릿 필드 열. 선택 그룹들에 등장하는 템플릿의 필드 이름을 합쳐 헤더로(중복 이름은 한 번). 템플릿 미일치 항목은 빈칸. TXT는 "코드값 (품목코드=…, 수량=…)" | `screens/ExportHistoryScreen.js` |
+| 내보내기 | CSV: 기존 4열 + "라벨 카테고리" 열 + 필드 열. 선택 그룹에 등장하는 카테고리의 필드 이름을 합쳐 헤더로(같은 이름은 한 열로). 카테고리 없는 항목은 빈칸. TXT는 "코드값 (필드1=…, 필드2=…)" | `screens/ExportHistoryScreen.js` |
 
 ### 1-4. 저장 연결
-- `ScannerScreen`: 스캔 직후 `parseLabel(data, templatesRef.current)` → `saveHistory(..., { fields, templateId })`. 템플릿은 화면 포커스 시 AsyncStorage에서 읽어 ref로 보관.
+- `ScannerScreen`: 스캔 직후 `resolveCategory(data, categoriesRef.current)` → 있으면 `saveHistory(..., { categoryId, values })`, 없고 패턴이 있으면 새 패턴 흐름(모달 또는 스낵바). 카테고리는 화면 포커스 시 AsyncStorage에서 읽어 ref로 보관.
 - `ImageAnalysisScreen`(갤러리 이미지 분석)과 `MultiCodeResultsScreen` 저장 경로에도 같은 호출 추가.
 - 기록 수정(결과 화면에서 값 편집) 시 `fields`를 다시 계산.
 
 ### 1-5. 번역 키 (ko/en/ja/zh/es)
-`labelTemplates.*` 약 20개: title, add, edit, name, delimiter, delimiterCustom, fields, addField, keyField, matchMode, matchByCount, matchByPrefix, prefix, preview, pickRecent, noTemplates, autoSplit, autoSplitDesc, deleteConfirm, fieldPlaceholder, summaryFallback(`필드{{n}}`), `result.labelFields`, `settings.labelTemplates`.
+`labelCategories.*` 약 25개: title, discovered, newPatternTitle, newPatternMessage(`{{delimiter}}로 나뉜 {{count}}칸`), create, skipOnce, neverAsk, defaultName(`라벨 {{letter}}`), fields, keyField, preview, sample, savedCount, ignoredPatterns, restore, deleteConfirm, autoSplit, autoSplitDesc, fieldN(`필드{{n}}`), noCategories, discoveredSnackbar, `result.labelFields`, `result.createCategory`, `settings.labelCategories`, `exportHistory.categoryColumn`.
 
 ### 1-6. 검증
-- 단위: `node`로 `labelParser` 입력 10개(기본 형식, 빈 칸, 구분자 없음, URL, WIFI, 탭, 공백) 결과 확인 스크립트를 `scripts/test-label-parser.js`로 둔다.
-- 실기기: 박스 QR 스캔 → 카드 요약 / 결과 화면 표 / 기록 보조 줄 / CSV 열 확인. 템플릿 없이도 `필드1~4`로 보이는지.
+- 단위: `scripts/test-label-parser.js`로 입력 10개(기본 형식, 빈 칸, 구분자 없음, URL, WIFI, 탭, 공백, 칸 수 다른 같은 구분자) 결과 확인.
+- 실기기: 박스 QR 첫 스캔 → 새 형식 모달 → 만들기 → 카드 요약 / 결과 화면 표 / 기록 보조 줄 / CSV 열. 설정에서 필드 이름을 바꾸면 기존 기록에도 반영되는지. 같은 패턴 두 번째 스캔은 묻지 않는지.
 
 ---
 
@@ -146,36 +163,35 @@ formatLabelSummary(parsed, maxFields = 3) → '품목코드 180100048 · 수량 
 
 ---
 
-## 3단계. 볼륨 키로 스캔 확정 (0.5일 + 네이티브 라이브러리)
+## 3단계. 하드웨어 키 매핑 + 수동 스캔 확정 (1일, 네이티브 모듈)
 
 ### 3-1. 동작
-- 설정 → 스캔 → **스캔 확정 방식**: 자동(현재) / 볼륨 키로 확정.
-- 확정 모드:
-  - 코드가 영역(2단계) 안에 들어오면 테두리만 그리고 저장하지 않는다. 하단에 안내 바 "볼륨 키를 눌러 확정 · 180100048"(대표 필드) + 화면 **확정 버튼**(볼륨 키 못 쓸 때).
-  - 볼륨 위/아래 어느 쪽이든 누르면 **그 순간 테두리가 그려진 코드**(여러 개면 중앙에 가장 가까운 것)를 저장. 저장 후 기존 피드백(진동·소리·카드/토스트) 그대로.
-  - 코드가 화면에서 사라지면 안내 바도 사라진다. 아무것도 없을 때 볼륨 키를 누르면 짧은 경고 진동만.
-  - 여러 코드 모드에서는 "현재 영역 안의 코드 전부"를 한 번에 추가.
-- Pro 목록의 `manualScanConfirm` 항목(지금 구현 없음)을 이 기능으로 연결: `config/lockedFeatures.js`에 잠금 항목 추가 여부는 사용자 결정(기본은 무료).
+- 설정 → 스캔 → **하드웨어 키**: 볼륨 위 / 볼륨 아래 각각에 동작 지정.
+  - 동작: 없음(기본, 볼륨 조절) / 스캔 확정 / 플래시 켜기·끄기 / 결과 보기(마지막 스캔 결과 화면) / 그룹 선택 열기 / 여러 코드 결과 보기
+  - "스캔 확정"을 어느 키에든 지정하면 `scanConfirmMode`가 자동으로 `manual`이 되고, 둘 다 해제하면 `auto`로 돌아간다. 설정 화면에 "스캔 확정 방식: 수동(볼륨 위)"으로 상태를 보여준다.
+- 수동 확정 모드(`manual`):
+  - 코드가 영역(2단계) 안에 들어오면 테두리만 그리고 저장하지 않는다. 하단 안내 바 "볼륨 위를 눌러 확정 · 180100048"(대표 필드) + 화면 **확정 버튼**.
+  - 지정한 키를 누르면 그 순간 테두리가 있는 코드(여러 개면 중앙에 가장 가까운 것)를 저장하고 기존 피드백 그대로. 코드가 없을 때 누르면 짧은 경고 진동.
+  - 여러 코드 모드에서는 영역 안의 코드를 모두 한 번에 추가.
+  - 코드가 1.2초 이상 안 보이면 안내 바를 내린다(`lastSeenAtRef` 재사용).
+- Pro 목록의 `manualScanConfirm`(구현 없음)은 이 기능으로 연결. 무료.
 
-### 3-2. 구현 포인트
-- 라이브러리 `react-native-volume-manager@2.2.0` 추가(네이티브 → 로컬 빌드 필요).
-  - `VolumeManager.addVolumeListener(cb)`: 볼륨 변화 이벤트. 스캐너 화면 포커스 중 + 확정 모드일 때만 등록.
-  - `VolumeManager.showNativeVolumeUI({ enabled: false })`로 시스템 볼륨 창 숨김, 화면 벗어날 때 복구.
-  - 키 누름 자체를 가로채는 공식 API는 없다. 이벤트를 받으면 `VolumeManager.setVolume(이전값)`으로 되돌린다 → 순간적으로 볼륨이 바뀌었다 돌아온다. 음악 재생 중이면 미세하게 들릴 수 있음. **이 제약을 사용자가 수용해야 한다.**
-  - 볼륨이 최대/최소일 때 한쪽 키는 이벤트가 안 온다 → 확정 모드로 들어갈 때 볼륨이 0 또는 최대면 1단계 안쪽(예: 0.05/0.95)으로 옮겨 두고 나갈 때 복구.
-  - 이벤트 디바운스 150ms(한 번 누름이 두 번 들어오는 기기 대응).
-- `screens/ScannerScreen.js`
-  - `scanConfirmMode` 로드. 확정 모드면 `handleBarCodeScanned`의 **execute** 단계 대신 `pendingConfirmRef.current = {code, type, ec, fields}`에 보관하고 안내 바 표시. 볼륨 이벤트/확정 버튼 → `commitPendingScan()` → 기존 execute 호출.
-  - 계속 비추는 동안 `pendingConfirmRef`가 최신 코드로 갱신되고, 1.2초 이상 안 보이면 비워서 안내 바를 내린다(기존 `lastSeenAtRef` 재사용).
-- `useVolumeConfirm(enabled, onPress)` 훅으로 분리 (`hooks/useVolumeConfirm.js`).
+### 3-2. 네이티브: 키 가로채기 (볼륨이 바뀌지 않는 방식)
+- `react-native-volume-manager`는 볼륨 변화를 듣는 방식이라 볼륨이 순간 바뀐다 → 쓰지 않는다.
+- 대신 **로컬 Expo 모듈** `modules/hardware-keys`(`expo-modules-core`)를 만든다.
+  - `setCapturedKeys(keys: string[])`: 가로챌 키 목록(`'volumeUp'`, `'volumeDown'`). 빈 배열이면 가로채지 않음.
+  - 이벤트 `onHardwareKey({ key: 'volumeUp' | 'volumeDown' })` (keyDown 1회, 길게 누름 반복 무시).
+  - Android: 모듈이 정적 플래그를 들고, `MainActivity.onKeyDown/onKeyUp`에서 `HardwareKeysModule.handleKeyEvent(keyCode, action)`를 호출해 `true`(소비)면 시스템 볼륨 처리를 막는다. `MainActivity`는 prebuild로 생성되므로 **config plugin**(`plugins/withHardwareKeys.js`, `withMainActivity`)으로 override 코드를 끼워 넣는다.
+  - iOS: 볼륨 키를 앱이 가로채는 공식 방법이 없어 모듈은 no-op. iOS에서는 화면 확정 버튼만 쓰고 설정 화면에 "iOS는 화면 버튼으로 확정"을 안내한다.
+- JS: `hooks/useHardwareKeys.js` — 스캐너 화면 포커스 중이고 매핑이 하나라도 있을 때만 `setCapturedKeys` 호출, 벗어나면 `[]`. 이벤트 → 매핑된 동작 실행(확정/플래시/결과/그룹/여러 코드).
+- 동작 핸들러는 `ScannerScreen`에 이미 있는 함수들을 그대로 쓴다(`toggleTorch`, `handleOpenResultWindow`, `setGroupModalVisible`, `handleViewMultiResults`). 확정은 3-1의 `commitPendingScan()`.
 
 ### 3-3. 번역 키
-`scanConfirm.title/auto/volume/autoDesc/volumeDesc/pressToConfirm/confirmButton/nothingToConfirm`, `settings.scanConfirmMode`.
+`hardwareKeys.title/volumeUp/volumeDown/actions.none/confirm/torch/result/group/multiResults/iosNote`, `scanConfirm.manualStatus(`수동 ({{key}})`)/pressToConfirm(`{{key}}을(를) 눌러 확정`)/confirmButton/nothingToConfirm`, `settings.hardwareKeys`.
 
 ### 3-4. 검증
-- 실기기: 확정 모드 ON → 코드 비추기(저장 안 됨) → 볼륨 키 → 저장·피드백. 볼륨 0/최대 상태에서 시작. 음악 재생 중 소리 변화 정도. 화면 벗어났을 때 볼륨 키가 정상 동작하는지.
-
----
+- 실기기: 볼륨 위 → 확정 지정 → 코드 비추기(저장 안 됨) → 볼륨 위 → 저장. **볼륨 숫자가 바뀌지 않는지.** 볼륨 아래 → 플래시 지정 → 켜짐/꺼짐. 다른 화면(설정)에서는 볼륨이 정상 조절되는지. 화면 확정 버튼.
+- 에뮬레이터: `adb shell input keyevent KEYCODE_VOLUME_UP`으로 키 이벤트가 JS까지 오는지 로그로 확인(카메라 없이도 가능).
 
 ## 4단계. 스캔 후 자동 동작 규칙 (1.5일)
 
@@ -188,8 +204,8 @@ ScanRule = {
   conditions: [                                 // 모두 만족(AND)
     { type: 'startsWith' | 'contains' | 'endsWith' | 'regex'
           | 'barcodeType'      // value: 'qr' | 'ean13' | ...
-          | 'template'         // value: templateId (1단계)
-          | 'field',           // field: '수량', op: 'eq'|'ne'|'gt'|'lt'|'contains'|'empty'|'notEmpty', value
+          | 'category'         // value: categoryId (1단계 라벨 카테고리)
+          | 'field',           // categoryId + fieldIndex, op: 'eq'|'ne'|'gt'|'lt'|'contains'|'empty'|'notEmpty', value
       value, field?, op? }
   ],
   actions: [                                    // 순서대로 실행
@@ -203,9 +219,9 @@ ScanRule = {
 }
 ```
 
-- 평가는 `utils/scanRules.js`의 순수 함수: `evaluateRules(rules, input) → { matched: ScanRule|null, decision: { skip, targetGroupId, actions } }`. `input = { code, type, fields, templateId, groupId, mode }`.
+- 평가는 `utils/scanRules.js`의 순수 함수: `evaluateRules(rules, input) → { matched: ScanRule|null, decision: { skip, targetGroupId, actions } }`. `input = { code, type, values, categoryId, groupId, mode }`.
 - 정규식은 `new RegExp(value)` 실패 시 조건을 불일치로 보고 설정 화면에서 저장 전에 검증한다.
-- `setLocation`: `currentLocationRef = { code, fields, at }`를 두고, 이후 `saveHistory` extra에 `location: code`를 넣는다. 그룹 바꾸거나 스캐너를 벗어나면 초기화. 기록 목록·결과 화면·CSV에 "위치" 표시/열 추가(1단계 CSV 확장과 같은 방식). 이것이 "위치-품목 연결"의 간단판.
+- `setLocation`: `currentLocationRef = { code, values, at }`를 두고, 이후 `saveHistory` extra에 `location: code`를 넣는다. **그룹을 바꾸거나 스캐너 탭을 벗어나면 자동 해제**(결정 5). 상단 배지를 탭해 수동 해제도 가능. 기록 목록·결과 화면·CSV에 "위치" 표시/열 추가(1단계 CSV 확장과 같은 방식). 이것이 "위치-품목 연결"의 간단판.
 
 ### 4-2. 파이프라인 연결
 - 0단계에서 만든 `decideScanAction`이 여기서 실체를 갖는다: `labelParser` 결과를 넣어 `evaluateRules` 호출.
@@ -216,8 +232,8 @@ ScanRule = {
 ### 4-3. 화면
 | 화면 | 내용 | 파일 |
 |---|---|---|
-| 설정 → **자동 규칙** (고급 스캔 기능 섹션) | 목록: 이름, 조건 요약("O-로 시작"), 동작 요약 아이콘(그룹/건너뜀/복사/URL/위치), 켜기 스위치, 드래그 정렬, 스와이프 삭제(실행 취소). 상단에 "전체 켜기" 스위치. 하단 "값으로 시험하기" 입력창 → 어느 규칙에 걸리고 어떤 동작이 나오는지 즉시 표시. 템플릿 1개 제안: "선반 라벨이면 위치로 지정" | `screens/ScanRulesScreen.js`, `app/scan-rules.tsx` |
-| 규칙 편집 | 이름 / 조건 목록(종류 칩 + 값 입력, 필드 조건은 템플릿 선택 → 필드 선택 → 연산자) / 동작 목록(종류 칩 + 그룹 선택·URL 입력) / "걸리면 아래 규칙 중단" 토글 / 미리보기 입력 | `screens/ScanRuleEditScreen.js`, `app/scan-rule-edit.tsx` |
+| 설정 → **자동 규칙** (고급 스캔 기능 섹션) | 목록: 이름, 조건 요약("O-로 시작"), 동작 요약 아이콘(그룹/건너뜀/복사/URL/위치), 켜기 스위치, 드래그 정렬, 스와이프 삭제(실행 취소). 상단에 "전체 켜기" 스위치. 하단 "값으로 시험하기" 입력창 → 어느 규칙에 걸리고 어떤 동작이 나오는지 즉시 표시. 기본 규칙은 넣지 않는다(결정 2). 빈 상태 화면에 예시 2개를 글로 안내("O-로 시작하면 위치로 지정", "180으로 시작하면 입고 그룹") | `screens/ScanRulesScreen.js`, `app/scan-rules.tsx` |
+| 규칙 편집 | 이름 / 조건 목록(종류 칩 + 값 입력, 필드 조건은 카테고리 선택 → 필드 선택 → 연산자) / 동작 목록(종류 칩 + 그룹 선택·URL 입력) / "걸리면 아래 규칙 중단" 토글 / 미리보기 입력 | `screens/ScanRuleEditScreen.js`, `app/scan-rule-edit.tsx` |
 | 스캐너 | 위치가 지정돼 있으면 상단 배지 스택에 "📍 O-02-A1" 배지(탭하면 해제). 규칙으로 그룹이 바뀌어 저장되면 토스트에 "→ 입고 그룹" 표시 | `ScannerScreen` 상태 배지 스택 |
 | 결과·기록·CSV | `location` 표시/열 | `ResultScreen`, `HistoryScreen`, `ExportHistoryScreen` |
 
@@ -237,15 +253,12 @@ ScanRule = {
 | 0 파이프라인 정리 | 0.5일 | 1회 | 기존 4개 모드 스캔이 그대로 되는지 |
 | 1 라벨 분리 | 1일 | 1회 | 박스 QR → 요약·표·CSV 열 |
 | 2 스캔 영역 | 0.5일 | (1과 묶어 1회) | 영역 밖 코드가 안 잡히는지, 디버그 사각형이 보이는 영역과 맞는지 |
-| 3 볼륨 키 | 0.5일 | 1회 (네이티브 추가) | 볼륨 변화 체감, 0/최대에서 동작 |
+| 3 키 매핑·수동 확정 | 1일 | 1회 (네이티브 모듈) | 볼륨 숫자가 안 바뀌는지, 매핑된 동작, 다른 화면에서 볼륨 정상 |
 | 4 자동 규칙 | 1.5일 | 1회 | 두 규칙 시나리오 |
 
 빌드는 Mac 로컬(`eas build --local`, 약 30분). EAS 클라우드는 11월 1일 초기화.
 
-## 결정이 필요한 것
+## 남은 확인 사항
 
-1. **박스 QR 필드 이름**: `180100048|91163||0014`의 각 칸이 무엇인지 → 기본 템플릿 필드 이름.
-2. **선반 QR 값**: `O-02-A1`을 찍으면 나오는 값 그대로인지 → 기본 규칙 "선반 라벨이면 위치로 지정"의 조건(예: 정규식 `^[A-Z]-\d{2}-[A-Z]\d$`).
-3. **볼륨 키 제약 수용**: 누를 때 볼륨이 순간 바뀌었다 돌아오는 방식이어도 되는지. 안 되면 3단계는 "화면 확정 버튼"만으로 축소.
-4. **잠금 여부**: 자동 규칙·볼륨 확정을 Pro(광고 시청 해제) 항목으로 둘지, 무료로 둘지.
-5. **위치 배지 해제 시점**: 그룹 변경·화면 이탈 시 자동 해제(제안) vs 수동 해제만.
+- 선반 QR 값 형식(위치 규칙을 만들 때 필요). 지금은 규칙 화면에서 사용자가 직접 조건을 넣는다.
+- 하드웨어 키 동작 목록에 더 넣을 것이 있는지(예: 사진 촬영, 그룹 다음으로 넘기기).
