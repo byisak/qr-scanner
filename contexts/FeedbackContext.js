@@ -145,7 +145,8 @@ export const FeedbackToastHost = () => {
         action={toast?.actionLabel
           ? { label: toast.actionLabel, onPress: () => { toast.onAction?.(); } }
           : { label: t('common.close'), onPress: hideToast }}
-        wrapperStyle={{ bottom: Math.max(insets.bottom, 16) + 76, zIndex: 9999 }}
+        // 탭 화면에서 Material 하단 내비게이션(80dp + 내비게이션 바)에 가리지 않게
+        wrapperStyle={{ bottom: insets.bottom + 88, zIndex: 9999 }}
         accessibilityLiveRegion="polite"
       >
         {toast?.message}

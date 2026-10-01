@@ -2,13 +2,14 @@
 import { Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// iOS 네이티브 탭바(UITabBar)는 반투명이라 화면이 그 밑까지 그려진다 → 탭바 높이(49) + 홈 인디케이터만큼 가려진다.
-// Android 네이티브 탭바(Material 하단 내비게이션)는 화면을 탭바 위까지만 그리고 내비게이션 바 여백도 직접 처리한다 → 0.
-const IOS_TAB_BAR_HEIGHT = 49;
+// 두 플랫폼 모두 네이티브 탭바 밑까지 화면이 그려진다 (탭바가 화면 위에 겹친다).
+// iOS UITabBar: 49pt + 홈 인디케이터. Android Material 3 하단 내비게이션: 80dp + 내비게이션 바(제스처/3버튼).
+// (에뮬레이터 실측: 탭바 104dp = 80 + 하단 inset 24)
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 49 : 80;
 
 export function useTabBarOverlap() {
   const insets = useSafeAreaInsets();
-  return Platform.OS === 'ios' ? insets.bottom + IOS_TAB_BAR_HEIGHT : 0;
+  return insets.bottom + TAB_BAR_HEIGHT;
 }
 
 export default useTabBarOverlap;

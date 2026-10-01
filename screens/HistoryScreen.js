@@ -16,6 +16,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
@@ -41,6 +42,7 @@ export default function HistoryScreen() {
   const { triggerSync } = useSync();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
+  const tabBarOverlap = useTabBarOverlap(); // 탭바에 가려지는 높이 (목록 끝 여백)
 
   // 노치 없는 SE(inset 20)부터 Dynamic Island(59)까지 대응하도록 insets 기준으로 계산
   const statusBarHeight = insets.top + (Platform.OS === 'ios' ? 23 : 20);
@@ -679,7 +681,7 @@ export default function HistoryScreen() {
           closeOnRowOpen
           closeOnScroll
           useNativeDriver={true}
-          contentContainerStyle={s.listContent}
+          contentContainerStyle={[s.listContent, { paddingBottom: tabBarOverlap + 24 }]}
         />
       )}
     </View>
@@ -802,7 +804,7 @@ const s = StyleSheet.create({
   },
   listContent: {
     // iOS는 반투명 탭바 밑까지 목록이 그려져 여유가 필요. Android 네이티브 탭바는 가리지 않는다
-    paddingBottom: Platform.OS === 'ios' ? 100 : 24,
+    paddingBottom: 100, // 실제 값은 탭바 높이 기준으로 인라인에서 덮어쓴다
   },
   item: {
     marginHorizontal: 15,

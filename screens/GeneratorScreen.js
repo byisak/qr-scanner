@@ -33,6 +33,7 @@ try {
 }
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { captureRef } from 'react-native-view-shot';
+import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
@@ -91,6 +92,7 @@ export default function GeneratorScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const tabBarOverlap = useTabBarOverlap(); // 탭바에 가려지는 높이 (목록 끝 여백)
   const params = useLocalSearchParams();
 
   // 노치 없는 SE(inset 20)부터 Dynamic Island(59)까지 대응하도록 insets 기준으로 계산
@@ -1836,7 +1838,7 @@ export default function GeneratorScreen() {
 
       <ScrollView
         style={s.content}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: tabBarOverlap + 32 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         automaticallyAdjustKeyboardInsets
@@ -3748,7 +3750,7 @@ const s = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: Platform.OS === 'ios' ? 120 : 32, // Android 네이티브 탭바는 화면을 가리지 않는다
+    paddingBottom: 120, // 실제 값은 탭바 높이 기준으로 인라인에서 덮어쓴다
   },
   header: {
     paddingHorizontal: 20,
