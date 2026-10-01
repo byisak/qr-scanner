@@ -1,0 +1,14 @@
+diff --git a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
+index 62edb40..fae9c5c 100644
+--- a/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
++++ b/node_modules/react-native-screens/android/src/main/java/com/swmansion/rnscreens/gamma/tabs/TabScreenViewManager.kt
+@@ -237,7 +237,8 @@ class TabScreenViewManager :
+         // In debug, metro is responsible for handling assets via http.
+         // At the moment, we're supporting images (drawable) and SVG icons (raw).
+         // For any other type, we may consider adding a support in the future if needed.
+-        if (uri.startsWith("_")) {
++        // release 번들 에셋은 "assets_..." 같은 리소스 이름으로 온다 ("_"로 시작하지 않음). 스킴이 없으면 리소스로 찾는다
++        if (uri.startsWith("_") || !uri.contains("://")) {
+             val drawableResId = context.resources.getIdentifier(uri, "drawable", context.packageName)
+             if (drawableResId != 0) {
+                 return RNSImageSource.DrawableRes(drawableResId)
