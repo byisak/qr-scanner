@@ -1,3 +1,16 @@
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/build.gradle b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/build.gradle
+index 046bd79..325fbe6 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/build.gradle
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/build.gradle
+@@ -65,6 +65,8 @@ dependencies {
+   implementation "com.facebook.react:react-native"
+   implementation "com.facebook.react:react-android:+"
+   implementation 'com.google.mlkit:barcode-scanning:17.3.0'
++  // ML Kit는 QR 오류 정정(EC) 레벨을 주지 않아, QR 영역만 ZXing으로 한 번 더 읽어 얻는다
++  implementation 'com.google.zxing:core:3.5.3'
+   implementation project(":react-native-vision-camera")
+   implementation project(":react-native-worklets-core")
+ }
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeFormatMapper.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeFormatMapper.java
 index b076e57..eb105f7 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeFormatMapper.java
@@ -20,10 +33,10 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..d0388d4 100644
+index 54ea5ab..cddb0c6 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-@@ -10,11 +10,14 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
+@@ -10,16 +10,29 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
  import com.google.mlkit.vision.barcode.common.Barcode;
  import com.google.mlkit.vision.common.InputImage;
  import com.mrousavy.camera.core.FrameInvalidError;
@@ -39,7 +52,22 @@ index 54ea5ab..d0388d4 100644
  import java.util.HashSet;
  import java.util.List;
  import java.util.Map;
-@@ -29,6 +32,10 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+ import java.util.Set;
+ import java.util.concurrent.ExecutionException;
++import java.util.EnumMap;
++import java.util.LinkedHashMap;
++import com.google.zxing.BarcodeFormat;
++import com.google.zxing.BinaryBitmap;
++import com.google.zxing.DecodeHintType;
++import com.google.zxing.PlanarYUVLuminanceSource;
++import com.google.zxing.Result;
++import com.google.zxing.ResultMetadataType;
++import com.google.zxing.common.HybridBinarizer;
++import com.google.zxing.qrcode.QRCodeReader;
+ import org.jetbrains.annotations.NotNull;
+ import org.jetbrains.annotations.Nullable;
+ 
+@@ -29,6 +42,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
@@ -47,10 +75,22 @@ index 54ea5ab..d0388d4 100644
 +  private static final int INVERT_RETRY_EVERY_N_FAILED_FRAMES = 3;
 +  private int failedFrameCount = 0;
 +
++  // QR 값 → 오류 정정 레벨(L/M/Q/H). ML Kit는 이 값을 주지 않아 ZXing으로 한 번 읽고 기억해 둔다
++  private static final int EC_CACHE_MAX = 300;
++  private static final int EC_MAX_ATTEMPTS = 6;
++  private static final Map<String, String> ecLevelCache =
++      new LinkedHashMap<String, String>(64, 0.75f, true) {
++        @Override
++        protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
++          return size() > EC_CACHE_MAX;
++        }
++      };
++  private static final Map<String, Integer> ecAttempts = new LinkedHashMap<>();
++
    CodeScannerProcessorPlugin(@NotNull VisionCameraProxy proxy,
                               @Nullable Map<String, Object> options) {
      Log.d(TAG,
-@@ -40,31 +47,55 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,31 +69,61 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -93,8 +133,14 @@ index 54ea5ab..d0388d4 100644
        List<Barcode> barcodeList = Tasks.await(scanner.process(inputImage));
 -      barcodeList.forEach(
 -          barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
-+      barcodeList.forEach(barcode -> barcodes.add(
-+          toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, sensorWidth, sensorHeight)));
++      for (Barcode barcode : barcodeList) {
++        Map<String, Object> converted =
++            toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, sensorWidth, sensorHeight);
++        if (barcode.getFormat() == Barcode.FORMAT_QR_CODE) {
++          attachErrorCorrectionLevel(converted, barcode.getRawValue(), mediaImage);
++        }
++        barcodes.add(converted);
++      }
 +
 +      if (barcodes.isEmpty()) {
 +        failedFrameCount++;
@@ -113,10 +159,85 @@ index 54ea5ab..d0388d4 100644
      } catch (ExecutionException | InterruptedException e) {
        Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
        return null;
-@@ -73,13 +104,101 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -73,13 +132,176 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
      return barcodes;
    }
  
++  /**
++   * QR 오류 정정 레벨을 결과에 붙인다. 같은 값은 캐시를 쓰고, 처음 보는 값만
++   * 바운딩 박스 주변의 밝기(Y) 평면을 잘라 ZXing으로 디코드한다 (센서 좌표 기준, 회전 무관).
++   */
++  @SuppressWarnings("unchecked")
++  private static void attachErrorCorrectionLevel(Map<String, Object> barcode, @Nullable String rawValue, Image image) {
++    if (rawValue == null) return;
++    String cached;
++    synchronized (ecLevelCache) {
++      cached = ecLevelCache.get(rawValue);
++    }
++    if (cached != null) {
++      barcode.put("errorCorrectionLevel", cached);
++      return;
++    }
++    synchronized (ecLevelCache) {
++      Integer tried = ecAttempts.get(rawValue);
++      if (tried != null && tried >= EC_MAX_ATTEMPTS) return;
++      ecAttempts.put(rawValue, tried == null ? 1 : tried + 1);
++      if (ecAttempts.size() > EC_CACHE_MAX) ecAttempts.clear();
++    }
++
++    Object boxObj = barcode.get("boundingBox");
++    if (!(boxObj instanceof Map)) return;
++    Map<String, Object> box = (Map<String, Object>) boxObj;
++    try {
++      int width = image.getWidth();
++      int height = image.getHeight();
++      int left = ((Number) box.get("left")).intValue();
++      int top = ((Number) box.get("top")).intValue();
++      int right = ((Number) box.get("right")).intValue();
++      int bottom = ((Number) box.get("bottom")).intValue();
++      // 조용한 영역(quiet zone)까지 포함하도록 여유를 둔다
++      int marginX = Math.max(8, (right - left) / 4);
++      int marginY = Math.max(8, (bottom - top) / 4);
++      int cropLeft = Math.max(0, left - marginX);
++      int cropTop = Math.max(0, top - marginY);
++      int cropRight = Math.min(width, right + marginX);
++      int cropBottom = Math.min(height, bottom + marginY);
++      int cropW = cropRight - cropLeft;
++      int cropH = cropBottom - cropTop;
++      if (cropW < 21 || cropH < 21) return;
++
++      Image.Plane yPlane = image.getPlanes()[0];
++      ByteBuffer yBuffer = yPlane.getBuffer();
++      int rowStride = yPlane.getRowStride();
++      byte[] luminance = new byte[cropW * cropH];
++      for (int row = 0; row < cropH; row++) {
++        yBuffer.position((cropTop + row) * rowStride + cropLeft);
++        yBuffer.get(luminance, row * cropW, cropW);
++      }
++
++      PlanarYUVLuminanceSource source =
++          new PlanarYUVLuminanceSource(luminance, cropW, cropH, 0, 0, cropW, cropH, false);
++      Map<DecodeHintType, Object> hints = new EnumMap<>(DecodeHintType.class);
++      hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
++      hints.put(DecodeHintType.POSSIBLE_FORMATS, java.util.Collections.singletonList(BarcodeFormat.QR_CODE));
++      hints.put(DecodeHintType.ALSO_INVERTED, Boolean.TRUE);
++      Result result = new QRCodeReader().decode(new BinaryBitmap(new HybridBinarizer(source)), hints);
++      Object level = result.getResultMetadata() != null
++          ? result.getResultMetadata().get(ResultMetadataType.ERROR_CORRECTION_LEVEL)
++          : null;
++      if (level != null) {
++        String ec = level.toString();
++        synchronized (ecLevelCache) {
++          ecLevelCache.put(rawValue, ec);
++          ecAttempts.remove(rawValue);
++        }
++        barcode.put("errorCorrectionLevel", ec);
++      }
++    } catch (Exception e) {
++      // 흐림·각도 때문에 이 프레임에서 못 읽으면 다음 프레임에서 다시 시도 (최대 EC_MAX_ATTEMPTS)
++    }
++  }
++
 +  /**
 +   * 회전된(똑바로 선) 이미지 좌표 (u, v)를 센서 원본 좌표로 되돌린다.
 +   * w, h는 센서 원본(회전 전) 크기. rotation은 시계방향 회전각.
@@ -220,7 +341,7 @@ index 54ea5ab..d0388d4 100644
        return null;
      }
    }
-@@ -105,15 +224,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +327,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");

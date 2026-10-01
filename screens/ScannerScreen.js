@@ -812,6 +812,27 @@ function ScannerScreen() {
     }
   }, [currentGroupId, getHistoryCache]);
 
+  // Android는 EC 레벨을 ZXing으로 따로 읽어서, 첫 프레임에는 없고 다음 프레임에 들어올 수 있다.
+  // 이미 저장한 기록에 EC 레벨이 비어 있으면 채운다 (코드당 한 번)
+  const ecFilledRef = useRef(new Set());
+  const fillMissingEcLevel = useCallback(async (code, ecLevel) => {
+    const key = `${currentGroupIdRef.current}::${code}`;
+    if (ecFilledRef.current.has(key)) return;
+    try {
+      const historyByGroup = await getHistoryCache();
+      const list = historyByGroup[currentGroupIdRef.current] || [];
+      const index = list.findIndex(item => item.code === code);
+      if (index === -1) return; // 아직 저장 전이면 다음 프레임에 다시
+      ecFilledRef.current.add(key);
+      if (list[index].errorCorrectionLevel) return;
+      list[index] = { ...list[index], errorCorrectionLevel: ecLevel };
+      historyByGroup[currentGroupIdRef.current] = list;
+      await saveHistoryCache(historyByGroup);
+    } catch (e) {
+      console.error('Fill EC level error:', e);
+    }
+  }, [getHistoryCache, saveHistoryCache]);
+
   // 저장하기로 정한 순간 세션 목록에 넣는다 (저장 완료를 기다리지 않음)
   const markSessionSaved = useCallback((code) => {
     sessionSavedCodesRef.current.add(`${currentGroupId || 'default'}::${code}`);
@@ -1714,7 +1735,10 @@ function ScannerScreen() {
       if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
 
       // 같은 코드를 계속 비추고 있으면 다시 처리하지 않는다 (여러 코드 모드는 자체 누적 로직 사용)
-      if (stillInView && !multiCodeModeEnabledRef.current) return;
+      if (stillInView && !multiCodeModeEnabledRef.current) {
+        if (errorCorrectionLevel) fillMissingEcLevel(data, errorCorrectionLevel);
+        return;
+      }
 
       // 카메라 프레임 크기 저장 (좌표 변환용)
       if (frameDimensions) {
@@ -2359,7 +2383,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
