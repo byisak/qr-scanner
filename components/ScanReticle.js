@@ -4,7 +4,7 @@
 // 중복이면 amber로 좌우 2번 흔들린다(shake). 모든 움직임은 UI 스레드(reanimated)
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { View, StyleSheet, AccessibilityInfo } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Rect } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -22,14 +22,27 @@ import { SCAN_THEME as T } from '../constants/scanTheme';
 
 const WHITE = 'rgba(255,255,255,0.92)';
 const TARGET_PADDING = 6;
-const CORNER_SVG = 64;                 // 코너 하나를 그리는 SVG 캔버스 한 변
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
-// 둥근 L자 코너 path (왼쪽 위 기준, 나머지는 회전). r = 모서리 반경, len = 변 길이
-function cornerPath(len, r) {
+// 네 코너를 화면 좌표에 직접 그린다 (회전·스케일 없음 → 네 코너의 선 두께가 같다)
+// x,y,w,h = 코너 네모, r = 모서리 반경, len = 변 길이
+function cornersPath(x, y, w, h, r, len) {
   'worklet';
-  const radius = Math.min(r, len);
-  return `M0,${len} V${radius} A${radius},${radius} 0 0 1 ${radius},0 H${len}`;
+  const radius = Math.max(1, Math.min(r, len, w / 2, h / 2));
+  const L = Math.max(radius, Math.min(len, w / 2, h / 2));
+  const x2 = x + w;
+  const y2 = y + h;
+  return [
+    // 왼쪽 위
+    `M${x},${y + L} V${y + radius} A${radius},${radius} 0 0 1 ${x + radius},${y} H${x + L}`,
+    // 오른쪽 위
+    `M${x2 - L},${y} H${x2 - radius} A${radius},${radius} 0 0 1 ${x2},${y + radius} V${y + L}`,
+    // 오른쪽 아래
+    `M${x2},${y2 - L} V${y2 - radius} A${radius},${radius} 0 0 1 ${x2 - radius},${y2} H${x2 - L}`,
+    // 왼쪽 아래
+    `M${x + L},${y2} H${x + radius} A${radius},${radius} 0 0 1 ${x},${y2 - radius} V${y2 - L}`,
+  ].join(' ');
 }
 
 const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = null, target = null }, ref) {
@@ -149,42 +162,31 @@ const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = 
     },
   }), [w, h, colorT, cornerLen, fillOpacity, shakeX]);
 
-  const boxStyle = useAnimatedStyle(() => {
-    const scale = 1 + breath.value * 0.06;
-    const spread = (1 - intro.value) * 40;
+  // 숨 쉬기·인트로는 변환 대신 크기 값으로 (SVG를 변환하면 코너마다 선 두께가 달라진다)
+  const frame = () => {
+    'worklet';
+    const grow = breath.value * 0.06 + (1 - intro.value) * 0.4;
+    const bw = w.value * (1 + grow);
+    const bh = h.value * (1 + grow);
+    return { x: cx.value - bw / 2 + shakeX.value, y: cy.value - bh / 2, w: bw, h: bh };
+  };
+  const cornerRadius = target ? 8 : T.regionRadius;
+  const cornerProps = useAnimatedProps(() => {
+    const f = frame();
     return {
-      position: 'absolute',
-      left: cx.value - w.value / 2,
-      top: cy.value - h.value / 2,
-      width: w.value,
-      height: h.value,
-      opacity: 0.7 + breath.value * 0.3,
-      transform: [{ translateX: shakeX.value }, { scale: scale * (1 + spread / Math.max(w.value, 1)) }],
+      d: cornersPath(f.x, f.y, f.w, f.h, cornerRadius, cornerLen.value),
+      stroke: interpolateColor(colorT.value, [0, 1, 2], [WHITE, T.primary, T.warning]),
+      strokeOpacity: intro.value * (0.7 + breath.value * 0.3),
     };
   });
-  const introOpacity = useAnimatedStyle(() => ({ opacity: intro.value }));
-  const fillStyle = useAnimatedStyle(() => ({
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: T.regionRadius,
-    backgroundColor: T.primaryFill,
-    opacity: fillOpacity.value,
-  }));
-  // 코너 반경: 타겟에 붙었을 땐 작게(8), 대기·영역에선 영역과 같은 16
-  const cornerProps = useAnimatedProps(() => ({
-    d: cornerPath(Math.min(cornerLen.value, CORNER_SVG - 2), target ? 8 : T.regionRadius),
-    stroke: interpolateColor(colorT.value, [0, 1, 2], [WHITE, T.primary, T.warning]),
-  }));
+  const fillProps = useAnimatedProps(() => {
+    const f = frame();
+    return { x: f.x, y: f.y, width: f.w, height: f.h, rx: cornerRadius, ry: cornerRadius, fillOpacity: fillOpacity.value };
+  });
   const dotStyle = useAnimatedStyle(() => ({
     opacity: dotOpacity.value * intro.value,
     backgroundColor: interpolateColor(colorT.value, [0, 1, 2], [WHITE, T.primary, T.warning]),
   }));
-
-  const corners = [
-    { key: 'tl', style: { top: -1.5, left: -1.5 }, rotate: '0deg' },
-    { key: 'tr', style: { top: -1.5, right: -1.5 }, rotate: '90deg' },
-    { key: 'br', style: { bottom: -1.5, right: -1.5 }, rotate: '180deg' },
-    { key: 'bl', style: { bottom: -1.5, left: -1.5 }, rotate: '270deg' },
-  ];
 
   return (
     <View
@@ -200,27 +202,18 @@ const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = 
         }
       }}
     >
-      <Animated.View style={[boxStyle, introOpacity]}>
-        <Animated.View style={fillStyle} />
-        {corners.map(c => (
-          <View key={c.key} style={[styles.corner, c.style, { transform: [{ rotate: c.rotate }] }]}>
-            <Svg width={CORNER_SVG} height={CORNER_SVG} viewBox={`0 0 ${CORNER_SVG} ${CORNER_SVG}`}>
-              <AnimatedPath animatedProps={cornerProps} fill="none" strokeWidth={T.cornerWidth} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </View>
-        ))}
-      </Animated.View>
+      {layout.width > 0 && (
+        <Svg width={layout.width} height={layout.height} style={StyleSheet.absoluteFill}>
+          <AnimatedRect animatedProps={fillProps} fill={T.primaryFill} />
+          <AnimatedPath animatedProps={cornerProps} fill="none" strokeWidth={T.cornerWidth} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      )}
       <Animated.View style={[styles.dot, { left: layout.width / 2 - 2, top: layout.height / 2 - 2 }, dotStyle]} />
     </View>
   );
 });
 
 const styles = StyleSheet.create({
-  corner: {
-    position: 'absolute',
-    width: CORNER_SVG,
-    height: CORNER_SVG,
-  },
   dot: {
     position: 'absolute',
     width: 4,
