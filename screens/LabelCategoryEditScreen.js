@@ -128,7 +128,7 @@ export default function LabelCategoryEditScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </MaterialPressable>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('labelCategories.edit')}
