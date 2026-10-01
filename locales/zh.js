@@ -2,6 +2,7 @@
 export default {
   // 通用
   common: {
+    copy: '复制',
     undo: '撤销',
     saving: '保存中...',
     later: '稍后',
@@ -158,6 +159,9 @@ export default {
 
   // 扫描界面
   scanner: {
+    multiListCleared: '已清空收集的代码',
+    duplicateSkipped: '已扫描过，已跳过',
+    clearMultiList: '清空已收集的代码',
     viewDetailsHint: '打开结果详情',
     skipped: '已跳过',
     retryPermission: '重新请求',
@@ -1797,6 +1801,12 @@ export default {
   },
 
   multiCodeResults: {
+    unsavedTitle: '不保存就离开吗？',
+    unsavedMessage: '有 {{count}} 个代码未保存，离开后将丢失。',
+    savedToGroup: '已将 {{count}} 个保存到 {{group}}',
+    saveTo: '保存到：{{group}}',
+    saveFailed: '保存失败',
+    discard: '放弃',
     title: '检测到的代码',
     saved: '已保存',
     saveAll: '全部保存',

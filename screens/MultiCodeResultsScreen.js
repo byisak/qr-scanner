@@ -1,39 +1,45 @@
 // screens/MultiCodeResultsScreen.js
 // 여러 코드 인식 모드 결과 화면 - 감지된 코드 목록 표시 및 개별/전체 저장
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
   StatusBar,
   Alert,
-  Platform,
+  ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
+  // 스캐너에서 선택돼 있던 그룹. 예전엔 무조건 'default'에 저장했다
+  const groupId = params.groupId || 'default';
+  const groupName = params.groupName || t('groupEdit.defaultGroup');
 
   const [codes, setCodes] = useState([]);
   const [savedCodes, setSavedCodes] = useState(new Set());
-  const [showSaveToast, setShowSaveToast] = useState(false);
-  const [saveToastMessage, setSaveToastMessage] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const allowLeaveRef = useRef(false);
 
   useEffect(() => {
     // params에서 바코드 데이터 파싱 및 빈값 필터링
@@ -54,24 +60,17 @@ export default function MultiCodeResultsScreen() {
     }
   }, [params.detectedBarcodes]);
 
-  // 토스트 표시
-  const showToast = (message) => {
-    setSaveToastMessage(message);
-    setShowSaveToast(true);
-    setTimeout(() => setShowSaveToast(false), 2000);
-  };
-
-  // 히스토리에 코드 저장
+  // 히스토리에 코드 저장 (스캐너에서 선택한 그룹으로)
   const saveCodeToHistory = useCallback(async (codeValue, barcodeType = 'qr') => {
     try {
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
       let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
 
-      if (!historyByGroup.default) {
-        historyByGroup.default = [];
+      if (!historyByGroup[groupId]) {
+        historyByGroup[groupId] = [];
       }
 
-      const currentHistory = historyByGroup.default;
+      const currentHistory = historyByGroup[groupId];
       const existingIndex = currentHistory.findIndex(item => item.code === codeValue);
       const now = Date.now();
 
@@ -90,7 +89,7 @@ export default function MultiCodeResultsScreen() {
         };
 
         currentHistory.splice(existingIndex, 1);
-        historyByGroup.default = [updatedItem, ...currentHistory].slice(0, 1000);
+        historyByGroup[groupId] = [updatedItem, ...currentHistory].slice(0, 1000);
       } else {
         // 새 항목 추가
         const record = {
@@ -100,7 +99,7 @@ export default function MultiCodeResultsScreen() {
           scanTimes: [now],
           type: barcodeType,
         };
-        historyByGroup.default = [record, ...currentHistory].slice(0, 1000);
+        historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
       }
 
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
@@ -108,52 +107,91 @@ export default function MultiCodeResultsScreen() {
       console.error('Failed to save to history:', error);
       throw error;
     }
-  }, []);
+  }, [groupId]);
 
   // 개별 코드 저장
   const handleSaveCode = useCallback(async (code, index) => {
-    if (savedCodes.has(index)) return;
+    if (savedCodes.has(index) || isSaving) return;
 
     try {
       await saveCodeToHistory(code.value, code.type);
       setSavedCodes(prev => new Set([...prev, index]));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast(t('multiCodeResults.codeSaved') || '저장됨');
+      feedback.success(t('multiCodeResults.codeSaved'));
     } catch (error) {
       console.error('Failed to save code:', error);
-      Alert.alert('Error', 'Failed to save code');
+      feedback.error(t('multiCodeResults.saveFailed'));
     }
-  }, [savedCodes, saveCodeToHistory, t]);
+  }, [savedCodes, isSaving, saveCodeToHistory, t, feedback]);
 
-  // 모두 저장
+  // 모두 저장. 저장 중 다시 누르면 같은 코드가 두 번 들어가므로 막는다
   const handleSaveAll = useCallback(async () => {
+    if (isSaving) return false;
+    const unsavedIndices = codes
+      .map((_, idx) => idx)
+      .filter(idx => !savedCodes.has(idx));
+
+    if (unsavedIndices.length === 0) return true;
+
+    setIsSaving(true);
+    const done = new Set(savedCodes);
     try {
-      const unsavedIndices = codes
-        .map((_, idx) => idx)
-        .filter(idx => !savedCodes.has(idx));
-
-      if (unsavedIndices.length === 0) return;
-
       for (const idx of unsavedIndices) {
         const code = codes[idx];
         await saveCodeToHistory(code.value, code.type);
+        done.add(idx);
       }
-
-      setSavedCodes(new Set(codes.map((_, idx) => idx)));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showToast(`${unsavedIndices.length}${t('multiCodeResults.codesSaved') || '개 코드 저장됨'}`);
+      feedback.success(t('multiCodeResults.savedToGroup', { count: unsavedIndices.length, group: groupName }));
+      return true;
     } catch (error) {
       console.error('Failed to save all codes:', error);
-      Alert.alert('Error', 'Failed to save codes');
+      feedback.error(t('multiCodeResults.saveFailed'));
+      return false;
+    } finally {
+      setSavedCodes(done);
+      setIsSaving(false);
     }
-  }, [codes, savedCodes, saveCodeToHistory, t]);
+  }, [codes, savedCodes, isSaving, saveCodeToHistory, t, feedback, groupName]);
 
   // 클립보드에 복사
   const handleCopy = useCallback(async (value) => {
     await Clipboard.setStringAsync(value);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    showToast(t('common.copied') || '복사됨');
-  }, [t]);
+    feedback.success(t('common.copied'));
+  }, [t, feedback]);
+
+  // 저장 안 한 코드가 있으면 나가기 전에 묻는다 (닫기 버튼·하드웨어 뒤로가기·제스처 모두)
+  const unsavedCount = codes.length - savedCodes.size;
+  useEffect(() => {
+    const sub = navigation.addListener('beforeRemove', (e) => {
+      if (allowLeaveRef.current || unsavedCount <= 0 || isSaving) return;
+      e.preventDefault();
+      Alert.alert(
+        t('multiCodeResults.unsavedTitle'),
+        t('multiCodeResults.unsavedMessage', { count: unsavedCount }),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('multiCodeResults.discard'),
+            style: 'destructive',
+            onPress: () => {
+              allowLeaveRef.current = true;
+              navigation.dispatch(e.data.action);
+            },
+          },
+          {
+            text: t('multiCodeResults.saveAll'),
+            onPress: async () => {
+              const ok = await handleSaveAll();
+              if (ok) {
+                allowLeaveRef.current = true;
+                navigation.dispatch(e.data.action);
+              }
+            },
+          },
+        ]
+      );
+    });
+    return sub;
+  }, [navigation, unsavedCount, isSaving, handleSaveAll, t]);
 
   // 바코드 타입 표시 이름
   const getTypeDisplayName = (type) => {
@@ -253,6 +291,8 @@ export default function MultiCodeResultsScreen() {
               style={[styles.actionButton, { backgroundColor: colors.inputBackground }]}
               onPress={() => handleCopy(item.value)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.copy')}
             >
               <Ionicons name="copy-outline" size={20} color={colors.primary} />
             </TouchableOpacity>
@@ -262,8 +302,11 @@ export default function MultiCodeResultsScreen() {
                 { backgroundColor: isSaved ? colors.success : colors.primary }
               ]}
               onPress={() => handleSaveCode(item, index)}
-              disabled={isSaved}
+              disabled={isSaved || isSaving}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={isSaved ? t('multiCodeResults.saved') : t('common.save')}
+              accessibilityState={{ disabled: isSaved || isSaving }}
             >
               <Ionicons
                 name={isSaved ? "checkmark" : "bookmark-outline"}
@@ -278,8 +321,8 @@ export default function MultiCodeResultsScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={colors.statusBar} backgroundColor={colors.background} />
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
       {/* 헤더 */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -287,12 +330,21 @@ export default function MultiCodeResultsScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="close" size={28} color={colors.text} />
+          <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('multiCodeResults.title') || '감지된 코드'} ({codes.length})
-        </Text>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('multiCodeResults.title')} ({codes.length})
+          </Text>
+          {/* 어느 그룹에 저장되는지 보여준다 */}
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
+            {t('multiCodeResults.saveTo', { group: groupName })}
+          </Text>
+        </View>
         <View style={styles.placeholder} />
       </View>
 
@@ -309,47 +361,45 @@ export default function MultiCodeResultsScreen() {
           data={codes}
           renderItem={renderCodeItem}
           keyExtractor={(item, index) => `${item.value}-${index}`}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 100 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         />
       )}
 
       {/* 하단 버튼 */}
       {codes.length > 0 && (
-        <View style={[styles.bottomContainer, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+        <View style={[styles.bottomContainer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: 16 + insets.bottom }]}>
           <TouchableOpacity
             style={[
               styles.saveAllButton,
               { backgroundColor: allSaved ? colors.success : colors.primary }
             ]}
             onPress={handleSaveAll}
-            disabled={allSaved}
+            disabled={allSaved || isSaving}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: allSaved || isSaving, busy: isSaving }}
           >
-            <Ionicons
-              name={allSaved ? "checkmark-circle" : "bookmark"}
-              size={22}
-              color="#fff"
-            />
+            {isSaving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Ionicons
+                name={allSaved ? "checkmark-circle" : "bookmark"}
+                size={22}
+                color="#fff"
+              />
+            )}
             <Text style={[styles.saveAllButtonText, { fontFamily: fonts.semiBold }]}>
               {allSaved
-                ? (t('multiCodeResults.allSaved') || '모두 저장됨')
-                : (t('multiCodeResults.saveAll') || '모두 저장')}
+                ? t('multiCodeResults.allSaved')
+                : isSaving
+                  ? t('common.saving')
+                  : `${t('multiCodeResults.saveAll')} (${unsavedCount})`}
             </Text>
           </TouchableOpacity>
         </View>
       )}
-
-      {/* 토스트 메시지 */}
-      {showSaveToast && (
-        <View style={[styles.toast, { backgroundColor: colors.text }]}>
-          <Ionicons name="checkmark-circle" size={20} color={colors.background} />
-          <Text style={[styles.toastText, { color: colors.background, fontFamily: fonts.medium }]}>
-            {saveToastMessage}
-          </Text>
-        </View>
-      )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -368,8 +418,16 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 4,
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 18,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
   },
   placeholder: {
     width: 36,
@@ -414,7 +472,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   itemActions: {
@@ -444,7 +502,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     borderTopWidth: 1,
   },
   saveAllButton: {

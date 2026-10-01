@@ -545,9 +545,8 @@ function ScannerScreen() {
       isProcessingRef.current = false; // 처리 중 플래그 리셋
       isProcessingMultiRef.current = false; // 다중 바코드 처리 플래그 리셋
       setIsImageLoading(false); // 이미지 분석 로딩 리셋
-      scannedCodesRef.current = []; // 여러 코드 인식 모드 스캔 목록 리셋
-      setPendingMultiScanData(null); // 다중 바코드 보류 데이터 리셋
-      setContinuousScanCount(0); // 연속 스캔 카운터 리셋
+      // 여러 코드 목록과 연속 스캔 카운터는 유지한다. 다른 탭에 잠깐 다녀오거나 토스트로 결과를
+      // 확인하고 돌아왔을 때 모아 둔 코드·센 개수가 사라지면 안 된다. (결과 보기·비우기에서 지운다)
       resetAll();
 
       (async () => {
@@ -897,6 +896,8 @@ function ScannerScreen() {
         }
       }
 
+      // 사용자가 "추가"를 고른 경우에만 실제로 저장된 것으로 센다
+      setContinuousScanCount(prev => prev + 1);
       saveHistory(data, null, null, type, errorCorrectionLevel).then((historyResult) => {
         showToast({
           data,
@@ -1392,6 +1393,17 @@ function ScannerScreen() {
     startResetTimer(RESET_DELAYS.NORMAL);
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
+  // 스캔 성공 비프 (설정에서 소리를 켠 경우만)
+  const playScanBeep = useCallback(() => {
+    if (!scanSoundEnabledRef.current || !beepSoundPlayerRef.current) return;
+    try {
+      beepSoundPlayerRef.current.seekTo(0);
+      beepSoundPlayerRef.current.play();
+    } catch (error) {
+      // 소리 재생 실패는 무시
+    }
+  }, []);
+
   // 다중 바코드 감지 핸들러 - 중복 제외하고 누적
   const handleMultipleCodesDetected = useCallback((count, barcodesData) => {
     console.log(`[ScannerScreen] handleMultipleCodesDetected called: count=${count}, barcodes=${barcodesData?.length}, isProcessingMulti=${isProcessingMultiRef.current}, isNavigating=${isNavigatingRef.current}, isActive=${isActive}`);
@@ -1478,6 +1490,8 @@ function ScannerScreen() {
         if (hapticEnabledRef.current) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         }
+        // 소음이 큰 곳에서는 진동만으로 잡혔는지 알기 어렵다 → 단일 모드처럼 비프도
+        playScanBeep();
       }
       return; // 처리 완료
     }
@@ -1534,8 +1548,11 @@ function ScannerScreen() {
       // handleDetectedBarcodesChange에서는 scannedCodesRef에만 축적하고,
       // bounds가 보장된 handleVerifiedBarcodesChange에서 pendingMultiScanData를 설정함
 
-      if (newCodesAdded && hapticEnabledRef.current) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (newCodesAdded) {
+        if (hapticEnabledRef.current) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        playScanBeep();
       }
     }
   }, [isActive]);
@@ -1551,6 +1568,9 @@ function ScannerScreen() {
       pathname: '/multi-code-results',
       params: {
         detectedBarcodes: pendingMultiScanData.barcodes,
+        // 결과 화면이 지금 선택된 그룹에 저장하도록 넘긴다
+        groupId: currentGroupId || 'default',
+        groupName: currentGroupName,
       }
     });
 
@@ -1562,7 +1582,7 @@ function ScannerScreen() {
     safeTimeout(() => {
       isNavigatingRef.current = false;
     }, 2000);
-  }, [pendingMultiScanData, router, safeTimeout]);
+  }, [pendingMultiScanData, router, safeTimeout, currentGroupId, currentGroupName]);
 
   // 화면에 표시되는 하이라이트 개수 변경 핸들러
   const handleVisibleHighlightsChange = useCallback((count) => {
@@ -1640,10 +1660,22 @@ function ScannerScreen() {
   }, []);
 
   // 다중 바코드 보류 데이터 닫기 핸들러
+  // 모은 코드 목록 비우기. 확인 없이 지우되 실행 취소로 되돌릴 수 있게 한다
   const handleCloseMultiScan = useCallback(() => {
+    const snapshotData = pendingMultiScanData;
+    const snapshotCodes = scannedCodesRef.current;
     setPendingMultiScanData(null);
     scannedCodesRef.current = [];
-  }, []);
+    if (!snapshotData) return;
+    feedback.warning(t('scanner.multiListCleared'), {
+      actionLabel: t('common.undo'),
+      onAction: () => {
+        scannedCodesRef.current = snapshotCodes;
+        setPendingMultiScanData(snapshotData);
+      },
+    });
+  }, [pendingMultiScanData, feedback, t]);
+
 
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
@@ -1824,27 +1856,25 @@ function ScannerScreen() {
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
-        // 연속 스캔 카운터 증가
-        setContinuousScanCount(prev => prev + 1);
-
-        // 햅틱 피드백
-        if (hapticEnabledRef.current) {
-          if (Platform.OS === 'android') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-          } else {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // 피드백은 중복 판정 뒤에 준다. 이미 찍은 라벨에 성공음·카운터가 올라가면
+        // 작업자는 실제보다 많이 처리했다고 믿게 된다
+        const giveSavedFeedback = () => {
+          setContinuousScanCount(prev => prev + 1);
+          if (hapticEnabledRef.current) {
+            if (Platform.OS === 'android') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            } else {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
           }
-        }
-
-        // 스캔 소리
-        if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
-          try {
-            beepSoundPlayerRef.current.seekTo(0);
-            beepSoundPlayerRef.current.play();
-          } catch (error) {
-            // 소리 재생 실패는 무시
+          playScanBeep();
+        };
+        // 중복: 소리 없이 경고 진동만. 카운터는 그대로
+        const giveDuplicateFeedback = () => {
+          if (hapticEnabledRef.current) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           }
-        }
+        };
 
         // 실시간 서버 전송 헬퍼 함수
         const sendToRealtimeServer = () => {
@@ -1873,6 +1903,7 @@ function ScannerScreen() {
 
               if (action === 'skip') {
                 // 자동 건너뛰기: 서버 전송 없이 토스트로 건너뛰었다고 알림
+                giveDuplicateFeedback();
                 showToast({
                   data,
                   type: normalizedType,
@@ -1885,6 +1916,7 @@ function ScannerScreen() {
                 return;
               } else if (action === 'alert') {
                 // 알림 후 추가: 확인 토스트로 물어봄 (스캔 일시 정지, 서버 전송은 확인 후)
+                giveDuplicateFeedback();
                 setCanScan(false);
                 setConfirmToastData({
                   data,
@@ -1898,6 +1930,7 @@ function ScannerScreen() {
             }
 
             // 중복이 아니거나 allow인 경우: 서버 전송 및 정상 저장
+            giveSavedFeedback();
             sendToRealtimeServer();
             saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
               showToast({
@@ -1912,6 +1945,7 @@ function ScannerScreen() {
           });
         } else {
           // 중복 감지 비활성화: 서버 전송 및 바로 저장
+          giveSavedFeedback();
           sendToRealtimeServer();
           saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
             showToast({
@@ -1950,7 +1984,11 @@ function ScannerScreen() {
           const action = duplicateActionRef.current;
 
           if (action === 'skip') {
-            // 자동으로 건너뛰기: 아무 피드백 없이 스캔만 재활성화
+            // 자동으로 건너뛰기. 무반응이면 인식이 안 된 줄 알고 계속 갖다 대므로 경고 진동 + 짧은 안내
+            if (hapticEnabledRef.current) {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
+            feedback.info(t('scanner.duplicateSkipped'));
             safeTimeout(() => {
               isProcessingRef.current = false;
               setCanScan(true);
@@ -2273,7 +2311,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -2975,7 +3013,7 @@ function ScannerScreen() {
       />
 
       {/* 다중 바코드 감지 시 결과 보기 버튼 */}
-      {pendingMultiScanData && (() => {
+      {multiCodeModeEnabled && pendingMultiScanData && (() => {
         // 유효한 코드만 필터링하여 개수 계산 (결과 페이지와 동일한 필터링)
         const parsedBarcodes = JSON.parse(pendingMultiScanData.barcodes || '[]');
         const validCount = parsedBarcodes.filter(code => {
@@ -3000,6 +3038,8 @@ function ScannerScreen() {
             style={styles.multiScanCloseButton}
             onPress={handleCloseMultiScan}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={t('scanner.clearMultiList')}
           >
             <Ionicons name="close" size={20} color="#fff" />
           </TouchableOpacity>

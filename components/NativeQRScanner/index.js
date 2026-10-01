@@ -581,7 +581,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     fps: 30,
     barcodeTypes: visionCameraCodeTypes,
     scanMode: 'continuous',
-    onBarcodeScanned: (barcodes) => {
+    onBarcodeScanned: (barcodes, frame) => {
       'worklet';
 
       if (barcodes.length === 0) {
@@ -635,36 +635,43 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
         // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택 (여러 코드 인식 모드 OFF)
         if (selectCenterBarcodeShared.value) {
-          // 프레임 중앙 좌표 계산
-          const frameWidth = frameDimensions?.width || 1920;
-          const frameHeight = frameDimensions?.height || 1440;
+          // 프레임 중앙. 바코드 좌표와 같은 센서(버퍼) 좌표계라 실제 프레임 크기를 쓴다.
+          // (frameDimensions는 worklet 생성 시점 값으로 굳어 있을 수 있다)
+          const frameWidth = (frame && frame.width) || frameDimensions?.width || 1920;
+          const frameHeight = (frame && frame.height) || frameDimensions?.height || 1440;
           const centerX = frameWidth / 2;
           const centerY = frameHeight / 2;
 
-          // 필터링된 바코드 중에서 중앙에 가장 가까운 것을 선택
-          let closestBarcode = validBarcodesData[0];
-          let closestOriginalBarcode = barcodes[0];
+          // 라이브러리 Barcode에는 frame이 없고 boundingBox {origin, size}가 있다.
+          // 예전엔 bc.frame을 읽어서 항상 첫 번째 코드가 선택됐다
+          let closestIndex = -1;
           let minDistance = Number.MAX_VALUE;
 
-          for (let i = 0; i < validBarcodesData.length; i++) {
-            const bc = validBarcodesData[i];
-            if (bc.frame) {
-              // 바코드 중앙 좌표
-              const bcCenterX = bc.frame.x + bc.frame.width / 2;
-              const bcCenterY = bc.frame.y + bc.frame.height / 2;
-              // 거리 계산 (유클리드 거리)
-              const distance = Math.sqrt(
-                Math.pow(bcCenterX - centerX, 2) + Math.pow(bcCenterY - centerY, 2)
-              );
-              if (distance < minDistance) {
-                minDistance = distance;
-                closestBarcode = bc;
-                // 원본 바코드에서 EC level 가져오기 위해 인덱스로 찾기
-                closestOriginalBarcode = barcodes.find(
-                  (b) => b.frame && b.frame.x === bc.frame.x && b.frame.y === bc.frame.y
-                ) || barcodes[0];
-              }
+          for (let i = 0; i < barcodes.length; i++) {
+            const b = barcodes[i];
+            const raw = b.value || b.displayValue || b.rawValue || b.data || '';
+            const v = String(raw).trim();
+            if (!v || v === 'undefined' || v === 'null') continue;
+            const box = b.boundingBox;
+            if (!box || !box.origin || !box.size) continue;
+            const bcCenterX = box.origin.x + box.size.width / 2;
+            const bcCenterY = box.origin.y + box.size.height / 2;
+            const distance = Math.sqrt(
+              Math.pow(bcCenterX - centerX, 2) + Math.pow(bcCenterY - centerY, 2)
+            );
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestIndex = i;
             }
+          }
+
+          const closestOriginalBarcode = closestIndex >= 0 ? barcodes[closestIndex] : barcodes[0];
+          const closestRaw = closestOriginalBarcode.value || closestOriginalBarcode.displayValue || closestOriginalBarcode.rawValue || closestOriginalBarcode.data || '';
+          const closestBarcode = closestIndex >= 0
+            ? { value: String(closestRaw).trim(), type: closestOriginalBarcode.type, frame: closestOriginalBarcode.frame }
+            : validBarcodesData[0];
+          if (!closestBarcode) {
+            return;
           }
 
           // 중앙에 가장 가까운 바코드로 단일 스캔 콜백 호출

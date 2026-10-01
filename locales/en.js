@@ -2,6 +2,7 @@
 export default {
   // Common
   common: {
+    copy: 'Copy',
     undo: 'Undo',
     saving: 'Saving...',
     back: 'Back',
@@ -160,6 +161,9 @@ export default {
 
   // Scanner screen
   scanner: {
+    multiListCleared: 'Collected codes cleared',
+    duplicateSkipped: 'Already scanned, skipped',
+    clearMultiList: 'Clear collected codes',
     exposureUp: 'Brighter',
     exposureReset: 'Reset exposure',
     exposureDown: 'Darker',
@@ -1588,6 +1592,12 @@ export default {
 
   // Multi-code results screen
   multiCodeResults: {
+    unsavedTitle: 'Leave without saving?',
+    unsavedMessage: '{{count}} codes aren\'t saved. They\'ll be lost if you leave.',
+    savedToGroup: 'Saved {{count}} to {{group}}',
+    saveTo: 'Saving to: {{group}}',
+    saveFailed: 'Couldn\'t save',
+    discard: 'Discard',
     codeSaved: 'Saved',
     codesSaved: ' codes saved',
     title: 'Detected Codes',

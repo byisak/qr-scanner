@@ -2,6 +2,7 @@
 export default {
   // Común
   common: {
+    copy: 'Copiar',
     undo: 'Deshacer',
     saving: 'Guardando...',
     later: 'Más tarde',
@@ -158,6 +159,9 @@ export default {
 
   // Pantalla de escaneo
   scanner: {
+    multiListCleared: 'Códigos recogidos eliminados',
+    duplicateSkipped: 'Ya escaneado, omitido',
+    clearMultiList: 'Vaciar códigos recogidos',
     viewDetailsHint: 'Abre el detalle del resultado',
     skipped: 'Omitido',
     retryPermission: 'Volver a intentar',
@@ -1797,6 +1801,12 @@ export default {
   },
 
   multiCodeResults: {
+    unsavedTitle: '¿Salir sin guardar?',
+    unsavedMessage: 'Hay {{count}} códigos sin guardar. Se perderán si sales.',
+    savedToGroup: '{{count}} guardados en {{group}}',
+    saveTo: 'Guardar en: {{group}}',
+    saveFailed: 'No se pudo guardar',
+    discard: 'Descartar',
     title: 'Códigos detectados',
     saved: 'Guardado',
     saveAll: 'Guardar todo',

@@ -32,6 +32,7 @@ import { isDrawCompleted } from '../utils/lotteryApi';
 import { LotteryIcon } from '../components/LotteryIcons';
 
 const DEFAULT_GROUP_ID = 'default';
+const HISTORY_VIEW_GROUP_KEY = 'historyViewGroupId';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -60,7 +61,10 @@ export default function HistoryScreen() {
     try {
       const groupsData = await AsyncStorage.getItem('scanGroups');
       const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      const selectedId = await AsyncStorage.getItem('selectedGroupId');
+      // 히스토리에서 보고 있는 그룹은 스캐너의 저장 그룹(selectedGroupId)과 따로 기억한다.
+      // 같은 키를 쓰면 B그룹 기록을 보기만 해도 이후 스캔이 B그룹에 저장됐다
+      const viewedId = await AsyncStorage.getItem(HISTORY_VIEW_GROUP_KEY);
+      const selectedId = viewedId || await AsyncStorage.getItem('selectedGroupId');
       const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
 
       // 실시간 서버전송 설정 로드
@@ -87,6 +91,12 @@ export default function HistoryScreen() {
           return g;
         });
         setGroups(localizedGroups.length > 0 ? localizedGroups : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
+        // 보던 그룹이 삭제됐거나 숨겨졌으면 기본 그룹으로
+        if (selectedId && !localizedGroups.some(g => g.id === selectedId)) {
+          setSelectedGroupId(DEFAULT_GROUP_ID);
+          if (historyData) setScanHistory(JSON.parse(historyData));
+          return;
+        }
       }
 
       if (historyData) {
@@ -146,7 +156,7 @@ export default function HistoryScreen() {
   // 그룹 선택
   const selectGroup = async (groupId) => {
     setSelectedGroupId(groupId);
-    await AsyncStorage.setItem('selectedGroupId', groupId);
+    await AsyncStorage.setItem(HISTORY_VIEW_GROUP_KEY, groupId);
     setQuery('');
   };
 
@@ -593,7 +603,7 @@ export default function HistoryScreen() {
                   )}
                   <View style={[s.itemInfo, (hasPhoto || hasThumbnail || isGenerated) && s.itemInfoWithPhoto]}>
                     {/* 1줄: 스캔값 */}
-                    <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
+                    <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1} ellipsizeMode="middle">
                       {item.code}
                     </Text>
 

@@ -2,6 +2,7 @@
 export default {
   // 공통
   common: {
+    copy: '복사',
     undo: '실행 취소',
     saving: '저장 중...',
     back: '뒤로',
@@ -160,6 +161,9 @@ export default {
 
   // 스캔 화면
   scanner: {
+    multiListCleared: '모은 코드를 비웠습니다',
+    duplicateSkipped: '이미 스캔한 코드라 건너뛰었습니다',
+    clearMultiList: '모은 코드 비우기',
     exposureUp: '밝게',
     exposureReset: '노출 초기화',
     exposureDown: '어둡게',
@@ -1578,6 +1582,12 @@ export default {
 
   // 여러 코드 결과 화면
   multiCodeResults: {
+    unsavedTitle: '저장하지 않고 나갈까요?',
+    unsavedMessage: '저장하지 않은 코드 {{count}}개가 있습니다. 나가면 사라집니다.',
+    savedToGroup: '{{group}}에 {{count}}개 저장했습니다',
+    saveTo: '저장 위치: {{group}}',
+    saveFailed: '저장하지 못했습니다',
+    discard: '버리기',
     codeSaved: '저장됨',
     codesSaved: '개 코드 저장됨',
     title: '감지된 코드',

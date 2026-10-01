@@ -2,6 +2,7 @@
 export default {
   // 共通
   common: {
+    copy: 'コピー',
     undo: '元に戻す',
     saving: '保存中...',
     later: '後で',
@@ -158,6 +159,9 @@ export default {
 
   // スキャン画面
   scanner: {
+    multiListCleared: '集めたコードを消去しました',
+    duplicateSkipped: 'スキャン済みのためスキップしました',
+    clearMultiList: '集めたコードを消去',
     viewDetailsHint: '結果の詳細画面を開きます',
     skipped: 'スキップ',
     retryPermission: 'もう一度許可を求める',
@@ -1797,6 +1801,12 @@ export default {
   },
 
   multiCodeResults: {
+    unsavedTitle: '保存せずに戻りますか？',
+    unsavedMessage: '保存していないコードが{{count}}件あります。戻ると消えます。',
+    savedToGroup: '{{group}}に{{count}}件保存しました',
+    saveTo: '保存先: {{group}}',
+    saveFailed: '保存できませんでした',
+    discard: '破棄',
     title: '検出されたコード',
     saved: '保存済み',
     saveAll: 'すべて保存',
