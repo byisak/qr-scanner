@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
+import { useFeedback, FeedbackToastHost } from '../contexts/FeedbackContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import AdBanner from '../components/AdBanner';
@@ -19,6 +20,7 @@ import QRContentInfoDisplay from '../components/QRContentInfoDisplay';
 export default function ResultScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const { isDark } = useTheme();
   const { triggerSync } = useSync();
   const { isBarcodeTypeLocked, getBarcodeFeatureId, showUnlockAlert } = useFeatureLock();
@@ -42,7 +44,15 @@ export default function ResultScreen() {
   const ecAnalysisFailed = ecLevelAnalysisFailed === 'true';
   const isQRCode = barcodeType === 'qr' || barcodeType === 'qrcode';
   const isGeneratedCode = isGenerated === 'true';
-  const parsedGeneratorData = generatorData ? JSON.parse(generatorData) : null;
+  const parsedGeneratorData = useMemo(() => {
+    if (!generatorData) return null;
+    try {
+      return JSON.parse(generatorData);
+    } catch (error) {
+      console.error('generatorData 파싱 실패:', error);
+      return null;
+    }
+  }, [generatorData]);
 
   // 오류 검증 레벨 설명 함수
   const getECLevelDescription = (level) => {
@@ -128,7 +138,8 @@ export default function ResultScreen() {
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(isEditing ? editedText : displayText);
-    Alert.alert(t('result.copySuccess'), t('result.copySuccessMessage'));
+    // 확인 버튼이 있는 Alert는 흐름을 막는다. 가벼운 성공은 토스트 + 햅틱
+    feedback.success(t('result.copySuccessMessage'));
   };
 
   const handleShare = async () => {
@@ -142,17 +153,13 @@ export default function ResultScreen() {
   const handleOpenUrl = async () => {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
-      if (urlOpenMode === 'safari') {
+      if (urlOpenMode === 'safari' || urlOpenMode === 'default') {
+        // 'default' 모드는 설정 화면에 있었지만 처리 분기가 없어 인앱 웹뷰로 열리고 있었다
         try {
-          const supported = await Linking.canOpenURL(urlToOpen);
-          if (supported) {
-            await Linking.openURL(urlToOpen);
-          } else {
-            Alert.alert(t('result.error'), 'Cannot open this URL');
-          }
+          await Linking.openURL(urlToOpen);
         } catch (error) {
           console.error('Open URL error:', error);
-          Alert.alert(t('result.error'), 'Failed to open URL');
+          Alert.alert(t('result.error'), t('result.openUrlFailed') || 'Failed to open URL');
         }
       } else if (urlOpenMode === 'chrome') {
         try {
@@ -169,16 +176,17 @@ export default function ResultScreen() {
               await Linking.openURL(urlToOpen);
             }
           } else {
-            const intentUrl = `intent://${urlToOpen.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;end`;
+            // RN Linking은 intent:// URI를 해석하지 못한다. Android Chrome의 navigate 스킴을 쓰고 안 되면 기본 브라우저
+            const chromeNavigateUrl = `googlechrome://navigate?url=${encodeURIComponent(urlToOpen)}`;
             try {
-              await Linking.openURL(intentUrl);
+              await Linking.openURL(chromeNavigateUrl);
             } catch {
               await Linking.openURL(urlToOpen);
             }
           }
         } catch (error) {
           console.error('Open URL error:', error);
-          Alert.alert(t('result.error'), 'Failed to open URL');
+          Alert.alert(t('result.error'), t('result.openUrlFailed') || 'Failed to open URL');
         }
       } else {
         router.push({ pathname: '/webview', params: { url: urlToOpen } });
@@ -194,7 +202,7 @@ export default function ResultScreen() {
     }
 
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
 
       if (status !== 'granted') {
         Alert.alert(
@@ -279,15 +287,9 @@ export default function ResultScreen() {
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
       triggerSync();
 
-      Alert.alert(t('result.editSuccess'), t('result.editSuccessMessage'), [
-        {
-          text: t('common.confirm'),
-          onPress: () => {
-            setIsEditing(false);
-            router.back();
-          }
-        }
-      ]);
+      feedback.success(t('result.editSuccessMessage'));
+      setIsEditing(false);
+      router.back();
     } catch (error) {
       console.error('Edit error:', error);
       Alert.alert(t('result.error'), t('result.errorOccurred'));
@@ -328,12 +330,8 @@ export default function ResultScreen() {
               await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
               triggerSync();
 
-              Alert.alert(t('result.deleteSuccess'), t('result.deleteSuccessMessage'), [
-                {
-                  text: t('common.confirm'),
-                  onPress: () => router.back()
-                }
-              ]);
+              feedback.success(t('result.deleteSuccessMessage'));
+              router.back();
             } catch (error) {
               console.error('Delete error:', error);
               Alert.alert(t('result.error'), t('result.errorDeleteOccurred'));
@@ -625,10 +623,14 @@ export default function ResultScreen() {
         )}
       </View>
 
+      <FeedbackToastHost />
       <ScrollView
         style={styles.content}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
       >
         {/* 메인 데이터 카드 */}
         <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>

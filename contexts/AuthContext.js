@@ -19,43 +19,22 @@ const API_URL = `${config.serverUrl}/api/auth`;
 // 🔧 개발 모드 설정 (배포 시 false로 변경)
 // ============================================================
 const DEV_MODE = false; // 실제 백엔드 API 사용
-
-// 개발용 테스트 계정 (DEV_MODE가 true일 때만 사용됨)
-const DEV_ACCOUNTS = [
-  {
-    email: 'test@test.com',
-    password: 'test1234',
-    user: {
-      id: 'dev-user-001',
-      email: 'test@test.com',
-      name: '테스트 사용자',
-      profileImage: null,
-      provider: 'email',
-      createdAt: new Date().toISOString(),
-    },
-  },
-  {
-    email: 'admin@admin.com',
-    password: 'admin1234',
-    user: {
-      id: 'dev-admin-001',
-      email: 'admin@admin.com',
-      name: '관리자',
-      profileImage: null,
-      provider: 'email',
-      createdAt: new Date().toISOString(),
-    },
-  },
-];
 // ============================================================
 
-// 기기 ID 생성 (UUID v4)
-const generateDeviceId = () => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+// 기기 ID 생성 (암호학적으로 안전한 UUID v4)
+const generateDeviceId = async () => {
+  try {
+    const Crypto = require('expo-crypto');
+    return Crypto.randomUUID();
+  } catch {
+    // fallback: expo-crypto 사용 불가 시
+    const bytes = new Uint8Array(16);
+    for (let i = 0; i < 16; i++) bytes[i] = (Math.random() * 256) | 0;
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+  }
 };
 
 // 기기 ID 가져오기 (없으면 생성)
@@ -63,14 +42,15 @@ const getOrCreateDeviceId = async () => {
   try {
     let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
     if (!deviceId) {
-      deviceId = `mobile-${generateDeviceId()}`;
+      const uuid = await generateDeviceId();
+      deviceId = `mobile-${uuid}`;
       await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
-      console.log('[Auth] 새 기기 ID 생성:', deviceId);
     }
     return deviceId;
   } catch (error) {
     console.error('[Auth] 기기 ID 생성 오류:', error);
-    return `mobile-${generateDeviceId()}`; // fallback
+    const uuid = await generateDeviceId();
+    return `mobile-${uuid}`;
   }
 };
 
@@ -246,26 +226,6 @@ export const AuthProvider = ({ children }) => {
     console.log('[Auth] ===== 이메일 로그인 요청 =====');
     console.log('[Auth] Email:', email);
 
-    // ============================================================
-    // 🔧 개발 모드: 하드코딩된 계정으로 로그인 (서버 인증 스킵)
-    // ============================================================
-    if (DEV_MODE) {
-      console.log('[Auth] 🔧 개발 모드 활성화 - 테스트 계정 확인 중...');
-      const devAccount = DEV_ACCOUNTS.find(
-        acc => acc.email === email && acc.password === password
-      );
-
-      if (devAccount) {
-        console.log('[Auth] ✅ 개발 모드 로그인 성공:', devAccount.user.email);
-        const mockToken = `dev-token-${Date.now()}`;
-        await login(devAccount.user, mockToken, null);
-        return { success: true, user: devAccount.user };
-      } else {
-        console.log('[Auth] ❌ 개발 모드: 일치하는 테스트 계정 없음, 서버 인증 시도...');
-        // 테스트 계정이 아니면 서버 인증으로 진행
-      }
-    }
-    // ============================================================
 
     const requestUrl = `${API_URL}/login`;
     console.log('[Auth] URL:', requestUrl);
@@ -632,22 +592,6 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'Not logged in' };
       }
 
-      // 개발 모드: 서버 호출 없이 로컬에서 처리
-      if (DEV_MODE) {
-        const devAccount = DEV_ACCOUNTS.find(acc => acc.email === user.email);
-        if (devAccount) {
-          if (devAccount.password !== currentPassword) {
-            return { success: false, error: 'Current password is incorrect', errorCode: 'AUTH_INVALID_CREDENTIALS' };
-          }
-          // 개발 모드에서는 실제로 변경하지 않음 (메모리만)
-          devAccount.password = newPassword;
-          console.log('[Auth] 🔧 개발 모드: 비밀번호 변경 성공 (테스트 계정)');
-          return { success: true };
-        }
-        // 개발 모드이지만 테스트 계정이 아닌 경우도 성공 처리
-        console.log('[Auth] 🔧 개발 모드: 비밀번호 변경 성공 (일반 계정)');
-        return { success: true };
-      }
 
       const token = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
       const requestUrl = `${API_URL}/change-password`;

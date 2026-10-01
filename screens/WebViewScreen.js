@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity, Linking, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Linking, Alert, ActivityIndicator, BackHandler, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,14 +14,35 @@ export default function WebViewScreen() {
   const { t } = useLanguage();
   const { url } = params;
   const [loading, setLoading] = useState(true);
+  const webViewRef = useRef(null);
+  const canGoBackRef = useRef(false);
+
+  // Android 하드웨어 뒤로가기: 웹 히스토리가 있으면 한 페이지 뒤로, 없으면 화면 닫기
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (canGoBackRef.current && webViewRef.current) {
+        webViewRef.current.goBack();
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, []);
 
   // WebView 에러 발생 시 Safari/외부 브라우저로 열기
   const handleError = useCallback(async (syntheticEvent) => {
     const { nativeEvent } = syntheticEvent;
     console.log('WebView error:', nativeEvent);
 
-    // iOS ATS 에러 (-1022) 또는 기타 로드 에러 시 외부 브라우저로 열기
-    if (nativeEvent.code === -1022 || nativeEvent.description?.includes('App Transport Security')) {
+    // iOS ATS 에러(-1022), Android 정리되지 않은 텍스트 차단(net::ERR_CLEARTEXT_NOT_PERMITTED) 등
+    // 인앱에서 못 여는 경우 외부 브라우저로 열기
+    const isBlocked =
+      nativeEvent.code === -1022 ||
+      nativeEvent.description?.includes('App Transport Security') ||
+      nativeEvent.description?.includes('ERR_CLEARTEXT_NOT_PERMITTED') ||
+      nativeEvent.description?.includes('ERR_UNKNOWN_URL_SCHEME');
+    if (isBlocked) {
       Alert.alert(
         t('webView.secureConnectionRequired'),
         t('webView.cannotOpenInApp'),
@@ -46,6 +67,8 @@ export default function WebViewScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       <WebView
+        ref={webViewRef}
+        onNavigationStateChange={(navState) => { canGoBackRef.current = navState.canGoBack; }}
         source={{ uri: url }}
         style={{ flex: 1 }}
         originWhitelist={['*']}

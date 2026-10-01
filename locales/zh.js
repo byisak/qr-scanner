@@ -239,6 +239,7 @@ export default {
     editSuccess: '编辑成功',
     editSuccessMessage: '扫描结果已更新。',
     error: '错误',
+    openUrlFailed: '无法打开该网址。',
     errorHistoryOnly: '只能从历史记录中编辑。',
     errorHistoryDeleteOnly: '只能从历史记录中删除。',
     errorEmptyValue: '请输入值。',
@@ -1466,6 +1467,7 @@ export default {
     },
     lotteryTypes: {
       lotto645: '乐透6/45（同行彩票）',
+      pension720: '年金彩票720+',
       powerballMega: 'Powerball, Mega Millions',
       ukLottoEuro: 'UK Lotto, EuroMillions',
       lotto649Max: 'Lotto 6/49, Lotto Max',
@@ -1475,6 +1477,10 @@ export default {
       toto4d: 'Toto, 4D',
       lottoPowerball: 'LOTTO, PowerBall',
     },
+    alreadyScanned: '已扫描的彩票',
+    alreadyScannedMessage: '{{type}} 第{{round}}期已保存。\n是否查看中奖结果？',
+    checkResult: '查看结果',
+    cancel: '取消',
   },
 
   // 批量扫描设置（旧版兼容）
@@ -1702,7 +1708,9 @@ export default {
     useBiometricMessage: '您想使用Face ID进行应用锁定吗？',
     biometricNotAvailable: '生物识别不可用',
     biometricNotAvailableDesc: '此设备不支持生物识别认证。请在设备设置中设置Face ID或指纹。',
-    biometricPrompt: '使用Face ID解锁',
+    biometricPrompt: '使用{{type}}解锁',
+    fingerprint: '指纹',
+    faceRecognition: '面部识别',
     toggleBiometricError: '更改设置失败。',
     biometric: '生物识别',
     infoText: '启用应用锁定后，您需要在打开应用时使用PIN或生物识别进行身份验证。',

@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -23,7 +24,7 @@ const PRO_FEATURES = [
   { key: 'deleteScannedBarcode', icon: 'menu-outline' },
   { key: 'copyToClipboard', icon: 'copy-outline' },
   { key: 'manualScanConfirm', icon: 'checkmark-circle-outline' },
-  { key: 'icloudSync', icon: 'cloud-upload-outline' },
+  ...(Platform.OS === 'ios' ? [{ key: 'icloudSync', icon: 'cloud-upload-outline' }] : []),
   { key: 'extraThemes', icon: 'happy-outline' },
   { key: 'unlimitedExport', icon: 'infinite-outline' },
   { key: 'businessScannerMode', icon: 'wifi-outline' },

@@ -239,6 +239,7 @@ export default {
     editSuccess: '編集完了',
     editSuccessMessage: 'スキャン結果が編集されました。',
     error: 'エラー',
+    openUrlFailed: 'URLを開けませんでした。',
     errorHistoryOnly: '履歴からのみ編集できます。',
     errorHistoryDeleteOnly: '履歴からのみ削除できます。',
     errorEmptyValue: '値を入力してください。',
@@ -1466,6 +1467,7 @@ export default {
     },
     lotteryTypes: {
       lotto645: 'ロト6/45（同行宝くじ）',
+      pension720: '年金宝くじ720+',
       powerballMega: 'Powerball, Mega Millions',
       ukLottoEuro: 'UK Lotto, EuroMillions',
       lotto649Max: 'Lotto 6/49, Lotto Max',
@@ -1475,6 +1477,10 @@ export default {
       toto4d: 'Toto, 4D',
       lottoPowerball: 'LOTTO, PowerBall',
     },
+    alreadyScanned: 'スキャン済みの宝くじ',
+    alreadyScannedMessage: '{{type}} 第{{round}}回はすでに保存されています。\n当選結果を確認しますか？',
+    checkResult: '結果確認',
+    cancel: 'キャンセル',
   },
 
   // バッチスキャン設定（レガシー互換）
@@ -1702,7 +1708,9 @@ export default {
     useBiometricMessage: 'Face IDをアプリロックに使用しますか？',
     biometricNotAvailable: '生体認証不可',
     biometricNotAvailableDesc: 'このデバイスでは生体認証を使用できません。デバイス設定でFace IDまたは指紋を登録してください。',
-    biometricPrompt: 'Face IDでロック解除',
+    biometricPrompt: '{{type}}でロック解除',
+    fingerprint: '指紋',
+    faceRecognition: '顔認証',
     toggleBiometricError: '設定変更に失敗しました。',
     biometric: '生体認証',
     infoText: 'アプリロックを設定すると、アプリ起動時にPINパスワードまたは生体認証で本人確認を行います。',

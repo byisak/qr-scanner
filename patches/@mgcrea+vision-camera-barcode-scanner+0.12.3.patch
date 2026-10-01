@@ -1,175 +1,173 @@
-diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store b/node_modules/@mgcrea/vision-camera-barcode-scanner/.DS_Store
-new file mode 100644
-index 0000000..e69de29
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeFormatMapper.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeFormatMapper.java
+index b076e57..eb105f7 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeFormatMapper.java
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/BarcodeFormatMapper.java
+@@ -12,12 +12,16 @@ public class BarcodeFormatMapper {
+     formatMap.put("code-128", Barcode.FORMAT_CODE_128);
+     formatMap.put("code-39", Barcode.FORMAT_CODE_39);
+     formatMap.put("code-93", Barcode.FORMAT_CODE_93);
++    formatMap.put("codabar", Barcode.FORMAT_CODABAR);
+     formatMap.put("data-matrix", Barcode.FORMAT_DATA_MATRIX);
+     formatMap.put("ean-13", Barcode.FORMAT_EAN_13);
+     formatMap.put("ean-8", Barcode.FORMAT_EAN_8);
++    formatMap.put("itf", Barcode.FORMAT_ITF);
+     formatMap.put("upc-a", Barcode.FORMAT_UPC_A);
+     formatMap.put("upc-e", Barcode.FORMAT_UPC_E);
+     formatMap.put("qr", Barcode.FORMAT_QR_CODE);
++    formatMap.put("pdf-417", Barcode.FORMAT_PDF417);
++    formatMap.put("aztec", Barcode.FORMAT_AZTEC);
+   }
+ 
+   @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..367e115 100644
+index 54ea5ab..650005b 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-@@ -1,6 +1,15 @@
- package com.visioncameracodescanner;
- 
-+import android.graphics.Bitmap;
-+import android.graphics.BitmapFactory;
-+import android.graphics.Canvas;
-+import android.graphics.ColorMatrix;
-+import android.graphics.ColorMatrixColorFilter;
- import android.graphics.ImageFormat;
-+import android.graphics.Matrix;
-+import android.graphics.Paint;
-+import android.graphics.Rect;
-+import android.graphics.YuvImage;
- import android.media.Image;
- import android.util.Log;
- import com.google.android.gms.tasks.Tasks;
-@@ -14,6 +23,8 @@ import com.mrousavy.camera.frameprocessors.Frame;
+@@ -13,8 +13,10 @@ import com.mrousavy.camera.core.FrameInvalidError;
+ import com.mrousavy.camera.frameprocessors.Frame;
  import com.mrousavy.camera.frameprocessors.FrameProcessorPlugin;
  import com.mrousavy.camera.frameprocessors.VisionCameraProxy;
- import com.mrousavy.camera.core.types.Orientation;
-+import java.io.ByteArrayOutputStream;
+-import com.mrousavy.camera.core.types.Orientation;
 +import java.nio.ByteBuffer;
  import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.Collection;
  import java.util.HashSet;
  import java.util.List;
-@@ -65,6 +76,16 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
-       List<Barcode> barcodeList = Tasks.await(scanner.process(inputImage));
-       barcodeList.forEach(
-           barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
+ import java.util.Map;
+@@ -29,6 +31,10 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+   private static BarcodeScanner barcodeScanner = null;
+   private static int previousBarcodeScannerFormatsBitmap = -1;
+ 
++  // 반전 재시도는 N번째 실패 프레임마다만 한다. 매 프레임 두 번 돌리면 실효 fps가 반으로 준다
++  private static final int INVERT_RETRY_EVERY_N_FAILED_FRAMES = 3;
++  private int failedFrameCount = 0;
 +
-+      // 결과가 없으면 반전 이미지로 재시도 (어두운 배경 + 밝은 코드)
-+      if (barcodes.isEmpty()) {
-+        InputImage invertedImage = getInvertedInputImage(frame);
-+        if (invertedImage != null) {
-+          List<Barcode> invertedList = Tasks.await(scanner.process(invertedImage));
-+          invertedList.forEach(
-+              barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
-+        }
-+      }
-     } catch (ExecutionException | InterruptedException e) {
-       Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
-       return null;
-@@ -77,13 +98,121 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
-   private InputImage getInputImageFromFrame(@NotNull Frame frame) {
+   CodeScannerProcessorPlugin(@NotNull VisionCameraProxy proxy,
+                              @Nullable Map<String, Object> options) {
+     Log.d(TAG,
+@@ -40,23 +46,25 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+   public Object callback(@NotNull Frame frame,
+                          @Nullable Map<String, Object> params) {
+ 
++    Image mediaImage;
++    int rotationDegrees;
      try {
-       Image mediaImage = frame.getImage();
--      return InputImage.fromMediaImage(mediaImage, 0);
-+      Orientation orientation = frame.getOrientation();
-+      int rotationDegrees = orientationToDegrees(orientation);
-+
-+      if (rotationDegrees == 0) {
-+        return InputImage.fromMediaImage(mediaImage, 0);
-+      }
-+
-+      Bitmap bitmap = yuvToBitmap(mediaImage);
-+      if (bitmap == null) {
-+        return InputImage.fromMediaImage(mediaImage, rotationDegrees);
-+      }
-+
-+      Matrix matrix = new Matrix();
-+      matrix.postRotate(rotationDegrees);
-+      Bitmap rotated = Bitmap.createBitmap(
-+          bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-+      if (rotated != bitmap) {
-+        bitmap.recycle();
-+      }
-+
-+      return InputImage.fromBitmap(rotated, 0);
+-      Image mediaImage = frame.getImage();
++      mediaImage = frame.getImage();
+ 
+       if (mediaImage.getFormat() != ImageFormat.YUV_420_888) {
+         Log.e(TAG, "Unsupported image format: " + mediaImage.getFormat() +
+                 ". Only YUV_420_888 is supported for now.");
+         return null;
+       }
++      // 이미지를 똑바로 세우기 위해 돌려야 하는 각도. ML Kit가 직접 처리하므로 비트맵 회전이 필요 없다
++      rotationDegrees = frame.getImageProxy().getImageInfo().getRotationDegrees();
      } catch (FrameInvalidError e) {
        Log.e(TAG, "Received an invalid frame.");
        return null;
      }
+ 
+-    InputImage inputImage = getInputImageFromFrame(frame);
+-    if (inputImage == null) {
+-      return null;
+-    }
++    // 복사·JPEG 인코딩 없이 YUV 버퍼를 그대로 넘긴다
++    InputImage inputImage = InputImage.fromMediaImage(mediaImage, rotationDegrees);
+ 
+     BarcodeScanner scanner = getBarcodeScannerClient(params);
+ 
+@@ -65,6 +73,21 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+       List<Barcode> barcodeList = Tasks.await(scanner.process(inputImage));
+       barcodeList.forEach(
+           barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
++
++      if (barcodes.isEmpty()) {
++        failedFrameCount++;
++        // 어두운 배경 + 밝은 코드용 반전 재시도. Y 평면만 뒤집은 NV21로 만들어 비용을 줄인다
++        if (failedFrameCount % INVERT_RETRY_EVERY_N_FAILED_FRAMES == 0) {
++          InputImage invertedImage = getInvertedInputImage(mediaImage, rotationDegrees);
++          if (invertedImage != null) {
++            List<Barcode> invertedList = Tasks.await(scanner.process(invertedImage));
++            invertedList.forEach(
++                barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
++          }
++        }
++      } else {
++        failedFrameCount = 0;
++      }
+     } catch (ExecutionException | InterruptedException e) {
+       Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
+       return null;
+@@ -73,13 +96,37 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+     return barcodes;
    }
  
-+  private int orientationToDegrees(Orientation orientation) {
-+    if (orientation == Orientation.LANDSCAPE_RIGHT) return 90;
-+    if (orientation == Orientation.PORTRAIT_UPSIDE_DOWN) return 180;
-+    if (orientation == Orientation.LANDSCAPE_LEFT) return 270;
-+    return 0;
-+  }
-+
-+  private Bitmap yuvToBitmap(Image image) {
-+    try {
++  /**
++   * 밝기(Y)만 반전한 NV21 이미지. 색차(UV)는 중립값으로 채워 회색조로 만든다.
++   * 회전값을 같이 넘기므로 일반 경로와 같은 좌표계로 결과가 나온다.
++   */
+   @Nullable
+-  private InputImage getInputImageFromFrame(@NotNull Frame frame) {
++  private InputImage getInvertedInputImage(@NotNull Image image, int rotationDegrees) {
+     try {
+-      Image mediaImage = frame.getImage();
+-      return InputImage.fromMediaImage(mediaImage, 0);
+-    } catch (FrameInvalidError e) {
+-      Log.e(TAG, "Received an invalid frame.");
 +      int width = image.getWidth();
 +      int height = image.getHeight();
++      Image.Plane yPlane = image.getPlanes()[0];
++      ByteBuffer yBuffer = yPlane.getBuffer();
++      int yRowStride = yPlane.getRowStride();
 +
-+      Image.Plane[] planes = image.getPlanes();
-+      ByteBuffer yBuffer = planes[0].getBuffer();
-+      ByteBuffer uBuffer = planes[1].getBuffer();
-+      ByteBuffer vBuffer = planes[2].getBuffer();
++      int ySize = width * height;
++      byte[] nv21 = new byte[ySize + ySize / 2];
++      byte[] rowBuf = new byte[width];
 +
-+      int yRowStride = planes[0].getRowStride();
-+      int uvRowStride = planes[1].getRowStride();
-+      int uvPixelStride = planes[1].getPixelStride();
-+
-+      byte[] nv21 = new byte[width * height * 3 / 2];
-+      int pos = 0;
-+
-+      if (yRowStride == width) {
-+        yBuffer.position(0);
-+        yBuffer.get(nv21, 0, width * height);
-+        pos = width * height;
-+      } else {
-+        for (int row = 0; row < height; row++) {
-+          yBuffer.position(row * yRowStride);
-+          yBuffer.get(nv21, pos, width);
-+          pos += width;
++      for (int row = 0; row < height; row++) {
++        yBuffer.position(row * yRowStride);
++        yBuffer.get(rowBuf, 0, width);
++        int base = row * width;
++        for (int col = 0; col < width; col++) {
++          nv21[base + col] = (byte) (255 - (rowBuf[col] & 0xFF));
 +        }
 +      }
++      Arrays.fill(nv21, ySize, nv21.length, (byte) 128);
 +
-+      int uvHeight = height / 2;
-+      int uvWidth = width / 2;
-+      for (int row = 0; row < uvHeight; row++) {
-+        for (int col = 0; col < uvWidth; col++) {
-+          int bufferIndex = row * uvRowStride + col * uvPixelStride;
-+          nv21[pos++] = vBuffer.get(bufferIndex);
-+          nv21[pos++] = uBuffer.get(bufferIndex);
-+        }
-+      }
-+
-+      YuvImage yuvImage = new YuvImage(nv21, ImageFormat.NV21, width, height, null);
-+      ByteArrayOutputStream out = new ByteArrayOutputStream();
-+      yuvImage.compressToJpeg(new Rect(0, 0, width, height), 85, out);
-+      byte[] jpegBytes = out.toByteArray();
-+      return BitmapFactory.decodeByteArray(jpegBytes, 0, jpegBytes.length);
-+    } catch (Exception e) {
-+      Log.e(TAG, "Failed to convert YUV to Bitmap: " + e.getMessage());
-+      return null;
-+    }
-+  }
-+
-+  /**
-+   * 반전 이미지 생성 (어두운 배경 + 밝은 바코드/QR코드용)
-+   */
-+  @Nullable
-+  private InputImage getInvertedInputImage(@NotNull Frame frame) {
-+    try {
-+      Image mediaImage = frame.getImage();
-+      Bitmap bitmap = yuvToBitmap(mediaImage);
-+      if (bitmap == null) return null;
-+
-+      // 색상 반전
-+      Bitmap inverted = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
-+      Canvas canvas = new Canvas(inverted);
-+      Paint paint = new Paint();
-+      ColorMatrix colorMatrix = new ColorMatrix(new float[]{
-+          -1, 0, 0, 0, 255,
-+          0, -1, 0, 0, 255,
-+          0, 0, -1, 0, 255,
-+          0, 0, 0, 1, 0
-+      });
-+      paint.setColorFilter(new ColorMatrixColorFilter(colorMatrix));
-+      canvas.drawBitmap(bitmap, 0, 0, paint);
-+      bitmap.recycle();
-+
-+      return InputImage.fromBitmap(inverted, 0);
++      return InputImage.fromByteArray(nv21, width, height, rotationDegrees,
++                                      InputImage.IMAGE_FORMAT_NV21);
 +    } catch (Exception e) {
 +      Log.e(TAG, "Failed to create inverted image: " + e.getMessage());
-+      return null;
+       return null;
+     }
+   }
+@@ -105,15 +152,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+       return Barcode.FORMAT_ALL_FORMATS;
+     Set<Integer> barcodeFormats = new HashSet<>();
+     Object barcodeTypesObj = params.get("barcodeTypes");
++    // JS 배열은 VisionCamera가 List로 넘긴다. Map만 검사하면 항상 전체 포맷으로 돌아간다
++    Collection<?> barcodeTypes = null;
+     if (barcodeTypesObj instanceof Map) {
+-      Map<String, String> barcodeTypes = (Map<String, String>)barcodeTypesObj;
+-      barcodeTypes.values().forEach(type -> {
++      barcodeTypes = ((Map<?, ?>) barcodeTypesObj).values();
++    } else if (barcodeTypesObj instanceof Collection) {
++      barcodeTypes = (Collection<?>) barcodeTypesObj;
 +    }
-+  }
-+
-   private synchronized BarcodeScanner
-   getBarcodeScannerClient(@Nullable Map<String, Object> params) {
-     int formatsBitmap = getFormatsBitmapFromParams(params);
++    if (barcodeTypes != null) {
++      for (Object typeObj : barcodeTypes) {
++        String type = String.valueOf(typeObj);
+         Integer format = BarcodeFormatMapper.getFormat(type);
+         if (format != null)
+           barcodeFormats.add(format);
+         else
+           Log.e(TAG, "Unsupported barcode type: " + type);
+-      });
++      }
+     }
+     return barcodeFormats.isEmpty() ? Barcode.FORMAT_ALL_FORMATS
+                                     : barcodeFormatsToBitmap(barcodeFormats);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 index 28f1634..cc2f372 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m

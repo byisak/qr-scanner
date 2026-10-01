@@ -55,9 +55,15 @@ export default function AppLockScreen() {
 
   // 생체인증 실행
   const handleBiometricAuth = async () => {
-    const biometricLabel = biometricType === 'FaceID' ? 'Face ID' : 'Touch ID';
+    // Face ID / Touch ID는 Apple 상표라 Android에서는 일반 명칭을 쓴다
+    let biometricLabel;
+    if (biometricType === 'FaceID') {
+      biometricLabel = Platform.OS === 'ios' ? 'Face ID' : (t('security.faceRecognition') || '얼굴 인식');
+    } else {
+      biometricLabel = Platform.OS === 'ios' ? 'Touch ID' : (t('security.fingerprint') || '지문');
+    }
     const result = await authenticateWithBiometric(
-      t('security.biometricPrompt') || `${biometricLabel}로 잠금 해제`
+      t('security.biometricPrompt', { type: biometricLabel }) || `${biometricLabel}로 잠금 해제`
     );
 
     if (result.success) {

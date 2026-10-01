@@ -233,10 +233,13 @@ class WebSocketClient {
     }
   }
 
-  // 이벤트 리스너 추가
+  // 이벤트 리스너 추가 (중복 방지)
   on(event, callback) {
     if (this.listeners[event]) {
-      this.listeners[event].push(callback);
+      // 동일 함수 중복 등록 방지
+      if (!this.listeners[event].includes(callback)) {
+        this.listeners[event].push(callback);
+      }
     }
   }
 

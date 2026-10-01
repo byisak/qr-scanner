@@ -83,12 +83,66 @@ const saveSyncHashes = async (hashes) => {
   }
 };
 
+// iCloud 동기화 허용 키 패턴 (allowlist)
+const SYNC_ALLOWED_PREFIXES = [
+  'scanHistory',
+  'scanGroups',
+  'selectedBarcodes',
+  'selectedGroupId',
+  'selectedCamera',
+  'hapticEnabled',
+  'scanSoundEnabled',
+  'photoSaveEnabled',
+  'batchScanEnabled',
+  'batchShowScanCounter',
+  'batchDuplicateDetection',
+  'batchDuplicateAction',
+  'continuousScanEnabled',
+  'continuousShowScanCounter',
+  'continuousDuplicateDetection',
+  'continuousDuplicateAction',
+  'scanResultMode',
+  'multiCodeModeEnabled',
+  'multiCodeShowValues',
+  'resultWindowAutoOpen',
+  'urlOpenMode',
+  'lotteryScanEnabled',
+  'lotteryResults',
+  'lotteryWinningNotificationEnabled',
+  'lottoNotificationHour',
+  'lottoNotificationMinute',
+  'pensionNotificationHour',
+  'pensionNotificationMinute',
+  'dontAskLotteryPrompt',
+  'productAutoSearch',
+  'productSearchCountry',
+  'productSearchSites',
+  'productSearchSitesCountry',
+  'favoriteBarcodesBcid',
+  'hiddenDefaultBarcodes',
+  'barcodeTypeOrder',
+  'qrTypeOrder',
+  'selectedLanguage',
+  'selectedTheme',
+  'photoQuality',
+  'qrStyles',
+  'customQRPresets',
+  'generatorHistory',
+  'bannerSettings',
+  'unlockedFeatures',
+  'adWatchCounts',
+];
+
+const isSyncAllowed = (key) => {
+  return SYNC_ALLOWED_PREFIXES.some(prefix => key.startsWith(prefix));
+};
+
 // 백업 데이터 생성 (증분 동기화 - 변경된 키만 포함)
 const createBackupData = async (forceFullSync = false) => {
   try {
     const allKeys = await AsyncStorage.getAllKeys();
-    // 동기화 해시 키는 제외
-    const keysToSync = allKeys.filter(k => k !== SYNC_HASH_KEY);
+    // 동기화 해시 키 제외 + allowlist 필터링
+    const keysToSync = allKeys.filter(k => k !== SYNC_HASH_KEY && isSyncAllowed(k));
     const allData = await AsyncStorage.multiGet(keysToSync);
 
     const backupData = {

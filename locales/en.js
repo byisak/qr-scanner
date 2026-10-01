@@ -2,6 +2,8 @@
 export default {
   // Common
   common: {
+    undo: 'Undo',
+    saving: 'Saving...',
     back: 'Back',
     close: 'Close',
     save: 'Save',
@@ -46,6 +48,8 @@ export default {
 
   // Auth
   auth: {
+    sessionExpired: 'Session expired',
+    sessionExpiredMessage: 'Your login has expired. Please restart the app or sign in again.',
     // Login/Signup button
     loginSignup: 'Login/Sign Up',
     loginPrompt: 'Login to use realtime server sync',
@@ -156,6 +160,21 @@ export default {
 
   // Scanner screen
   scanner: {
+    exposureUp: 'Brighter',
+    exposureReset: 'Reset exposure',
+    exposureDown: 'Darker',
+    clearBatchHint: 'Deletes all scanned items',
+    finishBatchHint: 'Finishes scanning and saves',
+    viewDetailsHint: 'Opens the result details',
+    openSettings: 'Open Settings',
+    retryPermission: 'Try again',
+    lotteryPromptTitle: 'A lottery ticket was scanned',
+    lotteryPromptMessage: 'Enable lottery recognition in settings so tickets are grouped automatically?',
+    lotteryPromptActivate: 'Enable',
+    lotteryPromptDontAsk: 'Don\'t ask again',
+    lotteryActivatedTitle: 'Done',
+    lotteryActivatedMessage: 'Lottery recognition is enabled.',
+    lotterySaveFailed: 'Failed to save the lottery ticket.',
     title: 'Scan',
     scanGuideQr: 'Align the QR code within the square',
     scanGuideBarcode: 'Align the barcode within the square',
@@ -230,6 +249,17 @@ export default {
 
   // History screen
   history: {
+    itemDeleted: 'Record deleted',
+    loadError: 'Failed to load history.',
+    lottoGroup: 'Lotto 6/45',
+    pensionGroup: 'Pension Lottery 720+',
+    lottoBadge: 'Lotto',
+    pensionBadge: 'Pension',
+    roundLabel: 'Round {{round}}',
+    gamesLabel: '{{count}} games',
+    checked: 'Checked',
+    unchecked: 'Unchecked',
+    pending: 'Pending',
     title: 'History',
     searchPlaceholder: 'Search code or URL',
     clearSearch: 'Clear search',
@@ -246,6 +276,8 @@ export default {
 
   // Result screen
   result: {
+    noData: 'No data',
+    info: 'Info',
     title: 'Scan Result',
     generatedTitle: 'Generated Result',
     scannedData: 'Scanned Data',
@@ -267,6 +299,7 @@ export default {
     editSuccess: 'Saved',
     editSuccessMessage: 'Scan result has been updated.',
     error: 'Error',
+    openUrlFailed: 'Could not open the URL.',
     errorHistoryOnly: 'Can only edit from history.',
     errorHistoryDeleteOnly: 'Can only delete from history.',
     errorEmptyValue: 'Please enter a value.',
@@ -304,6 +337,8 @@ export default {
 
   // Settings screen
   settings: {
+    loadError: 'Failed to load settings.',
+    syncing: 'Syncing with server...',
     title: 'Settings',
     // Section titles
     notification: 'Notification',
@@ -797,6 +832,8 @@ export default {
 
   // QR code generator screen
   generator: {
+    shareError: 'Failed to share.',
+    logoPickError: 'An error occurred while picking the image.',
     title: 'Generate',
     subtitle: 'Create various types of codes',
     formTitle: 'Enter Information',
@@ -1420,6 +1457,7 @@ export default {
 
   // Feature unlock with ads
   proFeatures: {
+    barcodeTypesDesc: 'Code 128 is free',
     title: 'Unlock Features',
     description: 'Watch ads to unlock features for free',
     advancedFeatures: 'Advanced Features',
@@ -1525,6 +1563,7 @@ export default {
     },
     lotteryTypes: {
       lotto645: 'Lotto 6/45 (Donghang Lottery)',
+      pension720: 'Pension Lottery 720+',
       powerballMega: 'Powerball, Mega Millions',
       ukLottoEuro: 'UK Lotto, EuroMillions',
       lotto649Max: 'Lotto 6/49, Lotto Max',
@@ -1534,10 +1573,16 @@ export default {
       toto4d: 'Toto, 4D',
       lottoPowerball: 'LOTTO, PowerBall',
     },
+    alreadyScanned: 'Already Scanned',
+    alreadyScannedMessage: '{{type}} Round {{round}} has already been saved.\nWould you like to check the results?',
+    checkResult: 'Check Result',
+    cancel: 'Cancel',
   },
 
   // Multi-code results screen
   multiCodeResults: {
+    codeSaved: 'Saved',
+    codesSaved: ' codes saved',
     title: 'Detected Codes',
     noResults: 'No codes detected',
     save: 'Save',
@@ -1786,7 +1831,9 @@ export default {
     useBiometricMessage: 'Would you like to use Face ID for app lock?',
     biometricNotAvailable: 'Biometric Unavailable',
     biometricNotAvailableDesc: 'Biometric authentication is not available on this device. Please set up Face ID or fingerprint in device settings.',
-    biometricPrompt: 'Unlock with Face ID',
+    biometricPrompt: 'Unlock with {{type}}',
+    fingerprint: 'Fingerprint',
+    faceRecognition: 'Face recognition',
     toggleBiometricError: 'Failed to change setting.',
     biometric: 'Biometric',
     // Info

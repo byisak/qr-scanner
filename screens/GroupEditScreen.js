@@ -116,11 +116,19 @@ export default function GroupEditScreen() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          const groupToDelete = groups.find(g => g.id === groupId);
+          // AsyncStorage에서 최신 데이터를 직접 읽어서 삭제 (stale closure 방지)
+          const freshGroupsData = await AsyncStorage.getItem('scanGroups');
+          const freshGroups = freshGroupsData ? JSON.parse(freshGroupsData) : [];
+          const groupToDelete = freshGroups.find(g => g.id === groupId);
           const isCloudSyncGroup = groupToDelete?.isCloudSync;
 
-          const updatedGroups = groups.filter(g => g.id !== groupId);
-          setGroups(updatedGroups);
+          const updatedGroups = freshGroups.filter(g => g.id !== groupId);
+          setGroups(updatedGroups.map(g => {
+            if (g.id === DEFAULT_GROUP_ID) {
+              return { ...g, name: t('groupEdit.defaultGroup') };
+            }
+            return g;
+          }));
           await saveGroups(updatedGroups);
 
           // 히스토리에서도 삭제

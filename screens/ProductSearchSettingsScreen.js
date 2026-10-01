@@ -470,7 +470,7 @@ export default function ProductSearchSettingsScreen() {
       </ScrollView>
 
       {/* 국가 선택 모달 */}
-      <Modal visible={showCountryPicker} animationType="slide" transparent>
+      <Modal visible={showCountryPicker} animationType="slide" transparent onRequestClose={() => setShowCountryPicker(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
@@ -506,7 +506,7 @@ export default function ProductSearchSettingsScreen() {
       </Modal>
 
       {/* 사이트 추가 모달 */}
-      <Modal visible={showAddSiteModal} animationType="slide" transparent>
+      <Modal visible={showAddSiteModal} animationType="slide" transparent onRequestClose={() => setShowAddSiteModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>

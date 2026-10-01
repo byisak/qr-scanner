@@ -91,14 +91,19 @@
         "android.permission.CHANGE_WIFI_STATE",
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
-        "com.google.android.gms.permission.AD_ID",
-        "android.permission.RECORD_AUDIO"
+        "com.google.android.gms.permission.AD_ID"
       ],
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
         }
-      }
+      },
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -121,7 +126,7 @@
       [
         "react-native-maps",
         {
-          "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
+          "androidGoogleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
         }
       ],
       [
@@ -176,6 +181,19 @@
         "expo-contacts",
         {
           "contactsPermission": "QR 코드의 연락처 정보를 저장하기 위해 접근이 필요합니다."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "QR 코드와 바코드 이미지를 사진에 저장하기 위해 접근이 필요합니다.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
         }
       ]
     ],

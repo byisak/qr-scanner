@@ -77,10 +77,11 @@ export default function SecuritySettingsScreen() {
 
   // 생체인증 타입에 따른 라벨
   const getBiometricLabel = () => {
+    // Face ID / Touch ID는 Apple 상표라 Android에서는 일반 명칭을 쓴다
     if (biometricType === 'FaceID') {
-      return 'Face ID';
+      return Platform.OS === 'ios' ? 'Face ID' : (t('security.faceRecognition') || '얼굴 인식');
     } else if (biometricType === 'TouchID') {
-      return 'Touch ID';
+      return Platform.OS === 'ios' ? 'Touch ID' : (t('security.fingerprint') || '지문');
     }
     return t('security.biometric') || '생체인증';
   };

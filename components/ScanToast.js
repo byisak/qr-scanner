@@ -192,6 +192,7 @@ export default function ScanToast({
         onPress={handleClose}
         accessibilityLabel={t('common.close')}
         accessibilityRole="button"
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Ionicons name="close" size={16} color={colors.textSecondary} />
       </TouchableOpacity>

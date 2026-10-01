@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -159,7 +160,8 @@ const FEATURE_CATEGORIES = {
   backup: {
     titleKey: 'proFeatures.backupFeatures',
     features: [
-      { id: 'icloudBackup', icon: 'cloud-outline', color: '#007AFF' },
+      // iCloud는 iOS에만 있다. Android에서 보여주면 광고를 보고 해제해도 쓸 곳이 없다
+      ...(Platform.OS === 'ios' ? [{ id: 'icloudBackup', icon: 'cloud-outline', color: '#007AFF' }] : []),
       { id: 'googleDriveBackup', icon: 'logo-google', color: '#4285F4' },
     ],
   },

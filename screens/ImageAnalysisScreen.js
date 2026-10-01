@@ -764,7 +764,7 @@ function ImageAnalysisScreen() {
 
     try {
       // 미디어 라이브러리 권한 요청
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         Alert.alert(t('common.error'), t('imageAnalysis.permissionDenied'));
         return;
@@ -824,7 +824,7 @@ function ImageAnalysisScreen() {
 
     try {
       // 미디어 라이브러리 권한 요청
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         Alert.alert(t('common.error'), t('imageAnalysis.permissionDenied'));
         return;

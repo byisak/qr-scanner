@@ -62,6 +62,7 @@ export const FeatureLockProvider = ({ children }) => {
   const showRewardedAdRef = useRef(null); // 순환 참조 방지용
   const isAdLoadedRef = useRef(false); // 콜백에서 접근용
   const isAdLoadingRef = useRef(false); // 콜백에서 접근용
+  const adRetryCountRef = useRef(0); // 광고 재시도 횟수 (exponential backoff)
   const adUsedRef = useRef(false); // 광고 사용됨 플래그
 
   // 저장된 해제 상태 및 개발 모드 로드
@@ -141,10 +142,10 @@ export const FeatureLockProvider = ({ children }) => {
       const unsubscribeLoaded = rewarded.addAdEventListener(
         RewardedAdEventType.LOADED,
         () => {
-          console.log('Rewarded ad loaded successfully');
           isAdLoadedRef.current = true;
           isAdLoadingRef.current = false;
-          adUsedRef.current = false; // 새 광고는 사용되지 않음
+          adUsedRef.current = false;
+          adRetryCountRef.current = 0; // 성공 시 재시도 카운터 리셋
           setIsAdLoaded(true);
           setIsAdLoading(false);
         }
@@ -196,11 +197,15 @@ export const FeatureLockProvider = ({ children }) => {
           isAdLoadedRef.current = false;
           setIsAdLoading(false);
           setIsAdLoaded(false);
-          // 에러 발생 시 재시도
-          setTimeout(() => {
-            rewardedAdRef.current = null;
-            loadRewardedAd();
-          }, 5000);
+          // 에러 발생 시 exponential backoff으로 재시도 (최대 5회)
+          if (adRetryCountRef.current < 5) {
+            const delay = Math.min(5000 * Math.pow(2, adRetryCountRef.current), 60000);
+            adRetryCountRef.current += 1;
+            setTimeout(() => {
+              rewardedAdRef.current = null;
+              loadRewardedAd();
+            }, delay);
+          }
         }
       );
 

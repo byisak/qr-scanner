@@ -39,8 +39,8 @@ export default function SettingsScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
-  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
-  const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
+  // 노치 없는 SE(inset 20)부터 Dynamic Island(59)까지 대응하도록 insets 기준으로 계산
+  const statusBarHeight = insets.top + (Platform.OS === 'ios' ? 23 : 20);
 
   const [on, setOn] = useState(false);
   const [hapticEnabled, setHapticEnabled] = useState(true);

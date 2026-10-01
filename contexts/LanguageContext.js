@@ -1,5 +1,5 @@
 // contexts/LanguageContext.js - Language context for global state
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { translations } from '../locales';
 import { getFontFamily, getFontStyle } from '../constants/Fonts';
@@ -8,6 +8,21 @@ const LanguageContext = createContext();
 
 const LANGUAGE_STORAGE_KEY = 'selectedLanguage';
 const DEFAULT_LANGUAGE = 'ko';
+// 현재 언어에 키가 없을 때 찾아보는 순서. 키 문자열이 화면에 그대로 보이는 것보다 영어가 낫다
+const FALLBACK_LANGUAGES = ['en', 'ko'];
+
+// 점으로 구분된 키로 번역 객체를 찾는다. 없으면 undefined
+const lookup = (table, key) => {
+  let value = table;
+  for (const k of key.split('.')) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      return undefined;
+    }
+  }
+  return value;
+};
 
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(DEFAULT_LANGUAGE);
@@ -32,7 +47,7 @@ export const LanguageProvider = ({ children }) => {
   };
 
   // 언어 변경
-  const changeLanguage = async (newLanguage) => {
+  const changeLanguage = useCallback(async (newLanguage) => {
     try {
       if (translations[newLanguage]) {
         setLanguage(newLanguage);
@@ -41,46 +56,49 @@ export const LanguageProvider = ({ children }) => {
     } catch (error) {
       console.error('Change language error:', error);
     }
-  };
+  }, []);
 
-  // 번역 함수
-  const t = (key, params = {}) => {
-    const keys = key.split('.');
-    let value = translations[language];
-
-    for (const k of keys) {
-      if (value && typeof value === 'object') {
-        value = value[k];
-      } else {
-        // 키를 찾을 수 없으면 키 자체를 반환
-        return key;
+  // 번역 함수. 현재 언어 → en → ko 순으로 찾고, 어디에도 없으면 키를 돌려준다
+  const t = useCallback((key, params = {}) => {
+    let value = lookup(translations[language], key);
+    if (value === undefined) {
+      for (const fallback of FALLBACK_LANGUAGES) {
+        if (fallback === language) continue;
+        value = lookup(translations[fallback], key);
+        if (value !== undefined) break;
+      }
+      if (__DEV__ && value === undefined) {
+        console.warn(`[i18n] missing key "${key}" in ${language} and fallbacks`);
       }
     }
+
+    if (value === undefined) return key;
 
     // 값이 문자열이면 파라미터 치환 ({{param}} 형식 지원)
     if (typeof value === 'string') {
       return Object.keys(params).reduce((str, param) => {
-        return str.replace(new RegExp(`\\{\\{${param}\\}\\}`, 'g'), params[param]);
+        return str.split(`{{${param}}}`).join(params[param]);
       }, value);
     }
 
     return value || key;
-  };
+  }, [language]);
 
   // Get font family for current language
-  const fonts = getFontFamily(language);
+  const fonts = useMemo(() => getFontFamily(language), [language]);
 
   // Get font style helper
-  const fontStyle = (weight = 'regular') => getFontStyle(language, weight);
+  const fontStyle = useCallback((weight = 'regular') => getFontStyle(language, weight), [language]);
 
-  const value = {
+  // value를 메모하지 않으면 Provider가 렌더될 때마다 모든 화면이 다시 렌더된다
+  const value = useMemo(() => ({
     language,
     changeLanguage,
     t,
     isLoading,
     fonts,
     fontStyle,
-  };
+  }), [language, changeLanguage, t, isLoading, fonts, fontStyle]);
 
   return (
     <LanguageContext.Provider value={value}>

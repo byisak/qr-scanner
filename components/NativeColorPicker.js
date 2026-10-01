@@ -40,7 +40,7 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: colors?.surface || '#fff' }]}>
           {/* Header */}

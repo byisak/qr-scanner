@@ -89,8 +89,8 @@ export default function GeneratorScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
 
-  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
-  const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
+  // 노치 없는 SE(inset 20)부터 Dynamic Island(59)까지 대응하도록 insets 기준으로 계산
+  const statusBarHeight = insets.top + (Platform.OS === 'ios' ? 23 : 20);
 
   // 세그먼트 탭: 'qr' 또는 'barcode'
   const [codeMode, setCodeMode] = useState(params.initialMode || 'qr');
@@ -1222,7 +1222,7 @@ export default function GeneratorScreen() {
     }
 
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         setSaveProgress({ visible: false, progress: 0, message: '' });
         Alert.alert(t('common.error'), 'Permission to access media library is required');
@@ -1387,9 +1387,9 @@ export default function GeneratorScreen() {
     } catch (error) {
       console.error('Error picking logo:', error);
       Alert.alert(
-        '오류',
-        '이미지를 선택하는 중 오류가 발생했습니다.',
-        [{ text: '확인' }]
+        t('common.error'),
+        t('generator.logoPickError'),
+        [{ text: t('common.confirm') }]
       );
     }
   };
@@ -1830,6 +1830,8 @@ export default function GeneratorScreen() {
         contentContainerStyle={s.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardDismissMode="on-drag"
       >
         {/* Header */}
         <View style={s.header}>
@@ -3182,6 +3184,7 @@ export default function GeneratorScreen() {
         visible={saveProgress.visible}
         transparent={true}
         animationType="fade"
+        onRequestClose={() => {}} // 저장 중에는 뒤로가기로 닫지 않는다 (Android 필수 prop)
       >
         <View style={s.progressModalOverlay}>
           <View style={[s.progressModalContent, { backgroundColor: colors.surface }]}>

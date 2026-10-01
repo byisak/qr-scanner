@@ -1,5 +1,5 @@
 // screens/HistoryScreen.js - 그룹별 히스토리 관리
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ScrollView,
   Image,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -39,9 +41,9 @@ export default function HistoryScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
-  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
-  const statusBarHeight = Platform.OS === 'ios' ? 70 : insets.top + 20;
-  const searchMarginTop = Platform.OS === 'ios' ? 50 : insets.top + 10;
+  // 노치 없는 SE(inset 20)부터 Dynamic Island(59)까지 대응하도록 insets 기준으로 계산
+  const statusBarHeight = insets.top + (Platform.OS === 'ios' ? 23 : 20);
+  const searchMarginTop = insets.top + (Platform.OS === 'ios' ? 3 : 10);
 
   const [groups, setGroups] = useState([{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
   const [selectedGroupId, setSelectedGroupId] = useState(DEFAULT_GROUP_ID);
@@ -50,13 +52,8 @@ export default function HistoryScreen() {
   const [filteredList, setFilteredList] = useState([]);
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
-  const [swipeValues, setSwipeValues] = useState({});
-
-  // 스와이프 값 변경 핸들러
-  const onSwipeValueChange = (swipeData) => {
-    const { key, value } = swipeData;
-    setSwipeValues(prev => ({ ...prev, [key]: Math.abs(value) }));
-  };
+  const [isLoading, setIsLoading] = useState(true); // 저장소를 읽는 동안 "기록 없음"이 잠깐 보이는 것 방지
+  const feedback = useFeedback();
 
   // 그룹 데이터 로드
   const loadGroups = async () => {
@@ -112,6 +109,9 @@ export default function HistoryScreen() {
       }
     } catch (error) {
       console.error('Load groups error:', error);
+      Alert.alert(t('common.error'), t('history.loadError'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -123,15 +123,14 @@ export default function HistoryScreen() {
     }, [t])
   );
 
-  // 선택된 그룹의 히스토리 가져오기
-  const getCurrentHistory = () => {
+  // 선택된 그룹의 히스토리 (최신순). 복사본을 정렬해야 state를 제자리에서 바꾸지 않는다
+  const currentHistory = useMemo(() => {
     const history = scanHistory[selectedGroupId] || [];
-    return history.sort((a, b) => b.timestamp - a.timestamp);
-  };
+    return [...history].sort((a, b) => b.timestamp - a.timestamp);
+  }, [scanHistory, selectedGroupId]);
 
   // 검색 필터
   useEffect(() => {
-    const currentHistory = getCurrentHistory();
     if (!query) {
       setFilteredList(currentHistory);
       return;
@@ -142,7 +141,7 @@ export default function HistoryScreen() {
         (i) => (i.code && i.code.toLowerCase().includes(q)) || (i.url && i.url.toLowerCase().includes(q)),
       ),
     );
-  }, [query, scanHistory, selectedGroupId]);
+  }, [query, currentHistory]);
 
   // 그룹 선택
   const selectGroup = async (groupId) => {
@@ -170,55 +169,57 @@ export default function HistoryScreen() {
     ]);
   };
 
-  // 개별 항목 삭제
+  // 개별 항목 삭제. 확인 창 대신 "실행 취소" 토스트로 되돌릴 수 있게 한다
   const deleteHistoryItem = async (item) => {
-    const currentHistory = scanHistory[selectedGroupId] || [];
+    const groupId = selectedGroupId;
+    const currentHistory = scanHistory[groupId] || [];
     const updatedHistory = currentHistory.filter(h => h.timestamp !== item.timestamp);
-    const newScanHistory = { ...scanHistory, [selectedGroupId]: updatedHistory };
+    const newScanHistory = { ...scanHistory, [groupId]: updatedHistory };
     setScanHistory(newScanHistory);
     await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(newScanHistory));
     triggerSync();
+
+    feedback.warning(t('history.itemDeleted'), {
+      actionLabel: t('common.undo'),
+      onAction: async () => {
+        let restored;
+        setScanHistory(prev => {
+          const list = prev[groupId] || [];
+          if (list.some(h => h.timestamp === item.timestamp)) return prev;
+          restored = { ...prev, [groupId]: [...list, item] };
+          return restored;
+        });
+        if (restored) {
+          await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(restored));
+          triggerSync();
+        }
+      },
+    });
   };
 
-  // SwipeListView에서 숨겨진 삭제 버튼 렌더링
+  // 스크린리더로도 삭제할 수 있게 행에 붙이는 접근성 액션
+  const rowAccessibilityActions = [{ name: 'delete', label: t('common.delete') }];
+  const handleRowAccessibilityAction = (item) => (event) => {
+    if (event.nativeEvent.actionName === 'delete') deleteHistoryItem(item);
+  };
+
+  // SwipeListView에서 숨겨진 삭제 버튼 렌더링 (항상 44pt 이상)
   const renderHiddenItem = (data, rowMap) => {
     const item = data.item;
-    const swipeValue = swipeValues[item.timestamp.toString()] || 0;
-
-    // 스와이프 거리에 따라 버튼 크기 계산 (20px에서 시작해서 56px까지)
-    const minSize = 20;
-    const maxSize = 56;
-    // 스와이프 값에 따라 더 빠르게 커지도록
-    const progress = Math.min(1, swipeValue / 80);
-    const buttonSize = minSize + (maxSize - minSize) * progress;
-
-    // 스와이프 거리에 따라 투명도 계산
-    const opacity = Math.min(1, swipeValue / 40);
-
-    // 아이콘 크기도 함께 변화
-    const iconSize = Math.round(14 + (8 * progress));
-
     return (
       <View style={s.rowBack}>
         <TouchableOpacity
-          style={[
-            s.deleteBtn,
-            {
-              width: buttonSize,
-              height: buttonSize,
-              borderRadius: buttonSize / 2,
-              opacity: opacity,
-              transform: [{ scale: 0.9 + (0.1 * progress) }],
-            }
-          ]}
+          style={s.deleteBtn}
           onPress={() => {
             if (rowMap[item.timestamp]) {
               rowMap[item.timestamp].closeRow();
             }
             deleteHistoryItem(item);
           }}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.delete')}
         >
-          <Ionicons name="trash" size={iconSize} color="#fff" />
+          <Ionicons name="trash" size={22} color="#fff" />
         </TouchableOpacity>
       </View>
     );
@@ -292,7 +293,6 @@ export default function HistoryScreen() {
     });
   };
 
-  const currentHistory = getCurrentHistory();
   const currentGroup = groups.find(g => g.id === selectedGroupId);
 
   // 각 그룹의 스캔 개수 계산
@@ -326,7 +326,7 @@ export default function HistoryScreen() {
           accessibilityLabel={t('common.search')}
         />
         {query ? (
-          <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('history.clearSearch')}>
+          <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('history.clearSearch')} accessibilityRole="button" hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="close-circle" size={22} color={colors.textTertiary} />
           </TouchableOpacity>
         ) : null}
@@ -341,6 +341,8 @@ export default function HistoryScreen() {
             return (
               <TouchableOpacity
                 key={group.id}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: isActive }}
                 style={[
                   s.groupTab,
                   { backgroundColor: isActive ? colors.primary : colors.inputBackground },
@@ -356,8 +358,8 @@ export default function HistoryScreen() {
                 )}
                 <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
                   {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') :
-                   group.id === 'lottery-lotto' ? '로또 6/45' :
-                   group.id === 'lottery-pension' ? '연금복권720+' : group.name}
+                   group.id === 'lottery-lotto' ? t('history.lottoGroup') :
+                   group.id === 'lottery-pension' ? t('history.pensionGroup') : group.name}
                 </Text>
                 {scanCount > 0 && (
                   <View style={[s.groupCountBadge, { backgroundColor: isActive ? '#fff' : colors.primary }, isActive && s.groupCountBadgeActive]}>
@@ -380,8 +382,8 @@ export default function HistoryScreen() {
       <View style={s.header}>
         <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
           {currentGroup?.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') :
-           currentGroup?.id === 'lottery-lotto' ? '로또 6/45' :
-           currentGroup?.id === 'lottery-pension' ? '연금복권720+' : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
+           currentGroup?.id === 'lottery-lotto' ? t('history.lottoGroup') :
+           currentGroup?.id === 'lottery-pension' ? t('history.pensionGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
           <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
@@ -391,7 +393,11 @@ export default function HistoryScreen() {
       </View>
 
       {/* 히스토리 목록 */}
-      {filteredList.length === 0 ? (
+      {isLoading && filteredList.length === 0 ? (
+        <View style={s.empty}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : filteredList.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="file-tray-outline" size={64} color={colors.borderLight} />
           <Text style={[s.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
@@ -399,7 +405,7 @@ export default function HistoryScreen() {
       ) : (
         <SwipeListView
           data={filteredList}
-          keyExtractor={(item, index) => `${item.timestamp}_${item.code || ''}_${index}`}
+          keyExtractor={(item) => `${item.timestamp}_${item.code || ''}`}
           renderItem={({ item }) => {
             const hasPhoto = item.photos && item.photos.length > 0;
             const hasThumbnail = item.thumbnail && !imageErrors[item.timestamp]; // 생성 코드 썸네일
@@ -421,8 +427,10 @@ export default function HistoryScreen() {
                   style={[s.item, { backgroundColor: colors.surface }]}
                   onPress={() => handleItemPress(item)}
                   activeOpacity={0.7}
-                  accessibilityLabel={`${lotteryInfo.typeName} ${lotteryInfo.round}회`}
+                  accessibilityLabel={`${lotteryInfo.typeName} ${t('history.roundLabel', { round: lotteryInfo.round })}`}
                   accessibilityRole="button"
+                  accessibilityActions={rowAccessibilityActions}
+                  onAccessibilityAction={handleRowAccessibilityAction(item)}
                 >
                   <View style={s.itemContent}>
                     {/* 복권 아이콘 (복주머니만) */}
@@ -432,7 +440,7 @@ export default function HistoryScreen() {
                     <View style={[s.itemInfo, { marginLeft: 12 }]}>
                       {/* 1줄: 복권 종류 및 회차 */}
                       <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1}>
-                        {lotteryInfo.typeName} {lotteryInfo.round}회
+                        {lotteryInfo.typeName} {t('history.roundLabel', { round: lotteryInfo.round })}
                         {!isLotto && lotteryInfo.displayNumber && ` (${lotteryInfo.displayNumber})`}
                       </Text>
 
@@ -441,7 +449,7 @@ export default function HistoryScreen() {
                         {/* 복권 타입 배지 */}
                         <View style={[s.badge, { backgroundColor: typeColor + '15' }]}>
                           <Text style={[s.badgeText, { color: typeColor }]}>
-                            {isLotto ? '로또' : '연금복권'}
+                            {isLotto ? t('history.lottoBadge') : t('history.pensionBadge')}
                           </Text>
                         </View>
 
@@ -449,7 +457,7 @@ export default function HistoryScreen() {
                         {isLotto && lotteryInfo.gameCount && (
                           <View style={[s.badge, { backgroundColor: colors.primary + '15' }]}>
                             <Text style={[s.badgeText, { color: colors.primary }]}>
-                              {lotteryInfo.gameCount}게임
+                              {t('history.gamesLabel', { count: lotteryInfo.gameCount })}
                             </Text>
                           </View>
                         )}
@@ -462,7 +470,7 @@ export default function HistoryScreen() {
                             return (
                               <View style={[s.badge, { backgroundColor: '#34C759' + '15' }]}>
                                 <Ionicons name="checkmark-circle" size={11} color="#34C759" />
-                                <Text style={[s.badgeText, { color: '#34C759' }]}>확인완료</Text>
+                                <Text style={[s.badgeText, { color: '#34C759' }]}>{t('history.checked')}</Text>
                               </View>
                             );
                           } else if (drawCompleted) {
@@ -470,7 +478,7 @@ export default function HistoryScreen() {
                             return (
                               <View style={[s.badge, { backgroundColor: '#FF3B30' + '15' }]}>
                                 <Ionicons name="alert-circle" size={11} color="#FF3B30" />
-                                <Text style={[s.badgeText, { color: '#FF3B30' }]}>미확인</Text>
+                                <Text style={[s.badgeText, { color: '#FF3B30' }]}>{t('history.unchecked')}</Text>
                               </View>
                             );
                           } else {
@@ -478,7 +486,7 @@ export default function HistoryScreen() {
                             return (
                               <View style={[s.badge, { backgroundColor: '#FF9500' + '15' }]}>
                                 <Ionicons name="time-outline" size={11} color="#FF9500" />
-                                <Text style={[s.badgeText, { color: '#FF9500' }]}>대기중</Text>
+                                <Text style={[s.badgeText, { color: '#FF9500' }]}>{t('history.pending')}</Text>
                               </View>
                             );
                           }
@@ -531,6 +539,8 @@ export default function HistoryScreen() {
                 activeOpacity={0.7}
                 accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
                 accessibilityRole="button"
+                accessibilityActions={rowAccessibilityActions}
+                onAccessibilityAction={handleRowAccessibilityAction(item)}
               >
                 <View style={s.itemContent}>
                   {/* 생성 코드: QR은 썸네일, 바코드는 아이콘 */}
@@ -656,8 +666,7 @@ export default function HistoryScreen() {
           closeOnRowPress
           closeOnRowOpen
           closeOnScroll
-          onSwipeValueChange={onSwipeValueChange}
-          useNativeDriver={false}
+          useNativeDriver={true}
           contentContainerStyle={s.listContent}
         />
       )}
@@ -911,6 +920,9 @@ const s = StyleSheet.create({
     marginVertical: 6,
   },
   deleteBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#FF3B30',
     justifyContent: 'center',
     alignItems: 'center',

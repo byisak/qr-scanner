@@ -15,11 +15,30 @@ Notifications.setNotificationHandler({
 
 const LOTTO_NOTIFICATION_KEY = 'lottoNotificationId';
 const PENSION_NOTIFICATION_KEY = 'pensionNotificationId';
+const ANDROID_CHANNEL_ID = 'lottery';
+
+/**
+ * Android 알림 채널 생성. Android 8+는 채널이 없으면 알림이 안 뜨고,
+ * Android 13+는 채널을 먼저 만들어야 권한 팝업이 뜬다
+ */
+async function ensureAndroidChannel() {
+  if (Platform.OS !== 'android') return;
+  try {
+    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+      name: '복권 당첨 확인',
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+    });
+  } catch (error) {
+    console.error('Notification channel error:', error);
+  }
+}
 
 /**
  * 알림 권한 요청
  */
 export async function requestNotificationPermission() {
+  await ensureAndroidChannel();
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
@@ -232,6 +251,7 @@ export async function scheduleLottoNotification() {
       trigger: {
         type: 'date',
         date: triggerDate,
+        channelId: ANDROID_CHANNEL_ID,
       },
     });
 
@@ -290,6 +310,7 @@ export async function schedulePensionNotification() {
       trigger: {
         type: 'date',
         date: triggerDate,
+        channelId: ANDROID_CHANNEL_ID,
       },
     });
 
@@ -378,14 +399,21 @@ export async function updateLotteryNotificationOnCheck() {
  * 알림 리스너 설정
  */
 export function setupNotificationListeners(navigation) {
-  // 알림 클릭 시 처리
-  const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-    const data = response.notification.request.content.data;
+  const handleResponse = (response) => {
+    const data = response?.notification?.request?.content?.data;
     if (data?.type === 'lottery_check') {
       // 복권 히스토리로 이동
       navigation?.navigate?.('/(tabs)/history');
     }
-  });
+  };
+
+  // 앱이 떠 있을 때 알림 탭
+  const subscription = Notifications.addNotificationResponseReceivedListener(handleResponse);
+
+  // 알림을 탭해서 앱이 켜진 경우(콜드 스타트)는 리스너가 못 받으므로 따로 확인
+  Notifications.getLastNotificationResponseAsync()
+    .then(response => { if (response) handleResponse(response); })
+    .catch(() => {});
 
   return () => subscription.remove();
 }

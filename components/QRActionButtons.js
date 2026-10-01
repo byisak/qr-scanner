@@ -1,6 +1,6 @@
 // components/QRActionButtons.js - QR 타입별 액션 버튼 컴포넌트
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert, Platform, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Calendar from 'expo-calendar';
@@ -27,16 +27,13 @@ export default function QRActionButtons({
     const phoneNumber = data.phoneNumber || (data.phones && data.phones[0]);
     if (!phoneNumber) return;
 
+    // Android 11+에서는 <queries>에 tel 스킴이 없으면 canOpenURL이 false를 돌려주므로 바로 연다
     const url = `tel:${phoneNumber}`;
     try {
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert(t('result.error') || '오류', t('qrActions.cannotCall') || '전화를 걸 수 없습니다.');
-      }
+      await Linking.openURL(url);
     } catch (error) {
       console.error('Call error:', error);
+      Alert.alert(t('result.error') || '오류', t('qrActions.cannotCall') || '전화를 걸 수 없습니다.');
     }
   };
 
@@ -187,7 +184,11 @@ export default function QRActionButtons({
     try {
       // Android에서 위치 권한 필요
       if (Platform.OS === 'android') {
-        const granted = await WifiManager.requestPermissions();
+        // react-native-wifi-reborn에는 requestPermissions가 없다. 위치 권한은 RN API로 직접 요청한다
+        const result = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        const granted = result === PermissionsAndroid.RESULTS.GRANTED;
         if (!granted) {
           Alert.alert(
             t('result.permissionDenied') || '권한 거부',
@@ -357,7 +358,7 @@ export default function QRActionButtons({
       }
 
       if (!defaultCalendar) {
-        // 캘린더가 없으면 새로 생성 (iOS)
+        // 캘린더가 없으면 새로 생성
         if (Platform.OS === 'ios') {
           const defaultCalendarSource = calendars.find(cal => cal.source?.isLocalAccount)?.source;
           if (defaultCalendarSource) {
@@ -373,6 +374,18 @@ export default function QRActionButtons({
             });
             defaultCalendar = { id: newCalendarId };
           }
+        } else {
+          // Android: 계정 캘린더가 없는 기기(구글 계정 미로그인 등)용 로컬 캘린더
+          const newCalendarId = await Calendar.createCalendarAsync({
+            title: 'QR Scanner Events',
+            color: '#007AFF',
+            entityType: Calendar.EntityTypes.EVENT,
+            source: { isLocalAccount: true, name: 'QR Scanner', type: Calendar.SourceType.LOCAL },
+            name: 'qrScannerCalendar',
+            ownerAccount: 'personal',
+            accessLevel: Calendar.CalendarAccessLevel.OWNER,
+          });
+          defaultCalendar = { id: newCalendarId };
         }
       }
 

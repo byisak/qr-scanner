@@ -562,8 +562,12 @@ export default function RealtimeSyncSettingsScreen() {
         name: sessionName,
         isPublic: newSessionIsPublic,
         hasPassword: !!newSessionPassword,
-        password: newSessionPassword || null,  // 비밀번호 원본 저장
       };
+
+      // 비밀번호는 SecureStore에 별도 저장
+      if (newSessionPassword) {
+        await SecureStore.setItemAsync(`session_pw_${newSessionId}`, newSessionPassword);
+      }
 
       setSessionUrls(prev => [newSessionUrl, ...prev]);
 
@@ -844,11 +848,18 @@ export default function RealtimeSyncSettingsScreen() {
   };
 
   // 세션 설정 모달 열기 (이름 + 비밀번호 + 공개/비공개 토글)
-  const handleOpenSecurityModal = (sessionId) => {
+  const handleOpenSecurityModal = async (sessionId) => {
     setSelectedSessionId(sessionId);
     const session = sessionUrls.find(s => s.id === sessionId);
     setSelectedSessionName(session?.name || '');
-    setPasswordInput(session?.password || '');
+    // 비밀번호는 세션 객체가 아니라 SecureStore에 있다. 빈칸으로 열면 저장 시 null이 서버로 가서 비밀번호가 풀린다
+    let savedPassword = '';
+    try {
+      savedPassword = (await SecureStore.getItemAsync(`session_pw_${sessionId}`)) || '';
+    } catch (error) {
+      console.error('세션 비밀번호 불러오기 실패:', error);
+    }
+    setPasswordInput(savedPassword);
     setSelectedIsPublic(session?.isPublic !== false);
     setPasswordModalVisible(true);
   };
@@ -902,19 +913,25 @@ export default function RealtimeSyncSettingsScreen() {
         console.error('❌ 서버 세션 설정 저장 실패:', error.message, error);
       }
 
-      // 로컬 상태 업데이트 (이름 + 비밀번호 원본도 저장)
+      // 로컬 상태 업데이트
       const updatedUrls = sessionUrls.map(session => {
         if (session.id === selectedSessionId) {
           return {
             ...session,
             name: sessionName,
             hasPassword: !!passwordInput.trim(),
-            password: passwordInput.trim() || null,  // 비밀번호 원본 저장
             isPublic: selectedIsPublic,
           };
         }
         return session;
       });
+
+      // 비밀번호는 SecureStore에 별도 저장
+      if (passwordInput.trim()) {
+        await SecureStore.setItemAsync(`session_pw_${selectedSessionId}`, passwordInput.trim());
+      } else {
+        await SecureStore.deleteItemAsync(`session_pw_${selectedSessionId}`);
+      }
 
       setSessionUrls(updatedUrls);
       await AsyncStorage.setItem('sessionUrls', JSON.stringify(updatedUrls));

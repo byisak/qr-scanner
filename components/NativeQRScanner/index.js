@@ -6,6 +6,7 @@ import { StyleSheet, View, Text, Dimensions } from 'react-native';
 import {
   Camera,
   useCameraDevice,
+  useCameraFormat,
   useCameraPermission,
 } from 'react-native-vision-camera';
 import { useBarcodeScanner } from '@mgcrea/vision-camera-barcode-scanner';
@@ -417,6 +418,21 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
+  // 프레임 프로세서 해상도를 명시한다. 포맷을 안 주면 Android(CameraX)는 분석 해상도를
+  // 기본값(640x480)으로 잡아 작은 코드·먼 1D 바코드 인식이 iOS보다 크게 떨어진다
+  const format = useCameraFormat(device, [
+    { videoResolution: { width: 1920, height: 1080 } },
+    { fps: 30 },
+  ]);
+  const cameraFps = format ? Math.min(30, format.maxFps) : undefined;
+
+  // 탭 포커스 (Android 기기별 근접 AF 품질 편차 보완)
+  const handleTouchEnd = useCallback((event) => {
+    if (!device?.supportsFocus || !cameraRef.current) return;
+    const { locationX, locationY } = event.nativeEvent;
+    cameraRef.current.focus({ x: locationX, y: locationY }).catch(() => {});
+  }, [device]);
+
   // 바코드 타입 변환 (expo-camera 형식 -> vision-camera-barcode-scanner 형식)
   const visionCameraCodeTypes = useMemo(() => {
     const types = barcodeTypes
@@ -428,6 +444,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 카메라 프레임 크기 가져오기 (코드 스캐너 좌표 변환용)
   const frameDimensions = useMemo(() => {
     if (!device) return null;
+
+    // 실제로 쓰는 포맷의 크기. 가장 큰 포맷을 가정하면 중앙 코드 선택·좌표 변환이 어긋난다
+    if (format?.videoWidth && format?.videoHeight) {
+      return { width: format.videoWidth, height: format.videoHeight };
+    }
 
     const formats = device.formats;
     if (formats && formats.length > 0) {
@@ -444,7 +465,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     }
 
     return { width: 1920, height: 1440 };
-  }, [device]);
+  }, [device, format]);
 
   // 바코드 스캔 콜백 핸들러 (JS 스레드에서 실행)
   const handleBarcodeDetected = useCallback((barcodeData) => {
@@ -781,12 +802,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         device={device}
+        format={format}
+        fps={cameraFps}
+        pixelFormat="yuv"
         isActive={isActive}
         torch={torch}
         exposure={exposure}
         photo={true}
         onError={handleCameraError}
         enableZoomGesture={true}
+        onTouchEnd={handleTouchEnd}
         {...cameraProps}
       />
       {showHighlights && (

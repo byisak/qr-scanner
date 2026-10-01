@@ -2,6 +2,8 @@
 export default {
   // 공통
   common: {
+    undo: '실행 취소',
+    saving: '저장 중...',
     back: '뒤로',
     close: '닫기',
     save: '저장',
@@ -46,6 +48,8 @@ export default {
 
   // 인증
   auth: {
+    sessionExpired: '세션 만료',
+    sessionExpiredMessage: '로그인이 만료되었습니다. 앱을 재시작하거나 다시 로그인해주세요.',
     // 로그인/회원가입 버튼
     loginSignup: '로그인/회원가입',
     loginPrompt: '로그인하여 실시간 서버 전송을 이용해보세요',
@@ -156,6 +160,21 @@ export default {
 
   // 스캔 화면
   scanner: {
+    exposureUp: '밝게',
+    exposureReset: '노출 초기화',
+    exposureDown: '어둡게',
+    clearBatchHint: '스캔된 모든 항목을 삭제합니다',
+    finishBatchHint: '스캔을 완료하고 저장합니다',
+    viewDetailsHint: '결과 상세 화면으로 이동합니다',
+    openSettings: '설정 열기',
+    retryPermission: '다시 요청',
+    lotteryPromptTitle: '복권이 스캔되었습니다',
+    lotteryPromptMessage: '설정에서 복권인식을 활성화 하여, 자동으로 그룹관리되도록 하겠습니까?',
+    lotteryPromptActivate: '활성화',
+    lotteryPromptDontAsk: '다시 묻지 않기',
+    lotteryActivatedTitle: '완료',
+    lotteryActivatedMessage: '복권 인식이 활성화되었습니다.',
+    lotterySaveFailed: '복권 정보 저장에 실패했습니다.',
     title: '스캔',
     scanGuideQr: 'QR 코드를 사각형 안에 맞춰주세요',
     scanGuideBarcode: '바코드를 사각형 안에 맞춰주세요',
@@ -230,6 +249,17 @@ export default {
 
   // 히스토리 화면
   history: {
+    itemDeleted: '기록을 삭제했습니다',
+    loadError: '기록을 불러오지 못했습니다.',
+    lottoGroup: '로또 6/45',
+    pensionGroup: '연금복권720+',
+    lottoBadge: '로또',
+    pensionBadge: '연금복권',
+    roundLabel: '{{round}}회',
+    gamesLabel: '{{count}}게임',
+    checked: '확인완료',
+    unchecked: '미확인',
+    pending: '대기중',
     title: '기록',
     searchPlaceholder: '코드 또는 URL 검색',
     clearSearch: '검색어 지우기',
@@ -246,6 +276,8 @@ export default {
 
   // 결과 화면
   result: {
+    noData: '데이터 없음',
+    info: '정보',
     title: '스캔 결과',
     generatedTitle: '생성 결과',
     scannedData: '스캔된 데이터',
@@ -267,6 +299,7 @@ export default {
     editSuccess: '수정 완료',
     editSuccessMessage: '스캔 결과가 수정되었습니다.',
     error: '오류',
+    openUrlFailed: 'URL을 열 수 없습니다.',
     errorHistoryOnly: '히스토리에서만 수정할 수 있습니다.',
     errorHistoryDeleteOnly: '히스토리에서만 삭제할 수 있습니다.',
     errorEmptyValue: '값을 입력해주세요.',
@@ -304,6 +337,8 @@ export default {
 
   // 설정 화면
   settings: {
+    loadError: '설정을 불러오는데 실패했습니다.',
+    syncing: '서버와 동기화 중...',
     title: '설정',
     // 섹션 타이틀
     notification: '알림',
@@ -786,6 +821,8 @@ export default {
 
   // QR 코드 생성 화면
   generator: {
+    shareError: '공유에 실패했습니다.',
+    logoPickError: '이미지를 선택하는 중 오류가 발생했습니다.',
     title: '코드 생성',
     subtitle: '다양한 유형의 코드를 만들어보세요',
     formTitle: '정보 입력',
@@ -1409,6 +1446,7 @@ export default {
 
   // 기능별 광고 해제
   proFeatures: {
+    barcodeTypesDesc: 'Code 128은 무료',
     title: '기능 잠금해제',
     description: '광고를 시청하고 원하는 기능을 무료로 잠금해제하세요',
     advancedFeatures: '고급 기능',
@@ -1515,6 +1553,7 @@ export default {
     },
     lotteryTypes: {
       lotto645: '로또 6/45 (동행복권)',
+      pension720: '연금복권720+',
       powerballMega: 'Powerball, Mega Millions',
       ukLottoEuro: 'UK Lotto, EuroMillions',
       lotto649Max: 'Lotto 6/49, Lotto Max',
@@ -1524,10 +1563,16 @@ export default {
       toto4d: 'Toto, 4D',
       lottoPowerball: 'LOTTO, PowerBall',
     },
+    alreadyScanned: '이미 스캔된 복권',
+    alreadyScannedMessage: '{{type}} {{round}}회 복권이 이미 저장되어 있습니다.\n당첨 결과를 확인하시겠습니까?',
+    checkResult: '결과 확인',
+    cancel: '취소',
   },
 
   // 여러 코드 결과 화면
   multiCodeResults: {
+    codeSaved: '저장됨',
+    codesSaved: '개 코드 저장됨',
     title: '감지된 코드',
     noResults: '감지된 코드가 없습니다',
     save: '저장',
@@ -1776,7 +1821,9 @@ export default {
     useBiometricMessage: 'Face ID를 앱 잠금에 사용하시겠습니까?',
     biometricNotAvailable: '생체인증 불가',
     biometricNotAvailableDesc: '이 기기에서 생체인증을 사용할 수 없습니다. 기기 설정에서 Face ID 또는 지문을 등록해주세요.',
-    biometricPrompt: 'Face ID로 잠금 해제',
+    biometricPrompt: '{{type}}(으)로 잠금 해제',
+    fingerprint: '지문',
+    faceRecognition: '얼굴 인식',
     toggleBiometricError: '설정 변경에 실패했습니다.',
     biometric: '생체인증',
     // Info

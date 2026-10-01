@@ -28,6 +28,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
+import { useFeedback } from '../contexts/FeedbackContext';
+
+// 노출 버튼은 32pt라 44pt 터치 영역을 hitSlop으로 채운다
+const EXPOSURE_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
 import {
@@ -65,6 +69,7 @@ import AdBanner from '../components/AdBanner';
 function ScannerScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const { isDark } = useTheme();
   const { triggerSync } = useSync();
   const { user } = useAuth();
@@ -73,10 +78,13 @@ function ScannerScreen() {
   const insets = useSafeAreaInsets();
 
 
-  // iOS는 기존 값 유지, Android는 SafeArea insets 사용
-  const topOffset = Platform.OS === 'ios' ? 60 : insets.top + 10;
-  const batchBadgeTop = Platform.OS === 'ios' ? 105 : insets.top + 55;
-  const bottomOffset = Platform.OS === 'ios' ? 200 : insets.bottom + 130;
+  // 노치 없는 SE(inset 20)부터 Dynamic Island(59)까지 대응하도록 insets 기준으로 계산
+  // (iOS 상수는 노치 기기 inset 47/34 기준으로 기존 값과 같아지게 잡았다)
+  const topOffset = insets.top + (Platform.OS === 'ios' ? 13 : 10);
+  const batchBadgeTop = insets.top + (Platform.OS === 'ios' ? 58 : 55);
+  const bottomOffset = insets.bottom + (Platform.OS === 'ios' ? 166 : 130);
+  const floatingButtonBottom = insets.bottom + 106;
+  const toastBottom = insets.bottom + 49;
 
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
@@ -93,10 +101,10 @@ function ScannerScreen() {
   const [duplicateAction, setDuplicateAction] = useState('alert'); // 중복 처리 방식: 'alert', 'skip', 'allow'
   const [isCapturingPhoto, setIsCapturingPhoto] = useState(false); // 사진 촬영 중 여부
   const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
-  const [currentGroupName, setCurrentGroupName] = useState('기본 그룹'); // 현재 선택된 그룹 이름
+  const [currentGroupName, setCurrentGroupName] = useState(() => t('groupEdit.defaultGroup')); // 현재 선택된 그룹 이름
   const [currentGroupId, setCurrentGroupId] = useState('default'); // 현재 선택된 그룹 ID
   const [groupModalVisible, setGroupModalVisible] = useState(false); // 그룹 선택 모달 표시 여부
-  const [availableGroups, setAvailableGroups] = useState([{ id: 'default', name: '기본 그룹', createdAt: Date.now() }]); // 사용 가능한 그룹 목록
+  const [availableGroups, setAvailableGroups] = useState([{ id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]); // 사용 가능한 그룹 목록
   // 기본값: 모든 바코드 타입 (BarcodeSelectionScreen과 일치)
   const [barcodeTypes, setBarcodeTypes] = useState([
     'qr',
@@ -120,6 +128,11 @@ function ScannerScreen() {
     const fullScreenBarcodes = ['ean13', 'ean8', 'code128', 'code39', 'code93', 'upce', 'upca', 'itf14', 'codabar', 'pdf417', 'aztec', 'datamatrix'];
     return barcodeTypes.some(type => fullScreenBarcodes.includes(type));
   }, [barcodeTypes]);
+
+  // 카메라 컴포넌트 key 메모이제이션 (불필요한 remount 방지)
+  const cameraKey = useMemo(() => {
+    return `${multiCodeModeEnabled ? 'multi' : 'single'}-${[...barcodeTypes].sort().join(',')}`;
+  }, [multiCodeModeEnabled, barcodeTypes]);
 
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
@@ -145,6 +158,14 @@ function ScannerScreen() {
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식 활성화 여부
   const [lotteryPromptVisible, setLotteryPromptVisible] = useState(false); // 복권 인식 활성화 유도 모달
+
+  // 복권 안내 모달을 닫으면서 보류했던 스캔을 다시 켠다 (닫기·다시 묻지 않기·활성화 공통)
+  const closeLotteryPrompt = useCallback(() => {
+    setLotteryPromptVisible(false);
+    setPendingLotteryCode(null);
+    isProcessingRef.current = false;
+    setCanScan(true);
+  }, []);
   const [dontAskLotteryPrompt, setDontAskLotteryPrompt] = useState(false); // 복권 인식 활성화 다시 묻지 않기
   const [pendingLotteryCode, setPendingLotteryCode] = useState(null); // 복권 인식 활성화 대기 중인 코드
 
@@ -157,6 +178,7 @@ function ScannerScreen() {
   const lastScannedTime = useRef(0);
   const resetTimerRef = useRef(null);
   const navigationTimerRef = useRef(null);
+  const pendingTimersRef = useRef(new Set()); // 모든 ad-hoc setTimeout 추적
   const cameraRef = useRef(null);
   const photoSaveEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지 (기본값: 켬)
   const hapticEnabledRef = useRef(true); // ref로 관리하여 함수 재생성 방지
@@ -187,7 +209,6 @@ function ScannerScreen() {
 
   // scanSoundEnabled 상태를 ref에 동기화
   useEffect(() => {
-    console.log('[ScannerScreen] Syncing scanSoundEnabled state to ref:', scanSoundEnabled);
     scanSoundEnabledRef.current = scanSoundEnabled;
   }, [scanSoundEnabled]);
 
@@ -208,7 +229,6 @@ function ScannerScreen() {
 
   // multiCodeModeEnabled 상태를 ref에 동기화
   useEffect(() => {
-    console.log(`[ScannerScreen] multiCodeModeEnabled changed: ${multiCodeModeEnabled}`);
     multiCodeModeEnabledRef.current = multiCodeModeEnabled;
     // 모드 비활성화 시 스캔된 코드 초기화
     if (!multiCodeModeEnabled) {
@@ -219,7 +239,6 @@ function ScannerScreen() {
 
   // resultWindowAutoOpen 상태를 ref에 동기화
   useEffect(() => {
-    console.log(`[ScannerScreen] resultWindowAutoOpen changed: ${resultWindowAutoOpen}`);
     resultWindowAutoOpenRef.current = resultWindowAutoOpen;
     // 활성화 시 마지막 스캔 코드 초기화
     if (resultWindowAutoOpen) {
@@ -285,13 +304,24 @@ function ScannerScreen() {
     };
   }, []);
 
+  // 카메라 권한 요청. 설정 로드와 분리해 두어야 설정 파싱 오류가 "권한 거부" 화면으로 둔갑하지 않는다
+  const requestCameraPermission = useCallback(async () => {
+    try {
+      const status = await Camera.requestCameraPermission();
+      setHasPermission(status === 'granted');
+    } catch (error) {
+      console.error('Camera permission error:', error);
+      setHasPermission(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    requestCameraPermission();
+  }, [requestCameraPermission]);
+
   useEffect(() => {
     (async () => {
       try {
-        // Vision Camera 권한 요청
-        const status = await Camera.requestCameraPermission();
-        setHasPermission(status === 'granted');
-
         const saved = await AsyncStorage.getItem('selectedBarcodes');
         if (saved) {
           const parsed = JSON.parse(saved);
@@ -308,11 +338,8 @@ function ScannerScreen() {
         }
 
         const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
-        console.log('[ScannerScreen] Initial load - scanSoundEnabled from storage:', scanSound);
         if (scanSound !== null) {
-          const enabled = scanSound === 'true';
-          console.log('[ScannerScreen] Initial load - setting scanSoundEnabled to:', enabled);
-          setScanSoundEnabled(enabled);
+          setScanSoundEnabled(scanSound === 'true');
         }
 
         const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
@@ -442,8 +469,8 @@ function ScannerScreen() {
           setActiveScanUrl(null);
         }
       } catch (error) {
-        console.error('Camera permission error:', error);
-        setHasPermission(false);
+        // 설정 하나가 깨져도 스캐너는 기본값으로 동작해야 한다
+        console.error('Scanner settings load error:', error);
       }
     })();
   }, []);
@@ -457,6 +484,19 @@ function ScannerScreen() {
       clearTimeout(navigationTimerRef.current);
       navigationTimerRef.current = null;
     }
+    // 모든 ad-hoc 타이머 정리
+    pendingTimersRef.current.forEach(id => clearTimeout(id));
+    pendingTimersRef.current.clear();
+  }, []);
+
+  // 안전한 setTimeout (자동 추적 + 자동 해제)
+  const safeTimeout = useCallback((fn, delay) => {
+    const id = setTimeout(() => {
+      pendingTimersRef.current.delete(id);
+      fn();
+    }, delay);
+    pendingTimersRef.current.add(id);
+    return id;
   }, []);
 
   const resetAll = useCallback(() => {
@@ -478,6 +518,7 @@ function ScannerScreen() {
 
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
+      historyCacheDirtyRef.current = true; // 히스토리 캐시 무효화 (다른 화면에서 변경 가능)
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
       isProcessingMultiRef.current = false; // 다중 바코드 처리 플래그 리셋
@@ -489,7 +530,19 @@ function ScannerScreen() {
 
       (async () => {
         try {
-          const saved = await AsyncStorage.getItem('selectedBarcodes');
+          // 모든 설정을 한 번에 읽기 (multiGet으로 I/O 워터폴 제거)
+          const settingsKeys = [
+            'selectedBarcodes', 'hapticEnabled', 'scanSoundEnabled', 'photoSaveEnabled',
+            'batchScanEnabled', 'continuousScanEnabled', 'batchShowScanCounter',
+            'batchDuplicateDetection', 'batchDuplicateAction', 'selectedCamera',
+            'scanResultMode', 'multiCodeModeEnabled', 'multiCodeShowValues',
+            'resultWindowAutoOpen', 'lotteryScanEnabled', 'dontAskLotteryPrompt',
+            'selectedGroupId', 'scanGroups', 'realtimeSyncEnabled',
+          ];
+          const settingsData = await AsyncStorage.multiGet(settingsKeys);
+          const settings = Object.fromEntries(settingsData);
+
+          const saved = settings['selectedBarcodes'];
           if (saved) {
             const parsed = JSON.parse(saved);
             setBarcodeTypes(
@@ -499,32 +552,28 @@ function ScannerScreen() {
             );
           }
 
-          const haptic = await AsyncStorage.getItem('hapticEnabled');
+          const haptic = settings['hapticEnabled'];
           if (haptic !== null) {
             setHapticEnabled(haptic === 'true');
           }
 
-          const scanSound = await AsyncStorage.getItem('scanSoundEnabled');
-          console.log('[ScannerScreen] Loaded scanSoundEnabled from storage:', scanSound);
+          const scanSound = settings['scanSoundEnabled'];
           if (scanSound !== null) {
-            const enabled = scanSound === 'true';
-            console.log('[ScannerScreen] Setting scanSoundEnabled to:', enabled);
-            setScanSoundEnabled(enabled);
+            setScanSoundEnabled(scanSound === 'true');
           }
 
-          const photoSave = await AsyncStorage.getItem('photoSaveEnabled');
+          const photoSave = settings['photoSaveEnabled'];
           setPhotoSaveEnabled(photoSave === null ? true : photoSave === 'true');
 
           // 연속 스캔 설정 로드 (두 키를 동기화하여 로드)
-          let batchScan = await AsyncStorage.getItem('batchScanEnabled');
-          const continuousScan = await AsyncStorage.getItem('continuousScanEnabled');
+          let batchScan = settings['batchScanEnabled'];
+          const continuousScan = settings['continuousScanEnabled'];
 
           // 두 키가 일치하지 않으면 동기화
           if (batchScan === null && continuousScan !== null) {
             batchScan = continuousScan;
             await AsyncStorage.setItem('batchScanEnabled', continuousScan);
           } else if (continuousScan !== null && batchScan !== continuousScan) {
-            // continuousScanEnabled 기준으로 동기화 (설정 화면의 값을 우선)
             batchScan = continuousScan;
             await AsyncStorage.setItem('batchScanEnabled', continuousScan);
           }
@@ -534,56 +583,55 @@ function ScannerScreen() {
           }
 
           // 배치 스캔 세부 설정 로드
-          const scanCounter = await AsyncStorage.getItem('batchShowScanCounter');
+          const scanCounter = settings['batchShowScanCounter'];
           if (scanCounter !== null) {
             setShowScanCounter(scanCounter === 'true');
           }
-          const dupDetection = await AsyncStorage.getItem('batchDuplicateDetection');
+          const dupDetection = settings['batchDuplicateDetection'];
           if (dupDetection !== null) {
             setDuplicateDetection(dupDetection === 'true');
           }
-          const dupAction = await AsyncStorage.getItem('batchDuplicateAction');
+          const dupAction = settings['batchDuplicateAction'];
           if (dupAction !== null) {
             setDuplicateAction(dupAction);
           }
 
-          const camera = await AsyncStorage.getItem('selectedCamera');
+          const camera = settings['selectedCamera'];
           if (camera) {
             setCameraFacing(camera);
           }
 
           // 스캔 결과 표시 모드 로드
-          const resultMode = await AsyncStorage.getItem('scanResultMode');
+          const resultMode = settings['scanResultMode'];
           if (resultMode) {
             setScanResultMode(resultMode);
           }
 
           // 여러 코드 인식 모드 로드
-          const multiCodeMode = await AsyncStorage.getItem('multiCodeModeEnabled');
-          console.log(`[ScannerScreen] Loaded multiCodeModeEnabled from storage: "${multiCodeMode}" -> ${multiCodeMode === 'true'}`);
+          const multiCodeMode = settings['multiCodeModeEnabled'];
           setMultiCodeModeEnabled(multiCodeMode === 'true');
 
           // 바코드 값 표시 설정 로드
-          const showValues = await AsyncStorage.getItem('multiCodeShowValues');
+          const showValues = settings['multiCodeShowValues'];
           setShowBarcodeValues(showValues === null ? true : showValues === 'true');
 
           // 결과창 자동 열림 설정 로드
-          const autoOpen = await AsyncStorage.getItem('resultWindowAutoOpen');
+          const autoOpen = settings['resultWindowAutoOpen'];
           setResultWindowAutoOpen(autoOpen === null ? true : autoOpen === 'true');
 
           // 복권 인식 활성화 설정 로드
-          const lotteryScan = await AsyncStorage.getItem('lotteryScanEnabled');
+          const lotteryScan = settings['lotteryScanEnabled'];
           setLotteryScanEnabled(lotteryScan === 'true');
 
           // 복권 인식 활성화 다시 묻지 않기 설정 로드
-          const dontAskLottery = await AsyncStorage.getItem('dontAskLotteryPrompt');
+          const dontAskLottery = settings['dontAskLotteryPrompt'];
           setDontAskLotteryPrompt(dontAskLottery === 'true');
 
-          // 현재 선택된 그룹 이름 로드
-          const selectedGroupId = await AsyncStorage.getItem('selectedGroupId') || 'default';
+          // 현재 선택된 그룹 이름 로드 (multiGet 결과 사용)
+          const selectedGroupId = settings['selectedGroupId'] || 'default';
           setCurrentGroupId(selectedGroupId);
-          const groupsData = await AsyncStorage.getItem('scanGroups');
-          const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+          const groupsData = settings['scanGroups'];
+          const realtimeSync = settings['realtimeSyncEnabled'];
           const isRealtimeSyncEnabled = realtimeSync === 'true';
 
           // 기본 그룹 정의
@@ -630,10 +678,9 @@ function ScannerScreen() {
           if (isRealtimeSyncEnabled) {
             setRealtimeSyncEnabled(true);
 
-            // 현재 선택된 그룹이 세션 그룹인지 확인하여 WebSocket 연결
-            const groupsData2 = await AsyncStorage.getItem('scanGroups');
-            if (groupsData2) {
-              const groups2 = JSON.parse(groupsData2);
+            // 현재 선택된 그룹이 세션 그룹인지 확인하여 WebSocket 연결 (이미 파싱된 groupsData 재사용)
+            if (groupsData) {
+              const groups2 = JSON.parse(groupsData);
               const selectedGroup = groups2.find(g => g.id === selectedGroupId && !g.isDeleted);
 
               if (selectedGroup && selectedGroup.isCloudSync) {
@@ -679,39 +726,47 @@ function ScannerScreen() {
       })();
 
       return () => {
-        console.log('[ScannerScreen] === CLEANUP START ===');
-
         // 먼저 콜백 차단 (새로운 스캔 결과 무시)
         isNavigatingRef.current = true;
-        isProcessingRef.current = true; // 처리 중 플래그도 설정하여 완전 차단
+        isProcessingRef.current = true;
         isCapturingPhotoRef.current = false;
-        console.log('[ScannerScreen] Callbacks blocked');
 
         clearAllTimers();
-        console.log('[ScannerScreen] Timers cleared');
 
         // 카메라 비활성화를 지연시켜 탭 전환 애니메이션이 먼저 실행되도록 함
-        // setTimeout을 사용하여 다음 프레임에서 카메라 중지
-        // ref에 저장하여 빠른 탭 전환 시 취소할 수 있도록 함
-        console.log('[ScannerScreen] Scheduling camera deactivation...');
         cleanupTimeoutRef.current = setTimeout(() => {
-          console.log('[ScannerScreen] Deactivating camera NOW');
           setIsActive(false);
           cleanupTimeoutRef.current = null;
-          console.log('[ScannerScreen] Camera deactivated');
         }, 50);
-
-        console.log('[ScannerScreen] === CLEANUP END ===');
       };
     }, [resetAll, clearAllTimers]),
   );
+
+  // 히스토리 인메모리 캐시 (매 스캔마다 전체 JSON 파싱 방지)
+  const historyCacheRef = useRef(null);
+  const historyCacheDirtyRef = useRef(false);
+
+  const getHistoryCache = useCallback(async () => {
+    if (historyCacheRef.current && !historyCacheDirtyRef.current) {
+      return historyCacheRef.current;
+    }
+    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+    historyCacheRef.current = historyData ? JSON.parse(historyData) : { default: [] };
+    historyCacheDirtyRef.current = false;
+    return historyCacheRef.current;
+  }, []);
+
+  const saveHistoryCache = useCallback(async (historyByGroup) => {
+    historyCacheRef.current = historyByGroup;
+    historyCacheDirtyRef.current = false;
+    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+  }, []);
 
   // 히스토리에서 중복 여부만 확인 (저장하지 않음)
   const checkDuplicateInHistory = useCallback(async (code) => {
     try {
       const selectedGroupId = currentGroupId || 'default';
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      const historyByGroup = await getHistoryCache();
       const currentHistory = historyByGroup[selectedGroupId] || [];
 
       const existingItem = currentHistory.find(item => item.code === code);
@@ -730,9 +785,8 @@ function ScannerScreen() {
       // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
       let selectedGroupId = targetGroupId || currentGroupId;
 
-      // 그룹별 히스토리 가져오기
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      // 그룹별 히스토리 가져오기 (캐시 사용)
+      let historyByGroup = await getHistoryCache();
 
       // 선택된 그룹이 없으면 기본 그룹 사용
       if (!historyByGroup[selectedGroupId]) {
@@ -792,8 +846,8 @@ function ScannerScreen() {
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
       }
 
-      // 저장
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      // 저장 (캐시 + AsyncStorage)
+      await saveHistoryCache(historyByGroup);
       triggerSync();
 
       // 중복 여부 반환 (ResultScreen에서 사용)
@@ -817,7 +871,7 @@ function ScannerScreen() {
         }, activeSessionId);
         if (success) {
           setShowSendMessage(true);
-          setTimeout(() => setShowSendMessage(false), 1000);
+          safeTimeout(() => setShowSendMessage(false), 1000);
         }
       }
 
@@ -860,8 +914,8 @@ function ScannerScreen() {
 
     try {
       const selectedGroupId = currentGroupId || 'default';
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      const historyByGroup = historyData ? JSON.parse(historyData) : {};
+      // 캐시를 거치지 않고 저장소에 직접 쓰면 다음 saveHistory가 오래된 캐시로 덮어쓴다
+      const historyByGroup = await getHistoryCache();
       const currentHistory = historyByGroup[selectedGroupId] || [];
 
       // 해당 코드의 가장 최근 항목 찾기
@@ -882,7 +936,7 @@ function ScannerScreen() {
           };
 
           historyByGroup[selectedGroupId] = currentHistory;
-          await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+          await saveHistoryCache(historyByGroup);
           triggerSync();
           console.log('[updateHistoryWithPhoto] Photo added to history:', photoUri);
         }
@@ -890,7 +944,7 @@ function ScannerScreen() {
     } catch (e) {
       console.error('Update history with photo error:', e);
     }
-  }, [currentGroupId]);
+  }, [currentGroupId, getHistoryCache, saveHistoryCache]);
 
   // 현재 그룹이 복권 그룹인지 확인
   const isCurrentGroupLottery = useCallback(() => {
@@ -917,7 +971,7 @@ function ScannerScreen() {
       if (!hasDefaultGroup) {
         const defaultGroup = {
           id: 'default',
-          name: '기본 그룹',
+          name: t('groupEdit.defaultGroup'),
           createdAt: Date.now(),
         };
         groups.unshift(defaultGroup);
@@ -932,7 +986,7 @@ function ScannerScreen() {
           setAvailableGroups(prev => {
             const hasDefault = prev.some(g => g.id === 'default');
             if (!hasDefault) {
-              return [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }, ...prev];
+              return [{ id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() }, ...prev];
             }
             return prev;
           });
@@ -960,7 +1014,7 @@ function ScannerScreen() {
 
         let updated = [...prev];
         if (!hasDefault) {
-          updated = [{ id: 'default', name: '기본 그룹', createdAt: Date.now() }, ...updated];
+          updated = [{ id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() }, ...updated];
         }
         if (!hasLotteryGroup) {
           updated = [...updated, newGroup];
@@ -985,9 +1039,8 @@ function ScannerScreen() {
         return null;
       }
 
-      // 그룹별 히스토리 가져오기
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : {};
+      // 그룹별 히스토리 가져오기 (캐시 경유 — 직접 쓰면 다음 saveHistory가 덮어쓴다)
+      let historyByGroup = await getHistoryCache();
 
       if (!historyByGroup[groupId]) {
         historyByGroup[groupId] = [];
@@ -1025,7 +1078,7 @@ function ScannerScreen() {
       };
 
       historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      await saveHistoryCache(historyByGroup);
       triggerSync();
 
       console.log('[ScannerScreen] Saved lottery record:', lotteryData.typeName, lotteryData.round);
@@ -1038,7 +1091,7 @@ function ScannerScreen() {
       console.error('Save lottery record error:', error);
       return null;
     }
-  }, [ensureLotteryGroup, triggerSync]);
+  }, [ensureLotteryGroup, triggerSync, getHistoryCache, saveHistoryCache]);
 
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(
@@ -1074,14 +1127,9 @@ function ScannerScreen() {
     const RAW_FRAME_W = dims.width;   // 센서 원본 가로 (예: 4032)
     const RAW_FRAME_H = dims.height;  // 센서 원본 세로 (예: 3024)
 
-    console.log('[convertVisionCameraCoords] ========================================');
-    console.log('[convertVisionCameraCoords] Input:', { x: x.toFixed(1), y: y.toFixed(1), w: width.toFixed(1), h: height.toFixed(1) });
-    console.log('[convertVisionCameraCoords] Screen:', { winWidth, winHeight });
-    console.log('[convertVisionCameraCoords] RawFrame:', { RAW_FRAME_W, RAW_FRAME_H });
 
     // 좌표가 0-1 사이면 정규화된 좌표
     if (x <= 1 && y <= 1 && width <= 1 && height <= 1) {
-      console.log('[convertVisionCameraCoords] Normalized coords');
       return {
         x: x * winWidth,
         y: y * winHeight,
@@ -1101,7 +1149,6 @@ function ScannerScreen() {
       // 프레임 차원 스왑 (landscape → portrait)
       FRAME_W = RAW_FRAME_H;  // 3024
       FRAME_H = RAW_FRAME_W;  // 4032
-      console.log('[convertVisionCameraCoords] Swapped frame dims for portrait:', { FRAME_W, FRAME_H });
     } else {
       FRAME_W = RAW_FRAME_W;
       FRAME_H = RAW_FRAME_H;
@@ -1123,20 +1170,14 @@ function ScannerScreen() {
       height: height * scale,
     };
 
-    console.log('[convertVisionCameraCoords] Scale:', scale.toFixed(4), 'Offset:', { x: offsetX.toFixed(1), y: offsetY.toFixed(1) });
-    console.log('[convertVisionCameraCoords] Result:', { x: result.x.toFixed(1), y: result.y.toFixed(1), w: result.width.toFixed(1), h: result.height.toFixed(1) });
     return result;
   }, [winWidth, winHeight]);
 
   const normalizeBounds = useCallback(
     (bounds, frameDimensions = null) => {
-      // bounds 형식 확인 및 로깅
       if (!bounds) {
-        console.log('No bounds provided');
         return null;
       }
-
-      console.log('[normalizeBounds] Input:', JSON.stringify(bounds));
 
       // 형식 1: { origin: { x, y }, size: { width, height } } (iOS / Vision Camera)
       if (bounds.origin && bounds.size) {
@@ -1165,16 +1206,19 @@ function ScannerScreen() {
         };
       }
 
-      console.log('Unknown bounds format:', JSON.stringify(bounds));
       return null;
     },
     [convertVisionCameraCoords],
   );
 
+  // 마지막 스캔 기억만 지운다. resetAll()은 스캔을 다시 켜는 safeTimeout까지 취소해서
+  // 연속 스캔 중 두 번째 스캔의 재활성화 타이머가 사라지면 스캐너가 멈춘다
   const startResetTimer = useCallback((delay) => {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     resetTimerRef.current = setTimeout(() => {
       resetTimerRef.current = null;
+      lastScannedData.current = null;
+      lastScannedTime.current = 0;
     }, delay);
   }, []);
 
@@ -1306,7 +1350,7 @@ function ScannerScreen() {
         timestamp: Date.now(),
       }, activeSessionId);
       setShowSendMessage(true);
-      setTimeout(() => setShowSendMessage(false), 1000);
+      safeTimeout(() => setShowSendMessage(false), 1000);
     }
 
     // 배치에 추가
@@ -1319,7 +1363,7 @@ function ScannerScreen() {
     }]);
 
     // 스캔 재활성화
-    setTimeout(() => {
+    safeTimeout(() => {
       isProcessingRef.current = false;
       setCanScan(true);
     }, 500);
@@ -1380,7 +1424,7 @@ function ScannerScreen() {
             }, activeSessionId);
             if (success) {
               setShowSendMessage(true);
-              setTimeout(() => setShowSendMessage(false), 1000);
+              safeTimeout(() => setShowSendMessage(false), 1000);
             }
           }
         } else {
@@ -1493,10 +1537,10 @@ function ScannerScreen() {
     scannedCodesRef.current = [];
 
     // 플래그 해제 (약간의 딜레이 후)
-    setTimeout(() => {
+    safeTimeout(() => {
       isNavigatingRef.current = false;
     }, 2000);
-  }, [pendingMultiScanData, router]);
+  }, [pendingMultiScanData, router, safeTimeout]);
 
   // 화면에 표시되는 하이라이트 개수 변경 핸들러
   const handleVisibleHighlightsChange = useCallback((count) => {
@@ -1643,9 +1687,12 @@ function ScannerScreen() {
       // 복권 QR 코드 감지 - 비활성화 상태에서 감지 시 활성화 유도 모달 표시
       if (!lotteryScanEnabledRef.current && isLotteryQR(data) && !dontAskLotteryPrompt) {
         console.log('[ScannerScreen] Lottery QR detected but feature disabled, showing prompt');
+        // 모달을 띄운 동안 일반 처리를 보류한다. 같이 진행하면 결과 화면·토스트와 모달이 겹친다
+        isProcessingRef.current = true;
+        setCanScan(false);
         setPendingLotteryCode(data);
         setLotteryPromptVisible(true);
-        // 일반 스캔 처리로 계속 진행
+        return;
       }
 
       // 복권 QR 코드 감지 및 처리 (설정에서 활성화된 경우에만)
@@ -1685,11 +1732,11 @@ function ScannerScreen() {
             if (result.isDuplicate) {
               // 중복 복권 - 기존 결과 화면으로 이동
               Alert.alert(
-                '이미 스캔된 복권',
-                `${lotteryData.typeName} ${lotteryData.round}회 복권이 이미 저장되어 있습니다.\n당첨 결과를 확인하시겠습니까?`,
+                t('lotteryScan.alreadyScanned'),
+                t('lotteryScan.alreadyScannedMessage', { type: lotteryData.typeName, round: lotteryData.round }),
                 [
                   {
-                    text: '취소',
+                    text: t('lotteryScan.cancel'),
                     style: 'cancel',
                     onPress: () => {
                       isProcessingRef.current = false;
@@ -1697,13 +1744,13 @@ function ScannerScreen() {
                     },
                   },
                   {
-                    text: '결과 확인',
+                    text: t('lotteryScan.checkResult'),
                     onPress: () => {
                       router.push({
                         pathname: '/lottery-result',
                         params: { code: data },
                       });
-                      setTimeout(() => {
+                      safeTimeout(() => {
                         isProcessingRef.current = false;
                         setCanScan(true);
                       }, 500);
@@ -1718,14 +1765,14 @@ function ScannerScreen() {
                 pathname: '/lottery-result',
                 params: { code: data },
               });
-              setTimeout(() => {
+              safeTimeout(() => {
                 isProcessingRef.current = false;
                 setCanScan(true);
               }, 500);
             }
           } else {
             // 저장 실패
-            Alert.alert('오류', '복권 정보 저장에 실패했습니다.');
+            Alert.alert(t('common.error'), t('scanner.lotterySaveFailed'));
             isProcessingRef.current = false;
             setCanScan(true);
           }
@@ -1758,6 +1805,25 @@ function ScannerScreen() {
         // 연속 스캔 카운터 증가
         setContinuousScanCount(prev => prev + 1);
 
+        // 햅틱 피드백
+        if (hapticEnabledRef.current) {
+          if (Platform.OS === 'android') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }
+        }
+
+        // 스캔 소리
+        if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
+          try {
+            beepSoundPlayerRef.current.seekTo(0);
+            beepSoundPlayerRef.current.play();
+          } catch (error) {
+            // 소리 재생 실패는 무시
+          }
+        }
+
         // 실시간 서버 전송 헬퍼 함수
         const sendToRealtimeServer = () => {
           if (realtimeSyncEnabled && activeSessionId) {
@@ -1767,7 +1833,7 @@ function ScannerScreen() {
             }, activeSessionId);
             if (success) {
               setShowSendMessage(true);
-              setTimeout(() => setShowSendMessage(false), 1000);
+              safeTimeout(() => setShowSendMessage(false), 1000);
             } else {
               console.warn('Failed to send scan data to server in continuous mode');
             }
@@ -1863,7 +1929,7 @@ function ScannerScreen() {
 
           if (action === 'skip') {
             // 자동으로 건너뛰기: 아무 피드백 없이 스캔만 재활성화
-            setTimeout(() => {
+            safeTimeout(() => {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 500);
@@ -1880,7 +1946,7 @@ function ScannerScreen() {
                   style: 'cancel',
                   onPress: () => {
                     // 취소: 스캔만 재활성화
-                    setTimeout(() => {
+                    safeTimeout(() => {
                       isProcessingRef.current = false;
                       setCanScan(true);
                     }, 300);
@@ -1915,18 +1981,13 @@ function ScannerScreen() {
       }
 
       // 스캔 소리 설정이 활성화된 경우에만 소리 재생
-      console.log('[ScannerScreen] Checking scan sound - enabled:', scanSoundEnabledRef.current, 'player exists:', !!beepSoundPlayerRef.current);
       if (scanSoundEnabledRef.current && beepSoundPlayerRef.current) {
-        console.log('[ScannerScreen] Playing scan sound');
         try {
-          // 처음부터 재생하도록 위치 초기화
           beepSoundPlayerRef.current.seekTo(0);
           beepSoundPlayerRef.current.play();
         } catch (error) {
-          console.log('Scan sound playback error:', error);
+          // 소리 재생 실패는 무시
         }
-      } else {
-        console.log('[ScannerScreen] Scan sound skipped');
       }
 
       // Android: cornerPoints를 우선 사용 (더 정확한 위치)
@@ -1934,31 +1995,18 @@ function ScannerScreen() {
       let effectiveBounds = bounds;
       if (Platform.OS === 'android' && cornerPoints && cornerPoints.length >= 4) {
         // Android에서는 cornerPoints가 더 정확함
-        console.log('[Android] Using cornerPoints for bounds');
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       } else if (!bounds && cornerPoints) {
-        console.log('Creating bounds from corner points');
         effectiveBounds = boundsFromCornerPoints(cornerPoints);
       }
 
       // 사진 저장이 활성화되어 있으면 촬영 (중복 코드는 사진 저장 스킵)
       let photoPromise = null;
-      const photoStartTime = Date.now();
-      console.log('[ScannerScreen] Photo save enabled:', photoSaveEnabledRef.current);
       if (photoSaveEnabledRef.current) {
         // 히스토리에서 중복 여부 확인 - 중복이면 사진 저장 스킵 (저장 공간 절약)
         const duplicateCheck = await checkDuplicateInHistory(data);
         if (!duplicateCheck.isDuplicate) {
-          console.log('[ScannerScreen] Starting photo capture at:', photoStartTime);
-          photoPromise = capturePhoto().then(result => {
-            console.log('[ScannerScreen] Photo capture completed in:', Date.now() - photoStartTime, 'ms');
-            return result;
-          }).catch(err => {
-            console.log('Background photo capture error:', err);
-            return null;
-          });
-        } else {
-          console.log('[ScannerScreen] Skipping photo for duplicate code (already in history):', data);
+          photoPromise = capturePhoto().catch(() => null);
         }
       }
 
@@ -1978,7 +2026,6 @@ function ScannerScreen() {
           if (photoPromise) {
             const waitStartTime = Date.now();
             const timeoutPromise = new Promise(resolve => setTimeout(() => {
-              console.log('[ScannerScreen] Photo timeout triggered after 300ms');
               resolve({ timedOut: true });
             }, 300));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
@@ -1986,21 +2033,16 @@ function ScannerScreen() {
 
             if (photoResult?.timedOut) {
               photoTimedOut = true;
-              console.log('[ScannerScreen] Photo wait timed out after:', waitEndTime - waitStartTime, 'ms');
 
               // 타임아웃되었지만 사진 캡처는 계속 진행 - 완료되면 히스토리에 추가
               photoPromise.then(result => {
                 const uri = result?.croppedUri || result;
                 if (uri) {
-                  console.log('[ScannerScreen] Background photo ready, updating history:', uri);
                   updateHistoryWithPhoto(data, uri);
                 }
-              }).catch(err => {
-                console.log('[ScannerScreen] Background photo failed:', err);
-              });
+              }).catch(() => {});
             } else {
               photoUri = photoResult?.croppedUri || photoResult;
-              console.log('[ScannerScreen] Photo ready in time:', waitEndTime - waitStartTime, 'ms');
             }
           }
 
@@ -2029,11 +2071,11 @@ function ScannerScreen() {
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
             if (realtimeSyncEnabled && activeSessionId) {
               setShowSendMessage(true);
-              setTimeout(() => setShowSendMessage(false), 1000);
+              safeTimeout(() => setShowSendMessage(false), 1000);
             }
 
             // 스캔 재활성화 (계속 스캔 가능)
-            setTimeout(() => {
+            safeTimeout(() => {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 500);
@@ -2067,7 +2109,7 @@ function ScannerScreen() {
             }
 
             // 스캔 재활성화 (계속 스캔 가능)
-            setTimeout(() => {
+            safeTimeout(() => {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 300);
@@ -2101,7 +2143,7 @@ function ScannerScreen() {
             }).catch(console.error);
 
             // 스캔 재활성화 (계속 스캔 가능) - 카메라는 활성 상태 유지
-            setTimeout(() => {
+            safeTimeout(() => {
               isProcessingRef.current = false;
               setCanScan(true);
             }, 300);
@@ -2118,7 +2160,8 @@ function ScannerScreen() {
           if (enabled === 'true') {
             const base = await SecureStore.getItemAsync('baseUrl');
             if (base) {
-              const url = base.includes('{code}') ? base.replace('{code}', data) : base + data;
+              const sanitizedData = encodeURIComponent(data);
+              const url = base.includes('{code}') ? base.replace('{code}', sanitizedData) : base + sanitizedData;
 
               // 스캔 연동 URL 그룹 ID 찾기
               let scanUrlGroupId = null;
@@ -2126,7 +2169,7 @@ function ScannerScreen() {
                 scanUrlGroupId = `scan-url-${activeScanUrl.id}`;
                 // URL 전송 메시지 표시
                 setShowUrlSendMessage(true);
-                setTimeout(() => setShowUrlSendMessage(false), 1000);
+                safeTimeout(() => setShowUrlSendMessage(false), 1000);
               }
 
               // 히스토리 저장은 해당 URL 그룹에 저장
@@ -2152,7 +2195,7 @@ function ScannerScreen() {
                 const enabledSite = searchSites.find(site => site.enabled);
 
                 if (enabledSite) {
-                  const searchUrl = enabledSite.url.replace('{code}', data);
+                  const searchUrl = enabledSite.url.replace('{code}', encodeURIComponent(data));
 
                   // 히스토리 저장
                   saveHistory(data, searchUrl, photoUri, normalizedType, detectedEcLevel).catch(console.error);
@@ -2384,8 +2427,9 @@ function ScannerScreen() {
 
   if (hasPermission === null) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.msg} accessibilityLabel={t('scanner.permissionRequest')}>
+      <View style={styles.permissionScreen}>
+        <ActivityIndicator size="large" color="#fff" />
+        <Text style={styles.permissionMsg} accessibilityLabel={t('scanner.permissionRequest')}>
           {t('scanner.permissionRequest')}
         </Text>
       </View>
@@ -2393,11 +2437,29 @@ function ScannerScreen() {
   }
 
   if (hasPermission === false) {
+    // 거부 화면에 탈출구가 없으면 사용자는 앱을 지우는 수밖에 없다
     return (
-      <View style={styles.container}>
-        <Text style={styles.msg} accessibilityLabel={t('scanner.permissionDenied')}>
+      <View style={styles.permissionScreen}>
+        <Ionicons name="camera-outline" size={56} color="rgba(255,255,255,0.7)" />
+        <Text style={styles.permissionMsg} accessibilityLabel={t('scanner.permissionDenied')}>
           {t('scanner.permissionDenied')}
         </Text>
+        <TouchableOpacity
+          style={styles.permissionButton}
+          onPress={() => Linking.openSettings()}
+          accessibilityRole="button"
+          accessibilityLabel={t('scanner.openSettings')}
+        >
+          <Text style={[styles.permissionButtonText, { fontFamily: fonts.semiBold }]}>{t('scanner.openSettings')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.permissionButton, styles.permissionButtonSecondary]}
+          onPress={requestCameraPermission}
+          accessibilityRole="button"
+          accessibilityLabel={t('scanner.retryPermission')}
+        >
+          <Text style={[styles.permissionButtonText, { fontFamily: fonts.semiBold }]}>{t('scanner.retryPermission')}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -2407,7 +2469,7 @@ function ScannerScreen() {
       {/* 카메라를 항상 마운트 상태로 유지하여 언마운트 시 네이티브 블로킹 방지 */}
       {/* isActive prop으로만 카메라 활성화/비활성화 제어 */}
       <NativeQRScanner
-        key={`${multiCodeModeEnabled ? 'multi' : 'single'}-${[...barcodeTypes].sort().join(',')}`}
+        key={cameraKey}
         ref={cameraRef}
         isActive={isActive}
         facing={cameraFacing}
@@ -2437,8 +2499,8 @@ function ScannerScreen() {
             <Ionicons name="folder" size={16} color="rgba(255,255,255,0.95)" />
             <Text style={[styles.groupBadgeText, { color: 'rgba(255,255,255,0.95)' }]}>
               {currentGroupId === 'default' ? t('groupEdit.defaultGroup') :
-               currentGroupId === 'lottery-lotto' ? '로또 6/45' :
-               currentGroupId === 'lottery-pension' ? '연금복권720+' : currentGroupName}
+               currentGroupId === 'lottery-lotto' ? t('lotteryScan.lotteryTypes.lotto645') :
+               currentGroupId === 'lottery-pension' ? t('lotteryScan.lotteryTypes.pension720') : currentGroupName}
             </Text>
             <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.95)" style={{ marginLeft: 4 }} />
           </BlurView>
@@ -2541,6 +2603,9 @@ function ScannerScreen() {
           onPress={() => setExposure(prev => Math.min(prev + 0.3, 1))}
           activeOpacity={0.8}
           style={styles.exposureButton}
+          hitSlop={EXPOSURE_HIT_SLOP}
+          accessibilityRole="button"
+          accessibilityLabel={t('scanner.exposureUp')}
         >
           {Platform.OS === 'ios' ? (
             <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
@@ -2558,6 +2623,9 @@ function ScannerScreen() {
             onPress={() => setExposure(0)}
             activeOpacity={0.8}
             style={styles.exposureButton}
+            hitSlop={EXPOSURE_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel={t('scanner.exposureReset')}
           >
             {Platform.OS === 'ios' ? (
               <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
@@ -2575,6 +2643,9 @@ function ScannerScreen() {
           onPress={() => setExposure(prev => Math.max(prev - 0.3, -1))}
           activeOpacity={0.8}
           style={styles.exposureButton}
+          hitSlop={EXPOSURE_HIT_SLOP}
+          accessibilityRole="button"
+          accessibilityLabel={t('scanner.exposureDown')}
         >
           {Platform.OS === 'ios' ? (
             <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
@@ -2635,7 +2706,7 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <BlurView intensity={80} tint="light" style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
+          <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Ionicons name="folder" size={24} color={colors.primary} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
@@ -2671,8 +2742,8 @@ function ScannerScreen() {
                       currentGroupId === group.id && { color: colors.primary }
                     ]}>
                       {group.id === 'default' ? t('groupEdit.defaultGroup') :
-                       group.id === 'lottery-lotto' ? '로또 6/45' :
-                       group.id === 'lottery-pension' ? '연금복권720+' : group.name}
+                       group.id === 'lottery-lotto' ? t('lotteryScan.lotteryTypes.lotto645') :
+                       group.id === 'lottery-pension' ? t('lotteryScan.lotteryTypes.pension720') : group.name}
                     </Text>
                   </View>
                   {currentGroupId === group.id && (
@@ -2690,17 +2761,17 @@ function ScannerScreen() {
         visible={lotteryPromptVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setLotteryPromptVisible(false)}
+        onRequestClose={closeLotteryPrompt}
       >
         <View style={styles.lotteryPromptOverlay}>
           <View style={[styles.lotteryPromptContent, { backgroundColor: colors.surface }]}>
             {/* 닫기 버튼 */}
             <TouchableOpacity
               style={styles.lotteryPromptCloseButton}
-              onPress={() => {
-                setLotteryPromptVisible(false);
-                setPendingLotteryCode(null);
-              }}
+              onPress={closeLotteryPrompt}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons name="close" size={24} color={colors.textTertiary} />
             </TouchableOpacity>
@@ -2712,10 +2783,10 @@ function ScannerScreen() {
 
             {/* 메시지 */}
             <Text style={[styles.lotteryPromptTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-              복권이 스캔되었습니다
+              {t('scanner.lotteryPromptTitle')}
             </Text>
             <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              설정에서 복권인식을 활성화 하여, 자동으로 그룹관리되도록 하겠습니까?
+              {t('scanner.lotteryPromptMessage')}
             </Text>
 
             {/* 버튼들 */}
@@ -2733,13 +2804,15 @@ function ScannerScreen() {
                   await AsyncStorage.setItem('multiCodeModeEnabled', 'false');
                   await SecureStore.setItemAsync('scanLinkEnabled', 'false');
                   await AsyncStorage.setItem('realtimeSyncEnabled', 'false');
-                  setLotteryPromptVisible(false);
-                  setPendingLotteryCode(null);
-                  Alert.alert('완료', '복권 인식이 활성화되었습니다. 다시 복권을 스캔해주세요.');
+                  // 마지막 스캔 기억을 지우고 스캔을 다시 켜면, 카메라를 대고 있는 그대로 바로 복권 처리가 이어진다
+                  lastScannedData.current = null;
+                  lastScannedTime.current = 0;
+                  closeLotteryPrompt();
+                  feedback.success(t('scanner.lotteryActivatedMessage'));
                 }}
               >
                 <Text style={[styles.lotteryPromptButtonText, { color: '#fff', fontFamily: fonts.semiBold }]}>
-                  활성화
+                  {t('scanner.lotteryPromptActivate')}
                 </Text>
               </TouchableOpacity>
 
@@ -2749,12 +2822,11 @@ function ScannerScreen() {
                   // 다시 묻지 않기 저장
                   setDontAskLotteryPrompt(true);
                   await AsyncStorage.setItem('dontAskLotteryPrompt', 'true');
-                  setLotteryPromptVisible(false);
-                  setPendingLotteryCode(null);
+                  closeLotteryPrompt();
                 }}
               >
                 <Text style={[styles.lotteryPromptButtonText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                  다시 묻지 않기
+                  {t('scanner.lotteryPromptDontAsk')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -2830,7 +2902,7 @@ function ScannerScreen() {
                   }
 
                   setPendingNonLotteryData(null);
-                  setTimeout(() => {
+                  safeTimeout(() => {
                     isProcessingRef.current = false;
                     setCanScan(true);
                   }, 300);
@@ -2874,7 +2946,7 @@ function ScannerScreen() {
                       }
 
                       setPendingNonLotteryData(null);
-                      setTimeout(() => {
+                      safeTimeout(() => {
                         isProcessingRef.current = false;
                         setCanScan(true);
                       }, 300);
@@ -2927,7 +2999,7 @@ function ScannerScreen() {
         }).length;
         if (validCount === 0) return null;
         return (
-        <View style={[styles.multiScanButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
+        <View style={[styles.multiScanButtonContainer, { bottom: floatingButtonBottom }]}>
           <TouchableOpacity
             style={styles.multiScanButton}
             onPress={handleViewMultiResults}
@@ -2951,7 +3023,7 @@ function ScannerScreen() {
 
       {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
       {lastScannedCode && !resultWindowAutoOpen && (
-        <View style={[styles.resultWindowButtonContainer, { bottom: Platform.OS === 'ios' ? 140 : insets.bottom + 106 }]}>
+        <View style={[styles.resultWindowButtonContainer, { bottom: floatingButtonBottom }]}>
           <BlurView intensity={80} tint="light" style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
               <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{t('resultWindowSettings.scannedCode')}</Text>
@@ -2992,7 +3064,7 @@ function ScannerScreen() {
       <AdBanner
         wrapperStyle={{
           position: 'absolute',
-          bottom: Platform.OS === 'ios' ? 83 : insets.bottom + 49,
+          bottom: toastBottom,
           left: 0,
           right: 0,
         }}
@@ -3263,6 +3335,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     color: '#fff',
     padding: 20,
+  },
+  permissionScreen: {
+    flex: 1,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  permissionMsg: {
+    textAlign: 'center',
+    fontSize: 17,
+    color: '#fff',
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  permissionButton: {
+    minWidth: 200,
+    minHeight: 48,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  permissionButtonSecondary: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  permissionButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   modalOverlay: {
     flex: 1,
