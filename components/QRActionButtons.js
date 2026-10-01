@@ -1,12 +1,13 @@
 // components/QRActionButtons.js - QR 타입별 액션 버튼 컴포넌트
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking, Alert, Platform, ActivityIndicator, PermissionsAndroid } from 'react-native';
+import { View, Text, StyleSheet, Linking, Alert, Platform, ActivityIndicator, PermissionsAndroid } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Calendar from 'expo-calendar';
 import * as Contacts from 'expo-contacts';
 import WifiManager from 'react-native-wifi-reborn';
 import { QR_CONTENT_TYPES } from '../utils/qrContentParser';
+import MaterialPressable from './MaterialPressable';
 
 /**
  * QR 타입별 액션 버튼 컴포넌트
@@ -442,7 +443,7 @@ export default function QRActionButtons({
 
   // 액션 버튼 렌더링
   const renderActionButton = (icon, label, onPress, color = colors.primary, loading = false, disabled = false) => (
-    <TouchableOpacity
+    <MaterialPressable
       style={[styles.actionButton, { backgroundColor: color + '15', borderColor: color + '30' }, disabled && { opacity: 0.6 }]}
       onPress={onPress}
       activeOpacity={0.7}
@@ -454,12 +455,12 @@ export default function QRActionButtons({
         <Ionicons name={icon} size={22} color={color} />
       )}
       <Text style={[styles.actionLabel, { color, fontFamily: fonts.medium }]}>{label}</Text>
-    </TouchableOpacity>
+    </MaterialPressable>
   );
 
   // WiFi 연결 버튼 (로딩 상태 포함)
   const renderWifiConnectButton = () => (
-    <TouchableOpacity
+    <MaterialPressable
       style={[styles.actionButton, { backgroundColor: '#34C759' + '15', borderColor: '#34C759' + '30' }, isConnecting && { opacity: 0.8 }]}
       onPress={handleConnectWifi}
       activeOpacity={0.7}
@@ -473,7 +474,7 @@ export default function QRActionButtons({
       <Text style={[styles.actionLabel, { color: '#34C759', fontFamily: fonts.medium }]}>
         {isConnecting ? (t('qrActions.connecting') || '연결 중...') : (t('qrActions.connect') || '연결')}
       </Text>
-    </TouchableOpacity>
+    </MaterialPressable>
   );
 
   // 타입별 액션 버튼 그룹
@@ -630,6 +631,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     gap: 8,
+    ...Platform.select({ android: { borderRadius: 20, minHeight: 48, paddingVertical: 10, overflow: 'hidden' }, default: {} }),
   },
   actionLabel: {
     fontSize: 14,

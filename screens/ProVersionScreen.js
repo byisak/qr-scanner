@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Platform,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialPressable from '../components/MaterialPressable';
 
 // Pro 기능 목록 - 실제 앱에 구현된 기능들 (11개)
 const PRO_FEATURES = [
@@ -72,13 +72,13 @@ export default function ProVersionScreen() {
       />
 
       {/* 닫기 버튼 */}
-      <TouchableOpacity
+      <MaterialPressable
         style={[s.closeButton, { top: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}
         onPress={() => router.back()}
         activeOpacity={0.7}
       >
         <Ionicons name="close" size={24} color="#a0a0a0" />
-      </TouchableOpacity>
+      </MaterialPressable>
 
       <ScrollView
         style={s.content}
@@ -127,7 +127,7 @@ export default function ProVersionScreen() {
         {/* 액션 영역 */}
         <View style={s.actionArea}>
           {/* 구매 버튼 */}
-          <TouchableOpacity
+          <MaterialPressable
             style={s.purchaseButton}
             onPress={handlePurchase}
             activeOpacity={0.85}
@@ -142,10 +142,10 @@ export default function ProVersionScreen() {
                 {t('proPurchase.oneTimePurchase')} • ₩15,000
               </Text>
             </LinearGradient>
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 광고 보기 버튼 */}
-          <TouchableOpacity
+          <MaterialPressable
             style={s.adButton}
             onPress={handleWatchAd}
             activeOpacity={0.85}
@@ -169,13 +169,13 @@ export default function ProVersionScreen() {
               </View>
               <Ionicons name="chevron-forward" size={16} color="#a0a0a0" />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 푸터 링크 */}
         <View style={s.footerArea}>
           {/* 구매 항목 복원 */}
-          <TouchableOpacity
+          <MaterialPressable
             style={s.restoreButton}
             onPress={handleRestorePurchase}
             activeOpacity={0.7}
@@ -184,27 +184,27 @@ export default function ProVersionScreen() {
             <Text style={[s.restoreText, { fontFamily: fonts.regular }]}>
               {t('proPurchase.restorePurchase')}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 약관 및 개인정보 */}
           <View style={s.footerLinks}>
-            <TouchableOpacity onPress={() => router.push({
+            <MaterialPressable onPress={() => router.push({
               pathname: '/webview',
               params: { url: `https://scanview.app/legal/terms?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
             })}>
               <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
                 {t('proPurchase.terms')}
               </Text>
-            </TouchableOpacity>
+            </MaterialPressable>
             <Text style={s.footerDot}>•</Text>
-            <TouchableOpacity onPress={() => router.push({
+            <MaterialPressable onPress={() => router.push({
               pathname: '/webview',
               params: { url: `https://scanview.app/legal/privacy?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
             })}>
               <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
                 {t('proPurchase.privacy')}
               </Text>
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
         </View>
 
@@ -231,6 +231,7 @@ const s = StyleSheet.create({
     right: 20,
     zIndex: 10,
     padding: 4,
+    ...(Platform.OS === 'android' ? { borderRadius: 16, overflow: 'hidden' } : {}),
   },
   content: {
     flex: 1,

@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   Switch,
-  TouchableOpacity,
   ScrollView,
   Platform,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialPressable from '../components/MaterialPressable';
 
 export default function ResultWindowSettingsScreen() {
   const router = useRouter();
@@ -60,13 +60,13 @@ export default function ResultWindowSettingsScreen() {
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <TouchableOpacity
+        <MaterialPressable
           style={s.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
           {t('resultWindowSettings.title')}
         </Text>
@@ -93,7 +93,7 @@ export default function ResultWindowSettingsScreen() {
             <Switch
               value={resultWindowAutoOpen}
               onValueChange={handleToggle}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
             />
           </View>
@@ -130,6 +130,7 @@ const s = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -147,6 +148,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionTitle: {
     fontSize: 13,

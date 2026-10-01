@@ -1,6 +1,6 @@
 // screens/ResultScreen.js - Expo Router 버전
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -17,6 +17,7 @@ import AdBanner from '../components/AdBanner';
 import { parseQRContent, QR_CONTENT_TYPES, formatPhoneNumber } from '../utils/qrContentParser';
 import QRActionButtons from '../components/QRActionButtons';
 import QRContentInfoDisplay from '../components/QRContentInfoDisplay';
+import MaterialPressable from '../components/MaterialPressable';
 
 // 바코드 타입 표시 이름 (다른 화면의 'EAN-13' 표기와 맞춘다)
 const BARCODE_TYPE_LABELS = {
@@ -643,26 +644,26 @@ export default function ResultScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 컴팩트 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.background, paddingTop: Platform.OS === 'ios' ? 50 : insets.top + 12 }]}>
-        <TouchableOpacity
+        <MaterialPressable
           style={styles.headerButton}
           onPress={() => router.back()}
           accessibilityLabel={t('common.close')}
           accessibilityRole="button"
         >
           <Ionicons name="chevron-down" size={28} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           {isGeneratedCode ? (t('result.generatedTitle') || '생성 결과') : t('result.title')}
         </Text>
         {isFromHistory ? (
-          <TouchableOpacity
+          <MaterialPressable
             style={styles.headerButton}
             onPress={handleDelete}
             accessibilityLabel={t('common.delete')}
             accessibilityRole="button"
           >
             <Ionicons name="trash-outline" size={22} color={colors.error} />
-          </TouchableOpacity>
+          </MaterialPressable>
         ) : (
           <View style={styles.headerButton} />
         )}
@@ -743,7 +744,7 @@ export default function ResultScreen() {
               />
 
               {/* 코드 재생성/편집 버튼 */}
-              <TouchableOpacity
+              <MaterialPressable
                 style={[styles.regenerateButton, { backgroundColor: isGeneratedCode ? '#9C27B0' + '15' : colors.inputBackground, borderColor: isGeneratedCode ? '#9C27B0' + '30' : colors.border }]}
                 onPress={handleRegenerateCode}
                 activeOpacity={0.7}
@@ -752,22 +753,22 @@ export default function ResultScreen() {
                 <Text style={[styles.regenerateButtonText, { color: isGeneratedCode ? '#9C27B0' : colors.textSecondary, fontFamily: fonts.medium }]}>
                   {isGeneratedCode ? (t('result.editCode') || '편집') : (t('result.regenerateCode') || '코드 재생성')}
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           ) : (
             <View style={styles.editActions}>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[styles.editButton, styles.cancelButton, { borderColor: colors.border }]}
                 onPress={handleEditToggle}
               >
                 <Text style={[styles.editButtonText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </MaterialPressable>
+              <MaterialPressable
                 style={[styles.editButton, styles.saveEditButton, { backgroundColor: colors.success }]}
                 onPress={handleSaveEdit}
               >
                 <Text style={styles.saveEditButtonText}>{t('common.save')}</Text>
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           )}
 
@@ -837,25 +838,25 @@ export default function ResultScreen() {
             <View style={styles.photoHeader}>
               <Text style={[styles.photoLabel, { color: colors.text }]}>{t('result.scanPhoto')}</Text>
               <View style={styles.photoActions}>
-                <TouchableOpacity
+                <MaterialPressable
                   style={[styles.photoActionButton, { backgroundColor: colors.primary }]}
                   onPress={handleSavePhoto}
                   accessibilityRole="button"
                   accessibilityLabel={t('result.savePhoto')}
                 >
                   <Ionicons name="download-outline" size={18} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity
+                </MaterialPressable>
+                <MaterialPressable
                   style={[styles.photoActionButton, { backgroundColor: colors.primary }]}
                   onPress={handleSharePhoto}
                   accessibilityRole="button"
                   accessibilityLabel={t('result.share')}
                 >
                   <Ionicons name="share-outline" size={18} color="#fff" />
-                </TouchableOpacity>
+                </MaterialPressable>
               </View>
             </View>
-            <TouchableOpacity
+            <MaterialPressable
               onPress={() => !photoError && router.push({
                 pathname: '/image-analysis',
                 params: { imageUri: photoUri }
@@ -883,7 +884,7 @@ export default function ResultScreen() {
                   </View>
                 </>
               )}
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
         )}
 
@@ -912,7 +913,7 @@ export default function ResultScreen() {
             </View>
 
             {/* 펼침 버튼 */}
-            <TouchableOpacity
+            <MaterialPressable
               style={styles.ecLevelExpandButton}
               onPress={() => setEcLevelExpanded(!ecLevelExpanded)}
             >
@@ -924,7 +925,7 @@ export default function ResultScreen() {
                 size={16}
                 color={colors.textSecondary}
               />
-            </TouchableOpacity>
+            </MaterialPressable>
 
             {/* 펼쳐진 EC 레벨 설명 */}
             {ecLevelExpanded && (
@@ -978,6 +979,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({ android: { borderRadius: 22, overflow: 'hidden' }, default: {} }),
   },
   headerTitle: {
     fontSize: 17,
@@ -993,6 +995,7 @@ const styles = StyleSheet.create({
   mainCard: {
     borderRadius: 16,
     padding: 16,
+    ...Platform.select({ android: { borderRadius: 12, elevation: 1 }, default: {} }),
   },
   badgeRow: {
     flexDirection: 'row',
@@ -1007,6 +1010,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
     gap: 5,
+    ...Platform.select({ android: { borderRadius: 8, minHeight: 28 }, default: {} }),
   },
   typeBadgeText: {
     fontSize: 12,
@@ -1070,6 +1074,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
+    ...Platform.select({ android: { borderRadius: 20, minHeight: 48, justifyContent: 'center', overflow: 'hidden' }, default: {} }),
   },
   cancelButton: {
     borderWidth: 1,
@@ -1111,6 +1116,7 @@ const styles = StyleSheet.create({
   photoCard: {
     borderRadius: 16,
     padding: 16,
+    ...Platform.select({ android: { borderRadius: 12, elevation: 1 }, default: {} }),
   },
   photoHeader: {
     flexDirection: 'row',
@@ -1132,6 +1138,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({ android: { borderRadius: 18, overflow: 'hidden' }, default: {} }),
   },
   scanPhoto: {
     width: '100%',
@@ -1288,6 +1295,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     gap: 8,
+    ...Platform.select({ android: { borderRadius: 20, minHeight: 48, paddingVertical: 10, overflow: 'hidden' }, default: {} }),
   },
   regenerateButtonText: {
     fontSize: 14,

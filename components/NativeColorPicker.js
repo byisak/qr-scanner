@@ -1,10 +1,14 @@
 // components/NativeColorPicker.js - 컬러 피커 모달 (컬러 휠 + HEX 입력)
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput } from 'react-native';
+import { View, StyleSheet, Modal, Text, Platform, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import { runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialPressable from './MaterialPressable';
+
+// Material 3 (Android 전용) 스타일 조정에 쓰는 플랫폼 플래그
+const IS_ANDROID = Platform.OS === 'android';
 
 export default function NativeColorPicker({ visible, onClose, color, onColorChange, colors }) {
   const insets = useSafeAreaInsets();
@@ -45,12 +49,13 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={[styles.container, { backgroundColor: colors?.surface || '#fff', paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom + 6, 20) : insets.bottom + 20 }]}>
+          {IS_ANDROID && <View style={[styles.sheetHandle, { backgroundColor: colors?.textTertiary || '#999' }]} />}
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors?.text || '#000' }]}>색상 선택</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <MaterialPressable onPress={onClose} style={styles.closeButton}>
               <Ionicons name="close" size={24} color={colors?.text || '#000'} />
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
 
           <View style={styles.content}>
@@ -87,12 +92,12 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
           </View>
 
           {/* Done Button */}
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.doneButton, { backgroundColor: colors?.primary || '#007AFF' }]}
             onPress={onClose}
           >
             <Text style={styles.doneText}>확인</Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       </View>
     </Modal>
@@ -105,9 +110,18 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 32,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.4,
+    marginTop: 12,
+  },
   container: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    ...(IS_ANDROID && { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }),
   },
   header: {
     flexDirection: 'row',
@@ -123,6 +137,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+    ...(IS_ANDROID && { borderRadius: 20, overflow: 'hidden' }),
   },
   content: {
     paddingHorizontal: 20,
@@ -170,6 +185,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, overflow: 'hidden' }),
   },
   doneText: {
     color: '#fff',

@@ -9,7 +9,6 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   ScrollView,
-  TouchableOpacity,
   Platform,
   Alert,
   Modal,
@@ -23,6 +22,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialPressable from '../components/MaterialPressable';
 
 export default function ScanUrlSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -299,13 +299,13 @@ export default function ScanUrlSettingsScreen() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* 헤더 */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <TouchableOpacity
+        <MaterialPressable
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={0.7}
         >
           <Ionicons name="chevron-back" size={28} color={colors.primary} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
         <View style={styles.headerRight} />
       </View>
@@ -322,7 +322,7 @@ export default function ScanUrlSettingsScreen() {
               <Switch
                 value={enabled}
                 onValueChange={setEnabled}
-                trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
                 thumbColor="#fff"
                 accessibilityLabel={t('settings.useScanUrl')}
               />
@@ -359,13 +359,13 @@ export default function ScanUrlSettingsScreen() {
                     keyboardType="url"
                     accessibilityLabel={t('settings.useScanUrl')}
                   />
-                  <TouchableOpacity
+                  <MaterialPressable
                     style={[styles.addButton, { backgroundColor: colors.primary }]}
                     onPress={handleAddUrl}
                     activeOpacity={0.7}
                   >
                     <Ionicons name="add" size={24} color="#fff" />
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 </View>
 
                 {/* URL 리스트 */}
@@ -410,14 +410,14 @@ export default function ScanUrlSettingsScreen() {
                           <Switch
                             value={item.enabled}
                             onValueChange={(value) => handleToggleUrl(item.id, value)}
-                            trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                            trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
                             thumbColor="#fff"
                             style={styles.urlItemSwitch}
                           />
                         </View>
                         {/* Row 2: Edit + Delete buttons */}
                         <View style={styles.urlItemButtonRow}>
-                          <TouchableOpacity
+                          <MaterialPressable
                             onPress={() => handleEditUrl(item)}
                             style={[styles.actionButton, { borderColor: colors.border }]}
                             activeOpacity={0.7}
@@ -426,8 +426,8 @@ export default function ScanUrlSettingsScreen() {
                             <Text style={[styles.actionButtonText, { color: colors.primary }]}>
                               {t('common.edit') || '수정'}
                             </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                          </MaterialPressable>
+                          <MaterialPressable
                             onPress={() => handleDeleteUrl(item.id)}
                             style={[styles.actionButton, { borderColor: colors.border }]}
                             activeOpacity={0.7}
@@ -436,7 +436,7 @@ export default function ScanUrlSettingsScreen() {
                             <Text style={[styles.actionButtonText, { color: colors.error }]}>
                               {t('common.delete') || '삭제'}
                             </Text>
-                          </TouchableOpacity>
+                          </MaterialPressable>
                         </View>
                       </View>
                     ))}
@@ -510,22 +510,22 @@ export default function ScanUrlSettingsScreen() {
                   />
 
                   <View style={styles.modalButtons}>
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
                       onPress={handleCancelEdit}
                     >
                       <Text style={[styles.modalButtonText, { color: colors.textSecondary }]}>
                         {t('common.cancel')}
                       </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                    </MaterialPressable>
+                    <MaterialPressable
                       style={[styles.modalButton, styles.modalSaveButton, { backgroundColor: colors.primary }]}
                       onPress={handleSaveEdit}
                     >
                       <Text style={[styles.modalButtonText, { color: '#fff' }]}>
                         {t('common.save') || '저장'}
                       </Text>
-                    </TouchableOpacity>
+                    </MaterialPressable>
                   </View>
                 </View>
               </TouchableWithoutFeedback>
@@ -548,6 +548,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+    ...(Platform.OS === 'android' ? { borderRadius: 16, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -571,6 +572,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   row: {
     flexDirection: 'row',

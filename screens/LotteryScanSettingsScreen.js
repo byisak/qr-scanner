@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   Switch,
-  TouchableOpacity,
   ScrollView,
   Alert,
   Modal,
@@ -24,6 +23,7 @@ import { Colors } from '../constants/Colors';
 import LockIcon from '../components/LockIcon';
 import { requestNotificationPermission, scheduleLotteryNotification, cancelLotteryNotification } from '../utils/lotteryNotification';
 import { Picker } from '@react-native-picker/picker';
+import MaterialPressable from '../components/MaterialPressable';
 
 // 지원 복권 목록
 const SUPPORTED_LOTTERIES = [
@@ -224,13 +224,13 @@ export default function LotteryScanSettingsScreen() {
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <TouchableOpacity
+        <MaterialPressable
           style={s.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
           {t('lotteryScan.title')}
         </Text>
@@ -259,7 +259,7 @@ export default function LotteryScanSettingsScreen() {
               <Switch
                 value={lotteryScanEnabled}
                 onValueChange={handleLotteryScanToggle}
-                trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
                 thumbColor="#fff"
               />
             </View>
@@ -283,7 +283,7 @@ export default function LotteryScanSettingsScreen() {
 
             {/* 대한민국 - 확장 가능한 항목 */}
             <View>
-              <TouchableOpacity
+              <MaterialPressable
                 style={s.lotteryItem}
                 onPress={() => setKoreaExpanded(!koreaExpanded)}
                 activeOpacity={0.7}
@@ -301,7 +301,7 @@ export default function LotteryScanSettingsScreen() {
                   size={20}
                   color={colors.textTertiary}
                 />
-              </TouchableOpacity>
+              </MaterialPressable>
 
               {/* 확장된 설정 */}
               {koreaExpanded && (
@@ -324,7 +324,7 @@ export default function LotteryScanSettingsScreen() {
                     <Switch
                       value={winningNotificationEnabled}
                       onValueChange={handleWinningNotificationToggle}
-                      trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                      trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
                       thumbColor="#fff"
                     />
                   </View>
@@ -333,7 +333,7 @@ export default function LotteryScanSettingsScreen() {
                   {winningNotificationEnabled && (
                     <>
                       {/* 로또 6/45 알림 시간 */}
-                      <TouchableOpacity
+                      <MaterialPressable
                         style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
                         onPress={openLottoTimePicker}
                         activeOpacity={0.7}
@@ -357,10 +357,10 @@ export default function LotteryScanSettingsScreen() {
                           </Text>
                           <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                         </View>
-                      </TouchableOpacity>
+                      </MaterialPressable>
 
                       {/* 연금복권720+ 알림 시간 */}
-                      <TouchableOpacity
+                      <MaterialPressable
                         style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
                         onPress={openPensionTimePicker}
                         activeOpacity={0.7}
@@ -384,7 +384,7 @@ export default function LotteryScanSettingsScreen() {
                           </Text>
                           <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                         </View>
-                      </TouchableOpacity>
+                      </MaterialPressable>
                     </>
                   )}
                 </View>
@@ -457,22 +457,22 @@ export default function LotteryScanSettingsScreen() {
             </View>
 
             <View style={s.modalButtons}>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[s.modalButton, { backgroundColor: colors.inputBackground }]}
                 onPress={() => setTimePickerVisible(false)}
               >
                 <Text style={[s.modalButtonText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                   취소
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </MaterialPressable>
+              <MaterialPressable
                 style={[s.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSaveTime}
               >
                 <Text style={[s.modalButtonText, { color: '#fff', fontFamily: fonts.semiBold }]}>
                   저장
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           </Pressable>
         </Pressable>
@@ -498,6 +498,7 @@ const s = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -515,6 +516,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionTitle: {
     fontSize: 14,

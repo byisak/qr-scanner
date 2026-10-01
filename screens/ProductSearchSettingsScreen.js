@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Platform,
   Switch,
   TextInput,
@@ -19,6 +18,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialPressable from '../components/MaterialPressable';
 
 // 국가 목록 (한글 이름 가나다순 정렬)
 const COUNTRIES = [
@@ -352,9 +352,9 @@ export default function ProductSearchSettingsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: statusBarHeight, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('productSearch.title')}
         </Text>
@@ -380,7 +380,7 @@ export default function ProductSearchSettingsScreen() {
             <Switch
               value={autoSearchEnabled}
               onValueChange={handleAutoSearchToggle}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
             />
           </View>
@@ -391,7 +391,7 @@ export default function ProductSearchSettingsScreen() {
           <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
             {t('productSearch.countrySettings')}
           </Text>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.countrySelector, { borderColor: colors.border }]}
             onPress={() => setShowCountryPicker(true)}
             activeOpacity={0.7}
@@ -401,7 +401,7 @@ export default function ProductSearchSettingsScreen() {
               {t(`productSearch.countries.${selectedCountry}`)}
             </Text>
             <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 검색 사이트 목록 */}
@@ -410,12 +410,12 @@ export default function ProductSearchSettingsScreen() {
             <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
               {t('productSearch.searchSites')}
             </Text>
-            <TouchableOpacity
+            <MaterialPressable
               style={[styles.addButton, { backgroundColor: colors.primary }]}
               onPress={() => setShowAddSiteModal(true)}
             >
               <Ionicons name="add" size={20} color="#fff" />
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
 
           {searchSites.map((site, index) => (
@@ -448,17 +448,17 @@ export default function ProductSearchSettingsScreen() {
               </View>
               <View style={styles.siteActions}>
                 {site.custom && (
-                  <TouchableOpacity
+                  <MaterialPressable
                     onPress={() => handleDeleteSite(site.id)}
                     style={styles.deleteButton}
                   >
                     <Ionicons name="trash-outline" size={20} color={colors.error} />
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 )}
                 <Switch
                   value={site.enabled}
                   onValueChange={() => handleSiteToggle(site.id)}
-                  trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                  trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
                   thumbColor="#fff"
                 />
               </View>
@@ -477,13 +477,13 @@ export default function ProductSearchSettingsScreen() {
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
                 {t('productSearch.selectCountry')}
               </Text>
-              <TouchableOpacity onPress={() => setShowCountryPicker(false)}>
+              <MaterialPressable onPress={() => setShowCountryPicker(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
             <ScrollView style={styles.countryList}>
               {COUNTRIES.map((country) => (
-                <TouchableOpacity
+                <MaterialPressable
                   key={country.code}
                   style={[
                     styles.countryItem,
@@ -498,7 +498,7 @@ export default function ProductSearchSettingsScreen() {
                   {selectedCountry === country.code && (
                     <Ionicons name="checkmark" size={24} color={colors.primary} />
                   )}
-                </TouchableOpacity>
+                </MaterialPressable>
               ))}
             </ScrollView>
           </View>
@@ -513,9 +513,9 @@ export default function ProductSearchSettingsScreen() {
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
                 {t('productSearch.addSearchSite')}
               </Text>
-              <TouchableOpacity onPress={() => setShowAddSiteModal(false)}>
+              <MaterialPressable onPress={() => setShowAddSiteModal(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
             <View style={styles.addSiteForm}>
               <Text style={[styles.inputLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
@@ -543,14 +543,14 @@ export default function ProductSearchSettingsScreen() {
               <Text style={[styles.inputHint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {t('productSearch.urlHint')}
               </Text>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[styles.addSiteButton, { backgroundColor: colors.primary }]}
                 onPress={handleAddSite}
               >
                 <Text style={[styles.addSiteButtonText, { fontFamily: fonts.semiBold }]}>
                   {t('productSearch.add')}
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           </View>
         </View>
@@ -574,6 +574,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -592,6 +593,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -646,6 +648,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'android' ? { overflow: 'hidden' } : {}),
   },
   siteItem: {
     flexDirection: 'row',
@@ -683,6 +686,7 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   modalOverlay: {
     flex: 1,
@@ -715,6 +719,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     gap: 12,
+    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
   },
   countryItemFlag: {
     fontSize: 28,

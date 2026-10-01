@@ -6,11 +6,11 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   FlatList,
   StatusBar,
   Alert,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from '../components/MaterialPressable';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 
 export default function MultiCodeResultsScreen() {
@@ -237,7 +238,7 @@ export default function MultiCodeResultsScreen() {
     const parsedContent = isQRCode ? parseQRContent(item.value) : null;
 
     return (
-      <TouchableOpacity
+      <MaterialPressable
         style={[styles.item, { backgroundColor: colors.surface }]}
         onPress={() => handleCopy(item.value)}
         activeOpacity={0.7}
@@ -287,7 +288,7 @@ export default function MultiCodeResultsScreen() {
 
           {/* 액션 버튼들 */}
           <View style={styles.itemActions}>
-            <TouchableOpacity
+            <MaterialPressable
               style={[styles.actionButton, { backgroundColor: colors.inputBackground }]}
               onPress={() => handleCopy(item.value)}
               activeOpacity={0.7}
@@ -295,8 +296,8 @@ export default function MultiCodeResultsScreen() {
               accessibilityLabel={t('common.copy')}
             >
               <Ionicons name="copy-outline" size={20} color={colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </MaterialPressable>
+            <MaterialPressable
               style={[
                 styles.actionButton,
                 { backgroundColor: isSaved ? colors.success : colors.primary }
@@ -313,10 +314,10 @@ export default function MultiCodeResultsScreen() {
                 size={20}
                 color="#fff"
               />
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
         </View>
-      </TouchableOpacity>
+      </MaterialPressable>
     );
   };
 
@@ -326,7 +327,7 @@ export default function MultiCodeResultsScreen() {
 
       {/* 헤더 */}
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity
+        <MaterialPressable
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
@@ -335,7 +336,7 @@ export default function MultiCodeResultsScreen() {
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <View style={styles.headerCenter}>
           <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
             {t('multiCodeResults.title')} ({codes.length})
@@ -369,7 +370,7 @@ export default function MultiCodeResultsScreen() {
       {/* 하단 버튼 */}
       {codes.length > 0 && (
         <View style={[styles.bottomContainer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: 16 + insets.bottom }]}>
-          <TouchableOpacity
+          <MaterialPressable
             style={[
               styles.saveAllButton,
               { backgroundColor: allSaved ? colors.success : colors.primary }
@@ -396,7 +397,7 @@ export default function MultiCodeResultsScreen() {
                   ? t('common.saving')
                   : `${t('multiCodeResults.saveAll')} (${unsavedCount})`}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       )}
     </View>
@@ -417,6 +418,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+    ...Platform.select({ android: { borderRadius: 18, overflow: 'hidden' }, default: {} }),
   },
   headerCenter: {
     flex: 1,
@@ -445,6 +447,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
+    ...Platform.select({ android: { borderRadius: 12, elevation: 1, overflow: 'hidden' }, default: {} }),
   },
   itemContent: {
     flexDirection: 'row',
@@ -470,6 +473,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
     gap: 3,
+    ...Platform.select({ android: { borderRadius: 8, minHeight: 28, paddingHorizontal: 8 }, default: {} }),
   },
   badgeText: {
     fontSize: 11,
@@ -486,6 +490,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({ android: { overflow: 'hidden' }, default: {} }),
   },
   emptyContainer: {
     flex: 1,
@@ -511,10 +516,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     gap: 8,
+    ...Platform.select({ android: { borderRadius: 20, minHeight: 48, paddingVertical: 12, overflow: 'hidden' }, default: {} }),
   },
   saveAllButtonText: {
     color: '#fff',
     fontSize: 16,
+    ...Platform.select({ android: { fontSize: 15 }, default: {} }),
   },
   toast: {
     position: 'absolute',

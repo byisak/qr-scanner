@@ -1,9 +1,10 @@
 // components/QRContentInfoDisplay.js - QR 콘텐츠 정보 표시 컴포넌트
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { QR_CONTENT_TYPES } from '../utils/qrContentParser';
+import MaterialPressable from './MaterialPressable';
 
 /**
  * QR 콘텐츠 정보 표시 컴포넌트
@@ -76,13 +77,13 @@ export default function QRContentInfoDisplay({
             {showPassword ? data.password || '-' : maskPassword(data.password) || '-'}
           </Text>
           {data.password && (
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+            <MaterialPressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={18}
                 color={colors.textSecondary}
               />
-            </TouchableOpacity>
+            </MaterialPressable>
           )}
         </View>
 
@@ -296,6 +297,7 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 4,
     marginLeft: 8,
+    ...Platform.select({ android: { borderRadius: 13, overflow: 'hidden' }, default: {} }),
   },
   miniMapContainer: {
     height: 150,

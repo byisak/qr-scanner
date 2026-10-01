@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Switch,
   Alert,
@@ -17,6 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import MaterialPressable from '../components/MaterialPressable';
 
 export default function SecuritySettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -92,12 +92,12 @@ export default function SecuritySettingsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
       <View style={[styles.header, { borderBottomColor: colors.borderLight, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
-        <TouchableOpacity
+        <MaterialPressable
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <Ionicons name="chevron-back" size={28} color={colors.primary} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('security.title') || '인증/보안'}
         </Text>
@@ -112,7 +112,7 @@ export default function SecuritySettingsScreen() {
         {/* 앱 잠금이 비활성화된 경우 */}
         {!appLockEnabled ? (
           <View style={[styles.section, { backgroundColor: colors.surface }]}>
-            <TouchableOpacity
+            <MaterialPressable
               style={styles.menuItem}
               onPress={handleEnableAppLock}
               activeOpacity={0.7}
@@ -129,13 +129,13 @@ export default function SecuritySettingsScreen() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
         ) : (
           <>
             {/* PIN 비밀번호 변경 */}
             <View style={[styles.section, { backgroundColor: colors.surface }]}>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: colors.borderLight }]}
                 onPress={handleChangePinPress}
                 activeOpacity={0.7}
@@ -146,7 +146,7 @@ export default function SecuritySettingsScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-              </TouchableOpacity>
+              </MaterialPressable>
 
               {/* Face ID 사용 */}
               <View style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: colors.borderLight }]}>
@@ -161,14 +161,14 @@ export default function SecuritySettingsScreen() {
                 <Switch
                   value={biometricEnabled}
                   onValueChange={handleBiometricToggle}
-                  trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                  trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
                   thumbColor="#fff"
                   disabled={!biometricAvailable}
                 />
               </View>
 
               {/* 앱 잠금 해제 */}
-              <TouchableOpacity
+              <MaterialPressable
                 style={styles.menuItem}
                 onPress={handleDisableAppLock}
                 activeOpacity={0.7}
@@ -182,7 +182,7 @@ export default function SecuritySettingsScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           </>
         )}
@@ -216,6 +216,7 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'android' ? { borderRadius: 22, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -236,6 +237,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   menuItem: {
     flexDirection: 'row',

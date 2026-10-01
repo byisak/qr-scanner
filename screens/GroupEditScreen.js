@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   TextInput,
   Alert,
   Modal,
@@ -21,6 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import config from '../config/config';
+import MaterialPressable from '../components/MaterialPressable';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -266,12 +266,13 @@ export default function GroupEditScreen() {
 
     return (
       <ScaleDecorator>
-        <TouchableOpacity
+        <MaterialPressable
           activeOpacity={0.9}
           onLongPress={drag}
           disabled={isActive}
           style={[
             s.reorderItem,
+            Platform.OS === 'android' && s.reorderItemAndroid,
             {
               backgroundColor: isActive ? colors.primary + '20' : colors.surface,
               borderColor: colors.border,
@@ -280,13 +281,13 @@ export default function GroupEditScreen() {
           ]}
         >
           {/* 드래그 핸들 */}
-          <TouchableOpacity
+          <MaterialPressable
             onPressIn={drag}
-            style={s.dragHandle}
+            style={[s.dragHandle, Platform.OS === 'android' && s.androidIconButton]}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="menu" size={22} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 아이콘 */}
           <View style={[s.reorderItemIcon, { backgroundColor: iconColor + '15' }]}>
@@ -311,8 +312,8 @@ export default function GroupEditScreen() {
           {/* 액션 버튼들 */}
           <View style={s.groupActions}>
             {/* 이름 변경 버튼 */}
-            <TouchableOpacity
-              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled]}
+            <MaterialPressable
+              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled, Platform.OS === 'android' && s.androidIconButton]}
               onPress={() => openEditModal(item)}
               disabled={item.id === DEFAULT_GROUP_ID}
             >
@@ -321,11 +322,11 @@ export default function GroupEditScreen() {
                 size={20}
                 color={item.id === DEFAULT_GROUP_ID ? colors.textTertiary : colors.primary}
               />
-            </TouchableOpacity>
+            </MaterialPressable>
 
             {/* 삭제 버튼 */}
-            <TouchableOpacity
-              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled]}
+            <MaterialPressable
+              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled, Platform.OS === 'android' && s.androidIconButton]}
               onPress={() => deleteGroup(item.id)}
               disabled={item.id === DEFAULT_GROUP_ID}
             >
@@ -334,9 +335,9 @@ export default function GroupEditScreen() {
                 size={20}
                 color={item.id === DEFAULT_GROUP_ID ? colors.textTertiary : colors.error}
               />
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
-        </TouchableOpacity>
+        </MaterialPressable>
       </ScaleDecorator>
     );
   }, [colors, t]);
@@ -355,13 +356,13 @@ export default function GroupEditScreen() {
       <View style={[s.container, { backgroundColor: colors.background }]}>
         {/* 헤더 */}
         <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: headerPaddingTop }]}>
-          <TouchableOpacity
-            style={s.backButton}
+          <MaterialPressable
+            style={[s.backButton, Platform.OS === 'android' && s.androidIconButton]}
             onPress={() => router.back()}
             accessibilityLabel={t('common.back')}
           >
             <Ionicons name="arrow-back" size={28} color={colors.primary} />
-          </TouchableOpacity>
+          </MaterialPressable>
           <Text style={[s.headerTitle, { color: colors.text }]}>{t('groupEdit.title')}</Text>
           <View style={{ width: 28 }} />
         </View>
@@ -385,13 +386,13 @@ export default function GroupEditScreen() {
 
         {/* 그룹 추가 버튼 */}
         <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 20 }]}>
-          <TouchableOpacity
-            style={[s.addButton, { backgroundColor: colors.primary }]}
+          <MaterialPressable
+            style={[s.addButton, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}
             onPress={() => setShowAddModal(true)}
           >
             <Ionicons name="add-circle" size={24} color="#fff" />
             <Text style={s.addButtonText}>{t('groupEdit.addGroup')}</Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
       {/* 그룹 추가 모달 */}
@@ -401,9 +402,10 @@ export default function GroupEditScreen() {
         animationType="fade"
         onRequestClose={() => setShowAddModal(false)}
       >
-        <TouchableOpacity
+        <MaterialPressable
           style={s.modalOverlay}
           activeOpacity={1}
+          rippleColor="transparent"
           onPress={() => {
             setShowAddModal(false);
             setNewGroupName('');
@@ -413,7 +415,7 @@ export default function GroupEditScreen() {
             behavior={Platform.OS === 'ios' ? 'position' : 'height'}
             style={s.bottomSheetWrapper}
           >
-            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+            <MaterialPressable activeOpacity={1} rippleColor="transparent" onPress={(e) => e.stopPropagation()}>
               <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
                 <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
                 <TextInput
@@ -429,26 +431,26 @@ export default function GroupEditScreen() {
                   autoFocus
                 />
                 <View style={s.modalButtons}>
-                  <TouchableOpacity
-                    style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
+                  <MaterialPressable
+                    style={[s.modalButton, s.modalButtonCancel, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.inputBackground }]}
                     onPress={() => {
                       setShowAddModal(false);
                       setNewGroupName('');
                     }}
                   >
                     <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
+                  </MaterialPressable>
+                  <MaterialPressable
+                    style={[s.modalButton, s.modalButtonConfirm, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}
                     onPress={addGroup}
                   >
                     <Text style={s.modalButtonTextConfirm}>{t('groupEdit.create')}</Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 </View>
               </View>
-            </TouchableOpacity>
+            </MaterialPressable>
           </KeyboardAvoidingView>
-        </TouchableOpacity>
+        </MaterialPressable>
       </Modal>
 
       {/* 그룹 이름 변경 모달 */}
@@ -458,9 +460,10 @@ export default function GroupEditScreen() {
         animationType="fade"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <TouchableOpacity
+        <MaterialPressable
           style={s.modalOverlay}
           activeOpacity={1}
+          rippleColor="transparent"
           onPress={() => {
             setShowEditModal(false);
             setNewGroupName('');
@@ -471,7 +474,7 @@ export default function GroupEditScreen() {
             behavior={Platform.OS === 'ios' ? 'position' : 'height'}
             style={s.bottomSheetWrapper}
           >
-            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+            <MaterialPressable activeOpacity={1} rippleColor="transparent" onPress={(e) => e.stopPropagation()}>
               <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
                 <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
                 <TextInput
@@ -487,8 +490,8 @@ export default function GroupEditScreen() {
                   autoFocus
                 />
                 <View style={s.modalButtons}>
-                  <TouchableOpacity
-                    style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.inputBackground }]}
+                  <MaterialPressable
+                    style={[s.modalButton, s.modalButtonCancel, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.inputBackground }]}
                     onPress={() => {
                       setShowEditModal(false);
                       setNewGroupName('');
@@ -496,18 +499,18 @@ export default function GroupEditScreen() {
                     }}
                   >
                     <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[s.modalButton, s.modalButtonConfirm, { backgroundColor: colors.primary }]}
+                  </MaterialPressable>
+                  <MaterialPressable
+                    style={[s.modalButton, s.modalButtonConfirm, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}
                     onPress={editGroupName}
                   >
                     <Text style={s.modalButtonTextConfirm}>{t('common.save')}</Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 </View>
               </View>
-            </TouchableOpacity>
+            </MaterialPressable>
           </KeyboardAvoidingView>
-        </TouchableOpacity>
+        </MaterialPressable>
       </Modal>
       </View>
     </GestureHandlerRootView>
@@ -588,6 +591,19 @@ const s = StyleSheet.create({
   },
   actionButtonDisabled: {
     opacity: 0.4,
+  },
+  // Android 전용 Material 3 규격 (iOS 값은 기본 스타일 그대로)
+  reorderItemAndroid: {
+    borderRadius: 12,
+    elevation: 1,
+    overflow: 'hidden', // 물결이 카드 모서리 안에 머물게
+  },
+  androidIconButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  androidClip: {
+    overflow: 'hidden',
   },
   addButtonContainer: {
     position: 'absolute',

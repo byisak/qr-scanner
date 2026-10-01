@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from '../components/MaterialPressable';
 
 // 사용 가능한 카메라 타입 목록
 const CAMERA_TYPES = [
@@ -66,9 +66,9 @@ export default function CameraSelectionScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('cameraSelection.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -83,7 +83,7 @@ export default function CameraSelectionScreen() {
             const isSelected = selectedCamera === camera.key;
 
             return (
-              <TouchableOpacity
+              <MaterialPressable
                 key={camera.key}
                 style={[
                   s.cameraItem,
@@ -116,7 +116,7 @@ export default function CameraSelectionScreen() {
                 <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.borderLight }]}>
                   {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
             );
           })}
 
@@ -149,6 +149,7 @@ const s = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -175,6 +176,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
+    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
   },
   cameraIcon: {
     width: 56,

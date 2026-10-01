@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   Modal,
-  TouchableOpacity,
   ScrollView,
   Platform,
   TextInput,
@@ -20,6 +19,10 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from './MaterialPressable';
+
+// Material 3 (Android 전용) 스타일 조정에 쓰는 플랫폼 플래그
+const IS_ANDROID = Platform.OS === 'android';
 import { FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
@@ -280,7 +283,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
 
       {showGradientOption && (
         <View style={styles.colorTypeRow}>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.colorTypeButton, !useGradient && styles.colorTypeButtonActive, { borderColor: colors.border }]}
             onPress={() => onGradientToggle(false)}
           >
@@ -288,8 +291,8 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
             <Text style={[styles.colorTypeText, { color: !useGradient ? colors.primary : colors.textSecondary }]}>
               {t('generator.qrStyle.solidColor')}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </MaterialPressable>
+          <MaterialPressable
             style={[styles.colorTypeButton, useGradient && styles.colorTypeButtonActive, { borderColor: colors.border }]}
             onPress={() => onGradientToggle(true)}
           >
@@ -297,7 +300,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
             <Text style={[styles.colorTypeText, { color: useGradient ? colors.primary : colors.textSecondary }]}>
               {t('generator.qrStyle.gradient')}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       )}
 
@@ -306,17 +309,17 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
           {/* 색상 그리드 - 컬러피커 버튼 + 프리셋 색상 */}
           <View style={styles.colorGrid}>
             {/* 컬러피커 버튼 (맨 앞) - 컬러 휠 아이콘 */}
-            <TouchableOpacity
+            <MaterialPressable
               style={[styles.rainbowPickerButton, { backgroundColor: color, borderColor: colors.border }]}
               onPress={() => setShowColorPicker(true)}
               activeOpacity={0.7}
             >
               <Ionicons name="color-palette" size={24} color={color === '#FFFFFF' || color === '#ffffff' ? '#333' : '#fff'} />
-            </TouchableOpacity>
+            </MaterialPressable>
 
             {/* 프리셋 색상들 */}
             {COLOR_PRESETS.map((presetColor) => (
-              <TouchableOpacity
+              <MaterialPressable
                 key={presetColor}
                 style={[
                   styles.colorButton,
@@ -346,7 +349,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
           {/* 그라데이션 프리셋 */}
           <View style={styles.gradientRow}>
             {GRADIENT_PRESETS.map((preset, index) => (
-              <TouchableOpacity
+              <MaterialPressable
                 key={index}
                 style={[
                   styles.gradientButton,
@@ -363,7 +366,7 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
                 <View style={[styles.gradientPreview, { backgroundColor: preset.colorStops[0].color }]}>
                   <View style={[styles.gradientPreviewHalf, { backgroundColor: preset.colorStops[1].color }]} />
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
             ))}
           </View>
 
@@ -372,19 +375,19 @@ function ColorPickerSection({ label, color, onColorChange, useGradient, gradient
             <View style={styles.stepperContainer}>
               <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.rotation')}</Text>
               <View style={styles.stepperControls}>
-                <TouchableOpacity
+                <MaterialPressable
                   style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
                   onPress={() => onGradientChange({ ...gradient, rotation: Math.max(0, (gradient.rotation || 0) - 45) })}
                 >
                   <Ionicons name="remove" size={20} color={colors.text} />
-                </TouchableOpacity>
+                </MaterialPressable>
                 <Text style={[styles.stepperValue, { color: colors.text }]}>{gradient.rotation || 0}°</Text>
-                <TouchableOpacity
+                <MaterialPressable
                   style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
                   onPress={() => onGradientChange({ ...gradient, rotation: Math.min(360, (gradient.rotation || 0) + 45) })}
                 >
                   <Ionicons name="add" size={20} color={colors.text} />
-                </TouchableOpacity>
+                </MaterialPressable>
               </View>
             </View>
           )}
@@ -461,7 +464,7 @@ export default function QRStylePicker({
   const renderPresets = () => (
     <View style={styles.presetGrid}>
       {/* 기본값 초기화 버튼 */}
-      <TouchableOpacity
+      <MaterialPressable
         style={[
           styles.presetItem,
           {
@@ -484,12 +487,12 @@ export default function QRStylePicker({
         <Text style={[styles.presetName, { color: colors.textSecondary }]}>
           {language === 'ko' ? '기본값' : 'Default'}
         </Text>
-      </TouchableOpacity>
+      </MaterialPressable>
 
       {QR_STYLE_PRESETS.map((preset, index) => {
         const isStyleLocked = isQrStyleLocked(index);
         return (
-          <TouchableOpacity
+          <MaterialPressable
             key={preset.id}
             style={[
               styles.presetItem,
@@ -543,7 +546,7 @@ export default function QRStylePicker({
             <Text style={[styles.presetName, { color: isStyleLocked ? colors.textTertiary : colors.text }]}>
               {language === 'ko' ? preset.nameKo : preset.name}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         );
       })}
     </View>
@@ -554,7 +557,7 @@ export default function QRStylePicker({
       {QR_FRAMES.map((frame) => {
         const isSelected = tempFrame?.id === frame.id || (!tempFrame && frame.id === 'none');
         return (
-          <TouchableOpacity
+          <MaterialPressable
             key={frame.id}
             style={[
               styles.frameItem,
@@ -600,7 +603,7 @@ export default function QRStylePicker({
                 <Ionicons name="checkmark" size={12} color="#fff" />
               </View>
             )}
-          </TouchableOpacity>
+          </MaterialPressable>
         );
       })}
     </View>
@@ -613,7 +616,7 @@ export default function QRStylePicker({
       </Text>
       <View style={styles.optionRow}>
         {DOT_TYPES.map((type) => (
-          <TouchableOpacity
+          <MaterialPressable
             key={type}
             style={[
               styles.optionButton,
@@ -633,7 +636,7 @@ export default function QRStylePicker({
             >
               {type}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         ))}
       </View>
 
@@ -671,7 +674,7 @@ export default function QRStylePicker({
       </Text>
       <View style={styles.optionRow}>
         {CORNER_SQUARE_TYPES.map((type) => (
-          <TouchableOpacity
+          <MaterialPressable
             key={type}
             style={[
               styles.optionButton,
@@ -691,7 +694,7 @@ export default function QRStylePicker({
             >
               {type}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         ))}
       </View>
 
@@ -725,7 +728,7 @@ export default function QRStylePicker({
       </Text>
       <View style={styles.optionRow}>
         {CORNER_DOT_TYPES.map((type) => (
-          <TouchableOpacity
+          <MaterialPressable
             key={type}
             style={[
               styles.optionButton,
@@ -745,7 +748,7 @@ export default function QRStylePicker({
             >
               {type}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         ))}
       </View>
 
@@ -806,38 +809,38 @@ export default function QRStylePicker({
       <View style={styles.stepperContainer}>
         <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.width')}</Text>
         <View style={styles.stepperControls}>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('width', Math.max(100, (tempStyle.width || 300) - 50))}
           >
             <Ionicons name="remove" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
           <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.width || 300}px</Text>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('width', Math.min(1000, (tempStyle.width || 300) + 50))}
           >
             <Ionicons name="add" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       </View>
 
       <View style={styles.stepperContainer}>
         <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.height')}</Text>
         <View style={styles.stepperControls}>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('height', Math.max(100, (tempStyle.height || 300) - 50))}
           >
             <Ionicons name="remove" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
           <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.height || 300}px</Text>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('height', Math.min(1000, (tempStyle.height || 300) + 50))}
           >
             <Ionicons name="add" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       </View>
 
@@ -851,19 +854,19 @@ export default function QRStylePicker({
       <View style={styles.stepperContainer}>
         <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.margin')}</Text>
         <View style={styles.stepperControls}>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('margin', Math.max(0, (tempStyle.margin || 0) - 5))}
           >
             <Ionicons name="remove" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
           <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.margin || 0}px</Text>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('margin', Math.min(50, (tempStyle.margin || 0) + 5))}
           >
             <Ionicons name="add" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       </View>
 
@@ -876,7 +879,7 @@ export default function QRStylePicker({
 
       <View style={styles.optionRow}>
         {['L', 'M', 'Q', 'H'].map((level) => (
-          <TouchableOpacity
+          <MaterialPressable
             key={level}
             style={[
               styles.optionButton,
@@ -905,7 +908,7 @@ export default function QRStylePicker({
             >
               {level === 'L' ? '7%' : level === 'M' ? '15%' : level === 'Q' ? '25%' : '30%'}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         ))}
       </View>
       <Text style={[styles.optionHint, { color: colors.textTertiary }]}>
@@ -932,26 +935,26 @@ export default function QRStylePicker({
               />
             </View>
             <View style={styles.logoButtonsRow}>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[styles.logoButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
                 onPress={onPickLogo}
                 activeOpacity={0.7}
               >
                 <Ionicons name="swap-horizontal" size={18} color={colors.text} />
                 <Text style={[styles.logoButtonText, { color: colors.text }]}>{t('generator.qrStyle.change')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </MaterialPressable>
+              <MaterialPressable
                 style={[styles.logoButton, { backgroundColor: '#FF3B30' }]}
                 onPress={onRemoveLogo}
                 activeOpacity={0.7}
               >
                 <Ionicons name="trash" size={18} color="#fff" />
                 <Text style={[styles.logoButtonText, { color: '#fff' }]}>{t('common.delete')}</Text>
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           </View>
         ) : (
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.logoAddButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={onPickLogo}
             activeOpacity={0.7}
@@ -961,7 +964,7 @@ export default function QRStylePicker({
             <Text style={[styles.logoAddHint, { color: colors.textTertiary }]}>
               {t('generator.qrStyle.logoHint')}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         )}
       </View>
 
@@ -987,38 +990,38 @@ export default function QRStylePicker({
       <View style={styles.stepperContainer}>
         <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.imageSize')}</Text>
         <View style={styles.stepperControls}>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, imageSize: Math.max(0.1, (tempStyle.imageOptions?.imageSize || 0.4) - 0.05) })}
           >
             <Ionicons name="remove" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
           <Text style={[styles.stepperValue, { color: colors.text }]}>{((tempStyle.imageOptions?.imageSize || 0.4) * 100).toFixed(0)}%</Text>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, imageSize: Math.min(0.5, (tempStyle.imageOptions?.imageSize || 0.4) + 0.05) })}
           >
             <Ionicons name="add" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       </View>
 
       <View style={styles.stepperContainer}>
         <Text style={[styles.stepperLabel, { color: colors.text }]}>{t('generator.qrStyle.imageMargin')}</Text>
         <View style={styles.stepperControls}>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, margin: Math.max(0, (tempStyle.imageOptions?.margin ?? 5) - 1) })}
           >
             <Ionicons name="remove" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
           <Text style={[styles.stepperValue, { color: colors.text }]}>{tempStyle.imageOptions?.margin ?? 5}px</Text>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.stepperButton, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}
             onPress={() => updateStyle('imageOptions', { ...tempStyle.imageOptions, margin: Math.min(20, (tempStyle.imageOptions?.margin ?? 5) + 1) })}
           >
             <Ionicons name="add" size={20} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
       </View>
     </View>
@@ -1039,17 +1042,17 @@ export default function QRStylePicker({
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-          <TouchableOpacity onPress={onClose} style={styles.headerButton}>
+          <MaterialPressable onPress={onClose} style={styles.headerButton}>
             <Ionicons name="close" size={24} color={colors.text} />
-          </TouchableOpacity>
+          </MaterialPressable>
           <Text style={[styles.headerTitle, { color: colors.text }]}>
             {t('generator.qrStyle.title')}
           </Text>
-          <TouchableOpacity onPress={handleApply} style={styles.headerButton}>
+          <MaterialPressable onPress={handleApply} style={styles.headerButton}>
             <Text style={[styles.applyText, { color: colors.primary }]}>
               {t('common.apply')}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* Live Preview */}
@@ -1090,7 +1093,7 @@ export default function QRStylePicker({
           contentContainerStyle={styles.tabScrollContent}
         >
           {tabs.map((tab) => (
-            <TouchableOpacity
+            <MaterialPressable
               key={tab.id}
               style={[
                 styles.tab,
@@ -1112,7 +1115,7 @@ export default function QRStylePicker({
               >
                 {tab.label}
               </Text>
-            </TouchableOpacity>
+            </MaterialPressable>
           ))}
         </ScrollView>
 
@@ -1150,6 +1153,7 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
     minWidth: 60,
+    ...(IS_ANDROID && { borderRadius: 20, overflow: 'hidden' }),
   },
   headerTitle: {
     fontSize: 17,
@@ -1215,6 +1219,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
     alignItems: 'center',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   presetPreview: {
     width: 80,
@@ -1253,6 +1258,7 @@ const styles = StyleSheet.create({
     padding: 12,
     alignItems: 'center',
     position: 'relative',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   framePreview: {
     width: 100,
@@ -1349,6 +1355,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
+    ...(IS_ANDROID && { minHeight: 32, justifyContent: 'center', borderRadius: 8, overflow: 'hidden' }),
   },
   optionButtonText: {
     fontSize: 13,
@@ -1378,6 +1385,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
+    ...(IS_ANDROID && { height: 32, paddingVertical: 0, borderRadius: 8, overflow: 'hidden' }),
   },
   colorTypeButtonActive: {
     backgroundColor: 'rgba(0,122,255,0.1)',
@@ -1418,6 +1426,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   colorPickerIconButton: {
     width: 44,
@@ -1425,6 +1434,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   rainbowPickerButton: {
     width: 44,
@@ -1487,6 +1497,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   stepperValue: {
     fontSize: 16,
@@ -1510,6 +1521,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   swiftUIPickerInline: {
     marginTop: 12,
@@ -1553,6 +1565,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     gap: 6,
+    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, overflow: 'hidden' }),
   },
   logoButtonText: {
     fontSize: 14,

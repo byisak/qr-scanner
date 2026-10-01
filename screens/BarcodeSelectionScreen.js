@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from '../components/MaterialPressable';
 
 // ✅ 지원되는 바코드 타입 목록
 const BARCODE_TYPES = [
@@ -107,9 +107,9 @@ export default function BarcodeSelectionScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text }]}>인식할 바코드 선택</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -120,9 +120,9 @@ export default function BarcodeSelectionScreen() {
             <Text style={[s.info, { color: colors.textSecondary }]}>
               선택한 바코드 타입만 인식됩니다 ({selectedBarcodes.length}개 선택)
             </Text>
-            <TouchableOpacity onPress={toggleAll} style={[s.toggleAllBtn, { backgroundColor: colors.primary }]}>
+            <MaterialPressable onPress={toggleAll} style={[s.toggleAllBtn, { backgroundColor: colors.primary }]}>
               <Text style={s.toggleAllText}>{allSelected ? '전체 해제' : '전체 선택'}</Text>
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
 
           {BARCODE_TYPES.map((barcode) => {
@@ -130,7 +130,7 @@ export default function BarcodeSelectionScreen() {
             const isQROnly = barcode.key === 'qr' && selectedBarcodes.length === 1;
 
             return (
-              <TouchableOpacity
+              <MaterialPressable
                 key={barcode.key}
                 style={[
                   s.barcodeItem,
@@ -157,7 +157,7 @@ export default function BarcodeSelectionScreen() {
                 <View style={[s.checkbox, { borderColor: isSelected ? colors.primary : colors.borderLight, backgroundColor: isSelected ? colors.primary : colors.surface }]}>
                   {isSelected && <Ionicons name="checkmark" size={18} color="#fff" />}
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
             );
           })}
         </View>
@@ -180,6 +180,7 @@ const s = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -200,6 +201,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -231,6 +233,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 10,
     borderWidth: 2,
+    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
   },
   barcodeInfo: {
     flex: 1,

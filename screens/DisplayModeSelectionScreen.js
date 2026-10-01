@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from '../components/MaterialPressable';
 
 const displayModes = [
   {
@@ -44,9 +44,9 @@ export default function DisplayModeSelectionScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text }]}>{t('displayModeSelection.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -61,7 +61,7 @@ export default function DisplayModeSelectionScreen() {
             const isSelected = themeMode === mode.id;
 
             return (
-              <TouchableOpacity
+              <MaterialPressable
                 key={mode.id}
                 style={[
                   s.modeItem,
@@ -98,7 +98,7 @@ export default function DisplayModeSelectionScreen() {
                 <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
                   {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
             );
           })}
         </View>
@@ -124,6 +124,7 @@ const s = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -150,6 +151,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 2,
+    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
   },
   modeIcon: {
     width: 56,

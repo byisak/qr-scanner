@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Platform,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { LOCKED_FEATURES } from '../config/lockedFeatures';
+import MaterialPressable from '../components/MaterialPressable';
 
 // 기능 카테고리별 정리
 const FEATURE_CATEGORIES = {
@@ -243,7 +243,7 @@ export default function ProFeaturesScreen() {
     const unlocked = !isLocked(feature.id);
 
     return (
-      <TouchableOpacity
+      <MaterialPressable
         key={feature.id}
         style={[
           s.featureItem,
@@ -260,7 +260,7 @@ export default function ProFeaturesScreen() {
           {feature.barcodeName || feature.styleName || feature.typeName || t(`proFeatures.features.${feature.id}`) || feature.id}
         </Text>
         {renderProgressBadge(feature.id, unlocked)}
-      </TouchableOpacity>
+      </MaterialPressable>
     );
   };
 
@@ -293,9 +293,9 @@ export default function ProFeaturesScreen() {
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('proFeatures.title') || '기능 잠금 해제'}
         </Text>
@@ -401,7 +401,7 @@ export default function ProFeaturesScreen() {
         </View>
 
         {/* 광고 제거 버튼 - TODO: 추후 프로버전 출시 시 주석 해제 */}
-        {/* <TouchableOpacity
+        {/* <MaterialPressable
           style={s.removeAdsButton}
           onPress={handleRemoveAds}
           activeOpacity={0.8}
@@ -417,7 +417,7 @@ export default function ProFeaturesScreen() {
               {t('proFeatures.removeAds') || '광고 제거하기'}
             </Text>
           </LinearGradient>
-        </TouchableOpacity> */}
+        </MaterialPressable> */}
 
         {/* 하단 여백 */}
         <View style={{ height: 40 }} />
@@ -440,6 +440,7 @@ const s = StyleSheet.create({
   },
   backButton: {
     padding: 8,
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -461,6 +462,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   progressHeader: {
     flexDirection: 'row',
@@ -507,6 +509,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionHeader: {
     marginBottom: 16,

@@ -5,7 +5,6 @@ import {
   Text,
   Modal,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from './MaterialPressable';
+
+// Material 3 (Android 전용) 스타일 조정에 쓰는 플랫폼 플래그
+const IS_ANDROID = Platform.OS === 'android';
 
 export default function PresetSaveModal({
   visible,
@@ -66,9 +69,10 @@ export default function PresetSaveModal({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={s.overlay}
       >
-        <TouchableOpacity
+        <MaterialPressable
           style={s.backdrop}
           activeOpacity={1}
+          rippleColor="transparent"
           onPress={handleClose}
         />
 
@@ -78,9 +82,9 @@ export default function PresetSaveModal({
             <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
               {t('generator.savePreset') || '프리셋 저장'}
             </Text>
-            <TouchableOpacity onPress={handleClose} style={s.closeButton}>
+            <MaterialPressable onPress={handleClose} style={s.closeButton}>
               <Ionicons name="close" size={24} color={colors.textTertiary} />
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
 
           {/* 프리셋 이름 입력 */}
@@ -109,16 +113,16 @@ export default function PresetSaveModal({
 
           {/* 버튼 */}
           <View style={s.buttonContainer}>
-            <TouchableOpacity
+            <MaterialPressable
               style={[s.button, s.cancelButton, { borderColor: colors.border }]}
               onPress={handleClose}
             >
               <Text style={[s.buttonText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
                 {t('common.cancel') || '취소'}
               </Text>
-            </TouchableOpacity>
+            </MaterialPressable>
 
-            <TouchableOpacity
+            <MaterialPressable
               style={[
                 s.button,
                 s.saveButton,
@@ -130,7 +134,7 @@ export default function PresetSaveModal({
               <Text style={[s.buttonText, { color: '#fff', fontFamily: fonts.semiBold }]}>
                 {isSaving ? (t('common.saving') || '저장 중...') : (t('common.save') || '저장')}
               </Text>
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -158,6 +162,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
+    ...(IS_ANDROID && { borderRadius: 28 }),
   },
   header: {
     flexDirection: 'row',
@@ -171,6 +176,7 @@ const s = StyleSheet.create({
   },
   closeButton: {
     padding: 4,
+    ...(IS_ANDROID && { borderRadius: 20, overflow: 'hidden' }),
   },
   inputContainer: {
     marginBottom: 24,
@@ -196,6 +202,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(IS_ANDROID && { height: 40, borderRadius: 20, overflow: 'hidden' }),
   },
   cancelButton: {
     borderWidth: 1,

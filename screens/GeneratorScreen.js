@@ -44,6 +44,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from '../components/StyledQRCode';
 import QRFrameRenderer from '../components/QRFrameRenderer';
+import MaterialPressable from '../components/MaterialPressable';
+
+// Material 3 (Android 전용) 스타일 조정에 쓰는 플랫폼 플래그
+const IS_ANDROID = Platform.OS === 'android';
 import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
 import NativeColorPicker from '../components/NativeColorPicker';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -1544,7 +1548,7 @@ export default function GeneratorScreen() {
               </Text>
               <View style={s.securityContainer}>
                 {['WPA', 'WEP', 'nopass'].map((sec) => (
-                  <TouchableOpacity
+                  <MaterialPressable
                     key={sec}
                     style={[
                       s.securityButton,
@@ -1562,7 +1566,7 @@ export default function GeneratorScreen() {
                     <Text style={[s.securityText, { color: data.security === sec ? '#fff' : colors.text }]}>
                       {t(`generator.securityTypes.${sec}`)}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 ))}
               </View>
             </View>
@@ -1758,7 +1762,7 @@ export default function GeneratorScreen() {
       case 'location':
         return (
           <>
-            <TouchableOpacity
+            <MaterialPressable
               style={[s.mapPickerButton, { backgroundColor: colors.primary }]}
               onPress={async () => {
                 if (hapticEnabled) {
@@ -1781,7 +1785,7 @@ export default function GeneratorScreen() {
                 {t('generator.selectFromMap') || 'Select from Map'}
               </Text>
               <Ionicons name="chevron-forward" size={20} color="#fff" />
-            </TouchableOpacity>
+            </MaterialPressable>
 
             <View style={s.fieldContainer}>
               <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
@@ -1849,11 +1853,11 @@ export default function GeneratorScreen() {
         </View>
 
         {/* 세그먼트 탭: QR 코드 / 바코드 */}
-        <View style={[s.segmentContainer, { backgroundColor: colors.surface }]}>
-          <TouchableOpacity
+        <View style={[s.segmentContainer, { backgroundColor: colors.surface }, IS_ANDROID && { backgroundColor: 'transparent', borderColor: colors.border }]}>
+          <MaterialPressable
             style={[
               s.segmentButton,
-              codeMode === 'qr' && { backgroundColor: colors.primary },
+              codeMode === 'qr' && { backgroundColor: IS_ANDROID ? colors.primary + '26' : colors.primary },
             ]}
             onPress={() => handleCodeModeChange('qr')}
             activeOpacity={0.8}
@@ -1864,19 +1868,19 @@ export default function GeneratorScreen() {
             <Ionicons
               name="qr-code-outline"
               size={20}
-              color={codeMode === 'qr' ? '#fff' : colors.text}
+              color={codeMode === 'qr' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text}
             />
             <Text style={[
               s.segmentText,
-              { color: codeMode === 'qr' ? '#fff' : colors.text }
+              { color: codeMode === 'qr' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text }
             ]}>
               {t('generator.qrCode') || 'QR 코드'}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </MaterialPressable>
+          <MaterialPressable
             style={[
               s.segmentButton,
-              codeMode === 'barcode' && { backgroundColor: colors.primary },
+              codeMode === 'barcode' && { backgroundColor: IS_ANDROID ? colors.primary + '26' : colors.primary },
             ]}
             onPress={() => {
               if (isLocked('barcodeTab')) {
@@ -1893,21 +1897,21 @@ export default function GeneratorScreen() {
             <Ionicons
               name="barcode-outline"
               size={20}
-              color={codeMode === 'barcode' ? '#fff' : colors.text}
+              color={codeMode === 'barcode' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text}
             />
             <Text style={[
               s.segmentText,
-              { color: codeMode === 'barcode' ? '#fff' : colors.text }
+              { color: codeMode === 'barcode' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text }
             ]}>
               {t('generator.barcode') || '바코드'}
             </Text>
             <LockIcon
               featureId="barcodeTab"
               size={14}
-              color={codeMode === 'barcode' ? '#fff' : colors.textTertiary}
+              color={codeMode === 'barcode' ? (IS_ANDROID ? colors.primary : '#fff') : colors.textTertiary}
               style={{ marginLeft: 4 }}
             />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* QR 코드 모드 */}
@@ -1927,7 +1931,7 @@ export default function GeneratorScreen() {
                 const hasQrProgress = qrFeatureId ? getAdProgress(qrFeatureId).current > 0 : false;
                 const qrLockColor = hasQrProgress ? LIGHT_PINK : HOT_PINK;
                 return (
-                  <TouchableOpacity
+                  <MaterialPressable
                     key={type.id}
                     style={[
                       s.typeButton,
@@ -1963,11 +1967,11 @@ export default function GeneratorScreen() {
                     ]}>
                       {t(`generator.types.${type.id}`)}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 );
               })}
               {/* 순서 변경 버튼 */}
-              <TouchableOpacity
+              <MaterialPressable
                 style={[
                   s.typeButton,
                   { backgroundColor: colors.surface, borderColor: colors.border }
@@ -1983,7 +1987,7 @@ export default function GeneratorScreen() {
                 <Text style={[s.typeText, { color: colors.textSecondary }]}>
                   {t('generator.reorder') || '순서'}
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
               </ScrollView>
             </View>
 
@@ -2028,7 +2032,7 @@ export default function GeneratorScreen() {
               {displayedBarcodeTypes.map((format) => {
                 const isSelected = selectedBarcodeFormat === format.bcid;
                 return (
-                  <TouchableOpacity
+                  <MaterialPressable
                     key={format.bcid}
                     style={[
                       s.typeButton,
@@ -2056,12 +2060,12 @@ export default function GeneratorScreen() {
                     ]} numberOfLines={1}>
                       {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 );
               })}
 
               {/* 바코드 추가 버튼 */}
-              <TouchableOpacity
+              <MaterialPressable
                 style={[
                   s.typeButton,
                   s.addBarcodeButton,
@@ -2089,10 +2093,10 @@ export default function GeneratorScreen() {
                 <Text style={[s.typeText, { color: colors.primary }]}>
                   {t('generator.addBarcode') || '더보기'}
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
 
               {/* 바코드 순서 변경 버튼 */}
-              <TouchableOpacity
+              <MaterialPressable
                 style={[
                   s.typeButton,
                   { backgroundColor: colors.surface, borderColor: colors.border }
@@ -2108,7 +2112,7 @@ export default function GeneratorScreen() {
                 <Text style={[s.typeText, { color: colors.textSecondary }]}>
                   {t('generator.reorder') || '순서'}
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
               </ScrollView>
             </View>
 
@@ -2174,7 +2178,7 @@ export default function GeneratorScreen() {
 
             {/* 바코드 스타일 설정 */}
             <View style={[s.formSection, { backgroundColor: colors.surface }]}>
-              <TouchableOpacity
+              <MaterialPressable
                 style={s.formHeaderCollapsible}
                 onPress={() => setBarcodeSettingsExpanded(!barcodeSettingsExpanded)}
                 activeOpacity={0.7}
@@ -2197,7 +2201,7 @@ export default function GeneratorScreen() {
                   size={20}
                   color={colors.textSecondary}
                 />
-              </TouchableOpacity>
+              </MaterialPressable>
               {barcodeSettingsExpanded && (
               <View style={s.settingsContainer}>
                 {/* 탭 버튼 */}
@@ -2207,7 +2211,7 @@ export default function GeneratorScreen() {
                     { id: 'display', icon: 'text-outline', label: t('generator.barcodeSettingsTabs.display') || '표시' },
                     { id: 'save', icon: 'save-outline', label: t('generator.barcodeSettingsTabs.save') || '저장' },
                   ].map((tab) => (
-                    <TouchableOpacity
+                    <MaterialPressable
                       key={tab.id}
                       style={[
                         s.settingsTab,
@@ -2229,7 +2233,7 @@ export default function GeneratorScreen() {
                       ]}>
                         {tab.label}
                       </Text>
-                    </TouchableOpacity>
+                    </MaterialPressable>
                   ))}
                 </View>
 
@@ -2302,7 +2306,7 @@ export default function GeneratorScreen() {
                             { value: 'I', label: '180°' },
                             { value: 'L', label: '270°' },
                           ].map((item) => (
-                            <TouchableOpacity
+                            <MaterialPressable
                               key={`rotate-${item.value}`}
                               style={[
                                 s.barcodeOptionBtn,
@@ -2316,7 +2320,7 @@ export default function GeneratorScreen() {
                               <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
                                 {item.label}
                               </Text>
-                            </TouchableOpacity>
+                            </MaterialPressable>
                           ))}
                         </View>
                       </View>
@@ -2334,7 +2338,7 @@ export default function GeneratorScreen() {
                           </Text>
                         </View>
                         <View style={[s.toggleControl, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                          <TouchableOpacity
+                          <MaterialPressable
                             style={[
                               s.toggleButton,
                               barcodeSettings.showText && { backgroundColor: colors.primary },
@@ -2345,8 +2349,8 @@ export default function GeneratorScreen() {
                             accessibilityState={{ selected: !!barcodeSettings.showText }}
                           >
                             <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
+                          </MaterialPressable>
+                          <MaterialPressable
                             style={[
                               s.toggleButton,
                               !barcodeSettings.showText && { backgroundColor: colors.primary },
@@ -2357,7 +2361,7 @@ export default function GeneratorScreen() {
                             accessibilityState={{ selected: !barcodeSettings.showText }}
                           >
                             <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
-                          </TouchableOpacity>
+                          </MaterialPressable>
                         </View>
                       </View>
 
@@ -2435,7 +2439,7 @@ export default function GeneratorScreen() {
 
                       <View style={[s.qualityLevelContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                         {HIGH_RES_LEVELS.map((item) => (
-                          <TouchableOpacity
+                          <MaterialPressable
                             key={`quality-${item.level}`}
                             style={[
                               s.qualityLevelBtn,
@@ -2452,7 +2456,7 @@ export default function GeneratorScreen() {
                             ]}>
                               {item.level === 0 ? (t('generator.qualityLevels.fast') || '빠름') : item.level}
                             </Text>
-                          </TouchableOpacity>
+                          </MaterialPressable>
                         ))}
                       </View>
 
@@ -2490,7 +2494,7 @@ export default function GeneratorScreen() {
         {/* QR 스타일 설정 - QR 모드일 때만 */}
         {codeMode === 'qr' && (
           <View style={[s.formSection, { backgroundColor: colors.surface }]}>
-            <TouchableOpacity
+            <MaterialPressable
               style={s.formHeaderCollapsible}
               onPress={() => setQrSettingsExpanded(!qrSettingsExpanded)}
               activeOpacity={0.7}
@@ -2513,7 +2517,7 @@ export default function GeneratorScreen() {
                 size={20}
                 color={colors.textSecondary}
               />
-            </TouchableOpacity>
+            </MaterialPressable>
             {qrSettingsExpanded && (
             <View style={s.settingsContainer}>
               {/* 탭 버튼 */}
@@ -2532,7 +2536,7 @@ export default function GeneratorScreen() {
                     { id: 'textColor', icon: 'text-outline', label: t('generator.qrStyle.textColor') || '글자' },
                     { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
                   ].map((tab) => (
-                    <TouchableOpacity
+                    <MaterialPressable
                       key={tab.id}
                       style={[
                         s.qrSettingsTab,
@@ -2554,7 +2558,7 @@ export default function GeneratorScreen() {
                     ]}>
                       {tab.label}
                     </Text>
-                    </TouchableOpacity>
+                    </MaterialPressable>
                   ))}
                 </ScrollView>
               </View>
@@ -2563,7 +2567,7 @@ export default function GeneratorScreen() {
               {qrSettingsTab === 'presets' && (
                 <View style={s.customPresetContainer}>
                   {/* 프리셋 저장 버튼 */}
-                  <TouchableOpacity
+                  <MaterialPressable
                     style={[s.savePresetButton, { backgroundColor: colors.primary }]}
                     onPress={() => setPresetSaveModalVisible(true)}
                     activeOpacity={0.7}
@@ -2574,12 +2578,12 @@ export default function GeneratorScreen() {
                     <Text style={[s.savePresetButtonText, { fontFamily: fonts.semiBold }]}>
                       {t('generator.saveCurrentAsPreset') || '현재 스타일을 프리셋으로 저장'}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
 
                   {/* 기본값 + 저장된 프리셋 목록 */}
                   <View style={s.qrStyleGrid}>
                     {/* 기본값 초기화 버튼 */}
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[
                         s.qrStyleItem,
                         {
@@ -2606,11 +2610,11 @@ export default function GeneratorScreen() {
                       <Text style={[s.qrStyleName, { color: colors.textSecondary }]}>
                         {language === 'ko' ? '기본값' : 'Default'}
                       </Text>
-                    </TouchableOpacity>
+                    </MaterialPressable>
 
                     {/* 커스텀 프리셋 */}
                     {customPresets.map((preset) => (
-                        <TouchableOpacity
+                        <MaterialPressable
                           key={preset.id}
                           style={[
                             s.qrStyleItem,
@@ -2648,7 +2652,7 @@ export default function GeneratorScreen() {
                           <Text style={[s.qrStyleName, { color: colors.text }]} numberOfLines={1}>
                             {preset.name}
                           </Text>
-                        </TouchableOpacity>
+                        </MaterialPressable>
                     ))}
                   </View>
 
@@ -2668,7 +2672,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.qrOptionRow}>
                     {DOT_TYPES.map((type) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={type}
                         style={[
                           s.qrOptionButton,
@@ -2686,7 +2690,7 @@ export default function GeneratorScreen() {
                         <Text style={[s.qrOptionText, { color: qrStyle.dotType === type ? '#fff' : colors.text }]}>
                           {type}
                         </Text>
-                      </TouchableOpacity>
+                      </MaterialPressable>
                     ))}
                   </View>
 
@@ -2695,7 +2699,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.colorGrid}>
                     {/* 컬러 피커 버튼 */}
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.dotColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('dotColor')}
                       activeOpacity={0.7}
@@ -2703,9 +2707,9 @@ export default function GeneratorScreen() {
                       accessibilityLabel={`${t('generator.qrStyle.dotColor') || '도트 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.dotColor === '#FFFFFF' || qrStyle.dotColor === '#ffffff') ? '#333' : '#fff'} />
-                    </TouchableOpacity>
+                    </MaterialPressable>
                     {COLOR_PRESETS.map((presetColor) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={presetColor}
                         style={[
                           s.colorButton,
@@ -2734,7 +2738,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.qrOptionRow}>
                     {CORNER_SQUARE_TYPES.map((type) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={type}
                         style={[
                           s.qrOptionButton,
@@ -2752,7 +2756,7 @@ export default function GeneratorScreen() {
                         <Text style={[s.qrOptionText, { color: qrStyle.cornerSquareType === type ? '#fff' : colors.text }]}>
                           {type}
                         </Text>
-                      </TouchableOpacity>
+                      </MaterialPressable>
                     ))}
                   </View>
 
@@ -2761,7 +2765,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.colorGrid}>
                     {/* 컬러 피커 버튼 */}
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerSquareColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('cornerSquareColor')}
                       activeOpacity={0.7}
@@ -2769,9 +2773,9 @@ export default function GeneratorScreen() {
                       accessibilityLabel={`${t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.cornerSquareColor === '#FFFFFF' || qrStyle.cornerSquareColor === '#ffffff') ? '#333' : '#fff'} />
-                    </TouchableOpacity>
+                    </MaterialPressable>
                     {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={`cs-${presetColor}`}
                         style={[
                           s.colorButton,
@@ -2795,7 +2799,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.qrOptionRow}>
                     {CORNER_DOT_TYPES.map((type) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={type}
                         style={[
                           s.qrOptionButton,
@@ -2813,7 +2817,7 @@ export default function GeneratorScreen() {
                         <Text style={[s.qrOptionText, { color: qrStyle.cornerDotType === type ? '#fff' : colors.text }]}>
                           {type}
                         </Text>
-                      </TouchableOpacity>
+                      </MaterialPressable>
                     ))}
                   </View>
 
@@ -2822,7 +2826,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.colorGrid}>
                     {/* 컬러 피커 버튼 */}
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerDotColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('cornerDotColor')}
                       activeOpacity={0.7}
@@ -2830,9 +2834,9 @@ export default function GeneratorScreen() {
                       accessibilityLabel={`${t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.cornerDotColor === '#FFFFFF' || qrStyle.cornerDotColor === '#ffffff') ? '#333' : '#fff'} />
-                    </TouchableOpacity>
+                    </MaterialPressable>
                     {COLOR_PRESETS.slice(0, 10).map((presetColor) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={`cd-${presetColor}`}
                         style={[
                           s.colorButton,
@@ -2861,7 +2865,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.colorGrid}>
                     {/* 컬러 피커 버튼 */}
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.backgroundColor || '#ffffff', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('backgroundColor')}
                       activeOpacity={0.7}
@@ -2869,9 +2873,9 @@ export default function GeneratorScreen() {
                       accessibilityLabel={`${t('generator.qrStyle.backgroundColor') || '배경 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.backgroundColor === '#FFFFFF' || qrStyle.backgroundColor === '#ffffff' || !qrStyle.backgroundColor) ? '#333' : '#fff'} />
-                    </TouchableOpacity>
+                    </MaterialPressable>
                     {COLOR_PRESETS.map((presetColor) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={presetColor}
                         style={[
                           s.colorButton,
@@ -2903,7 +2907,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.colorGrid}>
                     {/* 자동 버튼 */}
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[
                         s.colorButton,
                         {
@@ -2921,9 +2925,9 @@ export default function GeneratorScreen() {
                       accessibilityState={{ selected: frameTextColor === null }}
                     >
                       <Text style={{ color: colors.textSecondary, fontSize: 10 }}>AUTO</Text>
-                    </TouchableOpacity>
+                    </MaterialPressable>
                     {/* 컬러 피커 버튼 */}
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={[s.colorPickerButton, { backgroundColor: frameTextColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('frameTextColor')}
                       activeOpacity={0.7}
@@ -2931,10 +2935,10 @@ export default function GeneratorScreen() {
                       accessibilityLabel={`${t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={frameTextColor === '#ffffff' || frameTextColor === '#FFFFFF' ? '#333' : '#fff'} />
-                    </TouchableOpacity>
+                    </MaterialPressable>
                     {/* 프리셋 색상 */}
                     {['#000000', '#ffffff', '#333333', '#666666', '#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9900ff'].map((presetColor) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={presetColor}
                         style={[
                           s.colorButton,
@@ -2963,7 +2967,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.qrOptionRow}>
                     {['L', 'M', 'Q', 'H'].map((level) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={level}
                         style={[
                           s.qrOptionButton,
@@ -2985,7 +2989,7 @@ export default function GeneratorScreen() {
                         <Text style={[s.qrOptionSubtext, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
                           {level === 'L' ? '7%' : level === 'M' ? '15%' : level === 'Q' ? '25%' : '30%'}
                         </Text>
-                      </TouchableOpacity>
+                      </MaterialPressable>
                     ))}
                   </View>
 
@@ -2995,7 +2999,7 @@ export default function GeneratorScreen() {
                   </Text>
                   <View style={s.qrOptionRow}>
                     {QR_RES_LEVELS.map((item) => (
-                      <TouchableOpacity
+                      <MaterialPressable
                         key={item.level}
                         style={[
                           s.qrOptionButton,
@@ -3017,7 +3021,7 @@ export default function GeneratorScreen() {
                         <Text style={[s.qrOptionSubtext, { color: qrResLevel === item.level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
                           {item.time}
                         </Text>
-                      </TouchableOpacity>
+                      </MaterialPressable>
                     ))}
                   </View>
                   <Text style={[s.qrSettingHint, { color: colors.textTertiary }]}>
@@ -3250,7 +3254,7 @@ export default function GeneratorScreen() {
         {((codeMode === 'qr' && hasData) || (codeMode === 'barcode' && hasBarcodeData)) && (
           <View style={s.actionsContainer}>
             <View style={s.buttonRow}>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[s.actionButton, s.primaryButton, { backgroundColor: colors.primary, flex: 1 }]}
                 onPress={handleSaveImage}
                 activeOpacity={0.8}
@@ -3264,9 +3268,9 @@ export default function GeneratorScreen() {
                   <Text style={s.buttonTitle}>{t('generator.save')}</Text>
                   <Text style={s.buttonSubtitle}>{t('generator.saveSubtitle')}</Text>
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
 
-              <TouchableOpacity
+              <MaterialPressable
                 style={[s.shareIconButton, { backgroundColor: colors.primary }]}
                 onPress={handleShare}
                 activeOpacity={0.8}
@@ -3274,7 +3278,7 @@ export default function GeneratorScreen() {
                 accessibilityLabel={t('generator.share')}
               >
                 <Ionicons name="share-outline" size={24} color="#fff" />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           </View>
         )}
@@ -3325,6 +3329,7 @@ export default function GeneratorScreen() {
       >
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%', paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : insets.bottom + 24 }]}>
+            {IS_ANDROID && <View style={[s.sheetHandle, { backgroundColor: colors.textTertiary }]} />}
             {/* 모달 헤더 */}
             <View style={s.modalHeader}>
               <View>
@@ -3335,7 +3340,7 @@ export default function GeneratorScreen() {
                   {t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
                 </Text>
               </View>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[s.modalCloseButton, { backgroundColor: colors.background }]}
                 onPress={() => setQrTypeReorderVisible(false)}
                 activeOpacity={0.7}
@@ -3343,7 +3348,7 @@ export default function GeneratorScreen() {
                 accessibilityLabel={t('common.close')}
               >
                 <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
 
             {/* 드래그 리스트 */}
@@ -3401,6 +3406,7 @@ export default function GeneratorScreen() {
       >
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%', paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : insets.bottom + 24 }]}>
+            {IS_ANDROID && <View style={[s.sheetHandle, { backgroundColor: colors.textTertiary }]} />}
             {/* 모달 헤더 */}
             <View style={s.modalHeader}>
               <View>
@@ -3411,7 +3417,7 @@ export default function GeneratorScreen() {
                   {t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
                 </Text>
               </View>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[s.modalCloseButton, { backgroundColor: colors.background }]}
                 onPress={() => setBarcodeReorderVisible(false)}
                 activeOpacity={0.7}
@@ -3419,7 +3425,7 @@ export default function GeneratorScreen() {
                 accessibilityLabel={t('common.close')}
               >
                 <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
 
             {/* 드래그 리스트 */}
@@ -3491,6 +3497,7 @@ export default function GeneratorScreen() {
       >
         <View style={s.modalOverlay}>
           <View style={[s.modalContent, { backgroundColor: colors.surface, paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : insets.bottom + 24 }]}>
+            {IS_ANDROID && <View style={[s.sheetHandle, { backgroundColor: colors.textTertiary }]} />}
             {/* 모달 헤더 */}
             <View style={s.modalHeader}>
               <View>
@@ -3501,7 +3508,7 @@ export default function GeneratorScreen() {
                   {t('generator.barcodeCount', { count: ALL_BWIP_BARCODES.length }) || `${ALL_BWIP_BARCODES.length}종 지원`}
                 </Text>
               </View>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[s.modalCloseButton, { backgroundColor: colors.background }]}
                 onPress={() => {
                   setBarcodeSearchQuery('');
@@ -3512,7 +3519,7 @@ export default function GeneratorScreen() {
                 accessibilityLabel={t('common.close')}
               >
                 <Ionicons name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
 
             {/* 검색 인풋 */}
@@ -3529,14 +3536,14 @@ export default function GeneratorScreen() {
                   autoCorrect={false}
                 />
                 {barcodeSearchQuery.length > 0 && (
-                  <TouchableOpacity
+                  <MaterialPressable
                     onPress={() => setBarcodeSearchQuery('')}
                     accessibilityRole="button"
                     accessibilityLabel={t('history.clearSearch')}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 )}
               </View>
               {barcodeSearchQuery && (
@@ -3592,7 +3599,7 @@ export default function GeneratorScreen() {
                           const barcodeLockColor = hasBarcodeProgress ? LIGHT_PINK : HOT_PINK;
 
                           return (
-                            <TouchableOpacity
+                            <MaterialPressable
                               key={format.bcid}
                               style={[
                                 s.modalBarcodeItem,
@@ -3622,7 +3629,7 @@ export default function GeneratorScreen() {
                                   <Ionicons name="lock-closed" size={12} color={barcodeLockColor} />
                                 </View>
                               ) : (
-                                <TouchableOpacity
+                                <MaterialPressable
                                   style={s.barcodeCheckbox}
                                   onPress={(e) => {
                                     e.stopPropagation();
@@ -3638,7 +3645,7 @@ export default function GeneratorScreen() {
                                     size={20}
                                     color={isChecked ? '#22c55e' : colors.textTertiary}
                                   />
-                                </TouchableOpacity>
+                                </MaterialPressable>
                               )}
 
                               <View style={s.modalBarcodeTextContainer}>
@@ -3655,7 +3662,7 @@ export default function GeneratorScreen() {
                                   {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
                                 </Text>
                               </View>
-                            </TouchableOpacity>
+                            </MaterialPressable>
                           );
                         })}
                       </View>
@@ -3766,6 +3773,7 @@ const s = StyleSheet.create({
     borderRadius: 12,
     padding: 4,
     gap: 4,
+    ...(IS_ANDROID && { borderRadius: 20, borderWidth: 1, padding: 0, gap: 0, overflow: 'hidden' }),
   },
   segmentButton: {
     flex: 1,
@@ -3776,6 +3784,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 10,
     gap: 8,
+    ...(IS_ANDROID && { height: 40, paddingVertical: 0, borderRadius: 0 }),
   },
   segmentText: {
     fontSize: 15,
@@ -4060,6 +4069,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    ...(IS_ANDROID && { borderRadius: 12, elevation: 1, overflow: 'hidden' }),
   },
   typeIconContainer: {
     width: 44,
@@ -4133,6 +4143,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    ...(IS_ANDROID && { borderRadius: 12, elevation: 1 }),
   },
   typesScrollInSection: {
     maxHeight: 110,
@@ -4152,6 +4163,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    ...(IS_ANDROID && { borderRadius: 12, elevation: 1, overflow: 'hidden' }),
   },
   formHeader: {
     flexDirection: 'row',
@@ -4234,6 +4246,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
+    ...(IS_ANDROID && { borderRadius: 12, elevation: 1 }),
   },
   qrHeader: {
     flexDirection: 'row',
@@ -4299,6 +4312,7 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
+    ...(IS_ANDROID && { height: 32, paddingVertical: 0, borderRadius: 8, overflow: 'hidden' }),
   },
   qrSettingHint: {
     fontSize: 12,
@@ -4338,6 +4352,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     marginBottom: 16,
+    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, overflow: 'hidden' }),
   },
   savePresetButtonText: {
     color: '#fff',
@@ -4461,6 +4476,7 @@ const s = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
+    ...(IS_ANDROID && { minHeight: 32, justifyContent: 'center', borderRadius: 8, overflow: 'hidden' }),
   },
   qrOptionText: {
     fontSize: 12,
@@ -4480,6 +4496,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   colorPickerButton: {
     width: 36,
@@ -4488,6 +4505,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   stepperRow: {
     flexDirection: 'row',
@@ -4501,6 +4519,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   stepperValue: {
     fontSize: 16,
@@ -4623,6 +4642,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, elevation: 1, overflow: 'hidden' }),
   },
   shareIconButton: {
     width: 64,
@@ -4635,6 +4655,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, elevation: 1, overflow: 'hidden' }),
   },
   primaryButton: {
     // Primary button specific styles
@@ -4677,6 +4698,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, elevation: 1, overflow: 'hidden' }),
   },
   mapPickerButtonText: {
     color: '#fff',
@@ -4696,11 +4718,20 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
+  sheetHandle: {
+    alignSelf: 'center',
+    width: 32,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.4,
+    marginTop: 12,
+  },
   modalContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: '92%',
     minHeight: '80%',
+    ...(IS_ANDROID && { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }),
   },
   // 프로그레스 모달 스타일
   progressModalOverlay: {
@@ -4760,6 +4791,7 @@ const s = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    ...(IS_ANDROID && { overflow: 'hidden' }),
   },
   // 검색 관련 스타일
   searchContainer: {

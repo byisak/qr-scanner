@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Platform,
 } from 'react-native';
@@ -18,6 +17,7 @@ import * as Sharing from 'expo-sharing';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from '../components/MaterialPressable';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -231,9 +231,9 @@ export default function ExportHistoryScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={[s.backButton, Platform.OS === 'android' && s.androidIconButton]}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text }]}>{t('exportHistory.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -244,9 +244,9 @@ export default function ExportHistoryScreen() {
             <Text style={[s.info, { color: colors.textSecondary }]}>
               {t('exportHistory.selectedCount', { count: selectedGroups.length })}
             </Text>
-            <TouchableOpacity onPress={toggleAll} style={[s.toggleAllBtn, { backgroundColor: colors.primary }]}>
+            <MaterialPressable onPress={toggleAll} style={[s.toggleAllBtn, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}>
               <Text style={s.toggleAllText}>{allSelected ? t('exportHistory.deselectAll') : t('exportHistory.selectAll')}</Text>
-            </TouchableOpacity>
+            </MaterialPressable>
           </View>
 
           {groups.map((group) => {
@@ -255,10 +255,11 @@ export default function ExportHistoryScreen() {
             const scanCount = getGroupScanCount(group.id);
 
             return (
-              <TouchableOpacity
+              <MaterialPressable
                 key={group.id}
                 style={[
                   s.groupItem,
+                  Platform.OS === 'android' && s.groupItemAndroid,
                   { backgroundColor: colors.surface, borderColor: isSelected ? colors.primary : colors.border },
                   isSelected && { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : '#f0f8ff' }
                 ]}
@@ -284,13 +285,13 @@ export default function ExportHistoryScreen() {
                 <View style={[s.checkbox, { borderColor: isSelected ? colors.primary : colors.borderLight, backgroundColor: isSelected ? colors.primary : 'transparent' }]}>
                   {isSelected && <Ionicons name="checkmark" size={18} color="#fff" />}
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
             );
           })}
         </View>
 
-        <TouchableOpacity
-          style={[s.exportButton, { backgroundColor: isExporting ? colors.borderLight : colors.primary }]}
+        <MaterialPressable
+          style={[s.exportButton, Platform.OS === 'android' && s.androidClip, { backgroundColor: isExporting ? colors.borderLight : colors.primary }]}
           onPress={handleExport}
           disabled={isExporting}
           activeOpacity={0.7}
@@ -299,10 +300,10 @@ export default function ExportHistoryScreen() {
           <Text style={s.exportButtonText}>
             {isExporting ? t('exportHistory.exporting') : t('exportHistory.exportCSV')}
           </Text>
-        </TouchableOpacity>
+        </MaterialPressable>
 
-        <TouchableOpacity
-          style={[s.exportButton, { backgroundColor: isExportingTxt ? colors.borderLight : colors.success }]}
+        <MaterialPressable
+          style={[s.exportButton, Platform.OS === 'android' && s.androidClip, { backgroundColor: isExportingTxt ? colors.borderLight : colors.success }]}
           onPress={handleExportTXT}
           disabled={isExportingTxt}
           activeOpacity={0.7}
@@ -311,7 +312,7 @@ export default function ExportHistoryScreen() {
           <Text style={s.exportButtonText}>
             {isExportingTxt ? t('exportHistory.exporting') : t('exportHistory.exportTXT')}
           </Text>
-        </TouchableOpacity>
+        </MaterialPressable>
       </ScrollView>
     </View>
   );
@@ -419,6 +420,19 @@ const s = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     marginTop: 8,
+  },
+  // Android 전용 Material 3 규격 (iOS 값은 기본 스타일 그대로)
+  groupItemAndroid: {
+    borderRadius: 12,
+    elevation: 1,
+    overflow: 'hidden', // 물결이 카드 모서리 안에 머물게
+  },
+  androidIconButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  androidClip: {
+    overflow: 'hidden',
   },
   exportButtonText: {
     fontSize: 16,

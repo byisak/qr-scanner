@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Platform,
   Alert,
   ActivityIndicator,
@@ -23,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
+import MaterialPressable from '../components/MaterialPressable';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -327,9 +327,9 @@ export default function BackupExportScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: statusBarHeight, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('backupExport.title')}
         </Text>
@@ -376,7 +376,7 @@ export default function BackupExportScreen() {
                   }
                 }}
                 disabled={!iCloudEnabled}
-                trackColor={{ false: colors.border, true: '#5AC8FA' }}
+                trackColor={{ false: colors.border, true: Platform.OS === 'android' ? colors.primary + '99' : '#5AC8FA' }}
                 thumbColor="#FFFFFF"
               />
             </View>
@@ -386,7 +386,7 @@ export default function BackupExportScreen() {
                 <Text style={[styles.icloudDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('backupExport.icloudAutoSyncDesc')}
                 </Text>
-                <TouchableOpacity
+                <MaterialPressable
                   style={[styles.syncNowButton, { backgroundColor: colors.background }]}
                   onPress={handleSyncNow}
                   disabled={isLoading || syncStatus === SYNC_STATUS.SYNCING}
@@ -401,7 +401,7 @@ export default function BackupExportScreen() {
                       </Text>
                     </>
                   )}
-                </TouchableOpacity>
+                </MaterialPressable>
               </View>
             )}
 
@@ -415,7 +415,7 @@ export default function BackupExportScreen() {
 
         {/* Google Drive 백업 */}
         <View style={[styles.optionsContainer, { backgroundColor: colors.surface }]}>
-          <TouchableOpacity
+          <MaterialPressable
             style={styles.optionItem}
             onPress={() => {
               if (isLocked('googleDriveBackup')) {
@@ -450,7 +450,7 @@ export default function BackupExportScreen() {
             ) : (
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             )}
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 백업 포함 항목 */}
@@ -491,6 +491,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -509,6 +510,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   icloudHeader: {
     flexDirection: 'row',
@@ -577,6 +579,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   optionItem: {
     flexDirection: 'row',
@@ -607,6 +610,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionTitle: {
     fontSize: 16,

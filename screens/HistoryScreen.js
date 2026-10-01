@@ -6,7 +6,6 @@ import {
   FlatList,
   StyleSheet,
   TextInput,
-  TouchableOpacity,
   Alert,
   Platform,
   ScrollView,
@@ -30,6 +29,7 @@ import { SwipeListView } from 'react-native-swipe-list-view';
 import { updateLotteryNotificationOnCheck } from '../utils/lotteryNotification';
 import { isDrawCompleted } from '../utils/lotteryApi';
 import { LotteryIcon } from '../components/LotteryIcons';
+import MaterialPressable from '../components/MaterialPressable';
 
 const DEFAULT_GROUP_ID = 'default';
 const HISTORY_VIEW_GROUP_KEY = 'historyViewGroupId';
@@ -218,8 +218,8 @@ export default function HistoryScreen() {
     const item = data.item;
     return (
       <View style={s.rowBack}>
-        <TouchableOpacity
-          style={s.deleteBtn}
+        <MaterialPressable
+          style={[s.deleteBtn, Platform.OS === 'android' && s.androidClip]}
           onPress={() => {
             if (rowMap[item.timestamp]) {
               rowMap[item.timestamp].closeRow();
@@ -230,7 +230,7 @@ export default function HistoryScreen() {
           accessibilityLabel={t('common.delete')}
         >
           <Ionicons name="trash" size={22} color="#fff" />
-        </TouchableOpacity>
+        </MaterialPressable>
       </View>
     );
   };
@@ -325,7 +325,7 @@ export default function HistoryScreen() {
       />
 
       {/* 검색 */}
-      <View style={[s.search, { backgroundColor: colors.surface, marginTop: searchMarginTop }]}>
+      <View style={[s.search, Platform.OS === 'android' && s.searchAndroid, { backgroundColor: colors.surface, marginTop: searchMarginTop }]}>
         <Ionicons name="search" size={20} color={colors.textTertiary} />
         <TextInput
           style={[s.input, { color: colors.text }]}
@@ -336,9 +336,9 @@ export default function HistoryScreen() {
           accessibilityLabel={t('common.search')}
         />
         {query ? (
-          <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('history.clearSearch')} accessibilityRole="button" hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <MaterialPressable onPress={() => setQuery('')} accessibilityLabel={t('history.clearSearch')} accessibilityRole="button" hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Ionicons name="close-circle" size={22} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
         ) : null}
       </View>
 
@@ -349,24 +349,26 @@ export default function HistoryScreen() {
             const scanCount = getGroupScanCount(group.id);
             const isActive = selectedGroupId === group.id;
             return (
-              <TouchableOpacity
+              <MaterialPressable
                 key={group.id}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: isActive }}
                 style={[
                   s.groupTab,
                   { backgroundColor: isActive ? colors.primary : colors.inputBackground },
-                  isActive && s.groupTabActive
+                  isActive && s.groupTabActive,
+                  Platform.OS === 'android' && s.groupTabAndroid,
+                  Platform.OS === 'android' && isActive && { backgroundColor: colors.primary + '26' },
                 ]}
                 onPress={() => selectGroup(group.id)}
               >
                 {group.isCloudSync && (
-                  <Ionicons name="cloud" size={16} color={isActive ? '#fff' : colors.primary} style={{ marginRight: 6 }} />
+                  <Ionicons name="cloud" size={16} color={isActive ? (Platform.OS === 'android' ? colors.primary : '#fff') : colors.primary} style={{ marginRight: 6 }} />
                 )}
                 {group.isScanUrlGroup && (
-                  <Ionicons name="link" size={16} color={isActive ? '#fff' : '#2E7D32'} style={{ marginRight: 6 }} />
+                  <Ionicons name="link" size={16} color={isActive ? (Platform.OS === 'android' ? colors.primary : '#fff') : '#2E7D32'} style={{ marginRight: 6 }} />
                 )}
-                <Text style={[s.groupTabText, { color: isActive ? '#fff' : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
+                <Text style={[s.groupTabText, { color: isActive ? (Platform.OS === 'android' ? colors.primary : '#fff') : colors.text, fontFamily: fonts.semiBold }, isActive && s.groupTabTextActive]}>
                   {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') :
                    group.id === 'lottery-lotto' ? t('history.lottoGroup') :
                    group.id === 'lottery-pension' ? t('history.pensionGroup') : group.name}
@@ -378,13 +380,13 @@ export default function HistoryScreen() {
                     </Text>
                   </View>
                 )}
-              </TouchableOpacity>
+              </MaterialPressable>
             );
           })}
-          <TouchableOpacity style={[s.editGroupTab, { backgroundColor: colors.inputBackground }]} onPress={() => router.push('/group-edit')}>
+          <MaterialPressable style={[s.editGroupTab, { backgroundColor: colors.inputBackground }, Platform.OS === 'android' && s.groupTabAndroid]} onPress={() => router.push('/group-edit')}>
             <Ionicons name="settings-outline" size={20} color={colors.primary} />
             <Text style={[s.editGroupTabText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('history.editGroups')}</Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         </ScrollView>
       </View>
 
@@ -396,9 +398,9 @@ export default function HistoryScreen() {
            currentGroup?.id === 'lottery-pension' ? t('history.pensionGroup') : (currentGroup?.name || t('history.scanRecord'))} {filteredList.length > 0 && `(${filteredList.length})`}
         </Text>
         {currentHistory.length > 0 && (
-          <TouchableOpacity onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
+          <MaterialPressable onPress={clearCurrentGroupHistory} accessibilityLabel={t('history.deleteAll')}>
             <Text style={[s.del, { color: colors.error, fontFamily: fonts.semiBold }]}>{t('history.deleteAll')}</Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         )}
       </View>
 
@@ -433,8 +435,8 @@ export default function HistoryScreen() {
               const typeColor = isLotto ? '#FFC107' : '#4CAF50';
 
               return (
-                <TouchableOpacity
-                  style={[s.item, { backgroundColor: colors.surface }]}
+                <MaterialPressable
+                  style={[s.item, Platform.OS === 'android' && s.itemAndroid, { backgroundColor: colors.surface }]}
                   onPress={() => handleItemPress(item)}
                   activeOpacity={0.7}
                   accessibilityLabel={`${lotteryInfo.typeName} ${t('history.roundLabel', { round: lotteryInfo.round })}`}
@@ -510,7 +512,7 @@ export default function HistoryScreen() {
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
                   </View>
-                </TouchableOpacity>
+                </MaterialPressable>
               );
             }
 
@@ -543,8 +545,8 @@ export default function HistoryScreen() {
             };
 
             return (
-              <TouchableOpacity
-                style={[s.item, { backgroundColor: colors.surface }]}
+              <MaterialPressable
+                style={[s.item, Platform.OS === 'android' && s.itemAndroid, { backgroundColor: colors.surface }]}
                 onPress={() => handleItemPress(item)}
                 activeOpacity={0.7}
                 accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
@@ -575,7 +577,7 @@ export default function HistoryScreen() {
                   )}
                   {/* 사진 썸네일 - 클릭시 이미지 분석 */}
                   {!isGenerated && hasPhoto && (
-                    <TouchableOpacity
+                    <MaterialPressable
                       onPress={() => !imageErrors[item.timestamp] && router.push({
                         pathname: '/image-analysis',
                         params: { imageUri: item.photos[0] }
@@ -599,7 +601,7 @@ export default function HistoryScreen() {
                           </View>
                         </>
                       )}
-                    </TouchableOpacity>
+                    </MaterialPressable>
                   )}
                   <View style={[s.itemInfo, (hasPhoto || hasThumbnail || isGenerated) && s.itemInfoWithPhoto]}>
                     {/* 1줄: 스캔값 */}
@@ -667,7 +669,7 @@ export default function HistoryScreen() {
                     )}
                   </View>
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
             );
           }}
           renderHiddenItem={renderHiddenItem}
@@ -920,6 +922,26 @@ const s = StyleSheet.create({
   url: {
     fontSize: 12,
     marginTop: 8,
+  },
+  // Android 전용 Material 3 규격 (iOS 값은 위 기본 스타일 그대로)
+  searchAndroid: {
+    borderRadius: 28, // M3 search bar
+    minHeight: 48,
+    paddingHorizontal: 16,
+  },
+  groupTabAndroid: {
+    borderRadius: 8, // M3 filter chip
+    minHeight: 32,
+    paddingVertical: 4,
+    overflow: 'hidden',
+  },
+  itemAndroid: {
+    borderRadius: 12,
+    elevation: 1,
+    overflow: 'hidden', // 물결이 카드 모서리 안에 머물게
+  },
+  androidClip: {
+    overflow: 'hidden',
   },
   rowBack: {
     alignItems: 'center',

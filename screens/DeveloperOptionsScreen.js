@@ -6,8 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   Switch,
-  TouchableOpacity,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,6 +17,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { LOCKED_FEATURES } from '../config/lockedFeatures';
 import { Colors } from '../constants/Colors';
+import MaterialPressable from '../components/MaterialPressable';
 
 // 기능 카테고리별 그룹화
 const FEATURE_GROUPS = {
@@ -122,7 +123,7 @@ export default function DeveloperOptionsScreen() {
             value={devModeEnabled || isFeatureUnlocked(featureId)}
             onValueChange={(value) => handleToggleFeature(featureId, value)}
             disabled={devModeEnabled}
-            trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+            trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
             thumbColor="#fff"
           />
         </View>
@@ -134,9 +135,9 @@ export default function DeveloperOptionsScreen() {
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('settings.developerOptions')}
         </Text>
@@ -181,7 +182,7 @@ export default function DeveloperOptionsScreen() {
             {t('developerOptions.quickActions')}
           </Text>
 
-          <TouchableOpacity
+          <MaterialPressable
             style={[s.actionButton, { borderColor: colors.success }]}
             onPress={handleUnlockAll}
             disabled={devModeEnabled}
@@ -190,9 +191,9 @@ export default function DeveloperOptionsScreen() {
             <Text style={[s.actionButtonText, { color: colors.success, fontFamily: fonts.semiBold }]}>
               {t('developerOptions.unlockAll')}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
 
-          <TouchableOpacity
+          <MaterialPressable
             style={[s.actionButton, { borderColor: colors.error, marginTop: 10 }]}
             onPress={handleResetAll}
           >
@@ -200,7 +201,7 @@ export default function DeveloperOptionsScreen() {
             <Text style={[s.actionButtonText, { color: colors.error, fontFamily: fonts.semiBold }]}>
               {t('settings.resetLocks')}
             </Text>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 개별 기능 토글 */}
@@ -232,6 +233,7 @@ const s = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+    ...(Platform.OS === 'android' ? { borderRadius: 16, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -270,6 +272,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionTitle: {
     fontSize: 13,

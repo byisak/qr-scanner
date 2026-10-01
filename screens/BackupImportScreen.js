@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Platform,
   Alert,
   ActivityIndicator,
@@ -22,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { loadFromICloud, restoreFromBackup, getICloudBackupInfo } from '../services/iCloudService';
+import MaterialPressable from '../components/MaterialPressable';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -327,7 +327,7 @@ export default function BackupImportScreen() {
   };
 
   const renderGoogleFileItem = ({ item }) => (
-    <TouchableOpacity
+    <MaterialPressable
       style={[styles.fileItem, { borderBottomColor: colors.border }]}
       onPress={() => downloadGoogleDriveFile(item.id)}
     >
@@ -341,16 +341,16 @@ export default function BackupImportScreen() {
         </Text>
       </View>
       <Ionicons name="download-outline" size={24} color={colors.textTertiary} />
-    </TouchableOpacity>
+    </MaterialPressable>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: statusBarHeight, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <MaterialPressable onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('backupImport.title')}
         </Text>
@@ -373,7 +373,7 @@ export default function BackupImportScreen() {
         {/* 가져오기 옵션들 */}
         <View style={[styles.optionsContainer, { backgroundColor: colors.surface }]}>
           {importOptions.map((option, index) => (
-            <TouchableOpacity
+            <MaterialPressable
               key={option.id}
               style={[
                 styles.optionItem,
@@ -408,7 +408,7 @@ export default function BackupImportScreen() {
               ) : (
                 <Ionicons name="chevron-forward" size={24} color={option.available ? colors.textTertiary : colors.border} />
               )}
-            </TouchableOpacity>
+            </MaterialPressable>
           ))}
         </View>
 
@@ -448,9 +448,9 @@ export default function BackupImportScreen() {
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
                 {t('backupImport.googleDriveBackupFiles')}
               </Text>
-              <TouchableOpacity onPress={() => setShowFileListModal(false)}>
+              <MaterialPressable onPress={() => setShowFileListModal(false)}>
                 <Ionicons name="close" size={28} color={colors.text} />
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
 
             <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
@@ -486,6 +486,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
+    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
     fontSize: 18,
@@ -517,6 +518,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 20,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   optionItem: {
     flexDirection: 'row',
@@ -554,6 +556,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
+    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
   sectionTitle: {
     fontSize: 16,
