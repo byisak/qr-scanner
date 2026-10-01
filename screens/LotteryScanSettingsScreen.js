@@ -12,6 +12,7 @@ import {
   Platform,
   Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
@@ -41,6 +42,7 @@ export default function LotteryScanSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isLocked, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
 
@@ -221,7 +223,7 @@ export default function LotteryScanSettingsScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
         <TouchableOpacity
           style={s.backButton}
           onPress={() => router.back()}
@@ -488,7 +490,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },

@@ -472,7 +472,7 @@ export default function ProductSearchSettingsScreen() {
       {/* 국가 선택 모달 */}
       <Modal visible={showCountryPicker} animationType="slide" transparent onRequestClose={() => setShowCountryPicker(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, paddingBottom: 20 + insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
                 {t('productSearch.selectCountry')}
@@ -508,7 +508,7 @@ export default function ProductSearchSettingsScreen() {
       {/* 사이트 추가 모달 */}
       <Modal visible={showAddSiteModal} animationType="slide" transparent onRequestClose={() => setShowAddSiteModal(false)}>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, paddingBottom: 20 + insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
                 {t('productSearch.addSearchSite')}

@@ -6,7 +6,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -24,6 +26,7 @@ export default function CameraSelectionScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const colors = isDark ? Colors.dark : Colors.light;
 
   const [selectedCamera, setSelectedCamera] = useState('back');
@@ -58,7 +61,7 @@ export default function CameraSelectionScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
@@ -66,7 +69,7 @@ export default function CameraSelectionScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
+      <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
         <View style={s.section}>
           <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
             {t('cameraSelection.description')}
@@ -134,7 +137,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },

@@ -15,6 +15,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Crypto from 'expo-crypto';
 import { Ionicons } from '@expo/vector-icons';
@@ -82,6 +83,7 @@ export default function RealtimeSyncSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { isLoggedIn, getToken, user, refreshAccessToken } = useAuth();
   const colors = isDark ? Colors.dark : Colors.light;
 
@@ -1156,7 +1158,7 @@ export default function RealtimeSyncSettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* 헤더 */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -1711,7 +1713,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 60,
     paddingBottom: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,

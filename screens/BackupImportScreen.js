@@ -443,7 +443,7 @@ export default function BackupImportScreen() {
         onRequestClose={() => setShowFileListModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: '70%' }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: '70%', paddingBottom: 20 + insets.bottom }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
                 {t('backupImport.googleDriveBackupFiles')}

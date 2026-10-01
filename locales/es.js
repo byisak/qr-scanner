@@ -1760,6 +1760,7 @@ export default {
 
   // WebView screen
   webView: {
+    loadFailed: 'No se pudo cargar la página',
     secureConnectionRequired: 'Conexión Segura Requerida',
     cannotOpenInApp: 'Esta página no se puede abrir en la aplicación. ¿Desea abrirla en un navegador externo?',
     open: 'Abrir',

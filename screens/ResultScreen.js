@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -22,6 +23,7 @@ export default function ResultScreen() {
   const { t, fonts } = useLanguage();
   const feedback = useFeedback();
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const { triggerSync } = useSync();
   const { isBarcodeTypeLocked, getBarcodeFeatureId, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
@@ -597,7 +599,7 @@ export default function ResultScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 컴팩트 헤더 */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.background, paddingTop: Platform.OS === 'ios' ? 50 : insets.top + 12 }]}>
         <TouchableOpacity
           style={styles.headerButton}
           onPress={() => router.back()}
@@ -626,7 +628,7 @@ export default function ResultScreen() {
       <FeedbackToastHost />
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 40 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         automaticallyAdjustKeyboardInsets
         keyboardDismissMode="on-drag"
@@ -938,7 +940,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingTop: 50,
     paddingBottom: 8,
   },
   headerButton: {
@@ -956,7 +957,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 40,
     gap: 12,
   },
   mainCard: {

@@ -1803,6 +1803,7 @@ export default {
 
   // WebView screen
   webView: {
+    loadFailed: '페이지를 불러오지 못했습니다',
     secureConnectionRequired: '보안 연결 필요',
     cannotOpenInApp: '이 페이지는 앱 내에서 열 수 없습니다. 외부 브라우저에서 열까요?',
     open: '열기',

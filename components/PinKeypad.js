@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const KEYPAD_WIDTH = Math.min(width - 40, 320);
@@ -29,6 +30,7 @@ export default function PinKeypad({
   onBottomLinkPress,
   errorMessage,
 }) {
+  const insets = useSafeAreaInsets();
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
   const completedRef = useRef(false);
@@ -121,7 +123,7 @@ export default function PinKeypad({
         </Text>
       ) : null}
       <View style={styles.keypadWrapper}>
-        <View style={styles.keypadContainer}>
+        <View style={[styles.keypadContainer, { paddingBottom: Math.max(insets.bottom, 16) + 34 }]}>
           {/* Row 1 */}
           <View style={styles.row}>
             {renderNumberKey(shuffledNumbers[0])}
@@ -197,6 +199,7 @@ export const PinKeypadWithRef = React.forwardRef(({
   onBottomLinkPress,
   errorMessage,
 }, ref) => {
+  const insets = useSafeAreaInsets();
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
   const completedRef = useRef(false);
@@ -311,7 +314,7 @@ export const PinKeypadWithRef = React.forwardRef(({
         </Text>
       ) : null}
       <View style={styles.keypadWrapper}>
-        <View style={styles.keypadContainer}>
+        <View style={[styles.keypadContainer, { paddingBottom: Math.max(insets.bottom, 16) + 34 }]}>
           <View style={styles.row}>
             {renderNumberKey(shuffledNumbers[0])}
             {renderNumberKey(shuffledNumbers[1])}
@@ -394,7 +397,6 @@ const styles = StyleSheet.create({
   keypadContainer: {
     backgroundColor: '#0A2A5E',
     paddingTop: 20,
-    paddingBottom: 50,
     paddingHorizontal: 10,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,

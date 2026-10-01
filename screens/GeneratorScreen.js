@@ -3324,7 +3324,7 @@ export default function GeneratorScreen() {
         onRequestClose={() => setQrTypeReorderVisible(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%' }]}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%', paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : insets.bottom + 24 }]}>
             {/* 모달 헤더 */}
             <View style={s.modalHeader}>
               <View>
@@ -3400,7 +3400,7 @@ export default function GeneratorScreen() {
         onRequestClose={() => setBarcodeReorderVisible(false)}
       >
         <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%' }]}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, maxHeight: '80%', paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : insets.bottom + 24 }]}>
             {/* 모달 헤더 */}
             <View style={s.modalHeader}>
               <View>
@@ -3490,7 +3490,7 @@ export default function GeneratorScreen() {
         }}
       >
         <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : insets.bottom + 24 }]}>
             {/* 모달 헤더 */}
             <View style={s.modalHeader}>
               <View>
@@ -4701,7 +4701,6 @@ const s = StyleSheet.create({
     borderTopRightRadius: 24,
     maxHeight: '92%',
     minHeight: '80%',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 24,
   },
   // 프로그레스 모달 스타일
   progressModalOverlay: {

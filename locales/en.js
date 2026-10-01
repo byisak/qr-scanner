@@ -1813,6 +1813,7 @@ export default {
 
   // WebView screen
   webView: {
+    loadFailed: 'Couldn\'t load the page',
     secureConnectionRequired: 'Secure Connection Required',
     cannotOpenInApp: 'This page cannot be opened in the app. Would you like to open it in an external browser?',
     open: 'Open',

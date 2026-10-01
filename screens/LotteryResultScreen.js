@@ -309,7 +309,7 @@ export default function LotteryResultScreen() {
           </TouchableOpacity>
         </View>
       ) : isBeforeDraw && lotteryData ? (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
           {/* 회차 정보 */}
           <View style={[styles.roundInfo, { backgroundColor: colors.surface }]}>
             <Text style={[styles.roundText, { color: colors.primary, fontFamily: fonts.bold }]}>
@@ -433,7 +433,7 @@ export default function LotteryResultScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       ) : result ? (
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
           {/* 회차 정보 */}
           <View style={[styles.roundInfo, { backgroundColor: colors.surface }]}>
             <Text style={[styles.roundText, { color: colors.primary, fontFamily: fonts.bold }]}>

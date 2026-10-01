@@ -4,8 +4,10 @@ import { View, StyleSheet, Modal, TouchableOpacity, Text, Platform, TextInput } 
 import { Ionicons } from '@expo/vector-icons';
 import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker';
 import { runOnJS } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function NativeColorPicker({ visible, onClose, color, onColorChange, colors }) {
+  const insets = useSafeAreaInsets();
   const [tempColor, setTempColor] = useState(color || '#ffffff');
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors?.surface || '#fff' }]}>
+        <View style={[styles.container, { backgroundColor: colors?.surface || '#fff', paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom + 6, 20) : insets.bottom + 20 }]}>
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors?.text || '#000' }]}>색상 선택</Text>
@@ -106,7 +108,6 @@ const styles = StyleSheet.create({
   container: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
   },
   header: {
     flexDirection: 'row',

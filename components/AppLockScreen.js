@@ -138,7 +138,6 @@ export default function AppLockScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 30 : 0,
   },
   topSection: {
     // 타이틀 영역

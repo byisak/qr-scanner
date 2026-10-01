@@ -92,7 +92,7 @@ export default function BatchScanSettingsScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
         <TouchableOpacity
           style={s.backButton}
           onPress={() => router.back()}
@@ -308,7 +308,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 60,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },

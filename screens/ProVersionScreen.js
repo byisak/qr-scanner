@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Pro 기능 목록 - 실제 앱에 구현된 기능들 (11개)
 const PRO_FEATURES = [
@@ -34,6 +35,7 @@ export default function ProVersionScreen() {
   const router = useRouter();
   const { language, t, fonts } = useLanguage();
   const { isDark } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const handlePurchase = () => {
     Alert.alert(
@@ -71,7 +73,7 @@ export default function ProVersionScreen() {
 
       {/* 닫기 버튼 */}
       <TouchableOpacity
-        style={s.closeButton}
+        style={[s.closeButton, { top: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}
         onPress={() => router.back()}
         activeOpacity={0.7}
       >
@@ -80,7 +82,7 @@ export default function ProVersionScreen() {
 
       <ScrollView
         style={s.content}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, { paddingTop: insets.top + (Platform.OS === 'ios' ? 23 : 30), paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 헤더 섹션 */}
@@ -226,7 +228,6 @@ const s = StyleSheet.create({
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
     right: 20,
     zIndex: 10,
     padding: 4,
@@ -236,7 +237,6 @@ const s = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 70,
   },
 
   // 헤더 섹션
