@@ -118,6 +118,7 @@ function ScannerScreen() {
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 사진 저장 활성화 여부 (기본값: 켬)
   const [batchScanEnabled, setBatchScanEnabled] = useState(false); // 배치 스캔 모드 활성화 여부
   const [batchScannedItems, setBatchScannedItems] = useState([]); // 배치로 스캔된 항목들
+  const [isFinishingBatch, setIsFinishingBatch] = useState(false); // 배치 저장 중 (완료 버튼 중복 탭 방지)
   const [showScanCounter, setShowScanCounter] = useState(true); // 스캔 카운터 표시 여부
   const [duplicateDetection, setDuplicateDetection] = useState(true); // 중복 감지 활성화 여부
   const [duplicateAction, setDuplicateAction] = useState('alert'); // 중복 처리 방식: 'alert', 'skip', 'allow'
@@ -172,6 +173,16 @@ function ScannerScreen() {
   const [toastData, setToastData] = useState(null); // 토스트에 표시할 스캔 데이터
   const [confirmToastData, setConfirmToastData] = useState(null); // 중복 확인 토스트 데이터
   const [continuousScanCount, setContinuousScanCount] = useState(0); // 연속 스캔 카운터
+  const showContinuousCounter = scanResultMode === 'toast' && showScanCounter && continuousScanCount > 0;
+  // 카운터는 화면을 오가도 유지되므로, 작업 단위를 끊고 싶을 때 배지를 길게 눌러 초기화한다
+  const resetContinuousCounter = useCallback(() => {
+    const previous = continuousScanCount;
+    setContinuousScanCount(0);
+    feedback.info(t('scanner.counterReset'), {
+      actionLabel: t('common.undo'),
+      onAction: () => setContinuousScanCount(previous),
+    });
+  }, [continuousScanCount, feedback, t]);
   const [pendingMultiScanData, setPendingMultiScanData] = useState(null); // 다중 바코드 감지 시 보류 데이터 { imageUri, barcodes, scannedCodes }
   const [visibleHighlightsCount, setVisibleHighlightsCount] = useState(0); // 화면에 표시되는 하이라이트 개수
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
@@ -2318,8 +2329,10 @@ function ScannerScreen() {
 
   // 배치 스캔 완료 - 모든 항목을 히스토리에 저장
   const handleFinishBatch = useCallback(async () => {
-    if (batchScannedItems.length === 0) return;
+    if (batchScannedItems.length === 0 || isFinishingBatch) return;
 
+    setIsFinishingBatch(true);
+    let savedCount = 0;
     try {
       // 스캔 연동 URL이 활성화되어 있으면 해당 그룹에 저장
       let targetGroupId = null;
@@ -2330,10 +2343,12 @@ function ScannerScreen() {
       // 모든 배치 항목을 히스토리에 저장
       for (const item of batchScannedItems) {
         await saveHistory(item.code, null, item.photoUri, item.type, item.errorCorrectionLevel, targetGroupId);
+        savedCount++;
       }
 
       // 배치 항목 초기화
       setBatchScannedItems([]);
+      setIsFinishingBatch(false);
 
       // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
       isNavigatingRef.current = true;
@@ -2344,13 +2359,23 @@ function ScannerScreen() {
       router.push('/(tabs)/history');
     } catch (error) {
       console.error('Finish batch error:', error);
+      // 이미 저장된 항목은 빼서, 다시 눌렀을 때 같은 코드가 두 번 들어가지 않게 한다
+      setBatchScannedItems(prev => prev.slice(savedCount));
+      setIsFinishingBatch(false);
+      feedback.error(t('scanner.batchSaveFailed'));
     }
-  }, [batchScannedItems, saveHistory, router, scanUrlEnabled, activeScanUrl]);
+  }, [batchScannedItems, isFinishingBatch, saveHistory, router, scanUrlEnabled, activeScanUrl, feedback, t]);
 
-  // 배치 스캔 초기화
+  // 배치 스캔 초기화. "완료" 바로 옆이라 잘못 누르기 쉬워 실행 취소로 되돌릴 수 있게 한다
   const handleClearBatch = useCallback(() => {
+    const snapshot = batchScannedItems;
     setBatchScannedItems([]);
-  }, []);
+    if (snapshot.length === 0) return;
+    feedback.warning(t('scanner.batchCleared', { count: snapshot.length }), {
+      actionLabel: t('common.undo'),
+      onAction: () => setBatchScannedItems(snapshot),
+    });
+  }, [batchScannedItems, feedback, t]);
 
   // 그룹 선택 핸들러
   const handleSelectGroup = useCallback(async (groupId, groupName, isCloudSync = false, isScanUrlGroup = false, scanUrlId = null) => {
@@ -2566,33 +2591,42 @@ function ScannerScreen() {
           </BlurView>
         </TouchableOpacity>
 
-        {/* 배치 모드 활성 표시 */}
-        {batchScanEnabled && (
-          <View style={[styles.batchModeBadge, { top: batchBadgeTop }]}>
-            <Ionicons name="layers" size={16} color="#fff" />
-            <Text style={styles.batchModeBadgeText}>{t('scanner.batchModeActive')}</Text>
-          </View>
-        )}
+        {/* 상태 배지 스택: 위치를 +40씩 손으로 계산하면 연속 스캔 카운터와 겹쳤다 */}
+        <View style={[styles.statusBadgeStack, { top: batchBadgeTop }]} pointerEvents="box-none">
+          {/* 배치 모드 활성 표시 (연속 스캔이면 카운터를 같이 보여준다) */}
+          {batchScanEnabled && (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onLongPress={showContinuousCounter ? resetContinuousCounter : undefined}
+              disabled={!showContinuousCounter}
+              style={[styles.batchModeBadge, styles.stackedBadge]}
+              accessibilityRole={showContinuousCounter ? 'button' : 'text'}
+              accessibilityHint={showContinuousCounter ? t('scanner.counterResetHint') : undefined}
+            >
+              <Ionicons name="layers" size={16} color="#fff" />
+              <Text style={styles.batchModeBadgeText} maxFontSizeMultiplier={1.3}>
+                {t('scanner.batchModeActive')}
+                {showContinuousCounter ? ` · ${t('scanner.scannedCount').replace('{count}', continuousScanCount.toString())}` : ''}
+              </Text>
+            </TouchableOpacity>
+          )}
 
-        {/* 실시간 서버 전송 표시 */}
-        {realtimeSyncEnabled && activeSessionId && (
-          <View style={[styles.realtimeSyncBadge, { top: batchScanEnabled ? batchBadgeTop + 40 : batchBadgeTop }]}>
-            <Ionicons name="cloud-upload" size={16} color="#fff" />
-            <Text style={styles.realtimeSyncBadgeText}>{t('scanner.realtimeSync') || '실시간 서버 전송'}</Text>
-          </View>
-        )}
+          {/* 실시간 서버 전송 표시 */}
+          {realtimeSyncEnabled && activeSessionId && (
+            <View style={[styles.realtimeSyncBadge, styles.stackedBadge]}>
+              <Ionicons name="cloud-upload" size={16} color="#fff" />
+              <Text style={styles.realtimeSyncBadgeText} maxFontSizeMultiplier={1.3}>{t('scanner.realtimeSync')}</Text>
+            </View>
+          )}
 
-        {/* 스캔 연동 URL 표시 */}
-        {scanUrlEnabled && (
-          <View style={[styles.scanUrlBadge, {
-            top: batchScanEnabled
-              ? (realtimeSyncEnabled && activeSessionId ? batchBadgeTop + 80 : batchBadgeTop + 40)
-              : (realtimeSyncEnabled && activeSessionId ? batchBadgeTop + 40 : batchBadgeTop)
-          }]}>
-            <Ionicons name="link" size={16} color="#fff" />
-            <Text style={styles.scanUrlBadgeText}>{t('settings.useScanUrl')}</Text>
-          </View>
-        )}
+          {/* 스캔 연동 URL 표시 */}
+          {scanUrlEnabled && (
+            <View style={[styles.scanUrlBadge, styles.stackedBadge]}>
+              <Ionicons name="link" size={16} color="#fff" />
+              <Text style={styles.scanUrlBadgeText} maxFontSizeMultiplier={1.3}>{t('settings.useScanUrl')}</Text>
+            </View>
+          )}
+        </View>
 
         {/* 전송 메시지 (배치 + 실시간 전송 모드) */}
         {showSendMessage && (
@@ -2621,18 +2655,25 @@ function ScannerScreen() {
           showScanCounter={showScanCounter}
           onClear={handleClearBatch}
           onFinish={handleFinishBatch}
+          isFinishing={isFinishingBatch}
           style={{ bottom: bottomOffset }}
         />
       )}
 
-      {/* 연속 스캔 카운터 배지 */}
-      {scanResultMode === 'toast' && showScanCounter && continuousScanCount > 0 && (
-        <View style={[styles.continuousCounterBadge, { top: batchBadgeTop }]}>
+      {/* 연속 스캔 카운터 배지 (배치 모드면 위 배치 배지에 합쳐 보여준다). 길게 누르면 초기화 */}
+      {showContinuousCounter && !batchScanEnabled && (
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onLongPress={resetContinuousCounter}
+          style={[styles.continuousCounterBadge, { top: batchBadgeTop }]}
+          accessibilityRole="button"
+          accessibilityHint={t('scanner.counterResetHint')}
+        >
           <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-          <Text style={styles.continuousCounterText}>
+          <Text style={styles.continuousCounterText} maxFontSizeMultiplier={1.3}>
             {t('scanner.scannedCount').replace('{count}', continuousScanCount.toString())}
           </Text>
-        </View>
+        </TouchableOpacity>
       )}
 
       <TouchableOpacity
@@ -2737,6 +2778,9 @@ function ScannerScreen() {
               <TouchableOpacity
                 onPress={() => setGroupModalVisible(false)}
                 style={styles.modalCloseButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Ionicons name="close" size={24} color={colors.textTertiary} />
               </TouchableOpacity>
@@ -2875,6 +2919,9 @@ function ScannerScreen() {
             {/* 닫기 버튼 */}
             <TouchableOpacity
               style={styles.lotteryPromptCloseButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               onPress={() => {
                 setGroupSelectForNonLotteryVisible(false);
                 setPendingNonLotteryData(null);
@@ -2892,10 +2939,10 @@ function ScannerScreen() {
 
             {/* 메시지 */}
             <Text style={[styles.lotteryPromptTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-              복권 그룹이 선택되어 있습니다
+              {t('scanner.lotteryGroupTitle')}
             </Text>
             <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              일반 QR/바코드를 어디에 저장할까요?
+              {t('scanner.lotteryGroupMessage')}
             </Text>
 
             {/* 그룹 선택 리스트 */}
@@ -2936,10 +2983,10 @@ function ScannerScreen() {
                   <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
                   <View style={styles.groupSelectItemTextContainer}>
                     <Text style={[styles.groupSelectItemText, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                      현재 그룹에 계속 저장
+                      {t('scanner.keepLotteryGroup')}
                     </Text>
                     <Text style={[styles.groupSelectItemSubtext, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                      다시 묻지 않고 복권 그룹에 저장합니다
+                      {t('scanner.keepLotteryGroupDesc')}
                     </Text>
                   </View>
                 </View>
@@ -3050,10 +3097,12 @@ function ScannerScreen() {
       {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
       {lastScannedCode && !resultWindowAutoOpen && (
         <View style={[styles.resultWindowButtonContainer, { bottom: floatingButtonBottom }]}>
-          <BlurView intensity={80} tint="light" style={styles.resultWindowButtonBlur}>
+          {/* tint와 글자색을 같은 테마로 맞춘다. light 고정이면 다크모드에서 밝은 블러 위에 흰 글씨가 됐다 */}
+          <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
               <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{t('resultWindowSettings.scannedCode')}</Text>
-              <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1}>{lastScannedCode.code}</Text>
+              {/* 창고 라벨은 뒷자리로 구분하는 경우가 많아 가운데를 줄인다 */}
+              <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">{lastScannedCode.code}</Text>
             </View>
             <View style={styles.resultWindowButtonRow}>
               <TouchableOpacity
@@ -3070,6 +3119,8 @@ function ScannerScreen() {
                 style={styles.resultWindowCloseButton}
                 onPress={handleCloseResultWindow}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
               >
                 <Ionicons name="close" size={20} color="#fff" />
               </TouchableOpacity>
@@ -3140,6 +3191,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 6,
+  },
+  statusBadgeStack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 8,
+  },
+  // 스택 안에서는 절대 위치를 풀어 세로로 쌓는다
+  stackedBadge: {
+    position: 'relative',
   },
   batchModeBadge: {
     position: 'absolute',

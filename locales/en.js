@@ -161,6 +161,14 @@ export default {
 
   // Scanner screen
   scanner: {
+    batchCleared: 'Cleared {{count}} items',
+    batchSaveFailed: 'Some items weren\'t saved. Tap again to retry',
+    counterResetHint: 'Long press to reset the counter',
+    counterReset: 'Scan counter reset',
+    keepLotteryGroupDesc: 'Save to the lottery group without asking again',
+    keepLotteryGroup: 'Keep saving to this group',
+    lotteryGroupMessage: 'Where should this regular QR/barcode be saved?',
+    lotteryGroupTitle: 'A lottery group is selected',
     multiListCleared: 'Collected codes cleared',
     duplicateSkipped: 'Already scanned, skipped',
     clearMultiList: 'Clear collected codes',

@@ -159,6 +159,14 @@ export default {
 
   // スキャン画面
   scanner: {
+    batchCleared: '{{count}}件を消去しました',
+    batchSaveFailed: '保存できなかった項目があります。もう一度タップしてください',
+    counterResetHint: '長押しでカウンターをリセット',
+    counterReset: 'スキャンカウンターをリセットしました',
+    keepLotteryGroupDesc: '今後確認せずに宝くじグループに保存します',
+    keepLotteryGroup: 'このグループに保存し続ける',
+    lotteryGroupMessage: '通常のQR/バーコードをどこに保存しますか？',
+    lotteryGroupTitle: '宝くじグループが選択されています',
     multiListCleared: '集めたコードを消去しました',
     duplicateSkipped: 'スキャン済みのためスキップしました',
     clearMultiList: '集めたコードを消去',

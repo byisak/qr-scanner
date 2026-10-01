@@ -161,6 +161,14 @@ export default {
 
   // 스캔 화면
   scanner: {
+    batchCleared: '{{count}}개 항목을 비웠습니다',
+    batchSaveFailed: '저장하지 못한 항목이 남아 있습니다. 다시 눌러 주세요',
+    counterResetHint: '길게 누르면 카운터를 초기화합니다',
+    counterReset: '스캔 카운터를 초기화했습니다',
+    keepLotteryGroupDesc: '다시 묻지 않고 복권 그룹에 저장합니다',
+    keepLotteryGroup: '현재 그룹에 계속 저장',
+    lotteryGroupMessage: '일반 QR/바코드를 어디에 저장할까요?',
+    lotteryGroupTitle: '복권 그룹이 선택되어 있습니다',
     multiListCleared: '모은 코드를 비웠습니다',
     duplicateSkipped: '이미 스캔한 코드라 건너뛰었습니다',
     clearMultiList: '모은 코드 비우기',

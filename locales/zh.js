@@ -159,6 +159,14 @@ export default {
 
   // 扫描界面
   scanner: {
+    batchCleared: '已清空 {{count}} 项',
+    batchSaveFailed: '部分项目未保存，请再次点击重试',
+    counterResetHint: '长按重置计数',
+    counterReset: '已重置扫描计数',
+    keepLotteryGroupDesc: '不再询问，保存到彩票分组',
+    keepLotteryGroup: '继续保存到当前分组',
+    lotteryGroupMessage: '普通二维码/条形码要保存到哪里？',
+    lotteryGroupTitle: '当前选择的是彩票分组',
     multiListCleared: '已清空收集的代码',
     duplicateSkipped: '已扫描过，已跳过',
     clearMultiList: '清空已收集的代码',

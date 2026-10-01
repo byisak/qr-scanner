@@ -159,6 +159,14 @@ export default {
 
   // Pantalla de escaneo
   scanner: {
+    batchCleared: 'Se vaciaron {{count}} elementos',
+    batchSaveFailed: 'Algunos elementos no se guardaron. Toca de nuevo',
+    counterResetHint: 'Mantén pulsado para reiniciar el contador',
+    counterReset: 'Contador de escaneos reiniciado',
+    keepLotteryGroupDesc: 'Guardar en el grupo de lotería sin volver a preguntar',
+    keepLotteryGroup: 'Seguir guardando en este grupo',
+    lotteryGroupMessage: '¿Dónde guardar este QR/código de barras normal?',
+    lotteryGroupTitle: 'Hay un grupo de lotería seleccionado',
     multiListCleared: 'Códigos recogidos eliminados',
     duplicateSkipped: 'Ya escaneado, omitido',
     clearMultiList: 'Vaciar códigos recogidos',

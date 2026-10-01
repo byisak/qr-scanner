@@ -1,6 +1,6 @@
 // components/BatchScanControls.js - 배치 스캔 컨트롤 패널 컴포넌트
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -9,6 +9,7 @@ export default function BatchScanControls({
   showScanCounter = true,
   onClear,
   onFinish,
+  isFinishing = false,
   style,
 }) {
   const { t } = useLanguage();
@@ -25,8 +26,9 @@ export default function BatchScanControls({
       )}
       <View style={styles.buttons}>
         <TouchableOpacity
-          style={[styles.button, styles.buttonClear]}
+          style={[styles.button, styles.buttonClear, isFinishing && { opacity: 0.5 }]}
           onPress={onClear}
+          disabled={isFinishing}
           activeOpacity={0.8}
           accessibilityLabel={t('scanner.clearBatch')}
           accessibilityRole="button"
@@ -38,13 +40,19 @@ export default function BatchScanControls({
         <TouchableOpacity
           style={[styles.button, styles.buttonFinish]}
           onPress={onFinish}
+          disabled={isFinishing}
           activeOpacity={0.8}
           accessibilityLabel={t('scanner.finishBatch')}
           accessibilityRole="button"
-          accessibilityHint={t('scanner.finishBatchHint') || '스캔을 완료하고 저장합니다'}
+          accessibilityState={{ disabled: isFinishing, busy: isFinishing }}
+          accessibilityHint={t('scanner.finishBatchHint')}
         >
-          <Ionicons name="checkmark-done" size={18} color="#fff" />
-          <Text style={styles.buttonTextFinish}>{t('scanner.finishBatch')}</Text>
+          {isFinishing ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="checkmark-done" size={18} color="#fff" />
+          )}
+          <Text style={styles.buttonTextFinish}>{isFinishing ? t('common.saving') : t('scanner.finishBatch')}</Text>
         </TouchableOpacity>
       </View>
     </View>
