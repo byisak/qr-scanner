@@ -38,30 +38,6 @@ const DUPLICATE_NOTICE_COOLDOWN = 2500;
 // 0.8초마다 다시 저장되고 횟수가 부풀었다. 한 번 치웠다가 다시 찍어야 새 스캔이 된다
 const STILL_IN_VIEW_GAP = 1200;
 
-// 노출 버튼은 32pt라 44pt 터치 영역을 hitSlop으로 채운다
-const EXPOSURE_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
-
-// 카메라 위 둥근 반투명 버튼. iOS는 블러, Android는 반투명 배경 (BlurView 품질 차이)
-const GlassButton = ({ onPress, accessibilityLabel, children }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    activeOpacity={0.8}
-    style={styles.exposureButton}
-    hitSlop={EXPOSURE_HIT_SLOP}
-    accessibilityRole="button"
-    accessibilityLabel={accessibilityLabel}
-  >
-    {Platform.OS === 'ios' ? (
-      <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
-        {children}
-      </BlurView>
-    ) : (
-      <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
-        {children}
-      </View>
-    )}
-  </TouchableOpacity>
-);
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
 import {
@@ -121,7 +97,6 @@ function ScannerScreen() {
 
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);
-  const [exposure, setExposure] = useState(0); // 노출 보정 (-1 ~ +1)
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
@@ -2621,7 +2596,6 @@ function ScannerScreen() {
         isActive={isActive}
         facing={cameraFacing}
         torch={torchOn ? 'on' : 'off'}
-        exposure={exposure}
         barcodeTypes={barcodeTypes}
         onCodeScanned={handleBarCodeScanned}
         onMultipleCodesDetected={handleMultipleCodesDetected}
@@ -2760,31 +2734,6 @@ function ScannerScreen() {
         )}
       </TouchableOpacity>
 
-      {/* 노출 조절 버튼 (torch 아래) */}
-      <View style={[styles.exposureContainer, { top: topOffset + 52 }]}>
-        <GlassButton
-          onPress={() => setExposure(prev => Math.min(prev + 0.3, 1))}
-          accessibilityLabel={t('scanner.exposureUp')}
-        >
-          <Ionicons name="sunny" size={16} color={exposure > 0 ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-        </GlassButton>
-
-        {exposure !== 0 && (
-          <GlassButton
-            onPress={() => setExposure(0)}
-            accessibilityLabel={t('scanner.exposureReset')}
-          >
-            <Text maxFontSizeMultiplier={1.2} style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>EV0</Text>
-          </GlassButton>
-        )}
-
-        <GlassButton
-          onPress={() => setExposure(prev => Math.max(prev - 0.3, -1))}
-          accessibilityLabel={t('scanner.exposureDown')}
-        >
-          <Ionicons name="moon" size={16} color={exposure < 0 ? '#7B9CFF' : 'rgba(255,255,255,0.95)'} />
-        </GlassButton>
-      </View>
 
       {/* 이미지 업로드 버튼 */}
       <TouchableOpacity
@@ -3447,24 +3396,6 @@ const styles = StyleSheet.create({
   },
   torchButtonActive: {
     backgroundColor: 'rgba(255,214,10,0.15)',
-  },
-  exposureContainer: {
-    position: 'absolute',
-    left: 20,
-    flexDirection: 'column',
-    gap: 4,
-  },
-  exposureButton: {
-  },
-  exposureButtonInner: {
-    padding: 8,
-    borderRadius: 18,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  exposureButtonAndroid: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   imagePickerButtonContainer: {
     position: 'absolute',

@@ -71,8 +71,9 @@
         "backgroundColor": "#78848E"
       },
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon-foreground.png",
+        "monochromeImage": "./assets/adaptive-icon-foreground.png",
+        "backgroundColor": "#262934"
       },
       "package": "com.cubion.qrscanner",
       "googleServicesFile": "./google-services.json",
@@ -195,7 +196,9 @@
         {
           "configureAndroidBackup": true
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

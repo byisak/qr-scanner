@@ -7,7 +7,9 @@ import { Platform } from 'react-native';
 // 알림 설정
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // expo-notifications 0.32: shouldShowAlert 대신 배너·알림센터 표시를 따로 지정
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
