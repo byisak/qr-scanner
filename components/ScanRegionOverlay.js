@@ -7,7 +7,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 
 export const SCAN_REGION_MODES = ['full', 'center', 'band'];
 
-const MASK_COLOR = 'rgba(0,0,0,0.35)';
+const MASK_COLOR = 'rgba(0,0,0,0.45)';
 const CORNER_RADIUS = 16;
 
 // 모드별 사각형. 가운데 정렬(중앙 십자 기준)
@@ -75,8 +75,8 @@ export default function ScanRegionOverlay({ mode = 'full', onRegionChange }) {
             height={region.height - 2}
             rx={CORNER_RADIUS - 1}
             ry={CORNER_RADIUS - 1}
-            stroke="rgba(255,255,255,0.9)"
-            strokeWidth={2}
+            stroke="rgba(255,255,255,0.6)"
+            strokeWidth={1.5}
             fill="none"
           />
         </Svg>

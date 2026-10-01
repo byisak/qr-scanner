@@ -75,7 +75,8 @@ import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryPar
 import { updateLotteryNotificationOnScan } from '../utils/lotteryNotification';
 
 // 분리된 컴포넌트
-import ScanAnimation from '../components/ScanAnimation'; // 플러스 표시만 활성화
+import ScanReticle from '../components/ScanReticle'; // 조준 코너 (숨 쉬기 → 코드에 붙기 → 확정 펑)
+import { SCAN_THEME, SCAN_TEXT } from '../constants/scanTheme';
 import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
 import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
@@ -189,6 +190,16 @@ function ScannerScreen() {
   const [scanRegionMode, setScanRegionMode] = useState('full'); // 스캔 영역 제한: full | center | band
   const [scanRegionDebug, setScanRegionDebug] = useState(false); // 개발자 옵션: 영역 밖 판정 표시
   const [scanRegion, setScanRegion] = useState(null); // 오버레이가 잰 영역 사각형 (dp)
+  const reticleRef = useRef(null);                     // 조준 코너 (confirm/shake)
+  const [primaryHighlight, setPrimaryHighlight] = useState(null); // 대표 코드의 화면 사각형
+  const handlePrimaryHighlightChange = useCallback((rect) => {
+    setPrimaryHighlight(prev => {
+      if (!rect || !prev) return rect === prev ? prev : rect;
+      // 1px 이내 움직임은 무시 (리렌더 절약)
+      if (Math.abs(prev.x - rect.x) < 1 && Math.abs(prev.y - rect.y) < 1 && Math.abs(prev.width - rect.width) < 1 && Math.abs(prev.height - rect.height) < 1) return prev;
+      return rect;
+    });
+  }, []);
   const [hardwareKeyMap, setHardwareKeyMap] = useState(DEFAULT_KEY_MAP); // 볼륨 키 → 동작
   const [scanConfirmMode, setScanConfirmMode] = useState('auto'); // auto | manual (수동이면 키/버튼으로 확정)
   const scanConfirmModeRef = useRef('auto');
@@ -1059,6 +1070,7 @@ function ScannerScreen() {
 
   // extra: 기록 항목에 같이 넣을 부가 정보 (라벨 카테고리·필드 값·위치 등). 없는 키는 건드리지 않는다
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null, extra = null) => {
+    if (reticleRef.current) reticleRef.current.confirm();
     try {
       // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
       let selectedGroupId = targetGroupId || currentGroupId;
@@ -2175,7 +2187,7 @@ function ScannerScreen() {
         // 카메라를 계속 대고 있으면 0.5초마다 다시 알리므로 같은 코드는 잠시 무시한다
         const giveDuplicateFeedback = () => {
           if (hapticEnabledRef.current) {
-            haptics.warning();
+            haptics.warning(); reticleRef.current?.shake();
           }
           if (lastScannedData.current === data) {
             lastScannedTime.current = Date.now() + DUPLICATE_NOTICE_COOLDOWN;
@@ -2294,7 +2306,7 @@ function ScannerScreen() {
           if (action === 'skip') {
             // 자동으로 건너뛰기. 무반응이면 인식이 안 된 줄 알고 계속 갖다 대므로 경고 진동 + 짧은 안내
             if (hapticEnabledRef.current) {
-              haptics.warning();
+              haptics.warning(); reticleRef.current?.shake();
             }
             feedback.info(t('scanner.duplicateSkipped'));
             safeTimeout(() => {
@@ -2517,7 +2529,7 @@ function ScannerScreen() {
               // 이 모드는 결과 화면이 안 열려서, 중복이어도 아무 표시가 없었다.
               // 문구는 하단 결과 카드 제목에 나오므로(스낵바까지 띄우면 두 번 보이고 카드를 가린다) 진동만 준다
               if (historyResult.isDuplicate && hapticEnabledRef.current) {
-                haptics.warning();
+                haptics.warning(); reticleRef.current?.shake();
               }
             }).catch(console.error);
 
@@ -2641,7 +2653,7 @@ function ScannerScreen() {
   const commitPendingScan = useCallback(() => {
     const pending = pendingScanRef.current;
     if (!pending || Date.now() - pending.seenAt > PENDING_SCAN_TTL) {
-      if (hapticEnabledRef.current) haptics.warning();
+      if (hapticEnabledRef.current) haptics.warning(); reticleRef.current?.shake();
       feedback.info(t('scanConfirm.nothingToConfirm'));
       return;
     }
@@ -2662,7 +2674,7 @@ function ScannerScreen() {
       case 'confirm':
         if (multiCodeModeEnabledRef.current) {
           if (pendingMultiScanData) handleViewMultiResults();
-          else { if (hapticEnabledRef.current) haptics.warning(); feedback.info(t('scanConfirm.nothingToConfirm')); }
+          else { if (hapticEnabledRef.current) haptics.warning(); reticleRef.current?.shake(); feedback.info(t('scanConfirm.nothingToConfirm')); }
         } else {
           commitPendingScan();
         }
@@ -2935,7 +2947,10 @@ function ScannerScreen() {
         showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!multiCodeModeEnabled && singleCodeShowValue) || (!resultWindowAutoOpen && lastScannedCode)}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
-        highlightColor="lime"
+        highlightColor={SCAN_THEME.white}
+        highlightFillColor="transparent"
+        hideHighlightBoxes={!multiCodeModeEnabled}
+        onPrimaryHighlightChange={handlePrimaryHighlightChange}
         scanRegion={scanRegion}
         scanRegionDebug={scanRegionDebug}
       />
@@ -2950,14 +2965,14 @@ function ScannerScreen() {
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
-          <BlurView intensity={80} tint="light" style={styles.groupBadgeBlur}>
-            <Ionicons name="folder" size={16} color="rgba(255,255,255,0.95)" />
-            <Text style={[styles.groupBadgeText, { color: 'rgba(255,255,255,0.95)' }]}>
+          <BlurView intensity={40} tint="light" style={styles.groupBadgeBlur}>
+            <Ionicons name="folder" size={16} color={SCAN_THEME.white} />
+            <Text style={[styles.groupBadgeText, { color: SCAN_THEME.white }]}>
               {currentGroupId === 'default' ? t('groupEdit.defaultGroup') :
                currentGroupId === 'lottery-lotto' ? t('lotteryScan.lotteryTypes.lotto645') :
                currentGroupId === 'lottery-pension' ? t('lotteryScan.lotteryTypes.pension720') : currentGroupName}
             </Text>
-            <Ionicons name="chevron-down" size={16} color="rgba(255,255,255,0.95)" style={{ marginLeft: 4 }} />
+            <Ionicons name="chevron-down" size={16} color={SCAN_THEME.whiteDim} style={{ marginLeft: 4 }} />
           </BlurView>
         </TouchableOpacity>
 
@@ -2968,11 +2983,11 @@ function ScannerScreen() {
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => clearLocation(true)}
-              style={[styles.batchModeBadge, styles.stackedBadge, { backgroundColor: 'rgba(0, 122, 255, 0.85)' }]}
+              style={[styles.batchModeBadge, styles.stackedBadge]}
               accessibilityRole="button"
               accessibilityHint={t('scanner.locationClearHint')}
             >
-              <Ionicons name="location" size={16} color="#fff" />
+              <Ionicons name="location" size={16} color={SCAN_THEME.primary} />
               <Text style={styles.batchModeBadgeText} maxFontSizeMultiplier={1.3} numberOfLines={1}>
                 {t('scanner.locationBadge', { code: currentLocation.code })}
               </Text>
@@ -2990,7 +3005,7 @@ function ScannerScreen() {
               accessibilityRole={showContinuousCounter ? 'button' : 'text'}
               accessibilityHint={showContinuousCounter ? t('scanner.counterResetHint') : undefined}
             >
-              <Ionicons name="layers" size={16} color="#fff" />
+              <Ionicons name="layers" size={16} color={SCAN_THEME.success} />
               <Text style={styles.batchModeBadgeText} maxFontSizeMultiplier={1.3}>
                 {t('scanner.batchModeActive')}
                 {showContinuousCounter ? ` · ${t('scanner.scannedCount').replace('{count}', continuousScanCount.toString())}` : ''}
@@ -3001,7 +3016,7 @@ function ScannerScreen() {
           {/* 실시간 서버 전송 표시 */}
           {realtimeSyncEnabled && activeSessionId && (
             <View style={[styles.realtimeSyncBadge, styles.stackedBadge]}>
-              <Ionicons name="cloud-upload" size={16} color="#fff" />
+              <Ionicons name="cloud-upload" size={16} color={SCAN_THEME.primary} />
               <Text style={styles.realtimeSyncBadgeText} maxFontSizeMultiplier={1.3}>{t('scanner.realtimeSync')}</Text>
             </View>
           )}
@@ -3031,8 +3046,8 @@ function ScannerScreen() {
           </View>
         )}
 
-        {/* 중앙 플러스 표시 */}
-        <ScanAnimation isActive={isActive} />
+        {/* 조준 코너: 대기 땐 가운데(영역이 있으면 영역 모서리), 코드가 잡히면 코드 테두리로 */}
+        <ScanReticle ref={reticleRef} isActive={isActive} region={scanRegion} target={multiCodeModeEnabled ? null : primaryHighlight} />
       </View>
 
       {/* 배치 스캔 컨트롤 패널 */}
@@ -3070,19 +3085,13 @@ function ScannerScreen() {
         accessibilityRole="button"
         style={[styles.torchButtonContainer, { top: topOffset }]}
       >
-        {Platform.OS === 'ios' ? (
-          <BlurView
-            intensity={80}
-            tint="light"
-            style={[styles.torchButton, torchOn && styles.torchButtonActive]}
-          >
-            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-          </BlurView>
-        ) : (
-          <View style={[styles.torchButton, styles.torchButtonAndroid, torchOn && styles.torchButtonActive]}>
-            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-          </View>
-        )}
+        <BlurView
+          intensity={40}
+          tint="light"
+          style={[styles.torchButton, torchOn && styles.torchButtonActive]}
+        >
+          <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#111' : SCAN_THEME.white} />
+        </BlurView>
       </TouchableOpacity>
 
 
@@ -3094,19 +3103,13 @@ function ScannerScreen() {
         accessibilityRole="button"
         style={[styles.imagePickerButtonContainer, { top: topOffset }]}
       >
-        {Platform.OS === 'ios' ? (
-          <BlurView
-            intensity={80}
-            tint="light"
-            style={styles.imagePickerButton}
-          >
-            <Ionicons name="images" size={20} color="rgba(255,255,255,0.95)" />
-          </BlurView>
-        ) : (
-          <View style={[styles.imagePickerButton, styles.imagePickerButtonAndroid]}>
-            <Ionicons name="images" size={20} color="rgba(255,255,255,0.95)" />
-          </View>
-        )}
+        <BlurView
+          intensity={40}
+          tint="light"
+          style={styles.imagePickerButton}
+        >
+          <Ionicons name="images" size={20} color={SCAN_THEME.white} />
+        </BlurView>
       </TouchableOpacity>
 
       {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
@@ -3471,10 +3474,10 @@ function ScannerScreen() {
       {/* 수동 확정: 코드를 들고 있다가 키/버튼으로 저장 (결과 카드가 떠 있으면 그 위에) */}
       {scanConfirmMode === 'manual' && pendingScan && (
         <View style={[styles.resultWindowButtonContainer, { bottom: floatingButtonBottom + ((lastScannedCode && !resultWindowAutoOpen) ? 150 : 0) }]}>
-          <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.resultWindowButtonBlur}>
+          <BlurView intensity={50} tint="dark" style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
-              <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{confirmHintText}</Text>
-              <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">{pendingScan.code}</Text>
+              <Text style={[styles.scannedCodeLabel, { color: SCAN_TEXT.secondary }]}>{confirmHintText}</Text>
+              <Text style={[styles.scannedCodeValue, { color: SCAN_TEXT.primary }]} numberOfLines={1} ellipsizeMode="middle">{pendingScan.code}</Text>
             </View>
             <View style={styles.resultWindowButtonRow}>
               <TouchableOpacity
@@ -3496,20 +3499,20 @@ function ScannerScreen() {
       {lastScannedCode && !resultWindowAutoOpen && (
         <View style={[styles.resultWindowButtonContainer, { bottom: floatingButtonBottom }]}>
           {/* tint와 글자색을 같은 테마로 맞춘다. light 고정이면 다크모드에서 밝은 블러 위에 흰 글씨가 됐다 */}
-          <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.resultWindowButtonBlur}>
+          <BlurView intensity={50} tint="dark" style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
-              <Text style={[styles.scannedCodeLabel, { color: lastScannedCode.isDuplicate ? colors.warning : colors.textSecondary }]}>
+              <Text style={[styles.scannedCodeLabel, { color: lastScannedCode.isDuplicate ? SCAN_THEME.warning : SCAN_TEXT.secondary }]}>
                 {lastScannedCode.isDuplicate
                   ? t('scanner.alreadyScannedCount', { count: lastScannedCode.scanCount })
                   : t('resultWindowSettings.scannedCode')}
               </Text>
               {/* 창고 라벨은 뒷자리로 구분하는 경우가 많아 가운데를 줄인다 */}
-              <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">{lastScannedCode.code}</Text>
+              <Text style={[styles.scannedCodeValue, { color: SCAN_TEXT.primary }]} numberOfLines={1} ellipsizeMode="middle">{lastScannedCode.code}</Text>
               {(() => {
                 const label = labelOfItem(lastScannedCode, labelCategories);
                 const summary = label ? formatLabelSummary(label, 3, t) : '';
                 return summary ? (
-                  <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary, marginTop: 2 }]} numberOfLines={1} ellipsizeMode="middle">{summary}</Text>
+                  <Text style={[styles.scannedCodeLabel, { color: SCAN_TEXT.tertiary, marginTop: 2 }]} numberOfLines={1} ellipsizeMode="middle">{summary}</Text>
                 ) : null;
               })()}
             </View>
@@ -3583,7 +3586,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     // top은 인라인 스타일로 동적 설정
     overflow: 'hidden',
-    borderRadius: 20,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
+    backgroundColor: SCAN_THEME.glassLight,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -3594,7 +3600,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    height: 44,
   },
   groupBadgeText: {
     fontSize: 15,
@@ -3617,10 +3623,12 @@ const styles = StyleSheet.create({
     // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(52, 199, 89, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: SCAN_THEME.glassDark,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 999,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -3628,8 +3636,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   batchModeBadgeText: {
-    color: '#fff',
-    fontSize: 14,
+    color: SCAN_THEME.white,
+    fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
   },
@@ -3659,10 +3667,12 @@ const styles = StyleSheet.create({
     // top은 인라인 스타일로 동적 설정
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: SCAN_THEME.glassDark,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 999,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -3670,8 +3680,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   realtimeSyncBadgeText: {
-    color: '#fff',
-    fontSize: 14,
+    color: SCAN_THEME.white,
+    fontSize: 13,
     fontWeight: '600',
     marginLeft: 6,
   },
@@ -3779,17 +3789,18 @@ const styles = StyleSheet.create({
     left: 20,
   },
   torchButton: {
-    padding: 12,
+    width: 44,
+    height: 44,
     borderRadius: 22,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  torchButtonAndroid: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: SCAN_THEME.glassLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
   },
   torchButtonActive: {
-    backgroundColor: 'rgba(255,214,10,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
   },
   imagePickerButtonContainer: {
     position: 'absolute',
@@ -3797,14 +3808,15 @@ const styles = StyleSheet.create({
     right: 20,
   },
   imagePickerButton: {
-    padding: 12,
+    width: 44,
+    height: 44,
     borderRadius: 22,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  imagePickerButtonAndroid: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: SCAN_THEME.glassLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
   },
   msg: {
     flex: 1,
@@ -3938,10 +3950,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.95)',
-    paddingVertical: 14,
+    backgroundColor: SCAN_THEME.primary,
+    height: 52,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 999,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -3955,9 +3967,14 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   multiScanCloseButton: {
-    backgroundColor: 'rgba(100, 100, 100, 0.95)',
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: SCAN_THEME.glassDark,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
+    width: 52,
+    height: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 26,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
@@ -3967,10 +3984,13 @@ const styles = StyleSheet.create({
   // 결과창 자동 열림 비활성화 시 버튼 스타일
   resultWindowButtonContainer: {
     position: 'absolute',
-    left: 20,
-    right: 20,
+    left: 16,
+    right: 16,
     overflow: 'hidden',
-    borderRadius: 16,
+    borderRadius: SCAN_THEME.cardRadius,
+    backgroundColor: SCAN_THEME.glassDark,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -3991,8 +4011,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   scannedCodeValue: {
-    color: '#000',
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 17,
     fontWeight: '700',
   },
   resultWindowButtonRow: {
@@ -4005,10 +4025,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 200, 83, 0.95)',
-    paddingVertical: 14,
+    backgroundColor: SCAN_THEME.primary,
+    height: 48,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 999,
   },
   resultWindowButtonText: {
     color: '#fff',
@@ -4017,9 +4037,12 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   resultWindowCloseButton: {
-    backgroundColor: 'rgba(100, 100, 100, 0.95)',
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
   },
   // 복권 인식 활성화 유도 모달 스타일
   lotteryPromptOverlay: {

@@ -91,7 +91,7 @@ export default function DuplicateConfirmToast({
       accessibilityRole="alert"
       accessibilityLabel={t('batchScan.duplicateAlertTitle')}
     >
-      <View style={[styles.content, { backgroundColor: colors.surface }]}>
+      <View style={[styles.content, { backgroundColor: 'rgba(24,24,26,0.94)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.22)' }]}>
         {/* 상단: 중복 아이콘과 정보 */}
         <View style={styles.header}>
           <View style={[styles.iconContainer, { backgroundColor: '#FF9500' + '20' }]}>
@@ -106,7 +106,7 @@ export default function DuplicateConfirmToast({
           </View>
           <View style={styles.textContainer}>
             <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              <Text style={[styles.title, { color: '#fff', fontFamily: fonts.semiBold }]}>
                 {t('batchScan.duplicateAlertTitle')}
               </Text>
               <View style={styles.duplicateBadge}>
@@ -116,7 +116,7 @@ export default function DuplicateConfirmToast({
               </View>
             </View>
             <Text
-              style={[styles.data, { color: colors.textSecondary, fontFamily: fonts.regular }]}
+              style={[styles.data, { color: 'rgba(255,255,255,0.72)', fontFamily: fonts.regular }]}
               numberOfLines={1}
               ellipsizeMode="middle"
             >

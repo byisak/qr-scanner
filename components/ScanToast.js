@@ -127,7 +127,7 @@ export default function ScanToast({
       accessibilityLabel={`${isSkipped ? t('scanner.skipped') || '건너뜀' : t('scanner.scanned')}: ${data.data}${isDuplicate ? ` (${t('scanner.duplicate') || '중복'})` : ''}`}
     >
       <TouchableOpacity
-        style={[styles.content, { backgroundColor: colors.surface }]}
+        style={[styles.content, { backgroundColor: 'rgba(24,24,26,0.94)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.22)' }]}
         onPress={handlePress}
         activeOpacity={0.9}
         accessibilityRole="button"
@@ -154,7 +154,7 @@ export default function ScanToast({
           </View>
           <View style={styles.textContainer}>
             <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              <Text style={[styles.title, { color: '#fff', fontFamily: fonts.semiBold }]}>
                 {isSkipped ? (t('scanner.skipped') || '건너뜀') : t('scanner.scanned')}
               </Text>
               {isSkipped ? (
@@ -172,7 +172,7 @@ export default function ScanToast({
               )}
             </View>
             <Text
-              style={[styles.data, { color: colors.textSecondary, fontFamily: fonts.regular }]}
+              style={[styles.data, { color: 'rgba(255,255,255,0.72)', fontFamily: fonts.regular }]}
               numberOfLines={1}
               ellipsizeMode="middle"
             >
@@ -185,7 +185,7 @@ export default function ScanToast({
             ) : null}
             {data.labelSummary ? (
               <Text
-                style={[styles.data, { color: colors.textTertiary, fontFamily: fonts.regular }]}
+                style={[styles.data, { color: 'rgba(255,255,255,0.5)', fontFamily: fonts.regular }]}
                 numberOfLines={1}
                 ellipsizeMode="middle"
               >
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     paddingHorizontal: 14,
-    borderRadius: 14,
+    borderRadius: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,

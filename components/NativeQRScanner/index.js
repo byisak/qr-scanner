@@ -26,7 +26,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const MIN_VOTE_THRESHOLD = 3;
 
 // 애니메이션 하이라이트 컴포넌트 (부드럽게 따라다님)
-const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor }) => {
+const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value, labelBackgroundColor, hideBox = false }) => {
   const x = useSharedValue(highlight.origin.x);
   const y = useSharedValue(highlight.origin.y);
   const width = useSharedValue(highlight.size.width);
@@ -48,11 +48,11 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
     top: y.value,
     width: width.value,
     height: height.value,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: borderColor,
     backgroundColor: fillColor,
-    borderRadius: 4,
-    opacity: opacity.value,
+    borderRadius: 8,
+    opacity: hideBox ? 0 : opacity.value,
   }));
 
   const labelStyle = useAnimatedStyle(() => ({
@@ -80,7 +80,7 @@ const AnimatedHighlight = ({ highlight, borderColor, fillColor, showValue, value
 };
 
 // 커스텀 하이라이트 컴포넌트 (객체 추적 알고리즘 적용 + 투표 기반 값 검증)
-const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.5)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false, onVisibleCountChange, onVerifiedBarcodesChange }) => {
+const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 255, 0, 0.5)', fillColor = 'rgba(0, 255, 0, 0.15)', showBarcodeValues = true, selectCenterOnly = false, onVisibleCountChange, onVerifiedBarcodesChange, onPrimaryHighlightChange, hideBoxes = false }) => {
   const [trackedHighlights, setTrackedHighlights] = useState([]);
   const lastUpdateRef = useRef(0);
   // 추적 중인 하이라이트: id -> {x, y, width, height, valueCounts: Map<value, count>, bestValue, lastSeen}
@@ -109,6 +109,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
         setTrackedHighlights([]);
         trackedObjectsRef.current.clear();
         lastVerifiedKeyRef.current = ''; // 검증 키도 초기화
+        if (onPrimaryHighlightChange) onPrimaryHighlightChange(null);
       }, 300);
       return () => clearTimeout(timeout);
     }
@@ -276,6 +277,12 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
 
     setTrackedHighlights(newTracked);
 
+    // 조준 코너가 따라갈 대표 코드(중앙에 가장 가까운 것)의 화면 사각형
+    if (onPrimaryHighlightChange) {
+      const first = newTracked[0];
+      onPrimaryHighlightChange(first ? { x: first.origin.x, y: first.origin.y, width: first.size.width, height: first.size.height } : null);
+    }
+
     // 화면에 표시되는 하이라이트 개수를 부모에게 알림
     if (onVisibleCountChange) {
       onVisibleCountChange(newTracked.length);
@@ -332,6 +339,7 @@ const CustomHighlights = ({ highlights, barcodes = [], borderColor = 'rgba(0, 25
           showValue={showValues}
           value={highlight.value}
           labelBackgroundColor={LABEL_COLORS[highlight.colorIndex] || LABEL_COLORS[0]}
+          hideBox={hideBoxes}
         />
       ))}
     </View>
@@ -381,6 +389,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   exposure = 0, // 노출 보정 (-1 ~ +1, 0이 기본)
   scanRegion = null, // 스캔 영역 제한 { x, y, width, height } (카메라 뷰 기준 dp). null이면 전체
   scanRegionDebug = false, // 영역 밖으로 판정된 코드를 빨간 테두리로 표시 (개발자 옵션)
+  hideHighlightBoxes = false, // 테두리 네모는 숨기고 값 칩만 (단일 모드: 조준 코너가 대신 붙는다)
+  onPrimaryHighlightChange, // 대표 코드의 화면 사각형 { x, y, width, height } | null
 }, ref) {
   const cameraRef = useRef(null);
 
@@ -896,6 +906,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           selectCenterOnly={selectCenterBarcode}
           onVisibleCountChange={onVisibleHighlightsChange}
           onVerifiedBarcodesChange={onVerifiedBarcodesChange}
+          onPrimaryHighlightChange={onPrimaryHighlightChange}
+          hideBoxes={hideHighlightBoxes}
         />
       )}
       {scanRegion && scanRegionDebug && highlights.length > 0 && regionHighlights.dropped.map((r, i) => (
@@ -948,11 +960,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   valueLabel: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    backgroundColor: 'rgba(24, 24, 26, 0.85)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
     alignSelf: 'flex-start',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   valueLabelText: {
     color: '#fff',
