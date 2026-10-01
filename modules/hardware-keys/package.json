@@ -1,0 +1,7 @@
+{
+  "name": "hardware-keys",
+  "version": "1.0.0",
+  "description": "볼륨 키를 앱이 가로채서 스캔 확정 등에 쓰는 로컬 Expo 모듈 (Android)",
+  "main": "index.js",
+  "private": true
+}

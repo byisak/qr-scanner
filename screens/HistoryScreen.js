@@ -301,6 +301,7 @@ export default function HistoryScreen() {
         fromHistory: 'true', // 히스토리에서 왔음을 표시
         type: item.type || 'qr', // 바코드 타입 전달
         errorCorrectionLevel: item.errorCorrectionLevel || '', // EC 레벨 전달
+        location: item.location || '', // 규칙으로 지정된 위치
         // 생성 코드 데이터 (편집용)
         isGenerated: item.isGenerated ? 'true' : 'false',
         generatorData: item.generatorData ? JSON.stringify(item.generatorData) : '',
@@ -615,7 +616,10 @@ export default function HistoryScreen() {
                       {item.code}
                     </Text>
                     {(() => {
-                      const summary = formatLabelSummary(labelOfItem(item, labelCategories), 3, t);
+                      const summary = [
+                        formatLabelSummary(labelOfItem(item, labelCategories), 3, t),
+                        item.location ? `${t('result.location')} ${item.location}` : '',
+                      ].filter(Boolean).join(' · ');
                       return summary ? (
                         <Text style={[s.labelSummary, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1} ellipsizeMode="middle">
                           {summary}

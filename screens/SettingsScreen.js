@@ -15,6 +15,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialPressable from '../components/MaterialPressable';
+import { loadHardwareKeySettings, confirmKeyOf } from '../utils/hardwareKeys';
 import haptics, { loadHapticSettings, saveHapticSettings, HAPTIC_INTENSITIES, HAPTIC_PATTERNS } from '../utils/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -79,6 +80,7 @@ export default function SettingsScreen() {
   // URL 열기 방식 상태
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   const [scanRegionMode, setScanRegionMode] = useState('full');
+  const [hardwareKeySettings, setHardwareKeySettings] = useState({ keyMap: {}, scanConfirmMode: 'auto' });
   // 사진 압축률 상태
   const [photoQuality, setPhotoQuality] = useState('0.5'); // 기본값: 중간
   // 제품 검색 자동 실행 상태
@@ -247,6 +249,7 @@ export default function SettingsScreen() {
         }
         const savedScanRegion = await AsyncStorage.getItem('scanRegionMode');
         setScanRegionMode(savedScanRegion || 'full');
+        loadHardwareKeySettings().then(setHardwareKeySettings).catch(() => {});
 
         // 사진 압축률 로드
         const q = await AsyncStorage.getItem('photoQuality');
@@ -303,6 +306,7 @@ export default function SettingsScreen() {
           }
           const savedScanRegion = await AsyncStorage.getItem('scanRegionMode');
           setScanRegionMode(savedScanRegion || 'full');
+        loadHardwareKeySettings().then(setHardwareKeySettings).catch(() => {});
 
           // 사진 저장 설정 로드
           const p = await AsyncStorage.getItem('photoSaveEnabled');
@@ -562,6 +566,19 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </View>
+
+          {/* 자동 규칙 */}
+          <MaterialPressable accessibilityRole="button"
+            style={[s.menuItem, { borderTopWidth: 0 }]}
+            onPress={() => router.push('/scan-rules')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRules.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.scanRulesDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </MaterialPressable>
 
           {/* 연속 스캔 모드 */}
           <MaterialPressable accessibilityRole="button"
@@ -864,6 +881,25 @@ export default function SettingsScreen() {
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('urlOpenMode.title')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {t(`urlOpenMode.${urlOpenMode}`)}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </MaterialPressable>
+
+          {/* 하드웨어 키 · 수동 확정 */}
+          <MaterialPressable
+            style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}
+            onPress={() => router.push('/hardware-keys')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('hardwareKeys.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {(() => {
+                  if (hardwareKeySettings.scanConfirmMode !== 'manual') return t('scanConfirm.autoStatus');
+                  const key = Platform.OS === 'android' ? confirmKeyOf(hardwareKeySettings.keyMap) : null;
+                  return key ? t('scanConfirm.manualStatus', { key: t(`hardwareKeys.${key}`) }) : t('scanConfirm.manualStatusButton');
+                })()}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />

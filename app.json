@@ -198,7 +198,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withHardwareKeys.js"
     ],
     "experiments": {
       "typedRoutes": true

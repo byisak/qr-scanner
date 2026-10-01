@@ -121,7 +121,10 @@ export default function ExportHistoryScreen() {
     // UTF-8 BOM 추가 (한글 깨짐 방지)
     const columns = labelColumns();
     const quote = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    // 위치 열은 위치가 기록된 항목이 하나라도 있을 때만
+    const hasLocation = selectedGroups.some(groupId => (scanHistory[groupId] || []).some(item => item.location));
     let csv = '\uFEFF' + t('exportHistory.csvHeader');
+    if (hasLocation) csv += ',' + quote(t('exportHistory.locationColumn'));
     if (columns.length) csv += ',' + [t('exportHistory.categoryColumn'), ...columns].map(quote).join(',');
     csv += '\n';
 
@@ -135,6 +138,7 @@ export default function ExportHistoryScreen() {
         const code = `"${item.code.replace(/"/g, '""')}"`;
         const scanCount = item.scanCount || 1;
         csv += `${groupName},${code},${date},${scanCount}`;
+        if (hasLocation) csv += ',' + quote(item.location || '');
         if (columns.length) {
           const label = labelOfItem(item, labelCategories);
           const cells = columns.map((column) => {
@@ -216,6 +220,7 @@ export default function ExportHistoryScreen() {
           txt += `${t('exportHistory.codeLabel')}: ${item.code}\n`;
           txt += `${t('exportHistory.scanDateLabel')}: ${date}\n`;
           txt += `${t('exportHistory.duplicateLabel')}: ${scanCount}\n`;
+          if (item.location) txt += `${t('exportHistory.locationColumn')}: ${item.location}\n`;
           const label = labelOfItem(item, labelCategories);
           if (label) {
             txt += `${t('exportHistory.categoryColumn')}: ${label.category.name}\n`;

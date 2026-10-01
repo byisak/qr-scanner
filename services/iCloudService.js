@@ -134,6 +134,11 @@ const SYNC_ALLOWED_PREFIXES = [
   'labelCategories',
   'labelIgnoredPatterns',
   'labelAutoSplit',
+  'scanRegionMode',
+  'scanConfirmMode',
+  'hardwareKeyMap',
+  'scanRules',
+  'scanRulesEnabled',
 ];
 
 const isSyncAllowed = (key) => {

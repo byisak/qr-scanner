@@ -51,7 +51,7 @@ export default function ResultScreen() {
   const { isBarcodeTypeLocked, getBarcodeFeatureId, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed, isGenerated, generatorData, thumbnail } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed, isGenerated, generatorData, thumbnail, location } = params;
 
   // 코드 값 안전하게 처리 (빈 문자열 또는 undefined 체크)
   const safeCode = typeof code === 'string' && code.trim() ? code.trim() : '';
@@ -691,6 +691,7 @@ export default function ResultScreen() {
     scanTimestamp ? formatDateTime(scanTimestamp) : '',
     groupName,
     count > 1 ? t('result.scanCountTimes', { count }) : '',
+    typeof location === 'string' && location ? `${t('result.location')} ${location}` : '',
   ].filter(Boolean);
 
   return (

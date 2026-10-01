@@ -178,6 +178,11 @@ export default function ScanToast({
             >
               {data.data}
             </Text>
+            {data.groupName ? (
+              <Text style={[styles.data, { color: colors.primary, fontFamily: fonts.medium }]} numberOfLines={1}>
+                {t('scanner.savedToGroup', { group: data.groupName })}
+              </Text>
+            ) : null}
             {data.labelSummary ? (
               <Text
                 style={[styles.data, { color: colors.textTertiary, fontFamily: fonts.regular }]}

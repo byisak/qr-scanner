@@ -32,6 +32,11 @@ import { useFeedback } from '../contexts/FeedbackContext';
 import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import NewLabelPatternModal from '../components/NewLabelPatternModal';
 import ScanRegionOverlay from '../components/ScanRegionOverlay';
+import useHardwareKeys from '../hooks/useHardwareKeys';
+import { parseKeyMap, confirmKeyOf, DEFAULT_KEY_MAP } from '../utils/hardwareKeys';
+import * as Clipboard from 'expo-clipboard';
+import { evaluateRules, substituteTemplate } from '../utils/scanRules';
+import { loadScanRules } from '../utils/scanRulesStore';
 import { parseLabel, signatureOf, labelOfItem, formatLabelSummary, splitLabel } from '../utils/labelParser';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern, addDiscovered } from '../utils/labelCategories';
 
@@ -184,6 +189,10 @@ function ScannerScreen() {
   const [scanRegionMode, setScanRegionMode] = useState('full'); // 스캔 영역 제한: full | center | band
   const [scanRegionDebug, setScanRegionDebug] = useState(false); // 개발자 옵션: 영역 밖 판정 표시
   const [scanRegion, setScanRegion] = useState(null); // 오버레이가 잰 영역 사각형 (dp)
+  const [hardwareKeyMap, setHardwareKeyMap] = useState(DEFAULT_KEY_MAP); // 볼륨 키 → 동작
+  const [scanConfirmMode, setScanConfirmMode] = useState('auto'); // auto | manual (수동이면 키/버튼으로 확정)
+  const scanConfirmModeRef = useRef('auto');
+  const [pendingScan, setPendingScan] = useState(null); // 수동 확정 대기 중인 코드 { code, type }
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식 활성화 여부
@@ -295,6 +304,11 @@ function ScannerScreen() {
     // 라벨 카테고리가 있으면 값 아래에 "필드 값" 요약을 같이 보여준다
     const label = labelOfItem({ code: toastInfo.data }, labelSettingsRef.current.categories);
     if (label) toastInfo = { ...toastInfo, labelSummary: formatLabelSummary(label, 2, t) };
+    // 규칙이 다른 그룹에 저장하게 했으면 "→ 그룹"을 같이 보여준다
+    if (ruleGroupNameRef.current) {
+      toastInfo = { ...toastInfo, groupName: ruleGroupNameRef.current };
+      ruleGroupNameRef.current = null;
+    }
     setToastData({ ...toastInfo, timestamp: Date.now() });
   }, []);
 
@@ -563,6 +577,7 @@ function ScannerScreen() {
       resetAll();
 
       reloadLabelSettings().catch(() => {});
+      loadScanRules().then((loaded) => { scanRulesRef.current = loaded; }).catch(() => {});
 
       (async () => {
         try {
@@ -574,7 +589,7 @@ function ScannerScreen() {
             'scanResultMode', 'multiCodeModeEnabled', 'multiCodeShowValues', 'singleCodeShowValue',
             'resultWindowAutoOpen', 'lotteryScanEnabled', 'dontAskLotteryPrompt',
             'selectedGroupId', 'scanGroups', 'realtimeSyncEnabled',
-            'scanRegionMode', 'scanRegionDebug',
+            'scanRegionMode', 'scanRegionDebug', 'scanConfirmMode', 'hardwareKeyMap',
           ];
           const settingsData = await AsyncStorage.multiGet(settingsKeys);
           const settings = Object.fromEntries(settingsData);
@@ -652,6 +667,11 @@ function ScannerScreen() {
           setSingleCodeShowValue(settings['singleCodeShowValue'] === 'true');
           setScanRegionMode(['center', 'band'].includes(settings['scanRegionMode']) ? settings['scanRegionMode'] : 'full');
           setScanRegionDebug(settings['scanRegionDebug'] === 'true');
+          setHardwareKeyMap(parseKeyMap(settings['hardwareKeyMap']));
+          const confirmMode = settings['scanConfirmMode'] === 'manual' ? 'manual' : 'auto';
+          setScanConfirmMode(confirmMode);
+          scanConfirmModeRef.current = confirmMode;
+          if (confirmMode !== 'manual') { pendingScanRef.current = null; setPendingScan(null); }
           const showValues = settings['multiCodeShowValues'];
           setShowBarcodeValues(showValues === null ? true : showValues === 'true');
 
@@ -808,6 +828,25 @@ function ScannerScreen() {
   // 코드별 마지막으로 보인 시각 (계속 비추는 중인지 판단용)
   const lastSeenAtRef = useRef(new Map());
 
+  // 수동 확정: 코드를 들고 있다가 확정 키/버튼에서 저장한다. 안 보인 지 PENDING_SCAN_TTL 지나면 내린다
+  const PENDING_SCAN_TTL = 1500;
+  const pendingScanRef = useRef(null);          // { scanResult, seenAt }
+  const pendingClearTimerRef = useRef(null);
+  const confirmBypassRef = useRef(null);        // 확정 중인 코드 값: 수동 대기·연속 노출 가드를 건너뛴다
+  const lastConfirmedCodeRef = useRef(null);    // 방금 확정한 코드는 계속 비추는 동안 다시 묻지 않는다
+  const holdPendingScan = useCallback((scanResult) => {
+    const code = scanResult.data;
+    const type = String(scanResult.type || 'qr').toLowerCase().replace(/^org\.(iso|gs1)\./, '');
+    pendingScanRef.current = { scanResult, seenAt: Date.now() };
+    setPendingScan(prev => (prev && prev.code === code && prev.type === type) ? prev : { code, type });
+    if (pendingClearTimerRef.current) clearTimeout(pendingClearTimerRef.current);
+    pendingClearTimerRef.current = setTimeout(() => {
+      pendingScanRef.current = null;
+      setPendingScan(null);
+    }, PENDING_SCAN_TTL);
+  }, []);
+  useEffect(() => () => { if (pendingClearTimerRef.current) clearTimeout(pendingClearTimerRef.current); }, []);
+
   // 히스토리에서 중복 여부만 확인 (저장하지 않음)
   const checkDuplicateInHistory = useCallback(async (code) => {
     const selectedGroupId = currentGroupId || 'default';
@@ -862,25 +901,105 @@ function ScannerScreen() {
     return settings;
   }, []);
 
+  // 자동 규칙(설정 > 자동 규칙)과 "현재 위치"(setLocation 동작). 위치는 그룹을 바꾸거나 탭을 벗어나면 풀린다
+  const scanRulesRef = useRef({ rules: [], enabled: true });
+  const currentLocationRef = useRef(null);
+  const [currentLocation, setCurrentLocation] = useState(null); // { code, at }
+  const ruleGroupNameRef = useRef(null); // 규칙이 다른 그룹에 저장하게 했을 때 토스트에 "→ 그룹" 표시용
+  const clearLocation = useCallback((notify = false) => {
+    if (!currentLocationRef.current) return;
+    currentLocationRef.current = null;
+    setCurrentLocation(null);
+    if (notify) feedback.info(t('scanner.locationCleared'));
+  }, [feedback, t]);
+
   const buildScanMeta = useCallback((code, barcodeType) => {
     const meta = {
       extra: null,                                       // saveHistory extra (categoryId, values, location …)
       decision: { skip: false, targetGroupId: null, actions: [] },
       newPattern: null,                                  // 카테고리가 없는 새 패턴이면 { signature, sample }
     };
+    // 1) 라벨 카테고리
     const { categories, ignored, autoSplit } = labelSettingsRef.current;
-    if (!autoSplit) return meta;
-    const parsed = parseLabel(code, categories);
-    if (parsed) {
-      meta.extra = { categoryId: parsed.categoryId, values: parsed.values };
-      return meta;
+    if (autoSplit) {
+      const parsed = parseLabel(code, categories);
+      if (parsed) {
+        meta.extra = { categoryId: parsed.categoryId, values: parsed.values };
+      } else {
+        const signature = signatureOf(code);
+        if (signature && !ignored.includes(signature)) meta.newPattern = { signature, sample: code };
+      }
     }
-    const signature = signatureOf(code);
-    if (signature && !ignored.includes(signature)) {
-      meta.newPattern = { signature, sample: code };
+    // 2) 자동 규칙
+    const { rules, enabled } = scanRulesRef.current;
+    if (enabled && rules.length > 0) {
+      const input = {
+        code,
+        type: barcodeType,
+        categoryId: meta.extra ? meta.extra.categoryId : null,
+        values: meta.extra ? meta.extra.values : [],
+        groupId: currentGroupIdRef.current,
+      };
+      meta.decision = evaluateRules(rules, input).decision;
+    }
+    // 3) 현재 위치가 지정돼 있으면 (이 코드가 새 위치가 되는 경우 빼고) 기록에 붙인다
+    if (currentLocationRef.current && !meta.decision.actions.some(a => a.type === 'setLocation')) {
+      meta.extra = { ...(meta.extra || {}), location: currentLocationRef.current.code };
     }
     return meta;
   }, []);
+
+  // 규칙 동작 실행 (저장과 무관한 것들: 복사·URL·위치 지정·진동). 저장 그룹/건너뜀은 decision으로 처리된다
+  const runRuleActions = useCallback((meta, code) => {
+    for (const action of meta.decision.actions) {
+      switch (action.type) {
+        case 'copy':
+          Clipboard.setStringAsync(code).catch(() => {});
+          break;
+        case 'openUrl': {
+          const category = meta.extra && meta.extra.categoryId
+            ? labelSettingsRef.current.categories.find(c => c.id === meta.extra.categoryId)
+            : null;
+          const url = substituteTemplate(action.url, { code, values: meta.extra ? meta.extra.values : [] }, {
+            fieldNames: category ? category.fields : [],
+            groupName: currentGroupName,
+          });
+          if (action.mode === 'send') {
+            fetch(url).then(() => feedback.info(t('scanner.ruleUrlSent'))).catch(() => feedback.warning(t('scanner.ruleUrlFailed')));
+          } else {
+            Linking.openURL(url).catch(() => feedback.warning(t('scanner.ruleUrlFailed')));
+          }
+          break;
+        }
+        case 'setLocation': {
+          const location = { code, at: Date.now() };
+          currentLocationRef.current = location;
+          setCurrentLocation(location);
+          feedback.info(t('scanner.locationSet', { code }));
+          break;
+        }
+        case 'feedback':
+          if (hapticEnabledRef.current) (haptics[action.haptic] || haptics.success)();
+          break;
+        default:
+          break;
+      }
+    }
+    if (meta.decision.targetGroupId && meta.decision.targetGroupId !== currentGroupIdRef.current) {
+      const group = availableGroups.find(g => g.id === meta.decision.targetGroupId);
+      ruleGroupNameRef.current = group ? group.name : null;
+    }
+  }, [feedback, t, currentGroupName, availableGroups]);
+
+  // 그룹을 바꾸거나 스캐너 탭을 벗어나면 위치 지정을 푼다 (결정: 자동 해제)
+  const locationGroupRef = useRef(currentGroupId);
+  useEffect(() => {
+    if (locationGroupRef.current !== currentGroupId) {
+      locationGroupRef.current = currentGroupId;
+      clearLocation(false);
+    }
+  }, [currentGroupId, clearLocation]);
+  useFocusEffect(useCallback(() => () => clearLocation(false), [clearLocation]));
 
   // 연속·배치·여러 코드 모드에서는 스캔을 막지 않고, 패턴당 한 번만 알리고 설정의 "발견된 형식"에 쌓아 둔다
   const notifyDiscoveredPattern = useCallback((pattern) => {
@@ -1838,8 +1957,14 @@ function ScannerScreen() {
       // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
       if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
 
+      // 수동 확정 모드: 저장하지 않고 들고 있다가 확정 키/버튼에서 처리한다 (여러 코드 모드는 "결과 보기"가 확정)
+      if (scanConfirmModeRef.current === 'manual' && !multiCodeModeEnabledRef.current && confirmBypassRef.current !== data) {
+        if (!(stillInView && lastConfirmedCodeRef.current === data)) holdPendingScan(scanResult);
+        return;
+      }
+
       // 같은 코드를 계속 비추고 있으면 다시 처리하지 않는다 (여러 코드 모드는 자체 누적 로직 사용)
-      if (stillInView && !multiCodeModeEnabledRef.current) {
+      if (stillInView && !multiCodeModeEnabledRef.current && confirmBypassRef.current !== data) {
         if (errorCorrectionLevel) fillMissingEcLevel(data, errorCorrectionLevel);
         return;
       }
@@ -2017,6 +2142,7 @@ function ScannerScreen() {
 
       // 결정 단계: 라벨 분리·자동 규칙 결과. 모든 모드가 이 값을 쓴다
       const scanMeta = buildScanMeta(data, normalizedType);
+      runRuleActions(scanMeta, data);
       if (scanMeta.decision.skip) {
         // 규칙이 "저장하지 않음"으로 정한 코드: 알리고 스캔만 다시 켠다
         feedback.info(t('scanner.ruleSkipped'));
@@ -2506,10 +2632,66 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern, holdPendingScan, runRuleActions],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
+
+  // 수동 확정: 들고 있던 코드를 지금 저장한다 (확정 키 또는 화면 버튼)
+  const commitPendingScan = useCallback(() => {
+    const pending = pendingScanRef.current;
+    if (!pending || Date.now() - pending.seenAt > PENDING_SCAN_TTL) {
+      if (hapticEnabledRef.current) haptics.warning();
+      feedback.info(t('scanConfirm.nothingToConfirm'));
+      return;
+    }
+    if (pendingClearTimerRef.current) clearTimeout(pendingClearTimerRef.current);
+    pendingScanRef.current = null;
+    setPendingScan(null);
+    const data = pending.scanResult.data;
+    confirmBypassRef.current = data;
+    lastConfirmedCodeRef.current = data;
+    Promise.resolve(handleBarCodeScanned(pending.scanResult)).finally(() => {
+      if (confirmBypassRef.current === data) confirmBypassRef.current = null;
+    });
+  }, [handleBarCodeScanned, feedback, t]);
+
+  // 볼륨 키에 매핑된 동작
+  const handleHardwareKeyAction = useCallback((action) => {
+    switch (action) {
+      case 'confirm':
+        if (multiCodeModeEnabledRef.current) {
+          if (pendingMultiScanData) handleViewMultiResults();
+          else { if (hapticEnabledRef.current) haptics.warning(); feedback.info(t('scanConfirm.nothingToConfirm')); }
+        } else {
+          commitPendingScan();
+        }
+        break;
+      case 'torch':
+        toggleTorch();
+        break;
+      case 'result':
+        if (lastScannedCode) handleOpenResultWindow();
+        else feedback.info(t('scanConfirm.nothingToConfirm'));
+        break;
+      case 'group':
+        setGroupModalVisible(true);
+        break;
+      case 'multiResults':
+        if (pendingMultiScanData) handleViewMultiResults();
+        else feedback.info(t('scanConfirm.nothingToConfirm'));
+        break;
+      default:
+        break;
+    }
+  }, [pendingMultiScanData, handleViewMultiResults, commitPendingScan, toggleTorch, lastScannedCode, handleOpenResultWindow, feedback, t]);
+  useHardwareKeys({ keyMap: hardwareKeyMap, onAction: handleHardwareKeyAction });
+
+  // 수동 확정 안내: 확정 키가 있으면 "볼륨 위 키를 눌러 확정", 없으면 화면 버튼 안내
+  const confirmKey = Platform.OS === 'android' ? confirmKeyOf(hardwareKeyMap) : null;
+  const confirmHintText = confirmKey
+    ? t('scanConfirm.pressToConfirm', { key: t(`hardwareKeys.${confirmKey}`) })
+    : t('scanConfirm.tapToConfirm');
 
   // 배치 스캔 완료 - 모든 항목을 히스토리에 저장
   const handleFinishBatch = useCallback(async () => {
@@ -2781,6 +2963,23 @@ function ScannerScreen() {
 
         {/* 상태 배지 스택: 위치를 +40씩 손으로 계산하면 연속 스캔 카운터와 겹쳤다 */}
         <View style={[styles.statusBadgeStack, { top: batchBadgeTop }]} pointerEvents="box-none">
+          {/* 규칙으로 지정된 현재 위치. 탭하면 해제 */}
+          {currentLocation && (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => clearLocation(true)}
+              style={[styles.batchModeBadge, styles.stackedBadge, { backgroundColor: 'rgba(0, 122, 255, 0.85)' }]}
+              accessibilityRole="button"
+              accessibilityHint={t('scanner.locationClearHint')}
+            >
+              <Ionicons name="location" size={16} color="#fff" />
+              <Text style={styles.batchModeBadgeText} maxFontSizeMultiplier={1.3} numberOfLines={1}>
+                {t('scanner.locationBadge', { code: currentLocation.code })}
+              </Text>
+              <Ionicons name="close" size={14} color="#fff" style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+          )}
+
           {/* 배치 모드 활성 표시 (연속 스캔이면 카운터를 같이 보여준다) */}
           {batchScanEnabled && (
             <TouchableOpacity
@@ -3268,6 +3467,30 @@ function ScannerScreen() {
         </View>
         );
       })()}
+
+      {/* 수동 확정: 코드를 들고 있다가 키/버튼으로 저장 (결과 카드가 떠 있으면 그 위에) */}
+      {scanConfirmMode === 'manual' && pendingScan && (
+        <View style={[styles.resultWindowButtonContainer, { bottom: floatingButtonBottom + ((lastScannedCode && !resultWindowAutoOpen) ? 150 : 0) }]}>
+          <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.resultWindowButtonBlur}>
+            <View style={styles.scannedCodeInfo}>
+              <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{confirmHintText}</Text>
+              <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">{pendingScan.code}</Text>
+            </View>
+            <View style={styles.resultWindowButtonRow}>
+              <TouchableOpacity
+                style={styles.resultWindowButton}
+                onPress={commitPendingScan}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('scanConfirm.confirmButton')}
+              >
+                <Ionicons name="checkmark" size={20} color="#fff" />
+                <Text style={styles.resultWindowButtonText}>{t('scanConfirm.confirmButton')}</Text>
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        </View>
+      )}
 
       {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
       {lastScannedCode && !resultWindowAutoOpen && (
