@@ -162,15 +162,17 @@ const ScanReticle = forwardRef(function ScanReticle({ isActive = true, region = 
     },
   }), [w, h, colorT, cornerLen, fillOpacity, shakeX]);
 
+  const cornerRadius = target ? 8 : T.regionRadius;
+  const hasRegion = !!region && !target;
   // 숨 쉬기·인트로는 변환 대신 크기 값으로 (SVG를 변환하면 코너마다 선 두께가 달라진다)
   const frame = () => {
     'worklet';
-    const grow = breath.value * 0.06 + (1 - intro.value) * 0.4;
+    // 영역 모드에선 코너가 영역 테두리에 딱 붙어야 하니 크기는 두지 않고 투명도만 숨 쉰다
+    const grow = breath.value * (hasRegion ? 0 : 0.06) + (1 - intro.value) * 0.4;
     const bw = w.value * (1 + grow);
     const bh = h.value * (1 + grow);
     return { x: cx.value - bw / 2 + shakeX.value, y: cy.value - bh / 2, w: bw, h: bh };
   };
-  const cornerRadius = target ? 8 : T.regionRadius;
   const cornerProps = useAnimatedProps(() => {
     const f = frame();
     return {
