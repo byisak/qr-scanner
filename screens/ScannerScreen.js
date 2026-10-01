@@ -3138,7 +3138,8 @@ function ScannerScreen() {
           activeOpacity={1}
           onPress={() => setGroupModalVisible(false)}
         >
-          <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={styles.modalContentBlur} onStartShouldSetResponder={() => true}>
+          {/* Android에서 Modal은 별도 창이라 BlurView가 뒤를 흐리지 못하고 반투명만 돼서 카메라 위 선이 비쳤다 → 불투명 카드 */}
+          <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={[styles.modalContentBlur, Platform.OS === 'android' && { backgroundColor: colors.surface, borderRadius: 28 }]} onStartShouldSetResponder={() => true}>
             <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Ionicons name="folder" size={24} color={colors.primary} />
               <Text style={[styles.modalTitle, { color: colors.text }]}>{t('groupEdit.selectGroup')}</Text>
