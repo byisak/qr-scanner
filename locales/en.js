@@ -575,6 +575,9 @@ export default {
 
   // Developer options screen
   developerOptions: {
+    scanDebug: 'Scan Debug',
+    scanRegionDebug: 'Show scan area decisions',
+    scanRegionDebugDesc: 'Draws a red border around codes judged to be outside the area',
     warning: 'These options are for development and testing only. Disable before deployment.',
     devModeDesc: 'All features are automatically unlocked when dev mode is enabled',
     quickActions: 'Quick Actions',
@@ -845,6 +848,17 @@ export default {
   },
 
   // URL open mode selection screen
+  scanRegion: {
+    title: 'Scan Area',
+    description: 'Choose which part of the screen codes must be in to be recognized. Keeps neighboring labels on a crowded shelf from being scanned.',
+    full: 'Full Screen',
+    fullDesc: 'Recognizes codes anywhere on screen',
+    center: 'Center Square',
+    centerDesc: 'Only codes inside the square in the middle (good for QR codes)',
+    band: 'Horizontal Band',
+    bandDesc: 'Only codes inside the band across the middle (good for barcodes)',
+  },
+
   urlOpenMode: {
     title: 'URL Open Mode',
     description: 'Select how to open URLs from QR codes',

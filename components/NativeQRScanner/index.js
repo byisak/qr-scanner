@@ -9,7 +9,7 @@ import {
   useCameraFormat,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import { useBarcodeScanner } from '@mgcrea/vision-camera-barcode-scanner';
+import { useBarcodeScanner, computeHighlights } from '@mgcrea/vision-camera-barcode-scanner';
 import { Worklets } from 'react-native-worklets-core';
 import Animated, {
   useSharedValue,
@@ -379,6 +379,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   highlightColor = 'lime',
   highlightFillColor = 'rgba(0, 255, 0, 0.2)', // 하이라이트 내부 채우기 색상
   exposure = 0, // 노출 보정 (-1 ~ +1, 0이 기본)
+  scanRegion = null, // 스캔 영역 제한 { x, y, width, height } (카메라 뷰 기준 dp). null이면 전체
+  scanRegionDebug = false, // 영역 밖으로 판정된 코드를 빨간 테두리로 표시 (개발자 옵션)
 }, ref) {
   const cameraRef = useRef(null);
 
@@ -407,6 +409,17 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const [detectedBarcodes, setDetectedBarcodes] = useState([]);
   const detectedBarcodesTimeoutRef = useRef(null);
   const lastBarcodesKeyRef = useRef(''); // 이전 바코드 키 (변경 감지용)
+
+  // 스캔 영역 제한: 워크릿에서 바코드의 화면 좌표(computeHighlights, 라이브러리의 하이라이트와 같은 계산)를 구해
+  // 중심이 영역 안인 것만 남긴다. 카메라 뷰 크기는 onLayout을 가로채서 따로 들고 있는다
+  const scanRegionShared = useSharedValue(scanRegion);
+  useEffect(() => { scanRegionShared.value = scanRegion; }, [scanRegion]);
+  const layoutShared = useSharedValue({ width: 0, height: 0 });
+  const regionPristineShared = useSharedValue(true); // 첫 프레임은 가로세로가 뒤집혀 올 수 있어 건너뛴다 (라이브러리와 같은 처리)
+  const [regionHighlights, setRegionHighlights] = useState({ kept: [], dropped: [] });
+  const runOnJSSetRegionHighlights = Worklets.createRunOnJS((kept, dropped) => {
+    setRegionHighlights({ kept, dropped });
+  });
 
   // selectCenterBarcode를 worklet에서 사용하기 위한 shared value
   const selectCenterBarcodeShared = useSharedValue(selectCenterBarcode);
@@ -586,6 +599,43 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       if (barcodes.length === 0) {
         return;
+      }
+
+      // 스캔 영역 제한: 영역 밖 코드는 여기서 걸러서 아래 단일/다중 분기에 안 들어간다
+      const region = scanRegionShared.value;
+      if (region) {
+        const layout = layoutShared.value;
+        if (regionPristineShared.value) {
+          regionPristineShared.value = false;
+        } else if (layout.width > 0 && layout.height > 0) {
+          const rects = computeHighlights(
+            barcodes,
+            { width: frame.width, height: frame.height, orientation: frame.orientation },
+            layout,
+            'cover'
+          );
+          const kept = [];
+          const keptRects = [];
+          const dropped = [];
+          for (let i = 0; i < barcodes.length; i++) {
+            const r = rects[i];
+            if (!r || !r.origin || !r.size) continue;
+            const cx = r.origin.x + r.size.width / 2;
+            const cy = r.origin.y + r.size.height / 2;
+            const inside = cx >= region.x && cx <= region.x + region.width && cy >= region.y && cy <= region.y + region.height;
+            if (inside) {
+              kept.push(barcodes[i]);
+              keptRects.push(r);
+            } else {
+              dropped.push(r);
+            }
+          }
+          runOnJSSetRegionHighlights(keptRects, dropped);
+          if (kept.length === 0) {
+            return;
+          }
+          barcodes = kept;
+        }
       }
 
       // 다중 바코드 감지 시 (multiCodeThreshold 이상)
@@ -829,10 +879,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         enableZoomGesture={true}
         onTouchEnd={handleTouchEnd}
         {...cameraProps}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          layoutShared.value = { width, height };
+          if (cameraProps.onLayout) cameraProps.onLayout(e);
+        }}
       />
       {showHighlights && (
         <CustomHighlights
-          highlights={highlights}
+          // 영역 제한 중에는 영역 안 코드의 테두리만. 라이브러리 highlights가 비면(코드 없음) 같이 비운다
+          highlights={scanRegion ? (highlights.length ? regionHighlights.kept : []) : highlights}
           barcodes={detectedBarcodes}
           borderColor={highlightColor}
           fillColor={highlightFillColor}
@@ -842,6 +898,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           onVerifiedBarcodesChange={onVerifiedBarcodesChange}
         />
       )}
+      {scanRegion && scanRegionDebug && highlights.length > 0 && regionHighlights.dropped.map((r, i) => (
+        <View
+          key={`drop-${i}`}
+          pointerEvents="none"
+          style={{ position: 'absolute', left: r.origin.x, top: r.origin.y, width: r.size.width, height: r.size.height, borderWidth: 2, borderColor: 'red' }}
+        />
+      ))}
     </View>
   );
 });

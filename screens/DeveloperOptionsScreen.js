@@ -1,5 +1,6 @@
 // screens/DeveloperOptionsScreen.js - 개발자 옵션 화면
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -66,6 +67,20 @@ export default function DeveloperOptionsScreen() {
     unlockAllFeatures,
     resetAllLocks,
   } = useFeatureLock();
+
+  // 스캔 영역 디버그: 영역 밖으로 판정된 코드를 빨간 테두리로 보여준다 (좌표 변환 확인용)
+  const [scanRegionDebug, setScanRegionDebug] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('scanRegionDebug').then(v => setScanRegionDebug(v === 'true')).catch(() => {});
+  }, []);
+  const toggleScanRegionDebug = async (value) => {
+    setScanRegionDebug(value);
+    try {
+      await AsyncStorage.setItem('scanRegionDebug', value ? 'true' : 'false');
+    } catch (error) {
+      console.error('Save scanRegionDebug error:', error);
+    }
+  };
 
   const isFeatureUnlocked = (featureId) => {
     return unlockedFeatures.includes(featureId);
@@ -176,6 +191,29 @@ export default function DeveloperOptionsScreen() {
           </View>
         </View>
 
+        {/* 스캔 디버그 */}
+        <View style={[s.section, { backgroundColor: colors.surface }]}>
+          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+            {t('developerOptions.scanDebug')}
+          </Text>
+          <View style={s.debugRow}>
+            <View style={s.featureInfo}>
+              <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t('developerOptions.scanRegionDebug')}
+              </Text>
+              <Text style={[s.featureId, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t('developerOptions.scanRegionDebugDesc')}
+              </Text>
+            </View>
+            <Switch
+              value={scanRegionDebug}
+              onValueChange={toggleScanRegionDebug}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+            />
+          </View>
+        </View>
+
         {/* 빠른 액션 버튼들 */}
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
@@ -262,6 +300,11 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: '#E65100',
     lineHeight: 18,
+  },
+  debugRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   section: {
     borderRadius: 16,

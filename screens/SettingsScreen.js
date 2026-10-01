@@ -78,6 +78,7 @@ export default function SettingsScreen() {
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   // URL 열기 방식 상태
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  const [scanRegionMode, setScanRegionMode] = useState('full');
   // 사진 압축률 상태
   const [photoQuality, setPhotoQuality] = useState('0.5'); // 기본값: 중간
   // 제품 검색 자동 실행 상태
@@ -244,6 +245,8 @@ export default function SettingsScreen() {
         if (savedUrlOpenMode) {
           setUrlOpenMode(savedUrlOpenMode);
         }
+        const savedScanRegion = await AsyncStorage.getItem('scanRegionMode');
+        setScanRegionMode(savedScanRegion || 'full');
 
         // 사진 압축률 로드
         const q = await AsyncStorage.getItem('photoQuality');
@@ -298,6 +301,8 @@ export default function SettingsScreen() {
           if (savedUrlOpenMode) {
             setUrlOpenMode(savedUrlOpenMode);
           }
+          const savedScanRegion = await AsyncStorage.getItem('scanRegionMode');
+          setScanRegionMode(savedScanRegion || 'full');
 
           // 사진 저장 설정 로드
           const p = await AsyncStorage.getItem('photoSaveEnabled');
@@ -859,6 +864,21 @@ export default function SettingsScreen() {
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('urlOpenMode.title')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
                 {t(`urlOpenMode.${urlOpenMode}`)}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </MaterialPressable>
+
+          {/* 스캔 영역 제한 */}
+          <MaterialPressable
+            style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}
+            onPress={() => router.push('/scan-region-selection')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRegion.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t(`scanRegion.${scanRegionMode}`)}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />

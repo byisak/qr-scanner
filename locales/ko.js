@@ -575,6 +575,9 @@ export default {
 
   // 개발자 옵션 화면
   developerOptions: {
+    scanDebug: '스캔 디버그',
+    scanRegionDebug: '스캔 영역 판정 표시',
+    scanRegionDebugDesc: '영역 밖으로 판정된 코드를 빨간 테두리로 보여줍니다',
     warning: '이 옵션은 개발 및 테스트 용도입니다. 배포 시 비활성화하세요.',
     devModeDesc: '개발 모드 활성화 시 모든 기능이 자동으로 해제됩니다',
     quickActions: '빠른 액션',
@@ -834,6 +837,17 @@ export default {
   },
 
   // URL 열기 방식 선택 화면
+  scanRegion: {
+    title: '스캔 영역',
+    description: '화면의 어느 부분에 들어온 코드만 인식할지 정합니다. 라벨이 빽빽한 선반에서 옆 코드가 같이 찍히는 걸 막습니다.',
+    full: '전체 화면',
+    fullDesc: '화면 어디에 있어도 인식합니다',
+    center: '가운데 사각형',
+    centerDesc: '화면 가운데 네모 안에 들어온 코드만 (QR 코드에 알맞음)',
+    band: '가로 띠',
+    bandDesc: '화면 가운데 가로 띠 안에 들어온 코드만 (바코드에 알맞음)',
+  },
+
   urlOpenMode: {
     title: 'URL 열기 방식',
     description: 'QR 코드에서 URL을 인식했을 때 열기 방식을 선택하세요',

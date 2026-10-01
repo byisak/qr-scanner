@@ -570,6 +570,9 @@ export default {
 
   // 开发者选项界面
   developerOptions: {
+    scanDebug: '扫描调试',
+    scanRegionDebug: '显示扫描区域判定',
+    scanRegionDebugDesc: '用红色边框标出被判定在区域外的条码',
     warning: '这些选项仅用于开发和测试。部署前请禁用。',
     devModeDesc: '启用开发模式后，所有功能将自动解锁',
     quickActions: '快捷操作',
@@ -829,6 +832,17 @@ export default {
   },
 
   // URL打开方式选择界面
+  scanRegion: {
+    title: '扫描区域',
+    description: '设置只识别画面中哪个区域内的条码。避免在标签密集的货架上误扫相邻条码。',
+    full: '全屏',
+    fullDesc: '画面任意位置都可识别',
+    center: '中央方框',
+    centerDesc: '仅识别画面中央方框内的条码（适合二维码）',
+    band: '横向条带',
+    bandDesc: '仅识别画面中央横向条带内的条码（适合条形码）',
+  },
+
   urlOpenMode: {
     title: 'URL打开方式',
     description: '选择从QR码识别URL时的打开方式',

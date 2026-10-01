@@ -31,6 +31,7 @@ import { useSync } from '../contexts/SyncContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import NewLabelPatternModal from '../components/NewLabelPatternModal';
+import ScanRegionOverlay from '../components/ScanRegionOverlay';
 import { parseLabel, signatureOf, labelOfItem, formatLabelSummary, splitLabel } from '../utils/labelParser';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern, addDiscovered } from '../utils/labelCategories';
 
@@ -180,6 +181,9 @@ function ScannerScreen() {
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부 (여러 코드 모드)
   const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 값 표시
+  const [scanRegionMode, setScanRegionMode] = useState('full'); // 스캔 영역 제한: full | center | band
+  const [scanRegionDebug, setScanRegionDebug] = useState(false); // 개발자 옵션: 영역 밖 판정 표시
+  const [scanRegion, setScanRegion] = useState(null); // 오버레이가 잰 영역 사각형 (dp)
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [lastScannedCode, setLastScannedCode] = useState(null); // 마지막 스캔된 코드 (결과창 자동 열림 비활성화 시 사용)
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식 활성화 여부
@@ -570,6 +574,7 @@ function ScannerScreen() {
             'scanResultMode', 'multiCodeModeEnabled', 'multiCodeShowValues', 'singleCodeShowValue',
             'resultWindowAutoOpen', 'lotteryScanEnabled', 'dontAskLotteryPrompt',
             'selectedGroupId', 'scanGroups', 'realtimeSyncEnabled',
+            'scanRegionMode', 'scanRegionDebug',
           ];
           const settingsData = await AsyncStorage.multiGet(settingsKeys);
           const settings = Object.fromEntries(settingsData);
@@ -645,6 +650,8 @@ function ScannerScreen() {
 
           // 바코드 값 표시 설정 로드
           setSingleCodeShowValue(settings['singleCodeShowValue'] === 'true');
+          setScanRegionMode(['center', 'band'].includes(settings['scanRegionMode']) ? settings['scanRegionMode'] : 'full');
+          setScanRegionDebug(settings['scanRegionDebug'] === 'true');
           const showValues = settings['multiCodeShowValues'];
           setShowBarcodeValues(showValues === null ? true : showValues === 'true');
 
@@ -2747,7 +2754,12 @@ function ScannerScreen() {
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor="lime"
+        scanRegion={scanRegion}
+        scanRegionDebug={scanRegionDebug}
       />
+
+      {/* 스캔 영역 제한 표시 (전체면 아무것도 안 그린다) */}
+      <ScanRegionOverlay mode={scanRegionMode} onRegionChange={setScanRegion} />
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) - 글래스모피즘 효과 */}

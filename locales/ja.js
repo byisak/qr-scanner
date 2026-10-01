@@ -570,6 +570,9 @@ export default {
 
   // 開発者オプション画面
   developerOptions: {
+    scanDebug: 'スキャンデバッグ',
+    scanRegionDebug: 'スキャン範囲の判定を表示',
+    scanRegionDebugDesc: '範囲外と判定されたコードを赤い枠で表示します',
     warning: 'これらのオプションは開発およびテスト専用です。デプロイ前に無効にしてください。',
     devModeDesc: '開発モードが有効になると、すべての機能が自動的にロック解除されます',
     quickActions: 'クイックアクション',
@@ -829,6 +832,17 @@ export default {
   },
 
   // URL開き方選択画面
+  scanRegion: {
+    title: 'スキャン範囲',
+    description: '画面のどの部分に入ったコードだけを認識するかを決めます。ラベルが密集した棚で隣のコードが一緒に読まれるのを防ぎます。',
+    full: '画面全体',
+    fullDesc: '画面のどこにあっても認識します',
+    center: '中央の四角',
+    centerDesc: '画面中央の四角の中にあるコードのみ（QRコード向け）',
+    band: '横帯',
+    bandDesc: '画面中央の横帯の中にあるコードのみ（バーコード向け）',
+  },
+
   urlOpenMode: {
     title: 'URL開き方',
     description: 'QRコードからURLを認識した時の開き方を選択してください',

@@ -570,6 +570,9 @@ export default {
 
   // Pantalla de opciones de desarrollador
   developerOptions: {
+    scanDebug: 'Depuración de escaneo',
+    scanRegionDebug: 'Mostrar decisiones del área',
+    scanRegionDebugDesc: 'Dibuja un borde rojo en los códigos juzgados fuera del área',
     warning: 'Estas opciones son solo para desarrollo y pruebas. Desactívelas antes del despliegue.',
     devModeDesc: 'Todas las funciones se desbloquean automáticamente cuando se habilita el modo desarrollador',
     quickActions: 'Acciones rápidas',
@@ -829,6 +832,17 @@ export default {
   },
 
   // Pantalla de selección de modo de apertura de URL
+  scanRegion: {
+    title: 'Área de escaneo',
+    description: 'Elige en qué parte de la pantalla deben estar los códigos para reconocerse. Evita escanear etiquetas vecinas en estantes llenos.',
+    full: 'Pantalla completa',
+    fullDesc: 'Reconoce códigos en cualquier parte de la pantalla',
+    center: 'Cuadrado central',
+    centerDesc: 'Solo códigos dentro del cuadrado del centro (ideal para códigos QR)',
+    band: 'Banda horizontal',
+    bandDesc: 'Solo códigos dentro de la banda central (ideal para códigos de barras)',
+  },
+
   urlOpenMode: {
     title: 'Modo de apertura de URL',
     description: 'Selecciona cómo abrir URLs de códigos QR',
