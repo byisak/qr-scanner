@@ -161,6 +161,7 @@ export default {
 
   // 스캔 화면
   scanner: {
+    alreadyScannedCount: '이미 스캔한 코드예요 ({{count}}번째)',
     batchCleared: '{{count}}개 항목을 비웠습니다',
     batchSaveFailed: '저장하지 못한 항목이 남아 있습니다. 다시 눌러 주세요',
     counterResetHint: '길게 누르면 카운터를 초기화합니다',

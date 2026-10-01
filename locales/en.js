@@ -161,6 +161,7 @@ export default {
 
   // Scanner screen
   scanner: {
+    alreadyScannedCount: 'Already scanned ({{count}} times)',
     batchCleared: 'Cleared {{count}} items',
     batchSaveFailed: 'Some items weren\'t saved. Tap again to retry',
     counterResetHint: 'Long press to reset the counter',

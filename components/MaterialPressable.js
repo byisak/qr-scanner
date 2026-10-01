@@ -13,7 +13,8 @@ export default function MaterialPressable({
   ...rest
 }) {
   const { isDark } = useTheme();
-  const color = rippleColor || (isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.10)');
+  // Material 눌림 상태(onSurface 10~12%)보다 약간 진하게: 실기기에서 옅어서 안 보인다는 피드백
+  const color = rippleColor || (isDark ? 'rgba(255,255,255,0.24)' : 'rgba(0,0,0,0.16)');
 
   if (Platform.OS === 'android') {
     return (

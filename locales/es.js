@@ -159,6 +159,7 @@ export default {
 
   // Pantalla de escaneo
   scanner: {
+    alreadyScannedCount: 'Ya escaneado ({{count}} veces)',
     batchCleared: 'Se vaciaron {{count}} elementos',
     batchSaveFailed: 'Algunos elementos no se guardaron. Toca de nuevo',
     counterResetHint: 'Mantén pulsado para reiniciar el contador',

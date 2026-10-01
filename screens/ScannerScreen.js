@@ -33,6 +33,10 @@ import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 
 // 중복을 알린 뒤 같은 코드를 다시 알리기까지 쉬는 시간 (ms)
 const DUPLICATE_NOTICE_COOLDOWN = 2500;
+// 같은 코드가 이 시간 안에 다시 보이면 "계속 비추고 있는 중"으로 본다 (ms).
+// 카메라는 코드가 보이는 동안 매 프레임 인식하므로, 이걸 새 스캔으로 치면 대고 있는 동안
+// 0.8초마다 다시 저장되고 횟수가 부풀었다. 한 번 치웠다가 다시 찍어야 새 스캔이 된다
+const STILL_IN_VIEW_GAP = 1200;
 
 // 노출 버튼은 32pt라 44pt 터치 영역을 hitSlop으로 채운다
 const EXPOSURE_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
@@ -809,6 +813,8 @@ function ScannerScreen() {
   // 이번 세션에서 저장하기로 한 코드 (그룹ID::코드). 연속 스캔은 같은 코드를 0.5초마다 다시 인식하는데,
   // 첫 저장이 끝나기 전에 두 번째 인식이 오면 히스토리에 아직 없어 중복으로 안 잡혔다
   const sessionSavedCodesRef = useRef(new Set());
+  // 코드별 마지막으로 보인 시각 (계속 비추는 중인지 판단용)
+  const lastSeenAtRef = useRef(new Map());
 
   // 히스토리에서 중복 여부만 확인 (저장하지 않음)
   const checkDuplicateInHistory = useCallback(async (code) => {
@@ -1719,8 +1725,19 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
+
+      // 처리 중이어도 "보였다"는 사실은 기록해야 계속 비추는 중인지 알 수 있다 → 가드보다 먼저
+      const seenAt = Date.now();
+      const previousSeenAt = lastSeenAtRef.current.get(data);
+      const stillInView = previousSeenAt !== undefined && seenAt - previousSeenAt < STILL_IN_VIEW_GAP;
+      lastSeenAtRef.current.set(data, seenAt);
+      if (lastSeenAtRef.current.size > 200) lastSeenAtRef.current.clear();
+
       // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
       if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
+
+      // 같은 코드를 계속 비추고 있으면 다시 처리하지 않는다 (여러 코드 모드는 자체 누적 로직 사용)
+      if (stillInView && !multiCodeModeEnabledRef.current) return;
 
       // 카메라 프레임 크기 저장 (좌표 변환용)
       if (frameDimensions) {
@@ -2245,6 +2262,13 @@ function ScannerScreen() {
                 isDuplicate: historyResult.isDuplicate,
                 scanCount: historyResult.count,
               } : null);
+              // 이 모드는 결과 화면이 안 열려서, 중복이어도 아무 표시가 없었다
+              if (historyResult.isDuplicate) {
+                if (hapticEnabledRef.current) {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                }
+                feedback.warning(t('scanner.alreadyScannedCount', { count: historyResult.count }));
+              }
             }).catch(console.error);
 
             // 스캔 재활성화 (계속 스캔 가능) - 카메라는 활성 상태 유지
@@ -3136,7 +3160,11 @@ function ScannerScreen() {
           {/* tint와 글자색을 같은 테마로 맞춘다. light 고정이면 다크모드에서 밝은 블러 위에 흰 글씨가 됐다 */}
           <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
-              <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary }]}>{t('resultWindowSettings.scannedCode')}</Text>
+              <Text style={[styles.scannedCodeLabel, { color: lastScannedCode.isDuplicate ? colors.warning : colors.textSecondary }]}>
+                {lastScannedCode.isDuplicate
+                  ? t('scanner.alreadyScannedCount', { count: lastScannedCode.scanCount })
+                  : t('resultWindowSettings.scannedCode')}
+              </Text>
               {/* 창고 라벨은 뒷자리로 구분하는 경우가 많아 가운데를 줄인다 */}
               <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">{lastScannedCode.code}</Text>
             </View>
