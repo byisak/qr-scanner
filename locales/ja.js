@@ -159,6 +159,8 @@ export default {
 
   // スキャン画面
   scanner: {
+    quantityNow: '数量 {{count}}',
+    quantityBadge: '数量 {{count}}',
     locationSet: '現在位置: {{code}}',
     locationCleared: '位置指定を解除しました',
     locationBadge: '位置 {{code}}',
@@ -359,6 +361,7 @@ export default {
 
   // 設定画面
   settings: {
+    stocktakeDesc: '予定リストとスキャンを照合して欠品・過剰を見つけます',
     scanRulesDesc: '条件に合うコードをグループ保存・スキップ・コピー・URL・位置指定',
     labelCategoriesDesc: '区切り文字で分かれたコードのフィールド名を管理',
     labelCategories: 'ラベルカテゴリ',
@@ -842,6 +845,115 @@ export default {
   },
 
   // URL開き方選択画面
+  gs1: {
+    ai00: 'SSCC（物流単位）',
+    ai01: '商品コード（GTIN）',
+    ai02: '内容物GTIN',
+    ai10: 'ロット',
+    ai11: '製造日',
+    ai13: '包装日',
+    ai15: '品質保持期限',
+    ai17: '使用期限',
+    ai21: 'シリアル番号',
+    ai30: '数量',
+    ai37: '数量（内容物）',
+    ai400: '注文番号',
+    ai410: '配送先GLN',
+    ai414: 'ロケーションGLN',
+    ai8004: 'GIAI（資産）',
+    netWeight: '正味重量（kg）',
+    short: {
+      lot: 'ロット',
+      expiry: '期限',
+      qty: '数量',
+    },
+  },
+
+  quantity: {
+    title: '数量',
+    decrease: '数量を減らす',
+    increase: '数量を増やす',
+    mode: '数量カウント',
+    modeDesc: '同じコードを再度読むと重複通知の代わりに数量が1増えます（GS1数量があればその分）',
+  },
+
+  memo: {
+    title: 'メモ',
+    save: '保存',
+    saved: 'メモを保存しました',
+    placeholder: '破損や場所などをメモ',
+  },
+
+  nfc: {
+    read: 'NFCタグを読む',
+    iosAlert: 'NFCタグをiPhone上部に近づけてください',
+    setting: 'NFCタグ読み取り',
+    settingDesc: 'スキャン画面を開いている間、NFCタグをかざすとコードとして保存します（NFCをオンにしてください）',
+    settingDescIos: 'スキャン画面のNFCボタンでタグを読み取ります',
+  },
+
+  stocktake: {
+    title: '棚卸し',
+    new: '新しい棚卸し',
+    emptyTitle: '棚卸しはまだありません',
+    emptyDesc: '予定リストを貼り付けてスキャンすると、一致・欠品・過剰をすぐに表示します',
+    active: '実施中',
+    finished: '完了',
+    paused: '停止中',
+    progress: '{{done}}/{{total}} 品目',
+    qtyProgress: '数量 {{scanned}}/{{expected}}',
+    status: {
+      missing: '欠品',
+      partial: '不足',
+      complete: '一致',
+      over: '過剰',
+      extra: 'リスト外',
+    },
+    notInList: 'リストにないコード: {{code}}',
+    overExpected: '予定より多いです: {{name}}（{{scanned}}/{{expected}}）',
+    badge: '棚卸し {{done}}/{{total}}',
+    badgeExtra: 'リスト外 {{count}}',
+    errorEmpty: '予定リストを1行以上入力してください',
+    started: '棚卸し「{{name}}」を開始しました',
+    name: '名前',
+    namePlaceholder: '例: 10月 A棟 棚卸し',
+    expectedList: '予定リスト',
+    paste: '貼り付け',
+    listHint: '1行に1つ: コード, 名前, 数量（名前・数量は省略可、カンマかタブ区切り）。Excelの列をコピーして貼り付けても使えます',
+    parsedCount: '{{items}} 品目 · 数量合計 {{qty}}',
+    createAndStart: '作成してスキャン開始',
+    resumedHint: 'これからのスキャンはこの棚卸しに反映されます',
+    finishTitle: '棚卸し完了',
+    finishMessage: '欠品・不足 {{missing}}件、リスト外 {{extra}}件が残っています。完了しますか？',
+    finish: '完了',
+    report: '差異レポート',
+    exportError: 'レポートを作成できませんでした',
+    deleteTitle: '棚卸しの削除',
+    deleteMessage: '棚卸し「{{name}}」を削除しますか？',
+    delete: '棚卸しを削除',
+    pause: '一時停止',
+    resume: 'スキャン反映を開始',
+    activeHint: 'スキャン画面で読んだコードがこの棚卸しに反映されます。履歴にも通常どおり保存されます',
+    filter: {
+      todo: '残り',
+      missing: '欠品',
+      partial: '不足',
+      complete: '一致',
+      over: '過剰',
+      extra: 'リスト外',
+      all: 'すべて',
+    },
+    emptyFilter: '該当する品目はありません',
+    csv: {
+      code: 'コード',
+      name: '名前',
+      expected: '予定',
+      scanned: 'スキャン',
+      diff: '差異',
+      status: '状態',
+    },
+  },
+
   scanRules: {
     title: '自動ルール',
     description: 'スキャンしたコードが条件に合うと、決めておいた動作を自動で行います。上から順に見て、「中断」のルールに当たると以下は飛ばします。',

@@ -24,7 +24,7 @@ import { createAudioPlayer } from 'expo-audio';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
@@ -37,6 +37,10 @@ import { parseKeyMap, confirmKeyOf, DEFAULT_KEY_MAP } from '../utils/hardwareKey
 import * as Clipboard from 'expo-clipboard';
 import { evaluateRules, substituteTemplate } from '../utils/scanRules';
 import { loadScanRules } from '../utils/scanRulesStore';
+import { parseGs1, compactGs1, formatGs1Summary } from '../utils/gs1';
+import { keyValueOf } from '../utils/labelParser';
+import { getActiveStocktake, recordStocktakeScan, summarizeStocktake, upsertStocktake } from '../utils/stocktake';
+import { isNfcSupported, startNfcListening, readNfcOnce } from '../utils/nfcReader';
 import { parseLabel, signatureOf, labelOfItem, formatLabelSummary, splitLabel } from '../utils/labelParser';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern, addDiscovered } from '../utils/labelCategories';
 
@@ -191,6 +195,15 @@ function ScannerScreen() {
   const [scanRegionDebug, setScanRegionDebug] = useState(false); // 개발자 옵션: 영역 밖 판정 표시
   const [scanRegion, setScanRegion] = useState(null); // 오버레이가 잰 영역 사각형 (dp)
   const reticleRef = useRef(null);                     // 조준 코너 (confirm/shake)
+  // 수량 누적: 같은 코드를 다시 찍으면 중복 알림 대신 수량 +1 (GS1 수량이 있으면 그만큼)
+  const [quantityMode, setQuantityMode] = useState(false);
+  const quantityModeRef = useRef(false);
+  // 재고 실사: 진행 중인 실사가 있으면 스캔마다 예상 목록과 맞춰 본다
+  const stocktakeRef = useRef(null);
+  const [stocktakeBadge, setStocktakeBadge] = useState(null); // { id, name, done, total, extra }
+  // NFC 태그 읽기
+  const [nfcEnabled, setNfcEnabled] = useState(true);
+  const [nfcSupported, setNfcSupported] = useState(false);
   const [primaryHighlight, setPrimaryHighlight] = useState(null); // 대표 코드의 화면 사각형
   const handlePrimaryHighlightChange = useCallback((rect) => {
     setPrimaryHighlight(prev => {
@@ -315,6 +328,10 @@ function ScannerScreen() {
     // 라벨 카테고리가 있으면 값 아래에 "필드 값" 요약을 같이 보여준다
     const label = labelOfItem({ code: toastInfo.data }, labelSettingsRef.current.categories);
     if (label) toastInfo = { ...toastInfo, labelSummary: formatLabelSummary(label, 2, t) };
+    else {
+      const gs1Summary = formatGs1Summary(parseGs1(toastInfo.data), t);
+      if (gs1Summary) toastInfo = { ...toastInfo, labelSummary: gs1Summary };
+    }
     // 규칙이 다른 그룹에 저장하게 했으면 "→ 그룹"을 같이 보여준다
     if (ruleGroupNameRef.current) {
       toastInfo = { ...toastInfo, groupName: ruleGroupNameRef.current };
@@ -601,6 +618,7 @@ function ScannerScreen() {
             'resultWindowAutoOpen', 'lotteryScanEnabled', 'dontAskLotteryPrompt',
             'selectedGroupId', 'scanGroups', 'realtimeSyncEnabled',
             'scanRegionMode', 'scanRegionDebug', 'scanConfirmMode', 'hardwareKeyMap',
+            'quantityMode', 'nfcReadEnabled',
           ];
           const settingsData = await AsyncStorage.multiGet(settingsKeys);
           const settings = Object.fromEntries(settingsData);
@@ -679,6 +697,19 @@ function ScannerScreen() {
           setScanRegionMode(['center', 'band'].includes(settings['scanRegionMode']) ? settings['scanRegionMode'] : 'full');
           setScanRegionDebug(settings['scanRegionDebug'] === 'true');
           setHardwareKeyMap(parseKeyMap(settings['hardwareKeyMap']));
+          const qtyMode = settings['quantityMode'] === 'true';
+          setQuantityMode(qtyMode);
+          quantityModeRef.current = qtyMode;
+          setNfcEnabled(settings['nfcReadEnabled'] !== 'false');
+          getActiveStocktake().then((st) => {
+            stocktakeRef.current = st;
+            if (st) {
+              const sum = summarizeStocktake(st);
+              setStocktakeBadge({ id: st.id, name: st.name, done: sum.complete + sum.over, total: sum.total, extra: sum.extra });
+            } else {
+              setStocktakeBadge(null);
+            }
+          }).catch(() => {});
           const confirmMode = settings['scanConfirmMode'] === 'manual' ? 'manual' : 'auto';
           setScanConfirmMode(confirmMode);
           scanConfirmModeRef.current = confirmMode;
@@ -941,6 +972,9 @@ function ScannerScreen() {
         if (signature && !ignored.includes(signature)) meta.newPattern = { signature, sample: code };
       }
     }
+    // 1-2) GS1 (GTIN·로트·유통기한·수량)
+    const gs1 = parseGs1(code);
+    if (gs1) meta.extra = { ...(meta.extra || {}), gs1: compactGs1(gs1) };
     // 2) 자동 규칙
     const { rules, enabled } = scanRulesRef.current;
     if (enabled && rules.length > 0) {
@@ -1001,6 +1035,34 @@ function ScannerScreen() {
       ruleGroupNameRef.current = group ? group.name : null;
     }
   }, [feedback, t, currentGroupName, availableGroups]);
+
+  // 재고 실사에 스캔 하나를 반영 (예상 목록과 맞춰 보고 배지·저장 갱신)
+  const recordStocktake = useCallback((code, meta) => {
+    const st = stocktakeRef.current;
+    if (!st) return;
+    const label = meta.extra && meta.extra.categoryId
+      ? labelOfItem({ code, categoryId: meta.extra.categoryId, values: meta.extra.values }, labelSettingsRef.current.categories)
+      : null;
+    const { stocktake, status, item } = recordStocktakeScan(st, {
+      code,
+      gtin: meta.extra && meta.extra.gs1 ? meta.extra.gs1.gtin : null,
+      keyValue: label ? keyValueOf(label) : null,
+      qty: meta.extra && meta.extra.gs1 ? meta.extra.gs1.qty : null,
+    });
+    stocktakeRef.current = stocktake;
+    const sum = summarizeStocktake(stocktake);
+    setStocktakeBadge({ id: stocktake.id, name: stocktake.name, done: sum.complete + sum.over, total: sum.total, extra: sum.extra });
+    upsertStocktake(stocktake).catch(() => {});
+    if (status === 'extra') {
+      if (hapticEnabledRef.current) haptics.warning();
+      reticleRef.current?.shake();
+      feedback.warning(t('stocktake.notInList', { code }));
+    } else if (status === 'over') {
+      if (hapticEnabledRef.current) haptics.warning();
+      reticleRef.current?.shake();
+      feedback.warning(t('stocktake.overExpected', { name: item.name || item.code, scanned: item.scanned, expected: item.expected }));
+    }
+  }, [feedback, t]);
 
   // 그룹을 바꾸거나 스캐너 탭을 벗어나면 위치 지정을 푼다 (결정: 자동 해제)
   const locationGroupRef = useRef(currentGroupId);
@@ -1107,8 +1169,10 @@ function ScannerScreen() {
           if (photos.length > 10) photos.pop(); // 10개 초과시 가장 오래된 사진 제거
         }
 
+        const addQty = (extra && extra.gs1 && extra.gs1.qty) || 1;
         const updatedItem = {
           ...existingItem,
+          ...(quantityModeRef.current && { quantity: (existingItem.quantity || existingItem.count || 1) + addQty }),
           timestamp: now, // 최신 스캔 시간으로 업데이트
           count: (existingItem.count || 1) + 1, // 스캔 횟수 증가
           scanTimes: scanTimes, // 모든 스캔 시간 저장
@@ -1126,6 +1190,7 @@ function ScannerScreen() {
         // 새로운 스캔
         const record = {
           code,
+          ...(quantityModeRef.current && { quantity: (extra && extra.gs1 && extra.gs1.qty) || 1 }),
           timestamp: now,
           count: 1,
           scanTimes: [now], // 첫 스캔 시간을 배열로 저장
@@ -1143,7 +1208,8 @@ function ScannerScreen() {
       triggerSync();
 
       // 중복 여부 반환 (ResultScreen에서 사용)
-      return { isDuplicate, count: isDuplicate ? historyByGroup[selectedGroupId][0].count : 1, errorCorrectionLevel: ecLevel };
+      const saved = historyByGroup[selectedGroupId][0];
+      return { isDuplicate, count: isDuplicate ? saved.count : 1, quantity: saved.quantity, errorCorrectionLevel: ecLevel };
     } catch (e) {
       console.error('Save history error:', e);
       return { isDuplicate: false, count: 1, errorCorrectionLevel: null };
@@ -1180,6 +1246,7 @@ function ScannerScreen() {
           historyId: historyResult.id,
           isDuplicate: true,
           scanCount: historyResult.count,
+          quantity: historyResult.quantity,
           errorCorrectionLevel,
         });
       });
@@ -2155,6 +2222,7 @@ function ScannerScreen() {
       // 결정 단계: 라벨 분리·자동 규칙 결과. 모든 모드가 이 값을 쓴다
       const scanMeta = buildScanMeta(data, normalizedType);
       runRuleActions(scanMeta, data);
+      if (!scanMeta.decision.skip) recordStocktake(data, scanMeta);
       if (scanMeta.decision.skip) {
         // 규칙이 "저장하지 않음"으로 정한 코드: 알리고 스캔만 다시 켠다
         feedback.info(t('scanner.ruleSkipped'));
@@ -2213,8 +2281,8 @@ function ScannerScreen() {
         // EC Level 추출
         let detectedEcLevel = errorCorrectionLevel || null;
 
-        // 중복 감지가 활성화된 경우 먼저 중복 여부 확인
-        if (duplicateDetectionRef.current) {
+        // 중복 감지가 활성화된 경우 먼저 중복 여부 확인 (수량 누적 모드에선 중복이 아니라 수량 +1)
+        if (duplicateDetectionRef.current && !quantityModeRef.current) {
           checkDuplicateInHistory(data).then(({ isDuplicate, existingCount }) => {
             if (isDuplicate) {
               const action = duplicateActionRef.current;
@@ -2258,6 +2326,7 @@ function ScannerScreen() {
                 historyId: historyResult.id,
                 isDuplicate: historyResult.isDuplicate,
                 scanCount: historyResult.count,
+                quantity: historyResult.quantity,
                 errorCorrectionLevel: detectedEcLevel,
               });
             });
@@ -2274,6 +2343,7 @@ function ScannerScreen() {
               historyId: historyResult.id,
               isDuplicate: historyResult.isDuplicate,
               scanCount: historyResult.count,
+              quantity: historyResult.quantity,
               errorCorrectionLevel: detectedEcLevel,
             });
           }).catch((error) => {
@@ -2298,7 +2368,7 @@ function ScannerScreen() {
       setCanScan(false);
 
       // 배치 스캔 모드일 경우 중복 체크를 먼저 수행
-      if (batchScanEnabled && duplicateDetectionRef.current) {
+      if (batchScanEnabled && duplicateDetectionRef.current && !quantityModeRef.current) {
         const isDuplicate = batchScannedItems.some(item => item.code === data);
         if (isDuplicate) {
           const action = duplicateActionRef.current;
@@ -2525,10 +2595,11 @@ function ScannerScreen() {
                 ...prev,
                 isDuplicate: historyResult.isDuplicate,
                 scanCount: historyResult.count,
+                quantity: historyResult.quantity,
               } : null);
               // 이 모드는 결과 화면이 안 열려서, 중복이어도 아무 표시가 없었다.
               // 문구는 하단 결과 카드 제목에 나오므로(스낵바까지 띄우면 두 번 보이고 카드를 가린다) 진동만 준다
-              if (historyResult.isDuplicate && hapticEnabledRef.current) {
+              if (historyResult.isDuplicate && !quantityModeRef.current && hapticEnabledRef.current) {
                 haptics.warning(); reticleRef.current?.shake();
               }
             }).catch(console.error);
@@ -2644,10 +2715,39 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern, holdPendingScan, runRuleActions],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern, holdPendingScan, runRuleActions, recordStocktake],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
+
+  // NFC: 읽은 값을 바코드와 같은 처리 과정으로 넘긴다 (type 'nfc')
+  const handleBarCodeScannedRef = useRef(null);
+  useEffect(() => { handleBarCodeScannedRef.current = handleBarCodeScanned; }, [handleBarCodeScanned]);
+  const handleNfcValue = useCallback((decoded) => {
+    if (!decoded || !decoded.value || !handleBarCodeScannedRef.current) return;
+    handleBarCodeScannedRef.current({ data: decoded.value, type: 'nfc' });
+  }, []);
+  useEffect(() => {
+    isNfcSupported().then(setNfcSupported).catch(() => setNfcSupported(false));
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android' || !nfcEnabled || !nfcSupported) return undefined;
+      let stop = null;
+      let cancelled = false;
+      startNfcListening(handleNfcValue).then((fn) => {
+        if (cancelled) fn(); else stop = fn;
+      });
+      return () => {
+        cancelled = true;
+        if (stop) stop();
+      };
+    }, [nfcEnabled, nfcSupported, handleNfcValue])
+  );
+  const handleReadNfc = useCallback(async () => {
+    const decoded = await readNfcOnce(t('nfc.iosAlert'));
+    handleNfcValue(decoded);
+  }, [t, handleNfcValue]);
 
   // 수동 확정: 들고 있던 코드를 지금 저장한다 (확정 키 또는 화면 버튼)
   const commitPendingScan = useCallback(() => {
@@ -2980,6 +3080,30 @@ function ScannerScreen() {
 
         {/* 상태 배지 스택: 위치를 +40씩 손으로 계산하면 연속 스캔 카운터와 겹쳤다 */}
         <View style={[styles.statusBadgeStack, { top: batchBadgeTop }]} pointerEvents="box-none">
+          {/* 수량 누적 모드 표시 (같은 코드 → 수량 +1이라 모르고 쓰면 헷갈린다) */}
+          {quantityMode && (
+            <View style={[styles.batchModeBadge, styles.stackedBadge]}>
+              <Ionicons name="add-circle" size={16} color={SCAN_THEME.primary} />
+              <Text style={styles.batchModeBadgeText} maxFontSizeMultiplier={1.3}>{t('quantity.mode')}</Text>
+            </View>
+          )}
+
+          {/* 진행 중인 재고 실사. 탭하면 실사 화면 */}
+          {stocktakeBadge && (
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={() => router.push({ pathname: '/stocktake-detail', params: { id: stocktakeBadge.id } })}
+              style={[styles.batchModeBadge, styles.stackedBadge]}
+              accessibilityRole="button"
+            >
+              <Ionicons name="clipboard" size={16} color={SCAN_THEME.primary} />
+              <Text style={styles.batchModeBadgeText} maxFontSizeMultiplier={1.3} numberOfLines={1}>
+                {t('stocktake.badge', { name: stocktakeBadge.name, done: stocktakeBadge.done, total: stocktakeBadge.total })}
+                {stocktakeBadge.extra ? ` · ${t('stocktake.badgeExtra', { count: stocktakeBadge.extra })}` : ''}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* 규칙으로 지정된 현재 위치. 탭하면 해제 */}
           {currentLocation && (
             <TouchableOpacity
@@ -3113,6 +3237,21 @@ function ScannerScreen() {
           <Ionicons name="images" size={20} color={SCAN_THEME.white} />
         </BlurView>
       </TouchableOpacity>
+
+      {/* NFC 읽기 (iOS는 버튼으로 시스템 시트를 연다. Android는 스캐너가 떠 있는 동안 자동으로 듣는다) */}
+      {Platform.OS === 'ios' && nfcEnabled && nfcSupported && (
+        <TouchableOpacity
+          onPress={handleReadNfc}
+          activeOpacity={0.8}
+          accessibilityLabel={t('nfc.read')}
+          accessibilityRole="button"
+          style={[styles.imagePickerButtonContainer, { top: topOffset + 56 }]}
+        >
+          <BlurView intensity={40} tint="light" style={styles.imagePickerButton}>
+            <MaterialCommunityIcons name="nfc" size={20} color={SCAN_THEME.white} />
+          </BlurView>
+        </TouchableOpacity>
+      )}
 
       {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
       {realtimeSyncEnabled && !activeSessionId && (
@@ -3504,8 +3643,10 @@ function ScannerScreen() {
           {/* tint와 글자색을 같은 테마로 맞춘다. light 고정이면 다크모드에서 밝은 블러 위에 흰 글씨가 됐다 */}
           <BlurView intensity={50} tint="dark" style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
-              <Text style={[styles.scannedCodeLabel, { color: lastScannedCode.isDuplicate ? SCAN_THEME.warning : SCAN_TEXT.secondary }]}>
-                {lastScannedCode.isDuplicate
+              <Text style={[styles.scannedCodeLabel, { color: lastScannedCode.isDuplicate && !lastScannedCode.quantity ? SCAN_THEME.warning : SCAN_TEXT.secondary }]}>
+                {lastScannedCode.quantity
+                  ? t('scanner.quantityNow', { count: lastScannedCode.quantity })
+                  : lastScannedCode.isDuplicate
                   ? t('scanner.alreadyScannedCount', { count: lastScannedCode.scanCount })
                   : t('resultWindowSettings.scannedCode')}
               </Text>
@@ -3513,7 +3654,7 @@ function ScannerScreen() {
               <Text style={[styles.scannedCodeValue, { color: SCAN_TEXT.primary }]} numberOfLines={1} ellipsizeMode="middle">{lastScannedCode.code}</Text>
               {(() => {
                 const label = labelOfItem(lastScannedCode, labelCategories);
-                const summary = label ? formatLabelSummary(label, 3, t) : '';
+                const summary = label ? formatLabelSummary(label, 3, t) : formatGs1Summary(parseGs1(lastScannedCode.code), t);
                 return summary ? (
                   <Text style={[styles.scannedCodeLabel, { color: SCAN_TEXT.tertiary, marginTop: 2 }]} numberOfLines={1} ellipsizeMode="middle">{summary}</Text>
                 ) : null;

@@ -100,7 +100,9 @@ export default function ScanToast({
     return null;
   }
 
-  const isDuplicate = data.isDuplicate;
+  const quantity = data.quantity;
+  // 수량 누적 모드에선 같은 코드가 다시 와도 '중복'이 아니라 수량 증가다
+  const isDuplicate = data.isDuplicate && !quantity;
   const scanCount = data.scanCount || 1;
   const isSkipped = data.skipped;
 
@@ -162,6 +164,10 @@ export default function ScanToast({
                   <Text style={styles.duplicateBadgeText}>
                     {t('scanner.duplicate') || '중복'}
                   </Text>
+                </View>
+              ) : quantity ? (
+                <View style={[styles.duplicateBadge, { backgroundColor: '#0A84FF' }]}>
+                  <Text style={styles.duplicateBadgeText}>{t('scanner.quantityBadge', { count: quantity })}</Text>
                 </View>
               ) : isDuplicate && (
                 <View style={styles.duplicateBadge}>

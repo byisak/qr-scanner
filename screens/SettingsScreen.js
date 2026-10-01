@@ -55,6 +55,8 @@ export default function SettingsScreen() {
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 인식된 값 표시
+  const [quantityMode, setQuantityMode] = useState(false); // 같은 코드 → 수량 +1
+  const [nfcReadEnabled, setNfcReadEnabled] = useState(true); // NFC 태그 읽기
   // 진동 세기·패턴 (Android 기본 진동이 약하고 탁하다는 피드백)
   const [hapticIntensity, setHapticIntensity] = useState('medium');
   const [hapticPattern, setHapticPattern] = useState('tap');
@@ -346,6 +348,8 @@ export default function SettingsScreen() {
           // null이면 기본값 true 유지
           setResultWindowAutoOpen(rwa === null ? true : rwa === 'true');
           setSingleCodeShowValue((await AsyncStorage.getItem('singleCodeShowValue')) === 'true');
+          setQuantityMode((await AsyncStorage.getItem('quantityMode')) === 'true');
+          setNfcReadEnabled((await AsyncStorage.getItem('nfcReadEnabled')) !== 'false');
 
           // 제품 검색 자동 실행 설정 로드
           const pas = await AsyncStorage.getItem('productAutoSearch');
@@ -576,6 +580,19 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRules.title')}</Text>
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.scanRulesDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </MaterialPressable>
+
+          {/* 재고 실사 */}
+          <MaterialPressable accessibilityRole="button"
+            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+            onPress={() => router.push('/stocktakes')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktake.title')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.stocktakeDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </MaterialPressable>
@@ -932,6 +949,50 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </MaterialPressable>
+
+          {/* 수량 누적 */}
+          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('quantity.mode')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('quantity.modeDesc')}</Text>
+            </View>
+            <Switch
+              value={quantityMode}
+              onValueChange={async (value) => {
+                setQuantityMode(value);
+                try {
+                  await AsyncStorage.setItem('quantityMode', value.toString());
+                } catch (error) {
+                  setQuantityMode(!value);
+                }
+              }}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('quantity.mode')}
+            />
+          </View>
+
+          {/* NFC 태그 읽기 */}
+          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('nfc.setting')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{Platform.OS === 'ios' ? t('nfc.settingDescIos') : t('nfc.settingDesc')}</Text>
+            </View>
+            <Switch
+              value={nfcReadEnabled}
+              onValueChange={async (value) => {
+                setNfcReadEnabled(value);
+                try {
+                  await AsyncStorage.setItem('nfcReadEnabled', value.toString());
+                } catch (error) {
+                  setNfcReadEnabled(!value);
+                }
+              }}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+              accessibilityLabel={t('nfc.setting')}
+            />
+          </View>
 
           {/* 인식된 코드 값 표시 (일반 스캔) */}
           <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>

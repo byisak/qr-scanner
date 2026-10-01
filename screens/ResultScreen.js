@@ -1,5 +1,5 @@
 // screens/ResultScreen.js - Expo Router 버전
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,8 @@ import QRContentInfoDisplay from '../components/QRContentInfoDisplay';
 import MaterialPressable from '../components/MaterialPressable';
 import NewLabelPatternModal from '../components/NewLabelPatternModal';
 import { labelOfItem, signatureOf, fieldNameAt } from '../utils/labelParser';
+import { parseGs1, gs1AiLabel, gs1DisplayValue } from '../utils/gs1';
+import { findHistoryItem, updateHistoryItem } from '../utils/historyItem';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern } from '../utils/labelCategories';
 
 // 바코드 타입 표시 이름 (다른 화면의 'EAN-13' 표기와 맞춘다)
@@ -181,6 +183,55 @@ export default function ResultScreen() {
   };
 
   const labelInfo = useMemo(() => labelOfItem({ code: displayText }, labelCategories), [displayText, labelCategories]);
+  const gs1Info = useMemo(() => parseGs1(displayText), [displayText]);
+
+  // 기록 항목의 메모·수량 (스캔 직후엔 저장이 조금 늦을 수 있어 한 번 더 읽는다)
+  const [memo, setMemo] = useState('');
+  const [memoSaved, setMemoSaved] = useState('');
+  const [quantity, setQuantity] = useState(null);
+  const [historyItemFound, setHistoryItemFound] = useState(false);
+  useEffect(() => {
+    if (!displayText || isGeneratedCode) return undefined;
+    let cancelled = false;
+    const load = async (retry) => {
+      const item = await findHistoryItem(groupId, displayText);
+      if (cancelled) return;
+      if (item) {
+        setHistoryItemFound(true);
+        setMemo(item.memo || '');
+        setMemoSaved(item.memo || '');
+        setQuantity(typeof item.quantity === 'number' ? item.quantity : null);
+      } else if (retry) {
+        setTimeout(() => load(false), 800);
+      }
+    };
+    load(true);
+    return () => { cancelled = true; };
+  }, [displayText, groupId, isGeneratedCode]);
+
+  const saveMemo = useCallback(async () => {
+    const value = memo.trim();
+    if (value === memoSaved) return;
+    try {
+      const ok = await updateHistoryItem(groupId, displayText, { memo: value || undefined });
+      if (ok) {
+        setMemoSaved(value);
+        feedback.success(t('memo.saved'));
+      }
+    } catch (error) {
+      console.error('Save memo error:', error);
+    }
+  }, [memo, memoSaved, groupId, displayText, feedback, t]);
+
+  const changeQuantity = useCallback(async (delta) => {
+    const next = Math.max(0, (quantity ?? 1) + delta);
+    setQuantity(next);
+    try {
+      await updateHistoryItem(groupId, displayText, { quantity: next });
+    } catch (error) {
+      console.error('Save quantity error:', error);
+    }
+  }, [quantity, groupId, displayText]);
 
   // 저장된 그룹 이름 로드 (메타 줄 표시용)
   useEffect(() => {
@@ -799,6 +850,77 @@ export default function ResultScreen() {
             />
           )}
 
+          {/* GS1 (GTIN·로트·유통기한·수량) */}
+          {!isEditing && gs1Info && (
+            <View style={[styles.labelCard, { backgroundColor: colors.inputBackground }]}>
+              <View style={styles.labelHeader}>
+                <Ionicons name="barcode-outline" size={14} color={colors.primary} />
+                <Text style={[styles.labelTitle, { color: colors.primary, fontFamily: fonts.semiBold }]}>GS1</Text>
+              </View>
+              {gs1Info.ais.map(({ ai, value }, index) => {
+                const shown = gs1DisplayValue(ai, value);
+                return (
+                  <MaterialPressable
+                    key={`${ai}-${index}`}
+                    style={styles.labelRow}
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(shown);
+                      feedback.success(t('result.copySuccessMessage'));
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${gs1AiLabel(ai, t)}: ${shown}`}
+                  >
+                    <Text style={[styles.labelName, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
+                      {gs1AiLabel(ai, t)}
+                    </Text>
+                    <Text style={[styles.labelValue, { color: colors.text, fontFamily: fonts.regular }]} selectable numberOfLines={2}>
+                      {shown}
+                    </Text>
+                  </MaterialPressable>
+                );
+              })}
+            </View>
+          )}
+
+          {/* 수량 (수량 누적으로 저장된 항목) */}
+          {!isEditing && historyItemFound && quantity !== null && (
+            <View style={[styles.labelCard, styles.quantityRow, { backgroundColor: colors.inputBackground }]}>
+              <Text style={[styles.labelName, { color: colors.textSecondary, fontFamily: fonts.medium, flex: 1 }]}>{t('quantity.title')}</Text>
+              <MaterialPressable style={[styles.qtyButton, { borderColor: colors.border }]} onPress={() => changeQuantity(-1)} accessibilityLabel={t('quantity.decrease')}>
+                <Ionicons name="remove" size={20} color={colors.text} />
+              </MaterialPressable>
+              <Text style={[styles.qtyValue, { color: colors.text, fontFamily: fonts.bold }]}>{quantity}</Text>
+              <MaterialPressable style={[styles.qtyButton, { borderColor: colors.border }]} onPress={() => changeQuantity(1)} accessibilityLabel={t('quantity.increase')}>
+                <Ionicons name="add" size={20} color={colors.text} />
+              </MaterialPressable>
+            </View>
+          )}
+
+          {/* 메모 (기록에 저장된 항목만) */}
+          {!isEditing && historyItemFound && (
+            <View style={[styles.labelCard, { backgroundColor: colors.inputBackground, paddingVertical: 10 }]}>
+              <View style={styles.labelHeader}>
+                <Ionicons name="create-outline" size={14} color={colors.primary} />
+                <Text style={[styles.labelTitle, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('memo.title')}</Text>
+                {memo.trim() !== memoSaved && (
+                  <MaterialPressable onPress={saveMemo} style={styles.memoSaveButton} accessibilityRole="button">
+                    <Text style={[styles.labelHint, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('memo.save')}</Text>
+                  </MaterialPressable>
+                )}
+              </View>
+              <TextInput
+                value={memo}
+                onChangeText={setMemo}
+                onBlur={saveMemo}
+                placeholder={t('memo.placeholder')}
+                placeholderTextColor={colors.textTertiary}
+                multiline
+                maxLength={500}
+                style={[styles.memoInput, { color: colors.text, fontFamily: fonts.regular }]}
+              />
+            </View>
+          )}
+
           {/* 라벨 필드 (구분자로 나뉜 값을 카테고리의 필드 이름으로) */}
           {!isEditing && labelInfo && (
             <View style={[styles.labelCard, { backgroundColor: colors.inputBackground }]}>
@@ -1133,6 +1255,38 @@ const styles = StyleSheet.create({
   metaText: {
     flex: 1,
     fontSize: 12,
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  qtyButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  qtyValue: {
+    fontSize: 20,
+    minWidth: 36,
+    textAlign: 'center',
+  },
+  memoSaveButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  memoInput: {
+    fontSize: 15,
+    minHeight: 44,
+    textAlignVertical: 'top',
+    paddingVertical: 4,
   },
   labelCard: {
     borderRadius: 12,

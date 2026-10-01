@@ -161,6 +161,8 @@ export default {
 
   // 스캔 화면
   scanner: {
+    quantityNow: '수량 {{count}}',
+    quantityBadge: '수량 {{count}}',
     locationSet: '현재 위치: {{code}}',
     locationCleared: '위치 지정을 풀었습니다',
     locationBadge: '위치 {{code}}',
@@ -362,6 +364,7 @@ export default {
 
   // 설정 화면
   settings: {
+    stocktakeDesc: '예상 목록과 스캔을 맞춰 누락·초과를 찾습니다',
     scanRulesDesc: '조건에 맞는 코드를 그룹 저장·건너뜀·복사·URL·위치 지정',
     labelCategoriesDesc: '구분자로 나뉜 코드의 필드 이름 관리',
     labelCategories: '라벨 카테고리',
@@ -847,6 +850,115 @@ export default {
   },
 
   // URL 열기 방식 선택 화면
+  gs1: {
+    ai00: 'SSCC (물류 단위)',
+    ai01: '상품코드 (GTIN)',
+    ai02: '내용물 GTIN',
+    ai10: '로트',
+    ai11: '제조일',
+    ai13: '포장일',
+    ai15: '품질유지기한',
+    ai17: '유통기한',
+    ai21: '일련번호',
+    ai30: '수량',
+    ai37: '수량 (내품)',
+    ai400: '주문번호',
+    ai410: '배송지 GLN',
+    ai414: '위치 GLN',
+    ai8004: 'GIAI (자산)',
+    netWeight: '순중량 (kg)',
+    short: {
+      lot: '로트',
+      expiry: '유통',
+      qty: '수량',
+    },
+  },
+
+  quantity: {
+    title: '수량',
+    decrease: '수량 줄이기',
+    increase: '수량 늘리기',
+    mode: '수량 누적',
+    modeDesc: '같은 코드를 다시 찍으면 중복 알림 대신 수량이 1씩 늘어납니다 (GS1 수량이 있으면 그만큼)',
+  },
+
+  memo: {
+    title: '메모',
+    save: '저장',
+    saved: '메모를 저장했습니다',
+    placeholder: '파손, 위치 메모 등을 적어 두세요',
+  },
+
+  nfc: {
+    read: 'NFC 태그 읽기',
+    iosAlert: 'NFC 태그를 휴대폰 위쪽에 대세요',
+    setting: 'NFC 태그 읽기',
+    settingDesc: '스캔 화면이 열려 있으면 NFC 태그를 대기만 해도 코드처럼 저장합니다 (휴대폰 NFC가 켜져 있어야 합니다)',
+    settingDescIos: '스캔 화면의 NFC 버튼을 눌러 태그를 읽습니다',
+  },
+
+  stocktake: {
+    title: '재고 실사',
+    new: '새 실사',
+    emptyTitle: '진행한 실사가 없습니다',
+    emptyDesc: '예상 목록을 붙여넣고 스캔하면 일치·누락·초과를 바로 알려 줍니다',
+    active: '진행 중',
+    finished: '완료',
+    paused: '멈춤',
+    progress: '{{done}}/{{total}} 품목',
+    qtyProgress: '수량 {{scanned}}/{{expected}}',
+    status: {
+      missing: '누락',
+      partial: '부족',
+      complete: '일치',
+      over: '초과',
+      extra: '목록 외',
+    },
+    notInList: '목록에 없는 코드: {{code}}',
+    overExpected: '예상보다 많습니다: {{name}} ({{scanned}}/{{expected}})',
+    badge: '실사 {{done}}/{{total}}',
+    badgeExtra: '목록 외 {{count}}',
+    errorEmpty: '예상 목록을 한 줄 이상 넣어 주세요',
+    started: '"{{name}}" 실사를 시작했습니다',
+    name: '이름',
+    namePlaceholder: '예: 10월 A동 실사',
+    expectedList: '예상 목록',
+    paste: '붙여넣기',
+    listHint: '한 줄에 하나: 코드, 이름, 수량 (이름·수량은 생략 가능, 쉼표나 탭으로 구분). 엑셀에서 열을 복사해 붙여넣어도 됩니다',
+    parsedCount: '{{items}}개 품목 · 수량 합계 {{qty}}',
+    createAndStart: '만들고 스캔 시작',
+    resumedHint: '이제 스캔하면 이 실사에 반영됩니다',
+    finishTitle: '실사 완료',
+    finishMessage: '누락·부족 {{missing}}개, 목록 외 {{extra}}개가 남아 있습니다. 완료할까요?',
+    finish: '완료',
+    report: '차이 보고서',
+    exportError: '보고서를 만들지 못했습니다',
+    deleteTitle: '실사 삭제',
+    deleteMessage: '"{{name}}" 실사를 지울까요?',
+    delete: '실사 삭제',
+    pause: '일시정지',
+    resume: '스캔 반영 시작',
+    activeHint: '스캔 화면에서 찍는 코드가 이 실사에 반영됩니다. 기록에도 평소처럼 저장됩니다',
+    filter: {
+      todo: '남은 것',
+      missing: '누락',
+      partial: '부족',
+      complete: '일치',
+      over: '초과',
+      extra: '목록 외',
+      all: '전체',
+    },
+    emptyFilter: '해당하는 품목이 없습니다',
+    csv: {
+      code: '코드',
+      name: '이름',
+      expected: '예상',
+      scanned: '스캔',
+      diff: '차이',
+      status: '상태',
+    },
+  },
+
   scanRules: {
     title: '자동 규칙',
     description: '스캔한 코드가 조건에 맞으면 정해 둔 동작을 자동으로 합니다. 위에서부터 보고, 걸린 규칙이 "중단"이면 아래는 건너뜁니다.',

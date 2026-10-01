@@ -159,6 +159,8 @@ export default {
 
   // 扫描界面
   scanner: {
+    quantityNow: '数量 {{count}}',
+    quantityBadge: '数量 {{count}}',
     locationSet: '当前位置: {{code}}',
     locationCleared: '已清除位置',
     locationBadge: '位置 {{code}}',
@@ -359,6 +361,7 @@ export default {
 
   // 设置界面
   settings: {
+    stocktakeDesc: '将扫描与预期清单比对，找出缺失和多出',
     scanRulesDesc: '对符合条件的条码自动保存到分组、跳过、复制、URL 或设定位置',
     labelCategoriesDesc: '管理分隔符代码的字段名称',
     labelCategories: '标签类别',
@@ -842,6 +845,115 @@ export default {
   },
 
   // URL打开方式选择界面
+  gs1: {
+    ai00: 'SSCC（物流单元）',
+    ai01: '商品代码（GTIN）',
+    ai02: '内装物 GTIN',
+    ai10: '批号',
+    ai11: '生产日期',
+    ai13: '包装日期',
+    ai15: '最佳食用日期',
+    ai17: '有效期',
+    ai21: '序列号',
+    ai30: '数量',
+    ai37: '数量（内装）',
+    ai400: '订单号',
+    ai410: '收货方 GLN',
+    ai414: '位置 GLN',
+    ai8004: 'GIAI（资产）',
+    netWeight: '净重（kg）',
+    short: {
+      lot: '批号',
+      expiry: '有效期',
+      qty: '数量',
+    },
+  },
+
+  quantity: {
+    title: '数量',
+    decrease: '减少数量',
+    increase: '增加数量',
+    mode: '数量累计',
+    modeDesc: '再次扫描同一条码时不提示重复，而是数量加 1（有 GS1 数量时按该数量）',
+  },
+
+  memo: {
+    title: '备注',
+    save: '保存',
+    saved: '备注已保存',
+    placeholder: '记录破损、位置等信息',
+  },
+
+  nfc: {
+    read: '读取 NFC 标签',
+    iosAlert: '请将 NFC 标签靠近手机顶部',
+    setting: '读取 NFC 标签',
+    settingDesc: '扫描界面打开时，靠近 NFC 标签即可像条码一样保存（需开启手机 NFC）',
+    settingDescIos: '点击扫描界面的 NFC 按钮读取标签',
+  },
+
+  stocktake: {
+    title: '库存盘点',
+    new: '新建盘点',
+    emptyTitle: '还没有盘点',
+    emptyDesc: '粘贴预期清单后扫描，立即显示一致、缺失和多出',
+    active: '进行中',
+    finished: '已完成',
+    paused: '已暂停',
+    progress: '{{done}}/{{total}} 个品项',
+    qtyProgress: '数量 {{scanned}}/{{expected}}',
+    status: {
+      missing: '缺失',
+      partial: '不足',
+      complete: '一致',
+      over: '超出',
+      extra: '清单外',
+    },
+    notInList: '不在清单中: {{code}}',
+    overExpected: '超过预期: {{name}}（{{scanned}}/{{expected}}）',
+    badge: '盘点 {{done}}/{{total}}',
+    badgeExtra: '清单外 {{count}}',
+    errorEmpty: '请至少输入一行预期清单',
+    started: '已开始盘点“{{name}}”',
+    name: '名称',
+    namePlaceholder: '例如：10 月 A 仓盘点',
+    expectedList: '预期清单',
+    paste: '粘贴',
+    listHint: '每行一个：条码, 名称, 数量（名称和数量可省略，用逗号或 Tab 分隔）。可直接粘贴从 Excel 复制的列',
+    parsedCount: '{{items}} 个品项 · 数量合计 {{qty}}',
+    createAndStart: '创建并开始扫描',
+    resumedHint: '现在的扫描会计入此次盘点',
+    finishTitle: '完成盘点',
+    finishMessage: '还有缺失/不足 {{missing}} 项、清单外 {{extra}} 项。确定完成？',
+    finish: '完成',
+    report: '差异报告',
+    exportError: '无法生成报告',
+    deleteTitle: '删除盘点',
+    deleteMessage: '删除盘点“{{name}}”？',
+    delete: '删除盘点',
+    pause: '暂停',
+    resume: '开始计入扫描',
+    activeHint: '扫描界面扫描的条码会计入此次盘点，同时照常保存到记录',
+    filter: {
+      todo: '剩余',
+      missing: '缺失',
+      partial: '不足',
+      complete: '一致',
+      over: '超出',
+      extra: '清单外',
+      all: '全部',
+    },
+    emptyFilter: '没有符合的品项',
+    csv: {
+      code: '条码',
+      name: '名称',
+      expected: '预期',
+      scanned: '扫描',
+      diff: '差异',
+      status: '状态',
+    },
+  },
+
   scanRules: {
     title: '自动规则',
     description: '扫描到的条码符合条件时自动执行设定的操作。按从上到下顺序匹配，命中设为"中止"的规则后跳过其余规则。',

@@ -139,6 +139,9 @@ const SYNC_ALLOWED_PREFIXES = [
   'hardwareKeyMap',
   'scanRules',
   'scanRulesEnabled',
+  'quantityMode',
+  'nfcReadEnabled',
+  'stocktakes',
 ];
 
 const isSyncAllowed = (key) => {

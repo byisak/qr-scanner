@@ -159,6 +159,8 @@ export default {
 
   // Pantalla de escaneo
   scanner: {
+    quantityNow: 'Cantidad {{count}}',
+    quantityBadge: 'Cant. {{count}}',
     locationSet: 'Ubicación actual: {{code}}',
     locationCleared: 'Ubicación borrada',
     locationBadge: 'Ubicación {{code}}',
@@ -359,6 +361,7 @@ export default {
 
   // Pantalla de configuración
   settings: {
+    stocktakeDesc: 'Compara los escaneos con una lista esperada para encontrar faltantes y sobrantes',
     scanRulesDesc: 'Guardar en grupo, omitir, copiar, URL o fijar ubicación para códigos que coincidan',
     labelCategoriesDesc: 'Nombra los campos de códigos con delimitador',
     labelCategories: 'Categorías de etiqueta',
@@ -842,6 +845,115 @@ export default {
   },
 
   // Pantalla de selección de modo de apertura de URL
+  gs1: {
+    ai00: 'SSCC (unidad logística)',
+    ai01: 'Código de producto (GTIN)',
+    ai02: 'GTIN contenido',
+    ai10: 'Lote',
+    ai11: 'Fecha de producción',
+    ai13: 'Fecha de envasado',
+    ai15: 'Consumo preferente',
+    ai17: 'Caducidad',
+    ai21: 'Número de serie',
+    ai30: 'Cantidad',
+    ai37: 'Cantidad (contenida)',
+    ai400: 'Número de pedido',
+    ai410: 'GLN de destino',
+    ai414: 'GLN de ubicación',
+    ai8004: 'GIAI (activo)',
+    netWeight: 'Peso neto (kg)',
+    short: {
+      lot: 'LOTE',
+      expiry: 'CAD',
+      qty: 'CANT',
+    },
+  },
+
+  quantity: {
+    title: 'Cantidad',
+    decrease: 'Reducir cantidad',
+    increase: 'Aumentar cantidad',
+    mode: 'Contar cantidad',
+    modeDesc: 'Al escanear el mismo código otra vez, suma 1 a la cantidad en lugar de avisar duplicado (o la cantidad GS1 si existe)',
+  },
+
+  memo: {
+    title: 'Nota',
+    save: 'Guardar',
+    saved: 'Nota guardada',
+    placeholder: 'Añade una nota, p. ej. daños o ubicación',
+  },
+
+  nfc: {
+    read: 'Leer etiqueta NFC',
+    iosAlert: 'Acerca una etiqueta NFC a la parte superior del teléfono',
+    setting: 'Leer etiquetas NFC',
+    settingDesc: 'Con la pantalla de escaneo abierta, acercar una etiqueta NFC la guarda como un código (el NFC debe estar activado)',
+    settingDescIos: 'Pulsa el botón NFC de la pantalla de escaneo para leer una etiqueta',
+  },
+
+  stocktake: {
+    title: 'Inventario',
+    new: 'Nuevo inventario',
+    emptyTitle: 'Aún no hay inventarios',
+    emptyDesc: 'Pega la lista esperada y escanea: verás al instante coincidencias, faltantes y sobrantes',
+    active: 'En curso',
+    finished: 'Terminado',
+    paused: 'En pausa',
+    progress: '{{done}}/{{total}} artículos',
+    qtyProgress: 'Cant. {{scanned}}/{{expected}}',
+    status: {
+      missing: 'Faltante',
+      partial: 'Incompleto',
+      complete: 'Coincide',
+      over: 'Sobrante',
+      extra: 'Fuera de lista',
+    },
+    notInList: 'No está en la lista: {{code}}',
+    overExpected: 'Más de lo esperado: {{name}} ({{scanned}}/{{expected}})',
+    badge: 'Inventario {{done}}/{{total}}',
+    badgeExtra: '{{count}} fuera de lista',
+    errorEmpty: 'Añade al menos una línea a la lista esperada',
+    started: 'Inventario "{{name}}" iniciado',
+    name: 'Nombre',
+    namePlaceholder: 'p. ej. Almacén A octubre',
+    expectedList: 'Lista esperada',
+    paste: 'Pegar',
+    listHint: 'Uno por línea: código, nombre, cantidad (nombre y cantidad opcionales, separados por coma o tabulador). Puedes pegar columnas copiadas de Excel',
+    parsedCount: '{{items}} artículos · cantidad total {{qty}}',
+    createAndStart: 'Crear y empezar a escanear',
+    resumedHint: 'Los escaneos ahora cuentan para este inventario',
+    finishTitle: 'Terminar inventario',
+    finishMessage: 'Quedan {{missing}} faltantes o incompletos y {{extra}} fuera de lista. ¿Terminar?',
+    finish: 'Terminar',
+    report: 'Informe de diferencias',
+    exportError: 'No se pudo crear el informe',
+    deleteTitle: 'Eliminar inventario',
+    deleteMessage: '¿Eliminar el inventario "{{name}}"?',
+    delete: 'Eliminar inventario',
+    pause: 'Pausar',
+    resume: 'Empezar a contar escaneos',
+    activeHint: 'Los códigos escaneados cuentan para este inventario y también se guardan en el historial',
+    filter: {
+      todo: 'Pendientes',
+      missing: 'Faltantes',
+      partial: 'Incompletos',
+      complete: 'Coinciden',
+      over: 'Sobrantes',
+      extra: 'Fuera de lista',
+      all: 'Todos',
+    },
+    emptyFilter: 'No hay artículos aquí',
+    csv: {
+      code: 'Código',
+      name: 'Nombre',
+      expected: 'Esperado',
+      scanned: 'Escaneado',
+      diff: 'Diferencia',
+      status: 'Estado',
+    },
+  },
+
   scanRules: {
     title: 'Reglas automáticas',
     description: 'Cuando un código escaneado cumple una regla, sus acciones se ejecutan solas. Se revisan de arriba abajo; una regla con "detener" omite las demás.',

@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { labelOfItem, formatLabelSummary } from '../utils/labelParser';
+import { parseGs1, formatGs1Summary } from '../utils/gs1';
 import { loadLabelSettings } from '../utils/labelCategories';
 import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -616,8 +617,10 @@ export default function HistoryScreen() {
                       {item.code}
                     </Text>
                     {(() => {
+                      const labelSummary = formatLabelSummary(labelOfItem(item, labelCategories), 3, t);
                       const summary = [
-                        formatLabelSummary(labelOfItem(item, labelCategories), 3, t),
+                        typeof item.quantity === 'number' ? t('scanner.quantityBadge', { count: item.quantity }) : '',
+                        labelSummary || formatGs1Summary(item.gs1 || parseGs1(item.code), t),
                         item.location ? `${t('result.location')} ${item.location}` : '',
                       ].filter(Boolean).join(' · ');
                       return summary ? (
@@ -626,6 +629,11 @@ export default function HistoryScreen() {
                         </Text>
                       ) : null;
                     })()}
+                    {item.memo ? (
+                      <Text style={[s.labelSummary, { color: colors.textTertiary, fontFamily: fonts.regular, fontStyle: 'italic' }]} numberOfLines={1}>
+                        {item.memo}
+                      </Text>
+                    ) : null}
 
                     {/* 2줄: 바코드타입, 콘텐츠타입, 반복횟수, 에러레벨 */}
                     <View style={s.badgeRow}>

@@ -161,6 +161,8 @@ export default {
 
   // Scanner screen
   scanner: {
+    quantityNow: 'Quantity {{count}}',
+    quantityBadge: 'Qty {{count}}',
     locationSet: 'Current location: {{code}}',
     locationCleared: 'Location cleared',
     locationBadge: 'Location {{code}}',
@@ -362,6 +364,7 @@ export default {
 
   // Settings screen
   settings: {
+    stocktakeDesc: 'Match scans against an expected list to find missing and extra items',
     scanRulesDesc: 'Save to group, skip, copy, URL, or set location for matching codes',
     labelCategoriesDesc: 'Name the fields of delimited codes',
     labelCategories: 'Label categories',
@@ -858,6 +861,115 @@ export default {
   },
 
   // URL open mode selection screen
+  gs1: {
+    ai00: 'SSCC (logistic unit)',
+    ai01: 'Product code (GTIN)',
+    ai02: 'Contained GTIN',
+    ai10: 'Lot',
+    ai11: 'Production date',
+    ai13: 'Packaging date',
+    ai15: 'Best before',
+    ai17: 'Expiry date',
+    ai21: 'Serial number',
+    ai30: 'Quantity',
+    ai37: 'Quantity (contained)',
+    ai400: 'Order number',
+    ai410: 'Ship to GLN',
+    ai414: 'Location GLN',
+    ai8004: 'GIAI (asset)',
+    netWeight: 'Net weight (kg)',
+    short: {
+      lot: 'LOT',
+      expiry: 'EXP',
+      qty: 'QTY',
+    },
+  },
+
+  quantity: {
+    title: 'Quantity',
+    decrease: 'Decrease quantity',
+    increase: 'Increase quantity',
+    mode: 'Count quantity',
+    modeDesc: 'Scanning the same code again adds 1 to its quantity instead of a duplicate warning (or the GS1 quantity if present)',
+  },
+
+  memo: {
+    title: 'Memo',
+    save: 'Save',
+    saved: 'Memo saved',
+    placeholder: 'Add a note, e.g. damage or location',
+  },
+
+  nfc: {
+    read: 'Read NFC tag',
+    iosAlert: 'Hold an NFC tag near the top of your phone',
+    setting: 'Read NFC tags',
+    settingDesc: 'While the scan screen is open, tapping an NFC tag saves it like a code (phone NFC must be on)',
+    settingDescIos: 'Tap the NFC button on the scan screen to read a tag',
+  },
+
+  stocktake: {
+    title: 'Stocktake',
+    new: 'New stocktake',
+    emptyTitle: 'No stocktakes yet',
+    emptyDesc: 'Paste the expected list and scan — matches, missing and extra items show up right away',
+    active: 'Active',
+    finished: 'Finished',
+    paused: 'Paused',
+    progress: '{{done}}/{{total}} items',
+    qtyProgress: 'Qty {{scanned}}/{{expected}}',
+    status: {
+      missing: 'Missing',
+      partial: 'Short',
+      complete: 'Matched',
+      over: 'Over',
+      extra: 'Not in list',
+    },
+    notInList: 'Not in list: {{code}}',
+    overExpected: 'More than expected: {{name}} ({{scanned}}/{{expected}})',
+    badge: 'Stocktake {{done}}/{{total}}',
+    badgeExtra: '{{count}} not in list',
+    errorEmpty: 'Add at least one line to the expected list',
+    started: 'Started stocktake "{{name}}"',
+    name: 'Name',
+    namePlaceholder: 'e.g. October warehouse A',
+    expectedList: 'Expected list',
+    paste: 'Paste',
+    listHint: 'One per line: code, name, quantity (name and quantity optional, comma or tab separated). You can paste columns copied from Excel',
+    parsedCount: '{{items}} items · total qty {{qty}}',
+    createAndStart: 'Create and start scanning',
+    resumedHint: 'Scans now count toward this stocktake',
+    finishTitle: 'Finish stocktake',
+    finishMessage: '{{missing}} missing or short and {{extra}} not in list. Finish anyway?',
+    finish: 'Finish',
+    report: 'Variance report',
+    exportError: 'Could not create the report',
+    deleteTitle: 'Delete stocktake',
+    deleteMessage: 'Delete stocktake "{{name}}"?',
+    delete: 'Delete stocktake',
+    pause: 'Pause',
+    resume: 'Start counting scans',
+    activeHint: 'Codes scanned on the scan screen count toward this stocktake. They are also saved to history as usual',
+    filter: {
+      todo: 'Remaining',
+      missing: 'Missing',
+      partial: 'Short',
+      complete: 'Matched',
+      over: 'Over',
+      extra: 'Not in list',
+      all: 'All',
+    },
+    emptyFilter: 'No items here',
+    csv: {
+      code: 'Code',
+      name: 'Name',
+      expected: 'Expected',
+      scanned: 'Scanned',
+      diff: 'Difference',
+      status: 'Status',
+    },
+  },
+
   scanRules: {
     title: 'Auto Rules',
     description: 'When a scanned code matches a rule, its actions run automatically. Rules are checked top to bottom; a matched rule set to "stop" skips the rest.',

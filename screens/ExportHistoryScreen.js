@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { labelOfItem, fieldNameAt } from '../utils/labelParser';
+import { parseGs1, formatGs1Summary } from '../utils/gs1';
 import { loadLabelSettings } from '../utils/labelCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -123,8 +124,16 @@ export default function ExportHistoryScreen() {
     const quote = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
     // 위치 열은 위치가 기록된 항목이 하나라도 있을 때만
     const hasLocation = selectedGroups.some(groupId => (scanHistory[groupId] || []).some(item => item.location));
+    const anyItem = (fn) => selectedGroups.some(groupId => (scanHistory[groupId] || []).some(fn));
+    const hasQuantity = anyItem(item => typeof item.quantity === 'number');
+    const hasMemo = anyItem(item => item.memo);
+    const gs1Of = (item) => item.gs1 || parseGs1(item.code);
+    const hasGs1 = anyItem(item => gs1Of(item));
     let csv = '\uFEFF' + t('exportHistory.csvHeader');
     if (hasLocation) csv += ',' + quote(t('exportHistory.locationColumn'));
+    if (hasQuantity) csv += ',' + quote(t('quantity.title'));
+    if (hasMemo) csv += ',' + quote(t('memo.title'));
+    if (hasGs1) csv += ',' + ['GTIN', t('gs1.ai10'), t('gs1.ai17'), t('gs1.ai30')].map(quote).join(',');
     if (columns.length) csv += ',' + [t('exportHistory.categoryColumn'), ...columns].map(quote).join(',');
     csv += '\n';
 
@@ -139,6 +148,12 @@ export default function ExportHistoryScreen() {
         const scanCount = item.scanCount || 1;
         csv += `${groupName},${code},${date},${scanCount}`;
         if (hasLocation) csv += ',' + quote(item.location || '');
+        if (hasQuantity) csv += ',' + quote(typeof item.quantity === 'number' ? item.quantity : '');
+        if (hasMemo) csv += ',' + quote(item.memo || '');
+        if (hasGs1) {
+          const g = gs1Of(item) || {};
+          csv += ',' + [g.gtin, g.lot, g.expiry, g.qty].map(quote).join(',');
+        }
         if (columns.length) {
           const label = labelOfItem(item, labelCategories);
           const cells = columns.map((column) => {
@@ -221,6 +236,15 @@ export default function ExportHistoryScreen() {
           txt += `${t('exportHistory.scanDateLabel')}: ${date}\n`;
           txt += `${t('exportHistory.duplicateLabel')}: ${scanCount}\n`;
           if (item.location) txt += `${t('exportHistory.locationColumn')}: ${item.location}\n`;
+          if (typeof item.quantity === 'number') txt += `${t('quantity.title')}: ${item.quantity}\n`;
+          if (item.memo) txt += `${t('memo.title')}: ${item.memo}\n`;
+          {
+            const g = item.gs1 || parseGs1(item.code);
+            if (g) {
+              const gs1Line = formatGs1Summary(g, t);
+              if (gs1Line) txt += `GS1: ${gs1Line}\n`;
+            }
+          }
           const label = labelOfItem(item, labelCategories);
           if (label) {
             txt += `${t('exportHistory.categoryColumn')}: ${label.category.name}\n`;
