@@ -20,6 +20,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // react-native-maps는 development build에서만 동작
 let MapView = null;
@@ -46,6 +47,7 @@ const DEFAULT_LOCATION = {
 };
 
 export default function MapLocationPickerScreen() {
+  const insets = useSafeAreaInsets();
   const { t, fonts, language } = useLanguage();
 
   // 앱 언어를 Google API 언어 코드로 변환
@@ -339,7 +341,7 @@ export default function MapLocationPickerScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -484,7 +486,7 @@ export default function MapLocationPickerScreen() {
       </View>
 
       {/* Coordinates Display */}
-      <View style={[styles.coordsContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View style={[styles.coordsContainer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + 16 }]}>
         <View style={styles.coordsHeader}>
           <Ionicons name="pin" size={20} color={colors.primary} />
           <Text style={[styles.coordsTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
@@ -532,7 +534,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: Platform.OS === 'ios' ? 50 : 12,
     borderBottomWidth: 1,
   },
   backButton: {

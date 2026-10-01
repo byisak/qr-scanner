@@ -22,8 +22,10 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ScanUrlSettingsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
@@ -296,7 +298,7 @@ export default function ScanUrlSettingsScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* 헤더 */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.backButton}
@@ -540,7 +542,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     paddingBottom: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,

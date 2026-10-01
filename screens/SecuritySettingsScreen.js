@@ -16,8 +16,10 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SecuritySettingsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
@@ -89,7 +91,7 @@ export default function SecuritySettingsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
+      <View style={[styles.header, { borderBottomColor: colors.borderLight, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -206,7 +208,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingTop: Platform.OS === 'android' ? 40 : 50,
     paddingBottom: 12,
     borderBottomWidth: 1,
   },

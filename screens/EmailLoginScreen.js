@@ -19,8 +19,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EmailLoginScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
@@ -94,7 +96,7 @@ export default function EmailLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* 헤더 */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -212,7 +214,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 8,
-    paddingTop: Platform.OS === 'android' ? 40 : 50,
     paddingBottom: 10,
   },
   backButton: {

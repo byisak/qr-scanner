@@ -24,6 +24,7 @@ import { FREE_QR_STYLE_INDEX } from '../config/lockedFeatures';
 import StyledQRCode, { DOT_TYPES, CORNER_SQUARE_TYPES, CORNER_DOT_TYPES } from './StyledQRCode';
 import NativeColorPicker from './NativeColorPicker';
 import QRFrameRenderer, { FRAME_SVG_DATA } from './QRFrameRenderer';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // QR 프레임 프리셋
 const QR_FRAMES = [
@@ -406,6 +407,7 @@ export default function QRStylePicker({
   onFrameChange,
 }) {
   const { t, language } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const { isQrStyleLocked, showQrStyleUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
@@ -1036,7 +1038,7 @@ export default function QRStylePicker({
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
           <TouchableOpacity onPress={onClose} style={styles.headerButton}>
             <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
@@ -1141,7 +1143,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     paddingBottom: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,

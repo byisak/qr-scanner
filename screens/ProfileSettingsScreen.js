@@ -19,8 +19,10 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ProfileSettingsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
@@ -221,7 +223,7 @@ export default function ProfileSettingsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* 헤더 */}
-      <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
+      <View style={[styles.header, { borderBottomColor: colors.borderLight, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -403,7 +405,7 @@ export default function ProfileSettingsScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, paddingBottom: insets.bottom + 24 }]}>
             {/* 모달 핸들 */}
             <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
 
@@ -526,7 +528,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingTop: Platform.OS === 'android' ? 40 : 50,
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
