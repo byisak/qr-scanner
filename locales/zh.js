@@ -159,6 +159,7 @@ export default {
 
   // 扫描界面
   scanner: {
+    ruleSkipped: '已按自动规则跳过',
     alreadyScannedCount: '已扫描过（第 {{count}} 次）',
     batchCleared: '已清空 {{count}} 项',
     batchSaveFailed: '部分项目未保存，请再次点击重试',

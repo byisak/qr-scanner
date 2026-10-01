@@ -833,12 +833,22 @@ function ScannerScreen() {
     }
   }, [getHistoryCache, saveHistoryCache]);
 
+  // 스캔 파이프라인의 "결정" 단계. 코드가 어떤 것인지 보고(라벨 카테고리·필드 값) 어떻게 처리할지(건너뜀·저장 그룹·부가 동작)를 정한다.
+  // 모드별 저장 분기들은 이 결과만 보고 움직인다. 지금은 기본값만 돌려주고, 라벨 분리·자동 규칙이 여기에 들어온다.
+  const buildScanMeta = useCallback((code, barcodeType) => {
+    return {
+      extra: null,                                       // saveHistory extra (categoryId, values, location …)
+      decision: { skip: false, targetGroupId: null, actions: [] },
+    };
+  }, []);
+
   // 저장하기로 정한 순간 세션 목록에 넣는다 (저장 완료를 기다리지 않음)
   const markSessionSaved = useCallback((code) => {
     sessionSavedCodesRef.current.add(`${currentGroupId || 'default'}::${code}`);
   }, [currentGroupId]);
 
-  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null) => {
+  // extra: 기록 항목에 같이 넣을 부가 정보 (라벨 카테고리·필드 값·위치 등). 없는 키는 건드리지 않는다
+  const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null, extra = null) => {
     try {
       // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
       let selectedGroupId = targetGroupId || currentGroupId;
@@ -884,6 +894,7 @@ function ScannerScreen() {
           ...(url && { url }), // URL이 있으면 업데이트
           type: barcodeType, // 바코드 타입
           ...(ecLevel && { errorCorrectionLevel: ecLevel }), // QR 오류 검증 레벨
+          ...(extra || {}),
         };
 
         // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
@@ -900,6 +911,7 @@ function ScannerScreen() {
           ...(url && { url }),
           type: barcodeType, // 바코드 타입
           ...(ecLevel && { errorCorrectionLevel: ecLevel }), // QR 오류 검증 레벨
+          ...(extra || {}),
         };
         historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
       }
@@ -938,7 +950,8 @@ function ScannerScreen() {
       // 토스트를 닫자마자 같은 코드가 다시 잡혀 또 묻지 않도록 잠시 쉰다
       lastScannedData.current = data;
       lastScannedTime.current = Date.now() + DUPLICATE_NOTICE_COOLDOWN;
-      saveHistory(data, null, null, type, errorCorrectionLevel).then((historyResult) => {
+      const meta = buildScanMeta(data, type);
+      saveHistory(data, null, null, type, errorCorrectionLevel, meta.decision.targetGroupId, meta.extra).then((historyResult) => {
         showToast({
           data,
           type,
@@ -951,7 +964,7 @@ function ScannerScreen() {
     }
     setConfirmToastData(null);
     setCanScan(true);
-  }, [confirmToastData, saveHistory, showToast, realtimeSyncEnabled, activeSessionId]);
+  }, [confirmToastData, saveHistory, showToast, realtimeSyncEnabled, activeSessionId, buildScanMeta]);
 
   // 중복 확인 토스트 - 건너뛰기 버튼
   const handleConfirmSkip = useCallback(() => {
@@ -1911,6 +1924,16 @@ function ScannerScreen() {
         return;
       }
 
+      // 결정 단계: 라벨 분리·자동 규칙 결과. 모든 모드가 이 값을 쓴다
+      const scanMeta = buildScanMeta(data, normalizedType);
+      if (scanMeta.decision.skip) {
+        // 규칙이 "저장하지 않음"으로 정한 코드: 알리고 스캔만 다시 켠다
+        feedback.info(t('scanner.ruleSkipped'));
+        safeTimeout(() => { isProcessingRef.current = false; setCanScan(true); }, 300);
+        startResetTimer(RESET_DELAYS.NORMAL);
+        return;
+      }
+
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
         // 피드백은 중복 판정 뒤에 준다. 이미 찍은 라벨에 성공음·카운터가 올라가면
@@ -1994,7 +2017,7 @@ function ScannerScreen() {
             markSessionSaved(data);
             giveSavedFeedback();
             sendToRealtimeServer();
-            saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+            saveHistory(data, null, null, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra).then((historyResult) => {
               showToast({
                 data,
                 type: normalizedType,
@@ -2010,7 +2033,7 @@ function ScannerScreen() {
           markSessionSaved(data);
           giveSavedFeedback();
           sendToRealtimeServer();
-          saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
+          saveHistory(data, null, null, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra).then((historyResult) => {
             showToast({
               data,
               type: normalizedType,
@@ -2189,6 +2212,8 @@ function ScannerScreen() {
               photoUri: photoUri || null,
               type: normalizedType,
               errorCorrectionLevel: detectedEcLevel,
+              targetGroupId: scanMeta.decision.targetGroupId,
+              extra: scanMeta.extra,
             }]);
 
             // 배치 + 실시간 전송 모드: "전송" 메시지 표시
@@ -2217,6 +2242,7 @@ function ScannerScreen() {
                 type: normalizedType,
                 timestamp: Date.now(),
                 errorCorrectionLevel: detectedEcLevel,
+                extra: scanMeta.extra,
               }];
 
               // pendingMultiScanData 업데이트
@@ -2256,7 +2282,7 @@ function ScannerScreen() {
             });
 
             // 히스토리 저장 (비동기, 기다리지 않음 - 애니메이션 블록 방지)
-            saveHistory(data, null, photoUri, normalizedType, detectedEcLevel).then(historyResult => {
+            saveHistory(data, null, photoUri, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra).then(historyResult => {
               // 히스토리 결과로 업데이트
               setLastScannedCode(prev => prev ? {
                 ...prev,
@@ -2301,7 +2327,7 @@ function ScannerScreen() {
               }
 
               // 히스토리 저장은 해당 URL 그룹에 저장
-              saveHistory(data, url, photoUri, normalizedType, detectedEcLevel, scanUrlGroupId).catch(console.error);
+              saveHistory(data, url, photoUri, normalizedType, detectedEcLevel, scanUrlGroupId, scanMeta.extra).catch(console.error);
               router.push({ pathname: '/webview', params: { url } });
               startResetTimer(RESET_DELAYS.LINK);
               return;
@@ -2326,7 +2352,7 @@ function ScannerScreen() {
                   const searchUrl = enabledSite.url.replace('{code}', encodeURIComponent(data));
 
                   // 히스토리 저장
-                  saveHistory(data, searchUrl, photoUri, normalizedType, detectedEcLevel).catch(console.error);
+                  saveHistory(data, searchUrl, photoUri, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra).catch(console.error);
 
                   // openMode에 따라 웹뷰 또는 외부 브라우저로 열기
                   if (enabledSite.openMode === 'inApp') {
@@ -2356,7 +2382,7 @@ function ScannerScreen() {
           }
 
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
-          const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel);
+          const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra);
 
           // 팝업 모드: 결과 화면으로 이동
           router.push({
@@ -2374,14 +2400,14 @@ function ScannerScreen() {
           startResetTimer(RESET_DELAYS.NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
-          await saveHistory(data, null, null, type, null);
+          await saveHistory(data, null, null, type, null, scanMeta.decision.targetGroupId, scanMeta.extra);
           startResetTimer(RESET_DELAYS.NORMAL);
         } finally {
           navigationTimerRef.current = null;
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -2401,7 +2427,7 @@ function ScannerScreen() {
 
       // 모든 배치 항목을 히스토리에 저장
       for (const item of batchScannedItems) {
-        await saveHistory(item.code, null, item.photoUri, item.type, item.errorCorrectionLevel, targetGroupId);
+        await saveHistory(item.code, null, item.photoUri, item.type, item.errorCorrectionLevel, item.targetGroupId || targetGroupId, item.extra || null);
         savedCount++;
       }
 
@@ -2994,7 +3020,8 @@ function ScannerScreen() {
                   // 대기 중인 코드 저장
                   if (pendingNonLotteryData) {
                     const { data, type, ecLevel } = pendingNonLotteryData;
-                    await saveHistory(data, null, null, type, ecLevel);
+                    const meta = buildScanMeta(data, type);
+                    await saveHistory(data, null, null, type, ecLevel, meta.decision.targetGroupId, meta.extra);
 
                     // 결과 화면으로 이동 (팝업 모드인 경우)
                     if (scanResultModeRef.current === 'popup' && resultWindowAutoOpenRef.current) {
@@ -3038,7 +3065,8 @@ function ScannerScreen() {
                       // 선택한 그룹에 저장
                       if (pendingNonLotteryData) {
                         const { data, type, ecLevel } = pendingNonLotteryData;
-                        await saveHistory(data, null, null, type, ecLevel, group.id);
+                        const meta = buildScanMeta(data, type);
+                        await saveHistory(data, null, null, type, ecLevel, group.id, meta.extra);
 
                         // 결과 화면으로 이동 (팝업 모드인 경우)
                         if (scanResultModeRef.current === 'popup' && resultWindowAutoOpenRef.current) {

@@ -159,6 +159,7 @@ export default {
 
   // Pantalla de escaneo
   scanner: {
+    ruleSkipped: 'Omitido por una regla automática',
     alreadyScannedCount: 'Ya escaneado ({{count}} veces)',
     batchCleared: 'Se vaciaron {{count}} elementos',
     batchSaveFailed: 'Algunos elementos no se guardaron. Toca de nuevo',

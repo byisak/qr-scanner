@@ -159,6 +159,7 @@ export default {
 
   // スキャン画面
   scanner: {
+    ruleSkipped: '自動ルールにより保存しませんでした',
     alreadyScannedCount: 'スキャン済みのコードです（{{count}}回目）',
     batchCleared: '{{count}}件を消去しました',
     batchSaveFailed: '保存できなかった項目があります。もう一度タップしてください',
