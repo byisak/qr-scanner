@@ -33,10 +33,10 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..cddb0c6 100644
+index 54ea5ab..9be1236 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-@@ -10,16 +10,29 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
+@@ -10,16 +10,32 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
  import com.google.mlkit.vision.barcode.common.Barcode;
  import com.google.mlkit.vision.common.InputImage;
  import com.mrousavy.camera.core.FrameInvalidError;
@@ -64,16 +64,28 @@ index 54ea5ab..cddb0c6 100644
 +import com.google.zxing.ResultMetadataType;
 +import com.google.zxing.common.HybridBinarizer;
 +import com.google.zxing.qrcode.QRCodeReader;
++import com.google.zxing.LuminanceSource;
++import com.google.zxing.ResultPoint;
++import com.google.zxing.datamatrix.DataMatrixReader;
  import org.jetbrains.annotations.NotNull;
  import org.jetbrains.annotations.Nullable;
  
-@@ -29,6 +42,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -29,6 +45,31 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
 +  // 반전 재시도는 N번째 실패 프레임마다만 한다. 매 프레임 두 번 돌리면 실효 fps가 반으로 준다
 +  private static final int INVERT_RETRY_EVERY_N_FAILED_FRAMES = 3;
 +  private int failedFrameCount = 0;
++  // 다른 코드가 보여도(실패 프레임이 아니어도) 가끔은 반전 재시도를 한다.
++  // 장비 명판처럼 밝은 코드 옆에 일반 QR 스티커가 같이 찍히면 반전 재시도가 영영 안 돌았다
++  private static final int INVERT_RETRY_EVERY_N_FRAMES_WITH_RESULTS = 6;
++  private int frameCount = 0;
++
++  // ML Kit가 못 읽는 작은·레이저 각인(반전) 데이터 매트릭스용 ZXing 보조 판독.
++  // 화면 가운데(조준 코너) 영역만, N프레임마다, 정상 → 반전 순으로 시도한다
++  private static final int DM_FALLBACK_EVERY_N_FRAMES = 2;
++  private static final double DM_FALLBACK_CROP = 0.6; // 짧은 변 대비 가운데 정사각 크롭 비율
 +
 +  // QR 값 → 오류 정정 레벨(L/M/Q/H). ML Kit는 이 값을 주지 않아 ZXing으로 한 번 읽고 기억해 둔다
 +  private static final int EC_CACHE_MAX = 300;
@@ -90,7 +102,7 @@ index 54ea5ab..cddb0c6 100644
    CodeScannerProcessorPlugin(@NotNull VisionCameraProxy proxy,
                               @Nullable Map<String, Object> options) {
      Log.d(TAG,
-@@ -40,31 +69,61 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,31 +81,78 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -142,24 +154,41 @@ index 54ea5ab..cddb0c6 100644
 +        barcodes.add(converted);
 +      }
 +
++      frameCount++;
++      boolean retryInverted;
 +      if (barcodes.isEmpty()) {
 +        failedFrameCount++;
-+        // 어두운 배경 + 밝은 코드용 반전 재시도. Y 평면만 뒤집은 NV21로 만들어 비용을 줄인다
-+        if (failedFrameCount % INVERT_RETRY_EVERY_N_FAILED_FRAMES == 0) {
-+          InputImage invertedImage = getInvertedInputImage(mediaImage, rotationDegrees);
-+          if (invertedImage != null) {
-+            List<Barcode> invertedList = Tasks.await(scanner.process(invertedImage));
-+            invertedList.forEach(barcode -> barcodes.add(
-+                toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, sensorWidth, sensorHeight)));
-+          }
-+        }
++        retryInverted = failedFrameCount % INVERT_RETRY_EVERY_N_FAILED_FRAMES == 0;
 +      } else {
 +        failedFrameCount = 0;
++        retryInverted = frameCount % INVERT_RETRY_EVERY_N_FRAMES_WITH_RESULTS == 0;
++      }
++      // 어두운 배경 + 밝은 코드용 반전 재시도. Y 평면만 뒤집은 NV21로 만들어 비용을 줄인다
++      if (retryInverted) {
++        InputImage invertedImage = getInvertedInputImage(mediaImage, rotationDegrees);
++        if (invertedImage != null) {
++          List<Barcode> invertedList = Tasks.await(scanner.process(invertedImage));
++          for (Barcode barcode : invertedList) {
++            if (!containsValue(barcodes, barcode.getRawValue())) {
++              barcodes.add(toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, sensorWidth, sensorHeight));
++            }
++          }
++        }
++      }
++
++      // 데이터 매트릭스를 찾는 중인데 ML Kit가 못 찾았으면 ZXing으로 가운데 영역을 한 번 더 본다
++      int formats = getFormatsBitmapFromParams(params);
++      boolean wantsDataMatrix = formats == Barcode.FORMAT_ALL_FORMATS || (formats & Barcode.FORMAT_DATA_MATRIX) != 0;
++      if (wantsDataMatrix && frameCount % DM_FALLBACK_EVERY_N_FRAMES == 0 && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX)) {
++        Map<String, Object> dm = decodeDataMatrixWithZxing(mediaImage);
++        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
++          barcodes.add(dm);
++        }
 +      }
      } catch (ExecutionException | InterruptedException e) {
        Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
        return null;
-@@ -73,13 +132,176 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -73,13 +161,273 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
      return barcodes;
    }
  
@@ -302,18 +331,115 @@ index 54ea5ab..cddb0c6 100644
 +    return 0;
 +  }
 +
++  @SuppressWarnings("unchecked")
++  private static boolean containsValue(List<Object> barcodes, @Nullable String value) {
++    if (value == null) return false;
++    for (Object o : barcodes) {
++      if (o instanceof Map && value.equals(((Map<String, Object>) o).get("rawValue"))) return true;
++    }
++    return false;
++  }
++
++  @SuppressWarnings("unchecked")
++  private static boolean containsFormat(List<Object> barcodes, int format) {
++    for (Object o : barcodes) {
++      if (o instanceof Map) {
++        Object f = ((Map<String, Object>) o).get("format");
++        if (f instanceof Number && ((Number) f).intValue() == format) return true;
++      }
++    }
++    return false;
++  }
++
 +  /**
-+   * 밝기(Y)만 반전한 NV21 이미지. 색차(UV)는 중립값으로 채워 회색조로 만든다.
-+   * 회전값을 같이 넘기므로 일반 경로와 같은 좌표계로 결과가 나온다.
++   * ZXing 데이터 매트릭스 보조 판독. 센서 좌표(회전 전)의 가운데 정사각 영역을 잘라
++   * 정상 → 반전(어두운 바탕에 밝게 새긴 명판) 순으로 시도한다.
++   * 결과는 BarcodeConverter와 같은 모양(rawValue·format·cornerPoints·boundingBox, 센서 좌표)으로 만든다.
 +   */
    @Nullable
 -  private InputImage getInputImageFromFrame(@NotNull Frame frame) {
-+  private InputImage getInvertedInputImage(@NotNull Image image, int rotationDegrees) {
++  private static Map<String, Object> decodeDataMatrixWithZxing(Image image) {
      try {
 -      Image mediaImage = frame.getImage();
 -      return InputImage.fromMediaImage(mediaImage, 0);
 -    } catch (FrameInvalidError e) {
 -      Log.e(TAG, "Received an invalid frame.");
++      int width = image.getWidth();
++      int height = image.getHeight();
++      int side = (int) (Math.min(width, height) * DM_FALLBACK_CROP);
++      int left = (width - side) / 2;
++      int top = (height - side) / 2;
++
++      Image.Plane yPlane = image.getPlanes()[0];
++      ByteBuffer yBuffer = yPlane.getBuffer();
++      int rowStride = yPlane.getRowStride();
++      byte[] luminance = new byte[side * side];
++      for (int row = 0; row < side; row++) {
++        yBuffer.position((top + row) * rowStride + left);
++        yBuffer.get(luminance, row * side, side);
++      }
++      PlanarYUVLuminanceSource source = new PlanarYUVLuminanceSource(luminance, side, side, 0, 0, side, side, false);
++      Map<DecodeHintType, Object> hints = new EnumMap<>(DecodeHintType.class);
++      hints.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
++
++      Result result = null;
++      for (LuminanceSource candidate : new LuminanceSource[] { source.invert(), source }) {
++        try {
++          result = new DataMatrixReader().decode(new BinaryBitmap(new HybridBinarizer(candidate)), hints);
++          break;
++        } catch (Exception ignored) {
++          // 다음 후보
++        }
++      }
++      if (result == null || result.getText() == null) return null;
++
++      Map<String, Object> map = new java.util.HashMap<>();
++      map.put("rawValue", result.getText());
++      map.put("displayValue", result.getText());
++      map.put("format", Barcode.FORMAT_DATA_MATRIX);
++      map.put("type", Barcode.TYPE_TEXT);
++      Map<String, Object> content = new java.util.HashMap<>();
++      content.put("data", result.getText());
++      map.put("content", content);
++
++      ResultPoint[] points = result.getResultPoints();
++      if (points != null && points.length > 0) {
++        List<Object> corners = new ArrayList<>();
++        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
++        for (ResultPoint p : points) {
++          if (p == null) continue;
++          int x = Math.round(p.getX()) + left;
++          int y = Math.round(p.getY()) + top;
++          Map<String, Object> pt = new java.util.HashMap<>();
++          pt.put("x", x);
++          pt.put("y", y);
++          corners.add(pt);
++          minX = Math.min(minX, x); minY = Math.min(minY, y);
++          maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
++        }
++        if (!corners.isEmpty()) {
++          map.put("cornerPoints", corners);
++          Map<String, Object> box = new java.util.HashMap<>();
++          box.put("left", minX);
++          box.put("top", minY);
++          box.put("right", maxX);
++          box.put("bottom", maxY);
++          map.put("boundingBox", box);
++        }
++      }
++      return map;
++    } catch (Exception e) {
++      return null;
++    }
++  }
++
++  /**
++   * 밝기(Y)만 반전한 NV21 이미지. 색차(UV)는 중립값으로 채워 회색조로 만든다.
++   * 회전값을 같이 넘기므로 일반 경로와 같은 좌표계로 결과가 나온다.
++   */
++  @Nullable
++  private InputImage getInvertedInputImage(@NotNull Image image, int rotationDegrees) {
++    try {
 +      int width = image.getWidth();
 +      int height = image.getHeight();
 +      Image.Plane yPlane = image.getPlanes()[0];
@@ -341,7 +467,7 @@ index 54ea5ab..cddb0c6 100644
        return null;
      }
    }
-@@ -105,15 +327,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +453,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");
@@ -368,7 +494,7 @@ index 54ea5ab..cddb0c6 100644
      return barcodeFormats.isEmpty() ? Barcode.FORMAT_ALL_FORMATS
                                      : barcodeFormatsToBitmap(barcodeFormats);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-index 28f1634..cc2f372 100644
+index 28f1634..6644b4f 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 @@ -1,6 +1,7 @@
@@ -379,7 +505,7 @@ index 28f1634..cc2f372 100644
  
  static RCTEventEmitter* eventEmitter = nil;
  
-@@ -98,19 +99,33 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -98,19 +99,59 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
            return;
          }
  
@@ -392,6 +518,32 @@ index 28f1634..cc2f372 100644
 +                                 symbologies:symbologies
 +                            regionOfInterest:regionOfInterest
 +                                  completion:completion];
++          return;
++        }
++
++        // 다른 코드가 보여도 가끔은 반전으로도 본다. 장비 명판의 밝게 새긴 코드 옆에
++        // 일반 QR 스티커가 같이 찍히면 반전 재시도가 영영 안 돌았다
++        static NSUInteger framesWithResults = 0;
++        framesWithResults++;
++        if (framesWithResults % 6 == 0) {
++          NSArray* normalResults = results;
++          [self detectBarcodeInInvertedBuffer:pixelBuffer
++                                 symbologies:symbologies
++                            regionOfInterest:regionOfInterest
++                                  completion:^(NSArray* invertedResults) {
++            NSMutableArray* merged = [NSMutableArray arrayWithArray:normalResults];
++            NSMutableSet* seen = [NSMutableSet set];
++            for (VNBarcodeObservation* o in normalResults) {
++              if (o.payloadStringValue) [seen addObject:o.payloadStringValue];
++            }
++            for (VNBarcodeObservation* o in invertedResults) {
++              if (o.payloadStringValue && ![seen containsObject:o.payloadStringValue]) {
++                [merged addObject:o];
++                [seen addObject:o.payloadStringValue];
++              }
++            }
++            completion(merged);
++          }];
 +          return;
 +        }
 +
@@ -416,7 +568,7 @@ index 28f1634..cc2f372 100644
    }
  
    NSError* error;
-@@ -121,6 +136,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -121,6 +162,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
    }
  }
  
@@ -472,7 +624,7 @@ index 28f1634..cc2f372 100644
  /**
   * Converts a barcode observation to a dictionary representation.
   *
-@@ -174,6 +238,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
+@@ -174,6 +264,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
  
