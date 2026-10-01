@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function ContinuousScanSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
@@ -84,6 +86,8 @@ export default function ContinuousScanSettingsScreen() {
       }
     } catch (error) {
       console.error('Save continuous scan enabled error:', error);
+      // 여러 키가 연쇄로 바뀌므로 상태는 되돌리지 않고 안내만
+      feedback.error(t('settings.saveFailed'));
     }
   };
 
@@ -95,6 +99,8 @@ export default function ContinuousScanSettingsScreen() {
       await AsyncStorage.setItem('batchShowScanCounter', value.toString());
     } catch (error) {
       console.error('Save scan counter setting error:', error);
+      setShowScanCounter(!value);
+      feedback.error(t('settings.saveFailed'));
     }
   };
 
@@ -106,17 +112,22 @@ export default function ContinuousScanSettingsScreen() {
       await AsyncStorage.setItem('batchDuplicateDetection', value.toString());
     } catch (error) {
       console.error('Save duplicate detection setting error:', error);
+      setDuplicateDetection(!value);
+      feedback.error(t('settings.saveFailed'));
     }
   };
 
   // 중복 처리 방식 저장
   const handleDuplicateActionChange = async (action) => {
+    const prevAction = duplicateAction;
     setDuplicateAction(action);
     try {
       await AsyncStorage.setItem('continuousDuplicateAction', action);
       await AsyncStorage.setItem('batchDuplicateAction', action);
     } catch (error) {
       console.error('Save duplicate action setting error:', error);
+      setDuplicateAction(prevAction);
+      feedback.error(t('settings.saveFailed'));
     }
   };
 

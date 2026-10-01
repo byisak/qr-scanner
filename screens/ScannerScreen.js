@@ -30,6 +30,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 
+// 중복을 알린 뒤 같은 코드를 다시 알리기까지 쉬는 시간 (ms)
+const DUPLICATE_NOTICE_COOLDOWN = 2500;
+
 // 노출 버튼은 32pt라 44pt 터치 영역을 hitSlop으로 채운다
 const EXPOSURE_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
@@ -126,6 +129,9 @@ function ScannerScreen() {
   const [cameraFacing, setCameraFacing] = useState('back'); // 카메라 방향 (back/front)
   const [currentGroupName, setCurrentGroupName] = useState(() => t('groupEdit.defaultGroup')); // 현재 선택된 그룹 이름
   const [currentGroupId, setCurrentGroupId] = useState('default'); // 현재 선택된 그룹 ID
+  // 콜백 안에서 최신 그룹을 읽기 위한 ref (useCallback 의존성에 없어도 오래된 값을 붙잡지 않게)
+  const currentGroupIdRef = useRef('default');
+  useEffect(() => { currentGroupIdRef.current = currentGroupId || 'default'; }, [currentGroupId]);
   const [groupModalVisible, setGroupModalVisible] = useState(false); // 그룹 선택 모달 표시 여부
   const [availableGroups, setAvailableGroups] = useState([{ id: 'default', name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]); // 사용 가능한 그룹 목록
   // 기본값: 모든 바코드 타입 (BarcodeSelectionScreen과 일치)
@@ -304,6 +310,7 @@ function ScannerScreen() {
       router.push({
         pathname: '/result',
         params: {
+          groupId: currentGroupIdRef.current, // 결과 화면에 저장된 그룹을 보여주기 위해
           code: toastData.data,
           type: toastData.type,
           isDuplicate: toastData.isDuplicate ? 'true' : 'false',
@@ -552,6 +559,7 @@ function ScannerScreen() {
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
       historyCacheDirtyRef.current = true; // 히스토리 캐시 무효화 (다른 화면에서 변경 가능)
+      sessionSavedCodesRef.current.clear(); // 다른 화면에서 기록을 지웠을 수 있다. 이후 중복은 히스토리로 판정
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
       isProcessingMultiRef.current = false; // 다중 바코드 처리 플래그 리셋
@@ -794,22 +802,32 @@ function ScannerScreen() {
     await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
   }, []);
 
+  // 이번 세션에서 저장하기로 한 코드 (그룹ID::코드). 연속 스캔은 같은 코드를 0.5초마다 다시 인식하는데,
+  // 첫 저장이 끝나기 전에 두 번째 인식이 오면 히스토리에 아직 없어 중복으로 안 잡혔다
+  const sessionSavedCodesRef = useRef(new Set());
+
   // 히스토리에서 중복 여부만 확인 (저장하지 않음)
   const checkDuplicateInHistory = useCallback(async (code) => {
+    const selectedGroupId = currentGroupId || 'default';
+    const pendingDuplicate = sessionSavedCodesRef.current.has(`${selectedGroupId}::${code}`);
     try {
-      const selectedGroupId = currentGroupId || 'default';
       const historyByGroup = await getHistoryCache();
       const currentHistory = historyByGroup[selectedGroupId] || [];
 
       const existingItem = currentHistory.find(item => item.code === code);
       return {
-        isDuplicate: !!existingItem,
-        existingCount: existingItem?.count || 0,
+        isDuplicate: !!existingItem || pendingDuplicate,
+        existingCount: existingItem?.count || (pendingDuplicate ? 1 : 0),
       };
     } catch (e) {
       console.error('Check duplicate error:', e);
-      return { isDuplicate: false, existingCount: 0 };
+      return { isDuplicate: pendingDuplicate, existingCount: pendingDuplicate ? 1 : 0 };
     }
+  }, [currentGroupId, getHistoryCache]);
+
+  // 저장하기로 정한 순간 세션 목록에 넣는다 (저장 완료를 기다리지 않음)
+  const markSessionSaved = useCallback((code) => {
+    sessionSavedCodesRef.current.add(`${currentGroupId || 'default'}::${code}`);
   }, [currentGroupId]);
 
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null) => {
@@ -909,6 +927,9 @@ function ScannerScreen() {
 
       // 사용자가 "추가"를 고른 경우에만 실제로 저장된 것으로 센다
       setContinuousScanCount(prev => prev + 1);
+      // 토스트를 닫자마자 같은 코드가 다시 잡혀 또 묻지 않도록 잠시 쉰다
+      lastScannedData.current = data;
+      lastScannedTime.current = Date.now() + DUPLICATE_NOTICE_COOLDOWN;
       saveHistory(data, null, null, type, errorCorrectionLevel).then((historyResult) => {
         showToast({
           data,
@@ -928,6 +949,8 @@ function ScannerScreen() {
   const handleConfirmSkip = useCallback(() => {
     if (confirmToastData) {
       const { data, type, scanCount, errorCorrectionLevel } = confirmToastData;
+      lastScannedData.current = data;
+      lastScannedTime.current = Date.now() + DUPLICATE_NOTICE_COOLDOWN;
       showToast({
         data,
         type,
@@ -1652,6 +1675,7 @@ function ScannerScreen() {
     router.push({
       pathname: '/result',
       params: {
+        groupId: currentGroupIdRef.current, // 결과 화면에 저장된 그룹을 보여주기 위해
         code: lastScannedCode.code,
         isDuplicate: lastScannedCode.isDuplicate ? 'true' : 'false',
         scanCount: lastScannedCode.scanCount.toString(),
@@ -1880,10 +1904,14 @@ function ScannerScreen() {
           }
           playScanBeep();
         };
-        // 중복: 소리 없이 경고 진동만. 카운터는 그대로
+        // 중복: 소리 없이 경고 진동만. 카운터는 그대로.
+        // 카메라를 계속 대고 있으면 0.5초마다 다시 알리므로 같은 코드는 잠시 무시한다
         const giveDuplicateFeedback = () => {
           if (hapticEnabledRef.current) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          }
+          if (lastScannedData.current === data) {
+            lastScannedTime.current = Date.now() + DUPLICATE_NOTICE_COOLDOWN;
           }
         };
 
@@ -1941,6 +1969,7 @@ function ScannerScreen() {
             }
 
             // 중복이 아니거나 allow인 경우: 서버 전송 및 정상 저장
+            markSessionSaved(data);
             giveSavedFeedback();
             sendToRealtimeServer();
             saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
@@ -1956,6 +1985,7 @@ function ScannerScreen() {
           });
         } else {
           // 중복 감지 비활성화: 서버 전송 및 바로 저장
+          markSessionSaved(data);
           giveSavedFeedback();
           sendToRealtimeServer();
           saveHistory(data, null, null, normalizedType, detectedEcLevel).then((historyResult) => {
@@ -2281,6 +2311,7 @@ function ScannerScreen() {
                     router.push({
                       pathname: '/result',
                       params: {
+                        groupId: currentGroupIdRef.current, // 결과 화면에 저장된 그룹을 보여주기 위해
                         code: data,
                         isDuplicate: 'false',
                         scanCount: '1',
@@ -2304,6 +2335,7 @@ function ScannerScreen() {
           router.push({
             pathname: '/result',
             params: {
+              groupId: currentGroupIdRef.current, // 결과 화면에 저장된 그룹을 보여주기 위해
               code: data,
               isDuplicate: historyResult.isDuplicate ? 'true' : 'false',
               scanCount: historyResult.count.toString(),
@@ -2322,7 +2354,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -2967,7 +2999,7 @@ function ScannerScreen() {
                     if (scanResultModeRef.current === 'popup' && resultWindowAutoOpenRef.current) {
                       router.push({
                         pathname: '/result',
-                        params: { code: data },
+                        params: { code: data, groupId: currentGroupIdRef.current },
                       });
                     }
                   }
@@ -3011,7 +3043,7 @@ function ScannerScreen() {
                         if (scanResultModeRef.current === 'popup' && resultWindowAutoOpenRef.current) {
                           router.push({
                             pathname: '/result',
-                            params: { code: data },
+                            params: { code: data, groupId: currentGroupIdRef.current },
                           });
                         }
                       }

@@ -18,6 +18,24 @@ import { parseQRContent, QR_CONTENT_TYPES, formatPhoneNumber } from '../utils/qr
 import QRActionButtons from '../components/QRActionButtons';
 import QRContentInfoDisplay from '../components/QRContentInfoDisplay';
 
+// 바코드 타입 표시 이름 (다른 화면의 'EAN-13' 표기와 맞춘다)
+const BARCODE_TYPE_LABELS = {
+  ean13: 'EAN-13',
+  ean8: 'EAN-8',
+  upca: 'UPC-A',
+  upce: 'UPC-E',
+  itf14: 'ITF-14',
+  qr: 'QR',
+  qrcode: 'QR',
+  datamatrix: 'Data Matrix',
+  pdf417: 'PDF417',
+};
+
+const formatBarcodeType = (type) => {
+  if (!type) return '';
+  return BARCODE_TYPE_LABELS[type.toLowerCase().replace(/_/g, '')] || type.toUpperCase();
+};
+
 export default function ResultScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
@@ -81,6 +99,7 @@ export default function ResultScreen() {
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
   const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+  const [groupName, setGroupName] = useState('');
 
   // QR 콘텐츠 파싱 (타입 감지)
   const parsedContent = useMemo(() => {
@@ -116,6 +135,34 @@ export default function ResultScreen() {
       }
     })();
   }, []);
+
+  // 저장된 그룹 이름 로드 (메타 줄 표시용)
+  useEffect(() => {
+    if (!groupId) {
+      setGroupName('');
+      return;
+    }
+    if (groupId === 'default') {
+      setGroupName(t('groupEdit.defaultGroup'));
+      return;
+    }
+    if (groupId === 'generated') {
+      setGroupName(t('history.generatedGroup'));
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const groupsData = await AsyncStorage.getItem('scanGroups');
+        const groups = groupsData ? JSON.parse(groupsData) : [];
+        const group = Array.isArray(groups) ? groups.find(g => g.id === groupId) : null;
+        if (!cancelled) setGroupName(group?.name || '');
+      } catch (error) {
+        console.error('Load group name error:', error);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [groupId, t]);
 
   // 모든 스캔 시간 파싱
   let allScanTimes = [];
@@ -584,17 +631,13 @@ export default function ResultScreen() {
     }
   };
 
-  // EC 레벨 색상
-  const getECLevelColor = (level) => {
-    if (!level) return colors.textSecondary;
-    switch (level.toUpperCase()) {
-      case 'L': return '#FF9500';
-      case 'M': return '#34C759';
-      case 'Q': return '#007AFF';
-      case 'H': return '#5856D6';
-      default: return colors.textSecondary;
-    }
-  };
+  // 메타 한 줄: 타입 · 스캔 시각 · 그룹 · (N회 스캔) — 값이 없는 항목은 생략
+  const metaItems = [
+    formatBarcodeType(barcodeType),
+    scanTimestamp ? formatDateTime(scanTimestamp) : '',
+    groupName,
+    count > 1 ? t('result.scanCountTimes', { count }) : '',
+  ].filter(Boolean);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -636,38 +679,17 @@ export default function ResultScreen() {
       >
         {/* 메인 데이터 카드 */}
         <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>
-          {/* 바코드 타입 & 콘텐츠 타입 & EC 레벨 뱃지 */}
-          <View style={styles.badgeRow}>
-            {barcodeType && (
-              <View style={[styles.typeBadge, { backgroundColor: colors.primary + '15' }]}>
-                <Ionicons
-                  name={isQRCode ? "qr-code" : "barcode"}
-                  size={14}
-                  color={colors.primary}
-                />
-                <Text style={[styles.typeBadgeText, { color: colors.primary }]}>
-                  {isQRCode ? 'QR Code' : barcodeType.toUpperCase()}
-                </Text>
-              </View>
-            )}
-            {/* 콘텐츠 타입 뱃지 */}
-            {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+          {/* 콘텐츠 타입 뱃지 (바코드 타입은 메타 줄, EC 레벨은 하단 카드로) */}
+          {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+            <View style={styles.badgeRow}>
               <View style={[styles.typeBadge, { backgroundColor: parsedContent.color + '15' }]}>
                 <Ionicons name={parsedContent.icon} size={14} color={parsedContent.color} />
                 <Text style={[styles.typeBadgeText, { color: parsedContent.color }]}>
                   {getContentTypeLabel(parsedContent.type)}
                 </Text>
               </View>
-            )}
-            {ecLevelInfo && isQRCode && (
-              <View style={[styles.ecBadge, { backgroundColor: getECLevelColor(ecLevel) + '15' }]}>
-                <Ionicons name="shield-checkmark" size={14} color={getECLevelColor(ecLevel)} />
-                <Text style={[styles.ecBadgeText, { color: getECLevelColor(ecLevel) }]}>
-                  EC: {ecLevelInfo.level} ({ecLevelInfo.percent})
-                </Text>
-              </View>
-            )}
-          </View>
+            </View>
+          )}
 
           {/* 스캔 데이터 */}
           <View style={styles.dataSection}>
@@ -749,13 +771,15 @@ export default function ResultScreen() {
             </View>
           )}
 
-          {/* 배너 광고 - 액션 버튼과 중복 스캔 사이 */}
-          <AdBanner
-            wrapperStyle={{
-              marginTop: 16,
-              paddingHorizontal: 0,
-            }}
-          />
+          {/* 메타 정보: 타입 · 스캔 시각 · 그룹 · 스캔 횟수 */}
+          {metaItems.length > 0 && (
+            <View style={[styles.metaRow, { borderTopColor: colors.border }]}>
+              <Ionicons name={isQRCode ? "qr-code-outline" : "barcode-outline"} size={14} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                {metaItems.join(' · ')}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* 중복 스캔 알림 */}
@@ -800,7 +824,7 @@ export default function ResultScreen() {
               <View style={[styles.scanPhoto, styles.barcodePreviewContainer, { backgroundColor: '#9C27B0' + '10' }]}>
                 <Ionicons name="barcode-outline" size={64} color="#9C27B0" />
                 <Text style={[styles.barcodePreviewType, { color: '#9C27B0' }]}>
-                  {barcodeType?.toUpperCase() || 'BARCODE'}
+                  {formatBarcodeType(barcodeType) || 'BARCODE'}
                 </Text>
               </View>
             )}
@@ -816,12 +840,16 @@ export default function ResultScreen() {
                 <TouchableOpacity
                   style={[styles.photoActionButton, { backgroundColor: colors.primary }]}
                   onPress={handleSavePhoto}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('result.savePhoto')}
                 >
                   <Ionicons name="download-outline" size={18} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.photoActionButton, { backgroundColor: colors.primary }]}
                   onPress={handleSharePhoto}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('result.share')}
                 >
                   <Ionicons name="share-outline" size={18} color="#fff" />
                 </TouchableOpacity>
@@ -926,6 +954,9 @@ export default function ResultScreen() {
             )}
           </View>
         )}
+
+        {/* 배너 광고 - 스크롤 맨 아래 */}
+        <AdBanner wrapperStyle={{ paddingHorizontal: 0 }} />
       </ScrollView>
     </View>
   );
@@ -981,17 +1012,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  ecBadge: {
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 5,
+    gap: 6,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  ecBadgeText: {
+  metaText: {
+    flex: 1,
     fontSize: 12,
-    fontWeight: '600',
   },
   dataSection: {
     minHeight: 80,

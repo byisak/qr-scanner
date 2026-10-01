@@ -288,6 +288,7 @@ export default {
 
   // Result screen
   result: {
+    scanCountTimes: 'Scanned {{count}} times',
     noData: 'No data',
     info: 'Info',
     title: 'Scan Result',
@@ -349,6 +350,11 @@ export default {
 
   // Settings screen
   settings: {
+    saveFailed: 'Couldn\'t save the setting',
+    normalScanMode: 'Standard scan',
+    scanModeExclusiveHint: 'Only one of the modes below can be on at a time. Turning one on turns the others off.',
+    currentScanMode: 'Current scan mode: {{mode}}',
+    scanFeedback: 'Scan feedback',
     loadError: 'Failed to load settings.',
     syncing: 'Syncing with server...',
     title: 'Settings',

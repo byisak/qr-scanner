@@ -285,6 +285,7 @@ export default {
 
   // Pantalla de resultado
   result: {
+    scanCountTimes: 'Escaneado {{count}} veces',
     noData: 'Sin datos',
     info: 'Información',
     generatedTitle: 'Resultado generado',
@@ -346,6 +347,11 @@ export default {
 
   // Pantalla de configuración
   settings: {
+    saveFailed: 'No se pudo guardar el ajuste',
+    normalScanMode: 'Escaneo normal',
+    scanModeExclusiveHint: 'Solo uno de los modos de abajo puede estar activo. Al activar uno, los demás se desactivan.',
+    currentScanMode: 'Modo de escaneo actual: {{mode}}',
+    scanFeedback: 'Respuesta al escanear',
     syncing: 'Sincronizando con el servidor...',
     resetLocksSuccess: 'Se han restablecido los bloqueos',
     resetLocksConfirm: '¿Restablecer todos los bloqueos de funciones?',

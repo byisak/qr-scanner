@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 
@@ -29,6 +30,7 @@ const QUALITY_OPTIONS = [
 export default function PhotoSaveSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const colors = isDark ? Colors.dark : Colors.light;
@@ -59,16 +61,21 @@ export default function PhotoSaveSettingsScreen() {
       await AsyncStorage.setItem('photoSaveEnabled', value.toString());
     } catch (error) {
       console.error('Save photo enabled settings error:', error);
+      setPhotoSaveEnabled(!value);
+      feedback.error(t('settings.saveFailed'));
     }
   };
 
   // 압축률 선택 시 저장
   const selectQuality = async (key) => {
+    const prevQuality = selectedQuality;
     setSelectedQuality(key);
     try {
       await AsyncStorage.setItem('photoQuality', key);
     } catch (error) {
       console.error('Save photo quality settings error:', error);
+      setSelectedQuality(prevQuality);
+      feedback.error(t('settings.saveFailed'));
     }
   };
 

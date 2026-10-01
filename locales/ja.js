@@ -285,6 +285,7 @@ export default {
 
   // 結果画面
   result: {
+    scanCountTimes: '{{count}}回スキャン',
     noData: 'データなし',
     info: '情報',
     generatedTitle: '作成結果',
@@ -346,6 +347,11 @@ export default {
 
   // 設定画面
   settings: {
+    saveFailed: '設定を保存できませんでした',
+    normalScanMode: '通常スキャン',
+    scanModeExclusiveHint: '以下のモードは一度に1つだけオンにできます。1つをオンにすると他はオフになります。',
+    currentScanMode: '現在のスキャンモード: {{mode}}',
+    scanFeedback: 'スキャンのフィードバック',
     syncing: 'サーバーと同期中...',
     resetLocksSuccess: 'ロックをリセットしました',
     resetLocksConfirm: 'すべての機能ロックをリセットしますか？',

@@ -288,6 +288,7 @@ export default {
 
   // 결과 화면
   result: {
+    scanCountTimes: '{{count}}회 스캔',
     noData: '데이터 없음',
     info: '정보',
     title: '스캔 결과',
@@ -349,6 +350,11 @@ export default {
 
   // 설정 화면
   settings: {
+    saveFailed: '설정을 저장하지 못했습니다',
+    normalScanMode: '일반 스캔',
+    scanModeExclusiveHint: '아래 모드는 한 번에 하나만 켤 수 있어요. 하나를 켜면 나머지는 꺼집니다.',
+    currentScanMode: '현재 스캔 모드: {{mode}}',
+    scanFeedback: '스캔 피드백',
     loadError: '설정을 불러오는데 실패했습니다.',
     syncing: '서버와 동기화 중...',
     title: '설정',

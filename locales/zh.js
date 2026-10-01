@@ -285,6 +285,7 @@ export default {
 
   // 结果界面
   result: {
+    scanCountTimes: '已扫描 {{count}} 次',
     noData: '无数据',
     info: '信息',
     generatedTitle: '生成结果',
@@ -346,6 +347,11 @@ export default {
 
   // 设置界面
   settings: {
+    saveFailed: '无法保存设置',
+    normalScanMode: '普通扫描',
+    scanModeExclusiveHint: '以下模式一次只能开启一个，开启一个后其他会自动关闭。',
+    currentScanMode: '当前扫描模式：{{mode}}',
+    scanFeedback: '扫描反馈',
     syncing: '正在与服务器同步...',
     resetLocksSuccess: '锁定已重置',
     resetLocksConfirm: '要重置所有功能锁定吗？',

@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 
@@ -25,6 +26,7 @@ const CAMERA_TYPES = [
 export default function CameraSelectionScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const colors = isDark ? Colors.dark : Colors.light;
@@ -51,6 +53,8 @@ export default function CameraSelectionScreen() {
         await AsyncStorage.setItem('selectedCamera', selectedCamera);
       } catch (error) {
         console.error('Save camera settings error:', error);
+        // 저장이 state 변화에 묶인 effect라, 되돌리면 저장이 다시 돌아 실패가 반복될 수 있어 안내만
+        feedback.error(t('settings.saveFailed'));
       }
     })();
   }, [selectedCamera]);

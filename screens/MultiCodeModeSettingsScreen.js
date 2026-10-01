@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function MultiCodeModeSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
@@ -61,6 +63,8 @@ export default function MultiCodeModeSettingsScreen() {
       }
     } catch (error) {
       console.error('Save multi-code mode enabled error:', error);
+      // 여러 키가 연쇄로 바뀌므로 상태는 되돌리지 않고 안내만
+      feedback.error(t('settings.saveFailed'));
     }
   };
 
@@ -71,6 +75,8 @@ export default function MultiCodeModeSettingsScreen() {
       await AsyncStorage.setItem('multiCodeShowValues', value.toString());
     } catch (error) {
       console.error('Save show barcode values setting error:', error);
+      setShowBarcodeValues(!value);
+      feedback.error(t('settings.saveFailed'));
     }
   };
 

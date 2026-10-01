@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function ResultWindowSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
+  const feedback = useFeedback();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
@@ -49,6 +51,8 @@ export default function ResultWindowSettingsScreen() {
       await AsyncStorage.setItem('resultWindowAutoOpen', value.toString());
     } catch (error) {
       console.error('Save result window setting error:', error);
+      setResultWindowAutoOpen(!value);
+      feedback.error(t('settings.saveFailed'));
     }
   };
 
