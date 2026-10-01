@@ -821,6 +821,13 @@ export default {
 
   // QR 코드 생성 화면
   generator: {
+    // 접근성 라벨
+    a11y: {
+      customColor: '색상 직접 선택',
+      resetStyle: '기본 스타일로 초기화',
+      autoColor: '자동',
+      showInList: '바코드 목록에 표시',
+    },
     shareError: '공유에 실패했습니다.',
     logoPickError: '이미지를 선택하는 중 오류가 발생했습니다.',
     title: '코드 생성',

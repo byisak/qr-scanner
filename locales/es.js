@@ -2,6 +2,10 @@
 export default {
   // Común
   common: {
+    undo: 'Deshacer',
+    saving: 'Guardando...',
+    later: 'Más tarde',
+    copied: 'Copiado',
     back: 'Atrás',
     close: 'Cerrar',
     save: 'Guardar',
@@ -19,6 +23,9 @@ export default {
 
   // Bloqueo de funciones
   featureLock: {
+    watchNextAd: 'Continuar',
+    remainingAdsWithProgress: '¡Has visto {current}/{total} anuncios!\nMira {remaining} más para desbloquear.',
+    adNotReadyRetry: 'El anuncio está tardando en cargar. Inténtalo más tarde.',
     lockedTitle: 'Función bloqueada',
     watchAdToUnlock: 'Mira un anuncio para desbloquear esta función',
     watchAd: 'Ver anuncio',
@@ -41,6 +48,24 @@ export default {
 
   // Autenticación
   auth: {
+    sessionExpiredMessage: 'Tu sesión ha caducado. Reinicia la app o vuelve a iniciar sesión.',
+    sessionExpired: 'Sesión caducada',
+    passwordChangeSuccessRelogin: 'Contraseña cambiada. Vuelve a iniciar sesión.',
+    passwordChangeFailed: 'No se pudo cambiar la contraseña',
+    newPassword: 'Nueva contraseña',
+    errorSamePassword: 'La nueva contraseña debe ser distinta de la actual',
+    errorPasswordNumber: 'La contraseña debe contener números.',
+    errorPasswordMin8: 'La contraseña debe tener al menos 8 caracteres.',
+    errorPasswordMax100: 'La contraseña no puede superar los 100 caracteres.',
+    errorPasswordLetter: 'La contraseña debe contener letras.',
+    errorNewPasswordRequired: 'Introduce tu nueva contraseña',
+    errorCurrentPasswordWrong: 'La contraseña actual es incorrecta.',
+    errorCurrentPasswordRequired: 'Introduce tu contraseña actual',
+    enterNewPassword: 'Introduce la nueva contraseña (8+ caracteres, letras y números)',
+    enterCurrentPassword: 'Introduce la contraseña actual',
+    enterConfirmPassword: 'Vuelve a introducir la nueva contraseña',
+    currentPassword: 'Contraseña actual',
+    confirmNewPassword: 'Confirmar nueva contraseña',
     // Botón de inicio de sesión/registro
     loginSignup: 'Iniciar sesión/Registrarse',
     loginPrompt: 'Inicia sesión para usar la sincronización en tiempo real',
@@ -133,6 +158,22 @@ export default {
 
   // Pantalla de escaneo
   scanner: {
+    viewDetailsHint: 'Abre el detalle del resultado',
+    skipped: 'Omitido',
+    retryPermission: 'Volver a intentar',
+    openSettings: 'Abrir ajustes',
+    lotterySaveFailed: 'No se pudo guardar el boleto de lotería.',
+    lotteryPromptTitle: 'Se escaneó un boleto de lotería',
+    lotteryPromptMessage: '¿Activar el reconocimiento de lotería en ajustes para agrupar los boletos automáticamente?',
+    lotteryPromptDontAsk: 'No volver a preguntar',
+    lotteryPromptActivate: 'Activar',
+    lotteryActivatedMessage: 'Reconocimiento de lotería activado.',
+    finishBatchHint: 'Termina el escaneo y guarda',
+    exposureUp: 'Más claro',
+    exposureReset: 'Restablecer exposición',
+    exposureDown: 'Más oscuro',
+    duplicate: 'Duplicado',
+    clearBatchHint: 'Elimina todos los elementos escaneados',
     title: 'Escanear',
     scanGuideQr: 'Alinea el código QR dentro del cuadro',
     scanGuideBarcode: 'Alinea el código de barras dentro del cuadro',
@@ -205,6 +246,19 @@ export default {
 
   // Pantalla de historial
   history: {
+    unchecked: 'Sin comprobar',
+    roundLabel: 'Sorteo {{round}}',
+    pensionGroup: 'Lotería de Pensión 720+',
+    pensionBadge: 'Pensión',
+    pending: 'Pendiente',
+    lottoGroup: 'Lotto 6/45',
+    lottoBadge: 'Lotto',
+    loadError: 'No se pudo cargar el historial.',
+    itemDeleted: 'Registro eliminado',
+    generatedGroup: 'Generados',
+    generatedBadge: 'Creado',
+    gamesLabel: '{{count}} jugadas',
+    checked: 'Comprobado',
     title: 'Historial',
     searchPlaceholder: 'Buscar código o URL',
     clearSearch: 'Limpiar búsqueda',
@@ -219,6 +273,11 @@ export default {
 
   // Pantalla de resultado
   result: {
+    noData: 'Sin datos',
+    info: 'Información',
+    generatedTitle: 'Resultado generado',
+    generatedPreview: 'Vista previa',
+    editCode: 'Editar',
     title: 'Resultado del escaneo',
     scannedData: 'Datos escaneados',
     scanPhoto: 'Foto del escaneo',
@@ -275,6 +334,14 @@ export default {
 
   // Pantalla de configuración
   settings: {
+    syncing: 'Sincronizando con el servidor...',
+    resetLocksSuccess: 'Se han restablecido los bloqueos',
+    resetLocksConfirm: '¿Restablecer todos los bloqueos de funciones?',
+    resetLocks: 'Restablecer bloqueos',
+    loadError: 'No se pudieron cargar los ajustes.',
+    developerOptions: 'Opciones de desarrollador',
+    devModeDesc: 'Desbloquea todas las funciones bloqueadas (para pruebas)',
+    devMode: 'Modo desarrollador',
     title: 'Configuración',
     // Títulos de sección
     notification: 'Notificación',
@@ -749,6 +816,17 @@ export default {
 
   // Pantalla de generador de código QR
   generator: {
+    // 접근성 라벨
+    a11y: {
+      customColor: 'Elegir color personalizado',
+      resetStyle: 'Restablecer estilo predeterminado',
+      autoColor: 'Automático',
+      showInList: 'Mostrar en la lista de códigos de barras',
+    },
+    shareError: 'No se pudo compartir.',
+    logoPickError: 'Se produjo un error al elegir la imagen.',
+    imagePickerUnavailable: 'El selector de imágenes no está disponible. Vuelve a compilar la app.',
+    featureUnavailable: 'Función no disponible',
     title: 'Generar',
     subtitle: 'Crea varios tipos de códigos',
     formTitle: 'Ingresa información',
@@ -1088,6 +1166,7 @@ export default {
     selectFromMap: 'Seleccionar del mapa',
     // Estilo QR
     qrStyle: {
+      frame: 'Marco',
       title: 'Estilo QR',
       customize: 'Estilo',
       basic: 'Básico',
@@ -1362,6 +1441,7 @@ export default {
 
   // Desbloqueo de funciones con anuncios
   proFeatures: {
+    barcodeTypesDesc: 'Code 128 es gratis',
     title: 'Desbloquear funciones',
     description: 'Ver anuncios para desbloquear funciones gratis',
     advancedFeatures: 'Funciones avanzadas',
@@ -1447,6 +1527,10 @@ export default {
 
   // Configuración de escaneo de lotería
   lotteryScan: {
+    checkResult: 'Ver resultado',
+    cancel: 'Cancelar',
+    alreadyScannedMessage: '{{type}} sorteo {{round}} ya está guardado.\n¿Quieres comprobar los resultados?',
+    alreadyScanned: 'Ya escaneado',
     title: 'Escaneo de lotería',
     enable: 'Habilitar escaneo de lotería',
     enableDesc: 'Verificar automáticamente los resultados al escanear códigos QR de lotería',
@@ -1710,5 +1794,24 @@ export default {
     toggleBiometricError: 'Error al cambiar la configuración.',
     biometric: 'Biométrico',
     infoText: 'Cuando el bloqueo de app está activado, necesitarás verificar tu identidad con PIN o autenticación biométrica al abrir la app.',
+  },
+
+  multiCodeResults: {
+    title: 'Códigos detectados',
+    saved: 'Guardado',
+    saveAll: 'Guardar todo',
+    noResults: 'No se detectaron códigos',
+    codesSaved: ' códigos guardados',
+    codeSaved: 'Guardado',
+    allSaved: 'Todo guardado',
+  },
+
+  resultWindowSettings: {
+    title: 'Abrir resultado automáticamente',
+    scannedCode: 'Código escaneado',
+    openResultButton: 'Abrir resultado',
+    infoMessage: 'Si se desactiva, los códigos escaneados se marcan con un borde en pantalla y puedes tocar el botón inferior para abrir el resultado.',
+    enableDesc: 'Al escanear un código QR se abre automáticamente la pantalla de resultado',
+    enable: 'Abrir resultado automáticamente',
   },
 };

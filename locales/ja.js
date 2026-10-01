@@ -2,6 +2,10 @@
 export default {
   // 共通
   common: {
+    undo: '元に戻す',
+    saving: '保存中...',
+    later: '後で',
+    copied: 'コピーしました',
     back: '戻る',
     close: '閉じる',
     save: '保存',
@@ -19,6 +23,9 @@ export default {
 
   // 機能ロック
   featureLock: {
+    watchNextAd: '続ける',
+    remainingAdsWithProgress: '広告 {current}/{total} 視聴完了！\nあと{remaining}回視聴すると解除されます。',
+    adNotReadyRetry: '広告の読み込みに時間がかかっています。しばらくしてからもう一度お試しください。',
     lockedTitle: 'ロックされた機能',
     watchAdToUnlock: '広告を視聴するとこの機能を使用できます',
     watchAd: '広告を見る',
@@ -41,6 +48,24 @@ export default {
 
   // 認証
   auth: {
+    sessionExpiredMessage: 'ログインの有効期限が切れました。アプリを再起動するか、もう一度ログインしてください。',
+    sessionExpired: 'セッション切れ',
+    passwordChangeSuccessRelogin: 'パスワードを変更しました。もう一度ログインしてください。',
+    passwordChangeFailed: 'パスワードの変更に失敗しました',
+    newPassword: '新しいパスワード',
+    errorSamePassword: '新しいパスワードは現在のパスワードと違うものにしてください',
+    errorPasswordNumber: 'パスワードには数字を含めてください。',
+    errorPasswordMin8: 'パスワードは8文字以上にしてください。',
+    errorPasswordMax100: 'パスワードは100文字以内にしてください。',
+    errorPasswordLetter: 'パスワードには英字を含めてください。',
+    errorNewPasswordRequired: '新しいパスワードを入力してください',
+    errorCurrentPasswordWrong: '現在のパスワードが正しくありません。',
+    errorCurrentPasswordRequired: '現在のパスワードを入力してください',
+    enterNewPassword: '新しいパスワードを入力（8文字以上、英字＋数字）',
+    enterCurrentPassword: '現在のパスワードを入力',
+    enterConfirmPassword: '新しいパスワードを再入力',
+    currentPassword: '現在のパスワード',
+    confirmNewPassword: '新しいパスワード（確認）',
     // ログイン/会員登録ボタン
     loginSignup: 'ログイン/会員登録',
     loginPrompt: 'ログインしてリアルタイムサーバー送信を利用しましょう',
@@ -133,6 +158,22 @@ export default {
 
   // スキャン画面
   scanner: {
+    viewDetailsHint: '結果の詳細画面を開きます',
+    skipped: 'スキップ',
+    retryPermission: 'もう一度許可を求める',
+    openSettings: '設定を開く',
+    lotterySaveFailed: '宝くじ情報の保存に失敗しました。',
+    lotteryPromptTitle: '宝くじをスキャンしました',
+    lotteryPromptMessage: '設定で宝くじ認識をオンにして、自動でグループ管理しますか？',
+    lotteryPromptDontAsk: '今後表示しない',
+    lotteryPromptActivate: 'オンにする',
+    lotteryActivatedMessage: '宝くじ認識をオンにしました。',
+    finishBatchHint: 'スキャンを終了して保存します',
+    exposureUp: '明るくする',
+    exposureReset: '露出をリセット',
+    exposureDown: '暗くする',
+    duplicate: '重複',
+    clearBatchHint: 'スキャンしたすべての項目を削除します',
     title: 'スキャン',
     scanGuideQr: 'QRコードを四角の中に合わせてください',
     scanGuideBarcode: 'バーコードを四角の中に合わせてください',
@@ -205,6 +246,19 @@ export default {
 
   // 履歴画面
   history: {
+    unchecked: '未確認',
+    roundLabel: '第{{round}}回',
+    pensionGroup: '年金宝くじ720+',
+    pensionBadge: '年金宝くじ',
+    pending: '抽選待ち',
+    lottoGroup: 'ロト 6/45',
+    lottoBadge: 'ロト',
+    loadError: '履歴を読み込めませんでした。',
+    itemDeleted: '記録を削除しました',
+    generatedGroup: '作成したコード',
+    generatedBadge: '作成',
+    gamesLabel: '{{count}}ゲーム',
+    checked: '確認済み',
     title: '履歴',
     searchPlaceholder: 'コードまたはURLを検索',
     clearSearch: '検索をクリア',
@@ -219,6 +273,11 @@ export default {
 
   // 結果画面
   result: {
+    noData: 'データなし',
+    info: '情報',
+    generatedTitle: '作成結果',
+    generatedPreview: '作成プレビュー',
+    editCode: '編集',
     title: 'スキャン結果',
     scannedData: 'スキャンされたデータ',
     scanPhoto: 'スキャン時の写真',
@@ -275,6 +334,14 @@ export default {
 
   // 設定画面
   settings: {
+    syncing: 'サーバーと同期中...',
+    resetLocksSuccess: 'ロックをリセットしました',
+    resetLocksConfirm: 'すべての機能ロックをリセットしますか？',
+    resetLocks: 'ロックをリセット',
+    loadError: '設定を読み込めませんでした。',
+    developerOptions: '開発者オプション',
+    devModeDesc: 'ロックされた機能をすべて解除（テスト用）',
+    devMode: '開発者モード',
     title: '設定',
     // セクションタイトル
     notification: '通知',
@@ -749,6 +816,17 @@ export default {
 
   // QRコード生成画面
   generator: {
+    // 접근성 라벨
+    a11y: {
+      customColor: '色を自分で選ぶ',
+      resetStyle: 'デフォルトのスタイルに戻す',
+      autoColor: '自動',
+      showInList: 'バーコード一覧に表示',
+    },
+    shareError: '共有に失敗しました。',
+    logoPickError: '画像の選択中にエラーが発生しました。',
+    imagePickerUnavailable: '画像ピッカーを利用できません。アプリを再ビルドしてください。',
+    featureUnavailable: '機能を利用できません',
     title: 'コード生成',
     subtitle: '様々なタイプのコードを作成',
     formTitle: '情報入力',
@@ -1088,6 +1166,7 @@ export default {
     selectFromMap: '地図から選択',
     // QRスタイル
     qrStyle: {
+      frame: 'フレーム',
       title: 'QRスタイル',
       customize: 'スタイル',
       basic: '基本',
@@ -1362,6 +1441,7 @@ export default {
 
   // 機能別広告解除
   proFeatures: {
+    barcodeTypesDesc: 'Code 128は無料',
     title: '機能のアンロック',
     description: '広告を見て機能を無料でアンロックしましょう',
     advancedFeatures: '高度な機能',
@@ -1714,5 +1794,24 @@ export default {
     toggleBiometricError: '設定変更に失敗しました。',
     biometric: '生体認証',
     infoText: 'アプリロックを設定すると、アプリ起動時にPINパスワードまたは生体認証で本人確認を行います。',
+  },
+
+  multiCodeResults: {
+    title: '検出されたコード',
+    saved: '保存済み',
+    saveAll: 'すべて保存',
+    noResults: 'コードが検出されませんでした',
+    codesSaved: '件のコードを保存しました',
+    codeSaved: '保存しました',
+    allSaved: 'すべて保存済み',
+  },
+
+  resultWindowSettings: {
+    title: '結果画面を自動で開く',
+    scannedCode: 'スキャンしたコード',
+    openResultButton: '結果を開く',
+    infoMessage: 'オフにすると、スキャンしたコードは画面上に枠で表示され、下のボタンをタップして結果画面を開けます。',
+    enableDesc: 'QRコードをスキャンすると結果画面に自動で移動します',
+    enable: '結果画面を自動で開く',
   },
 };

@@ -832,6 +832,13 @@ export default {
 
   // QR code generator screen
   generator: {
+    // 접근성 라벨
+    a11y: {
+      customColor: 'Choose custom color',
+      resetStyle: 'Reset to default style',
+      autoColor: 'Auto',
+      showInList: 'Show in barcode list',
+    },
     shareError: 'Failed to share.',
     logoPickError: 'An error occurred while picking the image.',
     title: 'Generate',

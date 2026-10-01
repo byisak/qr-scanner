@@ -2,6 +2,10 @@
 export default {
   // 通用
   common: {
+    undo: '撤销',
+    saving: '保存中...',
+    later: '稍后',
+    copied: '已复制',
     back: '返回',
     close: '关闭',
     save: '保存',
@@ -19,6 +23,9 @@ export default {
 
   // 功能锁定
   featureLock: {
+    watchNextAd: '继续',
+    remainingAdsWithProgress: '已观看广告 {current}/{total}！\n再观看 {remaining} 次即可解锁。',
+    adNotReadyRetry: '广告加载时间较长，请稍后重试。',
     lockedTitle: '锁定功能',
     watchAdToUnlock: '观看广告即可解锁此功能',
     watchAd: '观看广告',
@@ -41,6 +48,24 @@ export default {
 
   // 认证
   auth: {
+    sessionExpiredMessage: '登录已过期，请重启应用或重新登录。',
+    sessionExpired: '会话已过期',
+    passwordChangeSuccessRelogin: '密码已修改，请重新登录。',
+    passwordChangeFailed: '密码修改失败',
+    newPassword: '新密码',
+    errorSamePassword: '新密码不能与当前密码相同',
+    errorPasswordNumber: '密码必须包含数字。',
+    errorPasswordMin8: '密码至少需要8个字符。',
+    errorPasswordMax100: '密码不能超过100个字符。',
+    errorPasswordLetter: '密码必须包含字母。',
+    errorNewPasswordRequired: '请输入新密码',
+    errorCurrentPasswordWrong: '当前密码不正确。',
+    errorCurrentPasswordRequired: '请输入当前密码',
+    enterNewPassword: '输入新密码（至少8位，字母+数字）',
+    enterCurrentPassword: '输入当前密码',
+    enterConfirmPassword: '再次输入新密码',
+    currentPassword: '当前密码',
+    confirmNewPassword: '确认新密码',
     // 登录/注册按钮
     loginSignup: '登录/注册',
     loginPrompt: '登录后使用实时服务器传输功能',
@@ -133,6 +158,22 @@ export default {
 
   // 扫描界面
   scanner: {
+    viewDetailsHint: '打开结果详情',
+    skipped: '已跳过',
+    retryPermission: '重新请求',
+    openSettings: '打开设置',
+    lotterySaveFailed: '彩票信息保存失败。',
+    lotteryPromptTitle: '已扫描到彩票',
+    lotteryPromptMessage: '要在设置中开启彩票识别并自动分组管理吗？',
+    lotteryPromptDontAsk: '不再询问',
+    lotteryPromptActivate: '开启',
+    lotteryActivatedMessage: '已开启彩票识别。',
+    finishBatchHint: '完成扫描并保存',
+    exposureUp: '调亮',
+    exposureReset: '重置曝光',
+    exposureDown: '调暗',
+    duplicate: '重复',
+    clearBatchHint: '删除所有已扫描的项目',
     title: '扫描',
     scanGuideQr: '请将二维码对准方框内',
     scanGuideBarcode: '请将条形码对准方框内',
@@ -205,6 +246,19 @@ export default {
 
   // 历史记录界面
   history: {
+    unchecked: '未确认',
+    roundLabel: '第{{round}}期',
+    pensionGroup: '年金彩票720+',
+    pensionBadge: '年金彩票',
+    pending: '待开奖',
+    lottoGroup: '乐透 6/45',
+    lottoBadge: '乐透',
+    loadError: '无法加载历史记录。',
+    itemDeleted: '记录已删除',
+    generatedGroup: '生成的代码',
+    generatedBadge: '已生成',
+    gamesLabel: '{{count}}注',
+    checked: '已确认',
     title: '历史',
     searchPlaceholder: '搜索代码或URL',
     clearSearch: '清除搜索',
@@ -219,6 +273,11 @@ export default {
 
   // 结果界面
   result: {
+    noData: '无数据',
+    info: '信息',
+    generatedTitle: '生成结果',
+    generatedPreview: '生成预览',
+    editCode: '编辑',
     title: '扫描结果',
     scannedData: '扫描数据',
     scanPhoto: '扫描时的照片',
@@ -275,6 +334,14 @@ export default {
 
   // 设置界面
   settings: {
+    syncing: '正在与服务器同步...',
+    resetLocksSuccess: '锁定已重置',
+    resetLocksConfirm: '要重置所有功能锁定吗？',
+    resetLocks: '重置锁定',
+    loadError: '无法加载设置。',
+    developerOptions: '开发者选项',
+    devModeDesc: '解锁所有锁定功能（测试用）',
+    devMode: '开发者模式',
     title: '设置',
     // 分区标题
     notification: '通知',
@@ -749,6 +816,17 @@ export default {
 
   // 二维码生成界面
   generator: {
+    // 접근성 라벨
+    a11y: {
+      customColor: '自定义颜色',
+      resetStyle: '恢复默认样式',
+      autoColor: '自动',
+      showInList: '在条码列表中显示',
+    },
+    shareError: '分享失败。',
+    logoPickError: '选择图片时出错。',
+    imagePickerUnavailable: '图片选择器不可用，请重新构建应用。',
+    featureUnavailable: '功能不可用',
     title: '代码生成',
     subtitle: '创建各种类型的代码',
     formTitle: '输入信息',
@@ -1088,6 +1166,7 @@ export default {
     selectFromMap: '从地图选择',
     // QR样式
     qrStyle: {
+      frame: '边框',
       title: 'QR样式',
       customize: '样式',
       basic: '基本',
@@ -1362,6 +1441,7 @@ export default {
 
   // 功能广告解锁
   proFeatures: {
+    barcodeTypesDesc: 'Code 128 免费',
     title: '解锁功能',
     description: '观看广告免费解锁功能',
     advancedFeatures: '高级功能',
@@ -1714,5 +1794,24 @@ export default {
     toggleBiometricError: '更改设置失败。',
     biometric: '生物识别',
     infoText: '启用应用锁定后，您需要在打开应用时使用PIN或生物识别进行身份验证。',
+  },
+
+  multiCodeResults: {
+    title: '检测到的代码',
+    saved: '已保存',
+    saveAll: '全部保存',
+    noResults: '未检测到代码',
+    codesSaved: '个代码已保存',
+    codeSaved: '已保存',
+    allSaved: '已全部保存',
+  },
+
+  resultWindowSettings: {
+    title: '自动打开结果窗口',
+    scannedCode: '已扫描的代码',
+    openResultButton: '打开结果',
+    infoMessage: '关闭后，扫描到的代码会在屏幕上以边框显示，点击底部按钮即可打开结果页面。',
+    enableDesc: '扫描二维码后自动进入结果页面',
+    enable: '自动打开结果窗口',
   },
 };

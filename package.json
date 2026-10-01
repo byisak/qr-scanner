@@ -9,7 +9,8 @@
     "build:dev": "eas build --profile development --platform all",
     "build:test": "eas build --profile preview --platform all",
     "build:prod": "eas build --profile production --platform all",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package",
+    "check:i18n": "node scripts/check-i18n.js"
   },
   "dependencies": {
     "@bwip-js/react-native": "^4.8.0",

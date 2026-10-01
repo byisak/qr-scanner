@@ -1555,6 +1555,9 @@ export default function GeneratorScreen() {
                     ]}
                     onPress={() => updateFormData('security', sec)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`generator.securityTypes.${sec}`)}
+                    accessibilityState={{ selected: data.security === sec }}
                   >
                     <Text style={[s.securityText, { color: data.security === sec ? '#fff' : colors.text }]}>
                       {t(`generator.securityTypes.${sec}`)}
@@ -1770,6 +1773,8 @@ export default function GeneratorScreen() {
                 });
               }}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={t('generator.selectFromMap') || 'Select from Map'}
             >
               <Ionicons name="map-outline" size={22} color="#fff" />
               <Text style={s.mapPickerButtonText}>
@@ -1852,6 +1857,9 @@ export default function GeneratorScreen() {
             ]}
             onPress={() => handleCodeModeChange('qr')}
             activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityLabel={t('generator.qrCode') || 'QR 코드'}
+            accessibilityState={{ selected: codeMode === 'qr' }}
           >
             <Ionicons
               name="qr-code-outline"
@@ -1878,6 +1886,9 @@ export default function GeneratorScreen() {
               }
             }}
             activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityLabel={t('generator.barcode') || '바코드'}
+            accessibilityState={{ selected: codeMode === 'barcode' }}
           >
             <Ionicons
               name="barcode-outline"
@@ -1927,6 +1938,9 @@ export default function GeneratorScreen() {
                     ]}
                     onPress={() => handleTypeSelect(type.id)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(`generator.types.${type.id}`)}
+                    accessibilityState={{ selected: selectedType === type.id }}
                   >
                     <View style={[
                       s.typeIconContainer,
@@ -1960,6 +1974,8 @@ export default function GeneratorScreen() {
                 ]}
                 onPress={() => setQrTypeReorderVisible(true)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('generator.reorder') || '순서'}
               >
                 <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
                   <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
@@ -2024,6 +2040,9 @@ export default function GeneratorScreen() {
                     ]}
                     onPress={() => handleBarcodeFormatSelect(format.bcid)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={format.name}
+                    accessibilityState={{ selected: isSelected }}
                   >
                     <Text style={[
                       s.typeTextMain,
@@ -2054,6 +2073,8 @@ export default function GeneratorScreen() {
                 ]}
                 onPress={() => setBarcodePickerVisible(true)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('generator.addBarcode') || '더보기'}
               >
                 <View style={[
                   s.typeIconContainer,
@@ -2078,6 +2099,8 @@ export default function GeneratorScreen() {
                 ]}
                 onPress={() => setBarcodeReorderVisible(true)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('generator.reorder') || '순서'}
               >
                 <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
                   <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
@@ -2155,6 +2178,9 @@ export default function GeneratorScreen() {
                 style={s.formHeaderCollapsible}
                 onPress={() => setBarcodeSettingsExpanded(!barcodeSettingsExpanded)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('generator.barcodeSettings') || '바코드 설정'}
+                accessibilityState={{ expanded: barcodeSettingsExpanded }}
               >
                 <View style={s.formHeaderLeft}>
                   <Ionicons
@@ -2188,6 +2214,9 @@ export default function GeneratorScreen() {
                         barcodeSettingsTab === tab.id && { backgroundColor: colors.primary },
                       ]}
                       onPress={() => setBarcodeSettingsTab(tab.id)}
+                      accessibilityRole="tab"
+                      accessibilityLabel={tab.label}
+                      accessibilityState={{ selected: barcodeSettingsTab === tab.id }}
                     >
                       <Ionicons
                         name={tab.icon}
@@ -2280,6 +2309,9 @@ export default function GeneratorScreen() {
                                 barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
                               ]}
                               onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
+                              accessibilityRole="button"
+                              accessibilityLabel={`${t('generator.barcodeRotate') || '회전'} ${item.label}`}
+                              accessibilityState={{ selected: barcodeSettings.rotate === item.value }}
                             >
                               <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
                                 {item.label}
@@ -2308,6 +2340,9 @@ export default function GeneratorScreen() {
                               barcodeSettings.showText && { backgroundColor: colors.primary },
                             ]}
                             onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('generator.barcodeShowText') || '숫자 표시'} ON`}
+                            accessibilityState={{ selected: !!barcodeSettings.showText }}
                           >
                             <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
                           </TouchableOpacity>
@@ -2317,6 +2352,9 @@ export default function GeneratorScreen() {
                               !barcodeSettings.showText && { backgroundColor: colors.primary },
                             ]}
                             onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('generator.barcodeShowText') || '숫자 표시'} OFF`}
+                            accessibilityState={{ selected: !barcodeSettings.showText }}
                           >
                             <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
                           </TouchableOpacity>
@@ -2404,6 +2442,9 @@ export default function GeneratorScreen() {
                               highResLevel === item.level && { backgroundColor: colors.primary },
                             ]}
                             onPress={() => setHighResLevel(item.level)}
+                            accessibilityRole="button"
+                            accessibilityLabel={`${t('generator.saveQuality') || '저장 품질'} ${item.label}`}
+                            accessibilityState={{ selected: highResLevel === item.level }}
                           >
                             <Text style={[
                               s.qualityLevelText,
@@ -2453,6 +2494,9 @@ export default function GeneratorScreen() {
               style={s.formHeaderCollapsible}
               onPress={() => setQrSettingsExpanded(!qrSettingsExpanded)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={t('generator.qrStyle.title') || 'QR 스타일'}
+              accessibilityState={{ expanded: qrSettingsExpanded }}
             >
               <View style={s.formHeaderLeft}>
                 <Ionicons
@@ -2495,6 +2539,9 @@ export default function GeneratorScreen() {
                         qrSettingsTab === tab.id && { backgroundColor: colors.primary },
                       ]}
                       onPress={() => setQrSettingsTab(tab.id)}
+                      accessibilityRole="tab"
+                      accessibilityLabel={tab.label}
+                      accessibilityState={{ selected: qrSettingsTab === tab.id }}
                   >
                     <Ionicons
                       name={tab.icon}
@@ -2520,6 +2567,8 @@ export default function GeneratorScreen() {
                     style={[s.savePresetButton, { backgroundColor: colors.primary }]}
                     onPress={() => setPresetSaveModalVisible(true)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('generator.saveCurrentAsPreset') || '현재 스타일을 프리셋으로 저장'}
                   >
                     <Ionicons name="add-circle-outline" size={20} color="#fff" />
                     <Text style={[s.savePresetButtonText, { fontFamily: fonts.semiBold }]}>
@@ -2548,6 +2597,8 @@ export default function GeneratorScreen() {
                         backgroundColor: '#000000',
                       } : QR_STYLE_PRESETS[0].style)}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('generator.a11y.resetStyle')}
                     >
                       <View style={[s.qrStylePreview, { backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }]}>
                         <Ionicons name="refresh-outline" size={32} color={colors.textTertiary} />
@@ -2572,6 +2623,9 @@ export default function GeneratorScreen() {
                           onPress={() => handleSelectPreset(preset)}
                           onLongPress={() => handleDeletePreset(preset.id)}
                           activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={preset.name}
+                          accessibilityHint={t('generator.longPressToDelete') || '길게 누르면 삭제할 수 있습니다'}
                         >
                           <View style={[s.qrStylePreview, { backgroundColor: preset.style?.backgroundColor || '#fff' }]}>
                             <View style={s.presetDotsContainer}>
@@ -2625,6 +2679,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, dotType: type }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.dotType') || '도트 타입'} ${type}`}
+                        accessibilityState={{ selected: qrStyle.dotType === type }}
                       >
                         <Text style={[s.qrOptionText, { color: qrStyle.dotType === type ? '#fff' : colors.text }]}>
                           {type}
@@ -2642,6 +2699,8 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.dotColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('dotColor')}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('generator.qrStyle.dotColor') || '도트 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.dotColor === '#FFFFFF' || qrStyle.dotColor === '#ffffff') ? '#333' : '#fff'} />
                     </TouchableOpacity>
@@ -2658,6 +2717,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, dotColor: presetColor, dotGradient: null }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.dotColor') || '도트 색상'} ${presetColor}`}
+                        accessibilityState={{ selected: qrStyle.dotColor === presetColor }}
                       />
                     ))}
                   </View>
@@ -2683,6 +2745,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareType: type }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.cornerSquareType') || '코너 스퀘어 타입'} ${type}`}
+                        accessibilityState={{ selected: qrStyle.cornerSquareType === type }}
                       >
                         <Text style={[s.qrOptionText, { color: qrStyle.cornerSquareType === type ? '#fff' : colors.text }]}>
                           {type}
@@ -2700,6 +2765,8 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerSquareColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('cornerSquareColor')}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.cornerSquareColor === '#FFFFFF' || qrStyle.cornerSquareColor === '#ffffff') ? '#333' : '#fff'} />
                     </TouchableOpacity>
@@ -2716,6 +2783,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareColor: presetColor }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'} ${presetColor}`}
+                        accessibilityState={{ selected: qrStyle.cornerSquareColor === presetColor }}
                       />
                     ))}
                   </View>
@@ -2736,6 +2806,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerDotType: type }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.cornerDotType') || '코너 도트 타입'} ${type}`}
+                        accessibilityState={{ selected: qrStyle.cornerDotType === type }}
                       >
                         <Text style={[s.qrOptionText, { color: qrStyle.cornerDotType === type ? '#fff' : colors.text }]}>
                           {type}
@@ -2753,6 +2826,8 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerDotColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('cornerDotColor')}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.cornerDotColor === '#FFFFFF' || qrStyle.cornerDotColor === '#ffffff') ? '#333' : '#fff'} />
                     </TouchableOpacity>
@@ -2769,6 +2844,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerDotColor: presetColor }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'} ${presetColor}`}
+                        accessibilityState={{ selected: qrStyle.cornerDotColor === presetColor }}
                       />
                     ))}
                   </View>
@@ -2787,6 +2865,8 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.backgroundColor || '#ffffff', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('backgroundColor')}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('generator.qrStyle.backgroundColor') || '배경 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={(qrStyle.backgroundColor === '#FFFFFF' || qrStyle.backgroundColor === '#ffffff' || !qrStyle.backgroundColor) ? '#333' : '#fff'} />
                     </TouchableOpacity>
@@ -2803,6 +2883,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, backgroundColor: presetColor }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.backgroundColor') || '배경 색상'} ${presetColor}`}
+                        accessibilityState={{ selected: qrStyle.backgroundColor === presetColor }}
                       />
                     ))}
                   </View>
@@ -2833,6 +2916,9 @@ export default function GeneratorScreen() {
                       ]}
                       onPress={() => setFrameTextColor(null)}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'} ${t('generator.a11y.autoColor')}`}
+                      accessibilityState={{ selected: frameTextColor === null }}
                     >
                       <Text style={{ color: colors.textSecondary, fontSize: 10 }}>AUTO</Text>
                     </TouchableOpacity>
@@ -2841,6 +2927,8 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: frameTextColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('frameTextColor')}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'} - ${t('generator.a11y.customColor')}`}
                     >
                       <Ionicons name="color-palette" size={20} color={frameTextColor === '#ffffff' || frameTextColor === '#FFFFFF' ? '#333' : '#fff'} />
                     </TouchableOpacity>
@@ -2858,6 +2946,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setFrameTextColor(presetColor)}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'} ${presetColor}`}
+                        accessibilityState={{ selected: frameTextColor === presetColor }}
                       />
                     ))}
                   </View>
@@ -2884,6 +2975,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, errorCorrectionLevel: level }))}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.qrStyle.errorCorrection') || '오류 수정'} ${level}`}
+                        accessibilityState={{ selected: (qrStyle.errorCorrectionLevel || 'M') === level }}
                       >
                         <Text style={[s.qrOptionText, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? '#fff' : colors.text }]}>
                           {level}
@@ -2913,6 +3007,9 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrResLevel(item.level)}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t('generator.saveQuality') || '저장 품질'} ${item.label}`}
+                        accessibilityState={{ selected: qrResLevel === item.level }}
                       >
                         <Text style={[s.qrOptionText, { color: qrResLevel === item.level ? '#fff' : colors.text }]}>
                           {item.label}
@@ -3157,6 +3254,8 @@ export default function GeneratorScreen() {
                 style={[s.actionButton, s.primaryButton, { backgroundColor: colors.primary, flex: 1 }]}
                 onPress={handleSaveImage}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('generator.save')}
               >
                 <View style={s.buttonIconContainer}>
                   <Ionicons name="download-outline" size={22} color="#fff" />
@@ -3171,6 +3270,8 @@ export default function GeneratorScreen() {
                 style={[s.shareIconButton, { backgroundColor: colors.primary }]}
                 onPress={handleShare}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('generator.share')}
               >
                 <Ionicons name="share-outline" size={24} color="#fff" />
               </TouchableOpacity>
@@ -3238,6 +3339,8 @@ export default function GeneratorScreen() {
                 style={[s.modalCloseButton, { backgroundColor: colors.background }]}
                 onPress={() => setQrTypeReorderVisible(false)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
               >
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -3255,6 +3358,9 @@ export default function GeneratorScreen() {
                       activeOpacity={0.9}
                       onLongPress={drag}
                       disabled={isActive}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(`generator.types.${item.id}`)}
+                      accessibilityHint={t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
                       style={[
                         s.reorderItem,
                         { backgroundColor: isActive ? colors.primary + '20' : colors.background },
@@ -3265,6 +3371,8 @@ export default function GeneratorScreen() {
                         onPressIn={drag}
                         style={s.dragHandle}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t(`generator.types.${item.id}`)} - ${t('generator.reorder') || '순서'}`}
                       >
                         <Ionicons name="menu" size={22} color={colors.textTertiary} />
                       </TouchableOpacity>
@@ -3307,6 +3415,8 @@ export default function GeneratorScreen() {
                 style={[s.modalCloseButton, { backgroundColor: colors.background }]}
                 onPress={() => setBarcodeReorderVisible(false)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
               >
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -3326,6 +3436,9 @@ export default function GeneratorScreen() {
                         activeOpacity={0.9}
                         onLongPress={drag}
                         disabled={isActive}
+                        accessibilityRole="button"
+                        accessibilityLabel={item.name}
+                        accessibilityHint={t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
                         style={[
                           s.reorderItem,
                           { backgroundColor: isActive ? colors.primary + '20' : colors.background },
@@ -3336,6 +3449,8 @@ export default function GeneratorScreen() {
                           onPressIn={drag}
                           style={s.dragHandle}
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${item.name} - ${t('generator.reorder') || '순서'}`}
                         >
                           <Ionicons name="menu" size={22} color={colors.textTertiary} />
                         </TouchableOpacity>
@@ -3393,6 +3508,8 @@ export default function GeneratorScreen() {
                   setBarcodePickerVisible(false);
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
               >
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
@@ -3412,7 +3529,12 @@ export default function GeneratorScreen() {
                   autoCorrect={false}
                 />
                 {barcodeSearchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setBarcodeSearchQuery('')}>
+                  <TouchableOpacity
+                    onPress={() => setBarcodeSearchQuery('')}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('history.clearSearch')}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
                     <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                 )}
@@ -3490,6 +3612,9 @@ export default function GeneratorScreen() {
                                 }
                               }}
                               activeOpacity={0.7}
+                              accessibilityRole="button"
+                              accessibilityLabel={format.name}
+                              accessibilityState={{ selected: isSelected }}
                             >
                               {/* 잠금 아이콘 또는 체크박스 - 오른쪽 상단 (둘 중 하나만 표시) */}
                               {isBarcodeLocked ? (
@@ -3504,6 +3629,9 @@ export default function GeneratorScreen() {
                                     toggleFavoriteBarcode(format.bcid);
                                   }}
                                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                  accessibilityRole="switch"
+                                  accessibilityLabel={`${format.name} - ${t('generator.a11y.showInList')}`}
+                                  accessibilityState={{ checked: isChecked }}
                                 >
                                   <Ionicons
                                     name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}

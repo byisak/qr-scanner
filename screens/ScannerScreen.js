@@ -32,6 +32,28 @@ import { useFeedback } from '../contexts/FeedbackContext';
 
 // 노출 버튼은 32pt라 44pt 터치 영역을 hitSlop으로 채운다
 const EXPOSURE_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
+// 카메라 위 둥근 반투명 버튼. iOS는 블러, Android는 반투명 배경 (BlurView 품질 차이)
+const GlassButton = ({ onPress, accessibilityLabel, children }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    activeOpacity={0.8}
+    style={styles.exposureButton}
+    hitSlop={EXPOSURE_HIT_SLOP}
+    accessibilityRole="button"
+    accessibilityLabel={accessibilityLabel}
+  >
+    {Platform.OS === 'ios' ? (
+      <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
+        {children}
+      </BlurView>
+    ) : (
+      <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
+        {children}
+      </View>
+    )}
+  </TouchableOpacity>
+);
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
 import {
@@ -2599,64 +2621,28 @@ function ScannerScreen() {
 
       {/* 노출 조절 버튼 (torch 아래) */}
       <View style={[styles.exposureContainer, { top: topOffset + 52 }]}>
-        <TouchableOpacity
+        <GlassButton
           onPress={() => setExposure(prev => Math.min(prev + 0.3, 1))}
-          activeOpacity={0.8}
-          style={styles.exposureButton}
-          hitSlop={EXPOSURE_HIT_SLOP}
-          accessibilityRole="button"
           accessibilityLabel={t('scanner.exposureUp')}
         >
-          {Platform.OS === 'ios' ? (
-            <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
-              <Ionicons name="sunny" size={16} color={exposure > 0 ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-            </BlurView>
-          ) : (
-            <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
-              <Ionicons name="sunny" size={16} color={exposure > 0 ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
-            </View>
-          )}
-        </TouchableOpacity>
+          <Ionicons name="sunny" size={16} color={exposure > 0 ? '#FFD60A' : 'rgba(255,255,255,0.95)'} />
+        </GlassButton>
 
         {exposure !== 0 && (
-          <TouchableOpacity
+          <GlassButton
             onPress={() => setExposure(0)}
-            activeOpacity={0.8}
-            style={styles.exposureButton}
-            hitSlop={EXPOSURE_HIT_SLOP}
-            accessibilityRole="button"
             accessibilityLabel={t('scanner.exposureReset')}
           >
-            {Platform.OS === 'ios' ? (
-              <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>EV0</Text>
-              </BlurView>
-            ) : (
-              <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>EV0</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+            <Text maxFontSizeMultiplier={1.2} style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>EV0</Text>
+          </GlassButton>
         )}
 
-        <TouchableOpacity
+        <GlassButton
           onPress={() => setExposure(prev => Math.max(prev - 0.3, -1))}
-          activeOpacity={0.8}
-          style={styles.exposureButton}
-          hitSlop={EXPOSURE_HIT_SLOP}
-          accessibilityRole="button"
           accessibilityLabel={t('scanner.exposureDown')}
         >
-          {Platform.OS === 'ios' ? (
-            <BlurView intensity={80} tint="light" style={styles.exposureButtonInner}>
-              <Ionicons name="moon" size={16} color={exposure < 0 ? '#7B9CFF' : 'rgba(255,255,255,0.95)'} />
-            </BlurView>
-          ) : (
-            <View style={[styles.exposureButtonInner, styles.exposureButtonAndroid]}>
-              <Ionicons name="moon" size={16} color={exposure < 0 ? '#7B9CFF' : 'rgba(255,255,255,0.95)'} />
-            </View>
-          )}
-        </TouchableOpacity>
+          <Ionicons name="moon" size={16} color={exposure < 0 ? '#7B9CFF' : 'rgba(255,255,255,0.95)'} />
+        </GlassButton>
       </View>
 
       {/* 이미지 업로드 버튼 */}

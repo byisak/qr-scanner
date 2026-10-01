@@ -693,7 +693,7 @@ const s = StyleSheet.create({
     // marginTop은 인라인 스타일로 동적 설정
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    minHeight: 48, // 큰 글꼴에서 잘리지 않게 고정 높이 대신 최소 높이
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -732,7 +732,7 @@ const s = StyleSheet.create({
   },
   groupCountBadge: {
     minWidth: 20,
-    height: 20,
+    minHeight: 20,
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -822,7 +822,7 @@ const s = StyleSheet.create({
     padding: 4,
   },
   barcodeTypeText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '600',
     marginTop: 2,
   },
@@ -880,7 +880,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   typeBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
   },
   badgeRow: {
@@ -898,7 +898,7 @@ const s = StyleSheet.create({
     gap: 3,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
   },
   time: {
