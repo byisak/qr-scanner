@@ -864,6 +864,19 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
           </MaterialPressable>
 
+          {/* 라벨 카테고리 (구분자로 나뉜 코드를 필드로) */}
+          <MaterialPressable
+            style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}
+            onPress={() => router.push('/label-categories')}
+            activeOpacity={0.7}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.labelCategories')}</Text>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.labelCategoriesDesc')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+          </MaterialPressable>
+
           {/* 인식된 코드 값 표시 (일반 스캔) */}
           <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>
             <View style={{ flex: 1 }}>

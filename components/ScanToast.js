@@ -178,6 +178,15 @@ export default function ScanToast({
             >
               {data.data}
             </Text>
+            {data.labelSummary ? (
+              <Text
+                style={[styles.data, { color: colors.textTertiary, fontFamily: fonts.regular }]}
+                numberOfLines={1}
+                ellipsizeMode="middle"
+              >
+                {data.labelSummary}
+              </Text>
+            ) : null}
           </View>
         </View>
         <View style={styles.right}>

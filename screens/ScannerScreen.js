@@ -30,6 +30,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
+import NewLabelPatternModal from '../components/NewLabelPatternModal';
+import { parseLabel, signatureOf, labelOfItem, formatLabelSummary, splitLabel } from '../utils/labelParser';
+import { loadLabelSettings, createCategoryFromCode, ignorePattern, addDiscovered } from '../utils/labelCategories';
 
 // 중복을 알린 뒤 같은 코드를 다시 알리기까지 쉬는 시간 (ms)
 const DUPLICATE_NOTICE_COOLDOWN = 2500;
@@ -285,6 +288,9 @@ function ScannerScreen() {
 
   // 토스트 표시 함수 (ScanToast 컴포넌트가 애니메이션 처리)
   const showToast = useCallback((toastInfo) => {
+    // 라벨 카테고리가 있으면 값 아래에 "필드 값" 요약을 같이 보여준다
+    const label = labelOfItem({ code: toastInfo.data }, labelSettingsRef.current.categories);
+    if (label) toastInfo = { ...toastInfo, labelSummary: formatLabelSummary(label, 2, t) };
     setToastData({ ...toastInfo, timestamp: Date.now() });
   }, []);
 
@@ -551,6 +557,8 @@ function ScannerScreen() {
       // 여러 코드 목록과 연속 스캔 카운터는 유지한다. 다른 탭에 잠깐 다녀오거나 토스트로 결과를
       // 확인하고 돌아왔을 때 모아 둔 코드·센 개수가 사라지면 안 된다. (결과 보기·비우기에서 지운다)
       resetAll();
+
+      reloadLabelSettings().catch(() => {});
 
       (async () => {
         try {
@@ -835,12 +843,88 @@ function ScannerScreen() {
 
   // 스캔 파이프라인의 "결정" 단계. 코드가 어떤 것인지 보고(라벨 카테고리·필드 값) 어떻게 처리할지(건너뜀·저장 그룹·부가 동작)를 정한다.
   // 모드별 저장 분기들은 이 결과만 보고 움직인다. 지금은 기본값만 돌려주고, 라벨 분리·자동 규칙이 여기에 들어온다.
+  // 라벨 카테고리 설정 (구분자로 나뉜 코드를 필드로 저장). ref는 스캔 콜백용, state는 화면 표시용
+  const labelSettingsRef = useRef({ categories: [], ignored: [], discovered: [], autoSplit: true });
+  const [labelCategories, setLabelCategories] = useState([]);
+  const [newPatternPrompt, setNewPatternPrompt] = useState(null); // { signature, sample } — 자동열기 OFF 모드에서 묻는 모달
+  const notifiedPatternsRef = useRef(new Set());                   // 연속·배치 모드에서 한 번만 알린 패턴
+  const reloadLabelSettings = useCallback(async () => {
+    const settings = await loadLabelSettings();
+    labelSettingsRef.current = settings;
+    setLabelCategories(settings.categories);
+    return settings;
+  }, []);
+
   const buildScanMeta = useCallback((code, barcodeType) => {
-    return {
+    const meta = {
       extra: null,                                       // saveHistory extra (categoryId, values, location …)
       decision: { skip: false, targetGroupId: null, actions: [] },
+      newPattern: null,                                  // 카테고리가 없는 새 패턴이면 { signature, sample }
     };
+    const { categories, ignored, autoSplit } = labelSettingsRef.current;
+    if (!autoSplit) return meta;
+    const parsed = parseLabel(code, categories);
+    if (parsed) {
+      meta.extra = { categoryId: parsed.categoryId, values: parsed.values };
+      return meta;
+    }
+    const signature = signatureOf(code);
+    if (signature && !ignored.includes(signature)) {
+      meta.newPattern = { signature, sample: code };
+    }
+    return meta;
   }, []);
+
+  // 연속·배치·여러 코드 모드에서는 스캔을 막지 않고, 패턴당 한 번만 알리고 설정의 "발견된 형식"에 쌓아 둔다
+  const notifyDiscoveredPattern = useCallback((pattern) => {
+    addDiscovered(pattern.sample).catch(() => {});
+    if (notifiedPatternsRef.current.has(pattern.signature)) return;
+    notifiedPatternsRef.current.add(pattern.signature);
+    feedback.info(t('labelCategories.discoveredSnackbar'));
+  }, [feedback, t]);
+
+  // 방금 저장한 기록에 카테고리·필드 값을 채운다 (모달에서 카테고리를 만든 직후)
+  const applyCategoryToHistory = useCallback(async (code, category) => {
+    try {
+      const historyByGroup = await getHistoryCache();
+      const groupId = currentGroupIdRef.current;
+      const list = historyByGroup[groupId] || [];
+      const index = list.findIndex(item => item.code === code);
+      if (index === -1) return;
+      list[index] = { ...list[index], categoryId: category.id, values: splitLabel(code, category.delimiter) };
+      historyByGroup[groupId] = list;
+      await saveHistoryCache(historyByGroup);
+    } catch (e) {
+      console.error('Apply category error:', e);
+    }
+  }, [getHistoryCache, saveHistoryCache]);
+
+  const handleCreateCategory = useCallback(async (name) => {
+    const pattern = newPatternPrompt;
+    setNewPatternPrompt(null);
+    if (!pattern) return;
+    try {
+      const category = await createCategoryFromCode(pattern.sample, t, name);
+      await reloadLabelSettings();
+      if (category) {
+        await applyCategoryToHistory(pattern.sample, category);
+        setLastScannedCode(prev => (prev && prev.code === pattern.sample)
+          ? { ...prev, categoryId: category.id, values: splitLabel(pattern.sample, category.delimiter) }
+          : prev);
+        feedback.success(t('labelCategories.created', { name: category.name }));
+      }
+    } catch (e) {
+      console.error('Create category error:', e);
+    }
+  }, [newPatternPrompt, t, reloadLabelSettings, applyCategoryToHistory, feedback]);
+
+  const handleNeverAskPattern = useCallback(async () => {
+    const pattern = newPatternPrompt;
+    setNewPatternPrompt(null);
+    if (!pattern) return;
+    await ignorePattern(pattern.signature);
+    await reloadLabelSettings();
+  }, [newPatternPrompt, reloadLabelSettings]);
 
   // 저장하기로 정한 순간 세션 목록에 넣는다 (저장 완료를 기다리지 않음)
   const markSessionSaved = useCallback((code) => {
@@ -1933,6 +2017,11 @@ function ScannerScreen() {
         startResetTimer(RESET_DELAYS.NORMAL);
         return;
       }
+      // 새 라벨 패턴: 스캔을 멈추면 안 되는 모드에서는 알림만. (자동열기 OFF 모드는 아래에서 모달로 묻고,
+      // 결과 화면이 열리는 모드는 결과 화면이 묻는다)
+      if (scanMeta.newPattern && (scanResultModeRef.current === 'toast' || batchScanEnabled || multiCodeModeEnabledRef.current)) {
+        notifyDiscoveredPattern(scanMeta.newPattern);
+      }
 
       // 토스트 모드: 연속 스캔 - 중복 감지 설정에 따라 처리
       if (scanResultModeRef.current === 'toast') {
@@ -2279,7 +2368,10 @@ function ScannerScreen() {
               scanCount: 1,
               photoUri: photoUri || null,
               errorCorrectionLevel: detectedEcLevel || null,
+              categoryId: scanMeta.extra?.categoryId,
+              values: scanMeta.extra?.values,
             });
+            if (scanMeta.newPattern) setNewPatternPrompt(scanMeta.newPattern);
 
             // 히스토리 저장 (비동기, 기다리지 않음 - 애니메이션 블록 방지)
             saveHistory(data, null, photoUri, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra).then(historyResult => {
@@ -2407,7 +2499,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
@@ -2883,6 +2975,16 @@ function ScannerScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* 새 라벨 패턴 → 카테고리 만들기 (자동열기 OFF 모드) */}
+      <NewLabelPatternModal
+        visible={!!newPatternPrompt}
+        pattern={newPatternPrompt}
+        categories={labelCategories}
+        onCreate={handleCreateCategory}
+        onSkip={() => setNewPatternPrompt(null)}
+        onNeverAsk={handleNeverAskPattern}
+      />
+
       {/* 복권 인식 활성화 유도 모달 */}
       <Modal
         visible={lotteryPromptVisible}
@@ -3168,6 +3270,13 @@ function ScannerScreen() {
               </Text>
               {/* 창고 라벨은 뒷자리로 구분하는 경우가 많아 가운데를 줄인다 */}
               <Text style={[styles.scannedCodeValue, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">{lastScannedCode.code}</Text>
+              {(() => {
+                const label = labelOfItem(lastScannedCode, labelCategories);
+                const summary = label ? formatLabelSummary(label, 3, t) : '';
+                return summary ? (
+                  <Text style={[styles.scannedCodeLabel, { color: colors.textSecondary, marginTop: 2 }]} numberOfLines={1} ellipsizeMode="middle">{summary}</Text>
+                ) : null;
+              })()}
             </View>
             <View style={styles.resultWindowButtonRow}>
               <TouchableOpacity

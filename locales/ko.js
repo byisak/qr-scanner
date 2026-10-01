@@ -290,6 +290,8 @@ export default {
 
   // 결과 화면
   result: {
+    createCategory: '이 형식으로 카테고리 만들기',
+    labelFields: '라벨 내용',
     scanCountTimes: '{{count}}회 스캔',
     noData: '데이터 없음',
     info: '정보',
@@ -352,6 +354,8 @@ export default {
 
   // 설정 화면
   settings: {
+    labelCategoriesDesc: '구분자로 나뉜 코드의 필드 이름 관리',
+    labelCategories: '라벨 카테고리',
     hapticIntensity: '진동 세기',
     hapticPattern: '진동 패턴',
     hapticPatternDesc: '\'시스템\'은 기기 기본 햅틱을 써서 세기 설정이 적용되지 않아요',
@@ -781,6 +785,7 @@ export default {
 
   // 내보내기 화면
   exportHistory: {
+    categoryColumn: '라벨 카테고리',
     title: '기록 내보내기',
     description: '그룹별 스캔 기록을 파일로 내보낼 수 있습니다',
     selectFormat: '파일 형식 선택',
@@ -1878,5 +1883,39 @@ export default {
     biometric: '생체인증',
     // Info
     infoText: '앱 잠금을 설정하면 앱 실행 시 PIN 비밀번호 또는 생체인증으로 본인 확인을 진행합니다.',
+  },
+
+  labelCategories: {
+    created: '카테고리를 만들었어요: {{name}}',
+    edit: '카테고리 편집',
+    discoveredSnackbar: '새 라벨 형식 발견 · 설정에서 카테고리로 만들 수 있어요',
+    noCategoriesDesc: '구분자가 있는 코드를 찍으면 카테고리를 만들지 물어봐요',
+    noCategories: '아직 카테고리가 없어요',
+    autoSplitDesc: '구분자가 있는 코드를 찍으면 카테고리에 맞춰 필드로 나눠요',
+    autoSplit: '라벨 자동 분리',
+    deleteConfirmMessage: '기록은 그대로 남고, 이 패턴은 더 이상 필드로 나뉘지 않아요',
+    deleteConfirmTitle: '카테고리를 삭제할까요?',
+    restore: '다시 묻기',
+    ignoredPatterns: '묻지 않기한 형식',
+    savedCount: '{{count}}개 저장됨',
+    sample: '샘플 값',
+    preview: '미리보기',
+    keyFieldDesc: '목록과 스캔 카드에서 먼저 보여줄 칸이에요',
+    keyField: '대표 필드',
+    fieldN: '필드{{n}}',
+    fieldsDesc: '각 칸에 이름을 붙이면 결과·기록·내보내기에 그 이름으로 나와요',
+    fields: '필드 이름',
+    pattern: '패턴',
+    name: '카테고리 이름',
+    defaultName: '라벨 {{letter}}',
+    neverAsk: '이 형식은 묻지 않기',
+    skipOnce: '이번만 건너뛰기',
+    create: '카테고리 만들기',
+    newPatternMessage: '{{delimiter}}로 나뉜 {{count}}칸이에요. 카테고리로 만들면 칸마다 이름을 붙이고 따로 볼 수 있어요.',
+    newPatternTitle: '새 라벨 형식을 찾았어요',
+    discoveredDesc: '스캔 중에 본 새 패턴이에요. 카테고리로 만들면 필드로 나뉘어 저장돼요',
+    discovered: '발견된 형식',
+    intro: '구분자(| ; , 탭)로 나뉜 코드는 같은 패턴끼리 카테고리로 묶이고, 필드 이름을 붙일 수 있어요',
+    title: '라벨 카테고리',
   },
 };

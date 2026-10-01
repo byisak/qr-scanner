@@ -131,6 +131,9 @@ const SYNC_ALLOWED_PREFIXES = [
   'bannerSettings',
   'unlockedFeatures',
   'adWatchCounts',
+  'labelCategories',
+  'labelIgnoredPatterns',
+  'labelAutoSplit',
 ];
 
 const isSyncAllowed = (key) => {

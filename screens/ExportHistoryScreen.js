@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { labelOfItem, fieldNameAt } from '../utils/labelParser';
+import { loadLabelSettings } from '../utils/labelCategories';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -33,12 +35,33 @@ export default function ExportHistoryScreen() {
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingTxt, setIsExportingTxt] = useState(false);
+  const [labelCategories, setLabelCategories] = useState([]);
+
+  // 선택한 그룹에 실제로 쓰인 카테고리의 필드 이름을 모아 열로 만든다 (같은 이름은 한 열로)
+  const labelColumns = () => {
+    const used = new Set();
+    selectedGroups.forEach((groupId) => {
+      (scanHistory[groupId] || []).forEach((item) => {
+        const label = labelOfItem(item, labelCategories);
+        if (label) used.add(label.category.id);
+      });
+    });
+    const columns = [];
+    labelCategories.filter(c => used.has(c.id)).forEach((category) => {
+      category.fields.forEach((name, index) => {
+        const column = fieldNameAt(category, index, t);
+        if (!columns.includes(column)) columns.push(column);
+      });
+    });
+    return columns;
+  };
 
   useEffect(() => {
     (async () => {
       try {
         const groupsData = await AsyncStorage.getItem('scanGroups');
         const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+        loadLabelSettings().then(ls => setLabelCategories(ls.categories)).catch(() => {});
 
         if (groupsData) {
           const parsed = JSON.parse(groupsData);
@@ -96,7 +119,11 @@ export default function ExportHistoryScreen() {
   // CSV 생성
   const generateCSV = () => {
     // UTF-8 BOM 추가 (한글 깨짐 방지)
-    let csv = '\uFEFF' + t('exportHistory.csvHeader') + '\n';
+    const columns = labelColumns();
+    const quote = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    let csv = '\uFEFF' + t('exportHistory.csvHeader');
+    if (columns.length) csv += ',' + [t('exportHistory.categoryColumn'), ...columns].map(quote).join(',');
+    csv += '\n';
 
     selectedGroups.forEach((groupId) => {
       const group = groups.find(g => g.id === groupId);
@@ -107,7 +134,17 @@ export default function ExportHistoryScreen() {
         const date = formatDate(item.timestamp);
         const code = `"${item.code.replace(/"/g, '""')}"`;
         const scanCount = item.scanCount || 1;
-        csv += `${groupName},${code},${date},${scanCount}\n`;
+        csv += `${groupName},${code},${date},${scanCount}`;
+        if (columns.length) {
+          const label = labelOfItem(item, labelCategories);
+          const cells = columns.map((column) => {
+            if (!label) return '';
+            const index = label.category.fields.findIndex((name, i) => fieldNameAt(label.category, i, t) === column);
+            return index === -1 ? '' : (label.values[index] ?? '');
+          });
+          csv += ',' + [label ? label.category.name : '', ...cells].map(quote).join(',');
+        }
+        csv += '\n';
       });
     });
 
@@ -179,6 +216,13 @@ export default function ExportHistoryScreen() {
           txt += `${t('exportHistory.codeLabel')}: ${item.code}\n`;
           txt += `${t('exportHistory.scanDateLabel')}: ${date}\n`;
           txt += `${t('exportHistory.duplicateLabel')}: ${scanCount}\n`;
+          const label = labelOfItem(item, labelCategories);
+          if (label) {
+            txt += `${t('exportHistory.categoryColumn')}: ${label.category.name}\n`;
+            label.values.forEach((value, index) => {
+              txt += `  ${fieldNameAt(label.category, index, t)}: ${value || '-'}\n`;
+            });
+          }
         });
       }
     });

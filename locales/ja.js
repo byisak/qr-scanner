@@ -287,6 +287,8 @@ export default {
 
   // 結果画面
   result: {
+    createCategory: 'この形式でカテゴリを作成',
+    labelFields: 'ラベルの内容',
     scanCountTimes: '{{count}}回スキャン',
     noData: 'データなし',
     info: '情報',
@@ -349,6 +351,8 @@ export default {
 
   // 設定画面
   settings: {
+    labelCategoriesDesc: '区切り文字で分かれたコードのフィールド名を管理',
+    labelCategories: 'ラベルカテゴリ',
     hapticIntensity: '振動の強さ',
     hapticPattern: '振動パターン',
     hapticPatternDesc: '「システム」は端末標準の触覚を使うため強さは反映されません',
@@ -776,6 +780,7 @@ export default {
 
   // エクスポート画面
   exportHistory: {
+    categoryColumn: 'ラベルカテゴリ',
     title: '履歴のエクスポート',
     description: 'グループ別のスキャン履歴をファイルにエクスポートできます',
     selectFormat: 'ファイル形式を選択',
@@ -1856,5 +1861,39 @@ export default {
     infoMessage: 'オフにすると、スキャンしたコードは画面上に枠で表示され、下のボタンをタップして結果画面を開けます。',
     enableDesc: 'QRコードをスキャンすると結果画面に自動で移動します',
     enable: '結果画面を自動で開く',
+  },
+
+  labelCategories: {
+    created: 'カテゴリを作成しました: {{name}}',
+    edit: 'カテゴリを編集',
+    discoveredSnackbar: '新しいラベル形式を発見 · 設定でカテゴリにできます',
+    noCategoriesDesc: '区切り文字のあるコードをスキャンすると作成するか確認します',
+    noCategories: 'まだカテゴリがありません',
+    autoSplitDesc: '区切り文字のあるコードをスキャンするとカテゴリに合わせてフィールドに分けます',
+    autoSplit: 'ラベルの自動分割',
+    deleteConfirmMessage: '記録はそのまま残り、この形式はフィールドに分かれなくなります',
+    deleteConfirmTitle: 'カテゴリを削除しますか？',
+    restore: '再度聞く',
+    ignoredPatterns: '聞かない形式',
+    savedCount: '{{count}}件保存',
+    sample: 'サンプル値',
+    preview: 'プレビュー',
+    keyFieldDesc: '一覧とスキャンカードで最初に表示する項目です',
+    keyField: '代表フィールド',
+    fieldN: 'フィールド{{n}}',
+    fieldsDesc: '名前を付けると結果・履歴・エクスポートにその名前で表示されます',
+    fields: 'フィールド名',
+    pattern: 'パターン',
+    name: 'カテゴリ名',
+    defaultName: 'ラベル {{letter}}',
+    neverAsk: 'この形式では聞かない',
+    skipOnce: '今回はスキップ',
+    create: 'カテゴリを作成',
+    newPatternMessage: '{{delimiter}}で区切られた{{count}}個の項目です。カテゴリにすると各項目に名前を付けて個別に見られます。',
+    newPatternTitle: '新しいラベル形式が見つかりました',
+    discoveredDesc: 'スキャン中に見つかった新しいパターンです。カテゴリにするとフィールドに分けて保存されます',
+    discovered: '見つかった形式',
+    intro: '区切り文字（| ; , タブ）で分かれたコードはパターンごとにまとまり、各フィールドに名前を付けられます',
+    title: 'ラベルカテゴリ',
   },
 };

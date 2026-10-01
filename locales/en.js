@@ -290,6 +290,8 @@ export default {
 
   // Result screen
   result: {
+    createCategory: 'Create a category for this pattern',
+    labelFields: 'Label fields',
     scanCountTimes: 'Scanned {{count}} times',
     noData: 'No data',
     info: 'Info',
@@ -352,6 +354,8 @@ export default {
 
   // Settings screen
   settings: {
+    labelCategoriesDesc: 'Name the fields of delimited codes',
+    labelCategories: 'Label categories',
     hapticIntensity: 'Vibration strength',
     hapticPattern: 'Vibration pattern',
     hapticPatternDesc: '\'System\' uses the device\'s built-in haptics, so strength doesn\'t apply',
@@ -792,6 +796,7 @@ export default {
 
   // Export history screen
   exportHistory: {
+    categoryColumn: 'Label category',
     title: 'Export History',
     description: 'Export scan history by group as a file',
     selectFormat: 'Select File Format',
@@ -1888,5 +1893,39 @@ export default {
     biometric: 'Biometric',
     // Info
     infoText: 'When app lock is enabled, you will need to verify your identity with PIN or biometric authentication when opening the app.',
+  },
+
+  labelCategories: {
+    created: 'Category created: {{name}}',
+    edit: 'Edit category',
+    discoveredSnackbar: 'New label pattern found · create a category in Settings',
+    noCategoriesDesc: 'Scan a delimited code and you\'ll be asked to create one',
+    noCategories: 'No categories yet',
+    autoSplitDesc: 'Split delimited codes into fields by category when scanned',
+    autoSplit: 'Auto-split labels',
+    deleteConfirmMessage: 'Records stay as they are; this pattern will no longer be split into fields',
+    deleteConfirmTitle: 'Delete this category?',
+    restore: 'Ask again',
+    ignoredPatterns: 'Muted patterns',
+    savedCount: '{{count}} saved',
+    sample: 'Sample value',
+    preview: 'Preview',
+    keyFieldDesc: 'Shown first in lists and the scan card',
+    keyField: 'Key field',
+    fieldN: 'Field {{n}}',
+    fieldsDesc: 'Named parts appear by name in results, history, and exports',
+    fields: 'Field names',
+    pattern: 'Pattern',
+    name: 'Category name',
+    defaultName: 'Label {{letter}}',
+    neverAsk: 'Don\'t ask for this pattern',
+    skipOnce: 'Skip this time',
+    create: 'Create category',
+    newPatternMessage: '{{count}} parts split by {{delimiter}}. Create a category to name each part and view them separately.',
+    newPatternTitle: 'New label pattern found',
+    discoveredDesc: 'New patterns seen while scanning. Create a category to split them into fields',
+    discovered: 'Discovered patterns',
+    intro: 'Codes split by a delimiter (| ; , tab) are grouped by pattern, and you can name each field',
+    title: 'Label categories',
   },
 };

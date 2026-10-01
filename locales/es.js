@@ -287,6 +287,8 @@ export default {
 
   // Pantalla de resultado
   result: {
+    createCategory: 'Crear categoría para este patrón',
+    labelFields: 'Campos de la etiqueta',
     scanCountTimes: 'Escaneado {{count}} veces',
     noData: 'Sin datos',
     info: 'Información',
@@ -349,6 +351,8 @@ export default {
 
   // Pantalla de configuración
   settings: {
+    labelCategoriesDesc: 'Nombra los campos de códigos con delimitador',
+    labelCategories: 'Categorías de etiqueta',
     hapticIntensity: 'Intensidad de vibración',
     hapticPattern: 'Patrón de vibración',
     hapticPatternDesc: '«Sistema» usa la háptica del dispositivo, así que la intensidad no se aplica',
@@ -776,6 +780,7 @@ export default {
 
   // Pantalla de exportar historial
   exportHistory: {
+    categoryColumn: 'Categoría de etiqueta',
     title: 'Exportar historial',
     description: 'Exportar historial de escaneo por grupo como archivo',
     selectFormat: 'Seleccionar formato de archivo',
@@ -1856,5 +1861,39 @@ export default {
     infoMessage: 'Si se desactiva, los códigos escaneados se marcan con un borde en pantalla y puedes tocar el botón inferior para abrir el resultado.',
     enableDesc: 'Al escanear un código QR se abre automáticamente la pantalla de resultado',
     enable: 'Abrir resultado automáticamente',
+  },
+
+  labelCategories: {
+    created: 'Categoría creada: {{name}}',
+    edit: 'Editar categoría',
+    discoveredSnackbar: 'Nuevo patrón detectado · crea una categoría en Ajustes',
+    noCategoriesDesc: 'Escanea un código con delimitador y se te pedirá crear una',
+    noCategories: 'Aún no hay categorías',
+    autoSplitDesc: 'Divide los códigos con delimitador en campos según la categoría',
+    autoSplit: 'Dividir etiquetas automáticamente',
+    deleteConfirmMessage: 'Los registros se conservan; este patrón ya no se dividirá en campos',
+    deleteConfirmTitle: '¿Eliminar esta categoría?',
+    restore: 'Volver a preguntar',
+    ignoredPatterns: 'Patrones silenciados',
+    savedCount: '{{count}} guardados',
+    sample: 'Valor de ejemplo',
+    preview: 'Vista previa',
+    keyFieldDesc: 'Se muestra primero en listas y en la tarjeta de escaneo',
+    keyField: 'Campo principal',
+    fieldN: 'Campo {{n}}',
+    fieldsDesc: 'Los nombres aparecen en resultados, historial y exportaciones',
+    fields: 'Nombres de campo',
+    pattern: 'Patrón',
+    name: 'Nombre de la categoría',
+    defaultName: 'Etiqueta {{letter}}',
+    neverAsk: 'No preguntar por este patrón',
+    skipOnce: 'Omitir esta vez',
+    create: 'Crear categoría',
+    newPatternMessage: '{{count}} partes separadas por {{delimiter}}. Crea una categoría para nombrar cada parte y verlas por separado.',
+    newPatternTitle: 'Nuevo patrón de etiqueta',
+    discoveredDesc: 'Patrones nuevos vistos al escanear. Crea una categoría para guardarlos por campos',
+    discovered: 'Patrones detectados',
+    intro: 'Los códigos separados por un delimitador (| ; , tab) se agrupan por patrón y puedes nombrar cada campo',
+    title: 'Categorías de etiqueta',
   },
 };

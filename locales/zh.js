@@ -287,6 +287,8 @@ export default {
 
   // 结果界面
   result: {
+    createCategory: '为此格式创建类别',
+    labelFields: '标签内容',
     scanCountTimes: '已扫描 {{count}} 次',
     noData: '无数据',
     info: '信息',
@@ -349,6 +351,8 @@ export default {
 
   // 设置界面
   settings: {
+    labelCategoriesDesc: '管理分隔符代码的字段名称',
+    labelCategories: '标签类别',
     hapticIntensity: '振动强度',
     hapticPattern: '振动模式',
     hapticPatternDesc: '“系统”使用设备自带触感，强度设置不生效',
@@ -776,6 +780,7 @@ export default {
 
   // 导出界面
   exportHistory: {
+    categoryColumn: '标签类别',
     title: '导出历史记录',
     description: '可以将分组扫描记录导出为文件',
     selectFormat: '选择文件格式',
@@ -1856,5 +1861,39 @@ export default {
     infoMessage: '关闭后，扫描到的代码会在屏幕上以边框显示，点击底部按钮即可打开结果页面。',
     enableDesc: '扫描二维码后自动进入结果页面',
     enable: '自动打开结果窗口',
+  },
+
+  labelCategories: {
+    created: '已创建类别：{{name}}',
+    edit: '编辑类别',
+    discoveredSnackbar: '发现新标签格式 · 可在设置中创建类别',
+    noCategoriesDesc: '扫描含分隔符的代码时会询问是否创建',
+    noCategories: '还没有类别',
+    autoSplitDesc: '扫描含分隔符的代码时按类别拆分为字段',
+    autoSplit: '自动拆分标签',
+    deleteConfirmMessage: '记录会保留，但此模式不再按字段拆分',
+    deleteConfirmTitle: '删除此类别？',
+    restore: '重新询问',
+    ignoredPatterns: '已静音的格式',
+    savedCount: '已保存 {{count}} 个',
+    sample: '示例值',
+    preview: '预览',
+    keyFieldDesc: '在列表和扫描卡片中优先显示的字段',
+    keyField: '主字段',
+    fieldN: '字段{{n}}',
+    fieldsDesc: '命名后会在结果、记录和导出中以该名称显示',
+    fields: '字段名称',
+    pattern: '模式',
+    name: '类别名称',
+    defaultName: '标签 {{letter}}',
+    neverAsk: '此格式不再询问',
+    skipOnce: '本次跳过',
+    create: '创建类别',
+    newPatternMessage: '由 {{delimiter}} 分成 {{count}} 段。创建类别后可以为每段命名并单独查看。',
+    newPatternTitle: '发现新的标签格式',
+    discoveredDesc: '扫描时发现的新模式。创建类别后会按字段保存',
+    discovered: '发现的格式',
+    intro: '用分隔符（| ; , 制表符）分开的代码按模式归类，可以为每个字段命名',
+    title: '标签类别',
   },
 };

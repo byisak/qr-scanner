@@ -16,6 +16,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { labelOfItem, formatLabelSummary } from '../utils/labelParser';
+import { loadLabelSettings } from '../utils/labelCategories';
 import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -56,6 +58,7 @@ export default function HistoryScreen() {
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true); // 저장소를 읽는 동안 "기록 없음"이 잠깐 보이는 것 방지
+  const [labelCategories, setLabelCategories] = useState([]); // 라벨 필드 요약 표시용
   const feedback = useFeedback();
 
   // 그룹 데이터 로드
@@ -68,6 +71,7 @@ export default function HistoryScreen() {
       const viewedId = await AsyncStorage.getItem(HISTORY_VIEW_GROUP_KEY);
       const selectedId = viewedId || await AsyncStorage.getItem('selectedGroupId');
       const realtimeSync = await AsyncStorage.getItem('realtimeSyncEnabled');
+      loadLabelSettings().then(ls => setLabelCategories(ls.categories)).catch(() => {});
 
       // 실시간 서버전송 설정 로드
       const isRealtimeSyncEnabled = realtimeSync === 'true';
@@ -610,6 +614,14 @@ export default function HistoryScreen() {
                     <Text style={[s.code, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={1} ellipsizeMode="middle">
                       {item.code}
                     </Text>
+                    {(() => {
+                      const summary = formatLabelSummary(labelOfItem(item, labelCategories), 3, t);
+                      return summary ? (
+                        <Text style={[s.labelSummary, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1} ellipsizeMode="middle">
+                          {summary}
+                        </Text>
+                      ) : null;
+                    })()}
 
                     {/* 2줄: 바코드타입, 콘텐츠타입, 반복횟수, 에러레벨 */}
                     <View style={s.badgeRow}>
@@ -865,6 +877,11 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  labelSummary: {
+    fontSize: 12,
+    marginLeft: 8,
+    marginTop: 2,
   },
   code: {
     fontSize: 16,

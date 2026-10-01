@@ -19,6 +19,9 @@ import { parseQRContent, QR_CONTENT_TYPES, formatPhoneNumber } from '../utils/qr
 import QRActionButtons from '../components/QRActionButtons';
 import QRContentInfoDisplay from '../components/QRContentInfoDisplay';
 import MaterialPressable from '../components/MaterialPressable';
+import NewLabelPatternModal from '../components/NewLabelPatternModal';
+import { labelOfItem, signatureOf, fieldNameAt } from '../utils/labelParser';
+import { loadLabelSettings, createCategoryFromCode, ignorePattern } from '../utils/labelCategories';
 
 // 바코드 타입 표시 이름 (다른 화면의 'EAN-13' 표기와 맞춘다)
 const BARCODE_TYPE_LABELS = {
@@ -102,6 +105,8 @@ export default function ResultScreen() {
   const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
   const [photoError, setPhotoError] = useState(false);
   const [groupName, setGroupName] = useState('');
+  const [labelCategories, setLabelCategories] = useState([]);
+  const [newPatternPrompt, setNewPatternPrompt] = useState(null); // 스캔 직후 처음 보는 라벨 패턴이면 카테고리 생성 묻기
 
   // QR 콘텐츠 파싱 (타입 감지)
   const parsedContent = useMemo(() => {
@@ -137,6 +142,45 @@ export default function ResultScreen() {
       }
     })();
   }, []);
+
+  // 라벨 카테고리 로드. 스캔 직후(기록에서 연 게 아니면) 처음 보는 패턴이면 카테고리를 만들지 묻는다
+  useEffect(() => {
+    (async () => {
+      try {
+        const { categories, ignored, autoSplit } = await loadLabelSettings();
+        setLabelCategories(categories);
+        if (!autoSplit || isFromHistory || !displayText) return;
+        const signature = signatureOf(displayText);
+        if (signature && !ignored.includes(signature) && !categories.some(c => c.signature === signature)) {
+          setNewPatternPrompt({ signature, sample: displayText });
+        }
+      } catch (error) {
+        console.error('Load label categories error:', error);
+      }
+    })();
+  }, [displayText, isFromHistory]);
+
+  const handleCreateCategory = async (name) => {
+    const pattern = newPatternPrompt;
+    setNewPatternPrompt(null);
+    if (!pattern) return;
+    try {
+      const category = await createCategoryFromCode(pattern.sample, t, name);
+      const { categories } = await loadLabelSettings();
+      setLabelCategories(categories);
+      if (category) feedback.success(t('labelCategories.created', { name: category.name }));
+    } catch (error) {
+      console.error('Create category error:', error);
+    }
+  };
+
+  const handleNeverAskPattern = async () => {
+    const pattern = newPatternPrompt;
+    setNewPatternPrompt(null);
+    if (pattern) await ignorePattern(pattern.signature);
+  };
+
+  const labelInfo = useMemo(() => labelOfItem({ code: displayText }, labelCategories), [displayText, labelCategories]);
 
   // 저장된 그룹 이름 로드 (메타 줄 표시용)
   useEffect(() => {
@@ -678,6 +722,22 @@ export default function ResultScreen() {
         )}
       </View>
 
+      <NewLabelPatternModal
+
+        visible={!!newPatternPrompt}
+
+        pattern={newPatternPrompt}
+
+        categories={labelCategories}
+
+        onCreate={handleCreateCategory}
+
+        onSkip={() => setNewPatternPrompt(null)}
+
+        onNeverAsk={handleNeverAskPattern}
+
+      />
+
       <FeedbackToastHost />
       <ScrollView
         style={styles.content}
@@ -736,6 +796,42 @@ export default function ResultScreen() {
               fonts={fonts}
               t={t}
             />
+          )}
+
+          {/* 라벨 필드 (구분자로 나뉜 값을 카테고리의 필드 이름으로) */}
+          {!isEditing && labelInfo && (
+            <View style={[styles.labelCard, { backgroundColor: colors.inputBackground }]}>
+              <MaterialPressable
+                style={styles.labelHeader}
+                onPress={() => router.push({ pathname: '/label-category-edit', params: { id: labelInfo.category.id } })}
+                accessibilityRole="button"
+              >
+                <Ionicons name="pricetags-outline" size={14} color={colors.primary} />
+                <Text style={[styles.labelTitle, { color: colors.primary, fontFamily: fonts.semiBold }]}>{labelInfo.category.name}</Text>
+                <Text style={[styles.labelHint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('labelCategories.edit')}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+              </MaterialPressable>
+              {labelInfo.values.map((value, index) => (
+                <MaterialPressable
+                  key={index}
+                  style={styles.labelRow}
+                  onPress={async () => {
+                    if (!value) return;
+                    await Clipboard.setStringAsync(value);
+                    feedback.success(t('result.copySuccessMessage'));
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${fieldNameAt(labelInfo.category, index, t)}: ${value || '—'}`}
+                >
+                  <Text style={[styles.labelName, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
+                    {fieldNameAt(labelInfo.category, index, t)}
+                  </Text>
+                  <Text style={[styles.labelValue, { color: value ? colors.text : colors.textTertiary, fontFamily: fonts.regular }]} selectable numberOfLines={2}>
+                    {value || '—'}
+                  </Text>
+                </MaterialPressable>
+              ))}
+            </View>
           )}
 
           {/* 액션 버튼들 */}
@@ -1036,6 +1132,44 @@ const styles = StyleSheet.create({
   metaText: {
     flex: 1,
     fontSize: 12,
+  },
+  labelCard: {
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    marginTop: 12,
+  },
+  labelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  labelTitle: {
+    flex: 1,
+    fontSize: 13,
+  },
+  labelHint: {
+    fontSize: 12,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  labelName: {
+    width: 88,
+    fontSize: 13,
+    paddingTop: 1,
+  },
+  labelValue: {
+    flex: 1,
+    fontSize: 15,
   },
   dataSection: {
     minHeight: 80,

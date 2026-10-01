@@ -23,6 +23,8 @@ import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
 import MaterialPressable from '../components/MaterialPressable';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
+import { parseLabel, labelOfItem, formatLabelSummary } from '../utils/labelParser';
+import { loadLabelSettings, addDiscovered } from '../utils/labelCategories';
 
 export default function MultiCodeResultsScreen() {
   const router = useRouter();
@@ -38,6 +40,8 @@ export default function MultiCodeResultsScreen() {
   const groupName = params.groupName || t('groupEdit.defaultGroup');
 
   const [codes, setCodes] = useState([]);
+  const [labelSettings, setLabelSettings] = useState({ categories: [], autoSplit: true });
+  useEffect(() => { loadLabelSettings().then(setLabelSettings).catch(() => {}); }, []);
   const [savedCodes, setSavedCodes] = useState(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const allowLeaveRef = useRef(false);
@@ -93,12 +97,16 @@ export default function MultiCodeResultsScreen() {
         historyByGroup[groupId] = [updatedItem, ...currentHistory].slice(0, 1000);
       } else {
         // 새 항목 추가
+        // 라벨 카테고리에 맞으면 필드 값도 같이 저장. 처음 보는 패턴은 설정의 "발견된 형식"에 쌓는다
+        const label = labelSettings.autoSplit ? parseLabel(codeValue, labelSettings.categories) : null;
+        if (labelSettings.autoSplit && !label) addDiscovered(codeValue).catch(() => {});
         const record = {
           code: codeValue,
           timestamp: now,
           count: 1,
           scanTimes: [now],
           type: barcodeType,
+          ...(label ? { categoryId: label.categoryId, values: label.values } : {}),
         };
         historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
       }
@@ -249,6 +257,14 @@ export default function MultiCodeResultsScreen() {
             <Text style={[styles.codeValue, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={2}>
               {item.value}
             </Text>
+            {(() => {
+              const summary = formatLabelSummary(labelOfItem({ code: item.value }, labelSettings.categories), 3, t);
+              return summary ? (
+                <Text style={[styles.labelSummary, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1} ellipsizeMode="middle">
+                  {summary}
+                </Text>
+              ) : null;
+            })()}
 
             {/* 2줄: 바코드타입, 콘텐츠타입 뱃지 */}
             <View style={styles.badgeRow}>
@@ -459,6 +475,10 @@ const styles = StyleSheet.create({
   codeValue: {
     fontSize: 16,
     lineHeight: 22,
+  },
+  labelSummary: {
+    fontSize: 12,
+    marginTop: 2,
   },
   badgeRow: {
     flexDirection: 'row',
