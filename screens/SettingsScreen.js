@@ -15,6 +15,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialPressable from '../components/MaterialPressable';
+import haptics, { loadHapticSettings, saveHapticSettings, HAPTIC_INTENSITIES, HAPTIC_PATTERNS } from '../utils/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -53,6 +54,24 @@ export default function SettingsScreen() {
   const [lotteryScanEnabled, setLotteryScanEnabled] = useState(false); // 복권 인식
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 인식된 값 표시
+  // 진동 세기·패턴 (Android 기본 진동이 약하고 탁하다는 피드백)
+  const [hapticIntensity, setHapticIntensity] = useState('medium');
+  const [hapticPattern, setHapticPattern] = useState('tap');
+  useEffect(() => {
+    loadHapticSettings().then(({ intensity, pattern }) => {
+      setHapticIntensity(intensity);
+      setHapticPattern(pattern);
+    });
+  }, []);
+  // 고르면 바로 그 느낌으로 한 번 울린다
+  const changeHaptic = async (next) => {
+    const intensity = next.intensity || hapticIntensity;
+    const pattern = next.pattern || hapticPattern;
+    setHapticIntensity(intensity);
+    setHapticPattern(pattern);
+    await saveHapticSettings({ intensity, pattern });
+    haptics.scan({ intensity, pattern });
+  };
   const [selectedBarcodesCount, setSelectedBarcodesCount] = useState(13); // 기본값: 모든 바코드 타입 (13개)
 
   // 실시간 서버전송 상태 (켬/끔 표시용)
@@ -712,6 +731,51 @@ export default function SettingsScreen() {
             />
           </View>
 
+          {/* 진동 세기 · 패턴 (진동이 켜져 있을 때만) */}
+          {hapticEnabled && (
+            <View style={s.hapticOptions}>
+              <Text style={[s.hapticOptionLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('settings.hapticIntensity')}</Text>
+              <View style={[s.segment, { backgroundColor: colors.inputBackground }]}>
+                {HAPTIC_INTENSITIES.map(level => {
+                  const selected = hapticIntensity === level;
+                  return (
+                    <MaterialPressable
+                      key={level}
+                      style={[s.segmentItem, selected && { backgroundColor: colors.primary }]}
+                      onPress={() => changeHaptic({ intensity: level })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                    >
+                      <Text style={[s.segmentText, { color: selected ? '#fff' : colors.text, fontFamily: fonts.semiBold }]}>
+                        {t(`settings.hapticIntensities.${level}`)}
+                      </Text>
+                    </MaterialPressable>
+                  );
+                })}
+              </View>
+              <Text style={[s.hapticOptionLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold, marginTop: 14 }]}>{t('settings.hapticPattern')}</Text>
+              <View style={[s.segment, { backgroundColor: colors.inputBackground }]}>
+                {HAPTIC_PATTERNS.map(pattern => {
+                  const selected = hapticPattern === pattern;
+                  return (
+                    <MaterialPressable
+                      key={pattern}
+                      style={[s.segmentItem, selected && { backgroundColor: colors.primary }]}
+                      onPress={() => changeHaptic({ pattern })}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                    >
+                      <Text style={[s.segmentText, { color: selected ? '#fff' : colors.text, fontFamily: fonts.semiBold }]}>
+                        {t(`settings.hapticPatterns.${pattern}`)}
+                      </Text>
+                    </MaterialPressable>
+                  );
+                })}
+              </View>
+              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular, marginTop: 8 }]}>{t('settings.hapticPatternDesc')}</Text>
+            </View>
+          )}
+
           {/* 스캔 소리 */}
           <View style={s.row}>
             <View style={{ flex: 1 }}>
@@ -1114,6 +1178,30 @@ export default function SettingsScreen() {
 }
 
 const s = StyleSheet.create({
+  hapticOptions: {
+    marginBottom: 16,
+  },
+  hapticOptionLabel: {
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  segment: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+    gap: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  segmentText: {
+    fontSize: 14,
+  },
   scanModeSummary: {
     flexDirection: 'row',
     alignItems: 'center',

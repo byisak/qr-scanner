@@ -16,7 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
 import { PinKeypadWithRef } from '../components/PinKeypad';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 
 export default function PinVerifyScreen() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function PinVerifyScreen() {
 
     const isValid = await verifyPin(pin);
     if (isValid) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.success();
 
       if (mode === 'disable') {
         // 앱 잠금 해제
@@ -66,7 +66,7 @@ export default function PinVerifyScreen() {
       }
     } else {
       // PIN 불일치
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await haptics.error();
       setAttempts((prev) => prev + 1);
       setErrorMessage(t('security.incorrectPin') || 'PIN이 올바르지 않습니다.');
       setTimeout(() => {

@@ -3,7 +3,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Snackbar } from 'react-native-paper';
@@ -43,10 +43,10 @@ export const FeedbackProvider = ({ children }) => {
   const haptic = useCallback(async (kind = 'success') => {
     if (!(await hapticEnabled())) return;
     try {
-      if (kind === 'success') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      else if (kind === 'warning') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      else if (kind === 'error') await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      else await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (kind === 'success') await haptics.success();
+      else if (kind === 'warning') await haptics.warning();
+      else if (kind === 'error') await haptics.error();
+      else await haptics.tap();
     } catch {
       // 햅틱 미지원 기기
     }

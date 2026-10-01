@@ -348,6 +348,20 @@ export default {
 
   // 設定画面
   settings: {
+    hapticIntensity: '振動の強さ',
+    hapticPattern: '振動パターン',
+    hapticPatternDesc: '「システム」は端末標準の触覚を使うため強さは反映されません',
+    hapticIntensities: {
+      light: '弱',
+      medium: '中',
+      strong: '強',
+    },
+    hapticPatterns: {
+      system: 'システム',
+      tap: 'トン',
+      double: 'トントン',
+      long: '長め',
+    },
     singleCodeShowValueDesc: '通常スキャンでもコードの枠の下に値を表示します',
     singleCodeShowValue: '認識したコードの値を表示',
     saveFailed: '設定を保存できませんでした',

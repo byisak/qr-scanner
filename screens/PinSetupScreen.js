@@ -16,7 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
 import { PinKeypadWithRef } from '../components/PinKeypad';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 
 export default function PinSetupScreen() {
   const router = useRouter();
@@ -45,7 +45,7 @@ export default function PinSetupScreen() {
       // 확인 PIN 입력
       if (pin !== firstPin) {
         // PIN이 일치하지 않음
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        await haptics.error();
         setErrorMessage(t('security.pinMismatch') || 'PIN이 일치하지 않습니다. 다시 시도해주세요.');
         setStep('enter');
         setFirstPin('');
@@ -83,7 +83,7 @@ export default function PinSetupScreen() {
   const savePin = async (pin, useBiometric) => {
     const result = await enableAppLock(pin, useBiometric);
     if (result.success) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.success();
       Alert.alert(
         t('settings.success') || '성공',
         t('security.appLockEnabled') || '앱 잠금이 설정되었습니다.',

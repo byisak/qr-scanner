@@ -351,6 +351,20 @@ export default {
 
   // 설정 화면
   settings: {
+    hapticIntensity: '진동 세기',
+    hapticPattern: '진동 패턴',
+    hapticPatternDesc: '\'시스템\'은 기기 기본 햅틱을 써서 세기 설정이 적용되지 않아요',
+    hapticIntensities: {
+      light: '약',
+      medium: '보통',
+      strong: '강',
+    },
+    hapticPatterns: {
+      system: '시스템',
+      tap: '톡',
+      double: '톡톡',
+      long: '길게',
+    },
     singleCodeShowValueDesc: '일반 스캔에서도 코드 테두리 아래에 값을 보여줍니다',
     singleCodeShowValue: '인식된 코드 값 표시',
     saveFailed: '설정을 저장하지 못했습니다',

@@ -16,7 +16,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
 import { PinKeypadWithRef } from '../components/PinKeypad';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 
 export default function PinChangeScreen() {
   const router = useRouter();
@@ -39,14 +39,14 @@ export default function PinChangeScreen() {
       // 현재 PIN 확인
       const isValid = await verifyPin(pin);
       if (isValid) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await haptics.success();
         setCurrentPin(pin);
         setStep('new');
         setTimeout(() => {
           pinKeypadRef.current?.resetPin();
         }, 100);
       } else {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        await haptics.error();
         setErrorMessage(t('security.incorrectPin') || 'PIN이 올바르지 않습니다.');
         setTimeout(() => {
           pinKeypadRef.current?.resetPin();
@@ -55,7 +55,7 @@ export default function PinChangeScreen() {
     } else if (step === 'new') {
       // 새 PIN 입력
       if (pin === currentPin) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        await haptics.error();
         setErrorMessage(t('security.samePinError') || '현재 PIN과 다른 PIN을 입력해주세요.');
         setTimeout(() => {
           pinKeypadRef.current?.resetPin();
@@ -70,7 +70,7 @@ export default function PinChangeScreen() {
     } else {
       // 새 PIN 확인
       if (pin !== newPin) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        await haptics.error();
         setErrorMessage(t('security.pinMismatch') || 'PIN이 일치하지 않습니다. 다시 시도해주세요.');
         setStep('new');
         setNewPin('');
@@ -83,7 +83,7 @@ export default function PinChangeScreen() {
       // PIN 변경
       const result = await setPin(pin);
       if (result.success) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await haptics.success();
         Alert.alert(
           t('settings.success') || '성공',
           t('security.pinChanged') || 'PIN이 변경되었습니다.',

@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -63,7 +63,7 @@ export default function PinKeypad({
   // 키 입력
   const handleKeyPress = async (key) => {
     if (disabled || completedRef.current) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await haptics.tap();
 
     if (pin.length < pinLength) {
       setPin((prev) => prev + key);
@@ -73,7 +73,7 @@ export default function PinKeypad({
   // 삭제
   const handleDelete = async () => {
     if (disabled) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await haptics.tap();
     completedRef.current = false; // 삭제 시 다시 입력 가능
     setPin((prev) => prev.slice(0, -1));
   };
@@ -230,7 +230,7 @@ export const PinKeypadWithRef = React.forwardRef(({
 
   const handleKeyPress = async (key) => {
     if (disabled || completedRef.current) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await haptics.tap();
     if (pin.length < pinLength) {
       setPin((prev) => prev + key);
     }
@@ -238,7 +238,7 @@ export const PinKeypadWithRef = React.forwardRef(({
 
   const handleDelete = async () => {
     if (disabled) return;
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await haptics.tap();
     completedRef.current = false;
     setPin((prev) => prev.slice(0, -1));
   };

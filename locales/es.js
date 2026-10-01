@@ -348,6 +348,20 @@ export default {
 
   // Pantalla de configuración
   settings: {
+    hapticIntensity: 'Intensidad de vibración',
+    hapticPattern: 'Patrón de vibración',
+    hapticPatternDesc: '«Sistema» usa la háptica del dispositivo, así que la intensidad no se aplica',
+    hapticIntensities: {
+      light: 'Suave',
+      medium: 'Media',
+      strong: 'Fuerte',
+    },
+    hapticPatterns: {
+      system: 'Sistema',
+      tap: 'Toque',
+      double: 'Doble',
+      long: 'Largo',
+    },
     singleCodeShowValueDesc: 'Muestra el valor bajo el contorno también en el escaneo normal',
     singleCodeShowValue: 'Mostrar valor reconocido',
     saveFailed: 'No se pudo guardar el ajuste',

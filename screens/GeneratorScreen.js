@@ -21,7 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
 import * as Sharing from 'expo-sharing';
 import * as MediaLibrary from 'expo-media-library';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -301,7 +301,7 @@ export default function GeneratorScreen() {
   // 즐겨찾기 토글 (기본 바코드와 일반 즐겨찾기 모두 처리)
   const toggleFavoriteBarcode = async (bcid) => {
     if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await haptics.tap();
     }
 
     const isDefault = DEFAULT_BARCODE_BCIDS.includes(bcid);
@@ -336,7 +336,7 @@ export default function GeneratorScreen() {
   // 모달에서 바코드 선택
   const handleSelectBarcodeFromModal = async (bcid) => {
     if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await haptics.impact();
     }
     setSelectedBarcodeFormat(bcid);
     setBarcodeValue('');
@@ -696,7 +696,7 @@ export default function GeneratorScreen() {
 
   const handleTypeSelect = async (typeId) => {
     if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await haptics.tap();
     }
 
     // QR 타입 잠금 체크 (text는 무료)
@@ -753,7 +753,7 @@ export default function GeneratorScreen() {
   // 바코드 포맷 선택 (bcid 형식)
   const handleBarcodeFormatSelect = async (bcid) => {
     if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await haptics.tap();
     }
     setSelectedBarcodeFormat(bcid);
     setBarcodeValue('');  // 값 초기화
@@ -1109,7 +1109,7 @@ export default function GeneratorScreen() {
   // 세그먼트 탭 변경
   const handleCodeModeChange = async (mode) => {
     if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      await haptics.tap();
     }
     setCodeMode(mode);
 
@@ -1131,7 +1131,7 @@ export default function GeneratorScreen() {
     }
 
     if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await haptics.impact();
     }
 
     try {
@@ -1243,7 +1243,7 @@ export default function GeneratorScreen() {
     setSaveProgress({ visible: true, progress: 0, message: '', type: isBarcode ? 'barcode' : 'qr' });
 
     if (hapticEnabled) {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await haptics.impact();
     }
 
     try {
@@ -1788,7 +1788,7 @@ export default function GeneratorScreen() {
               style={[s.mapPickerButton, { backgroundColor: colors.primary }]}
               onPress={async () => {
                 if (hapticEnabled) {
-                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  await haptics.tap();
                 }
                 router.push({
                   pathname: '/map-location-picker',

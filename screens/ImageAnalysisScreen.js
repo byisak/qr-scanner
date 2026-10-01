@@ -21,7 +21,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
@@ -706,9 +706,9 @@ function ImageAnalysisScreen() {
 
       // 햅틱 피드백
       if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptics.impact();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
     } catch (err) {
       console.error('Reanalyze error:', err);
@@ -733,9 +733,9 @@ function ImageAnalysisScreen() {
     try {
       await Clipboard.setStringAsync(text);
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
       Alert.alert(t('result.copySuccess'), t('result.copySuccessMessage'));
     } catch (err) {
@@ -801,9 +801,9 @@ function ImageAnalysisScreen() {
       setSavedCount(prev => prev + 1);
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
 
       Alert.alert(
@@ -870,9 +870,9 @@ function ImageAnalysisScreen() {
       setSavedCount(prev => prev + successCount);
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
 
       Alert.alert(
@@ -1027,9 +1027,9 @@ function ImageAnalysisScreen() {
       }
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
 
       Alert.alert(
@@ -1074,9 +1074,9 @@ function ImageAnalysisScreen() {
       await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
 
       Alert.alert(
@@ -1135,9 +1135,9 @@ function ImageAnalysisScreen() {
       setIsSavingHistory(false);
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
 
       Alert.alert(
@@ -1269,9 +1269,9 @@ function ImageAnalysisScreen() {
       setIsSavingHistory(false);
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
 
       Alert.alert(
@@ -1325,9 +1325,9 @@ function ImageAnalysisScreen() {
       }
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
     } catch (err) {
       console.error('Download all JSON error:', err);
@@ -1366,9 +1366,9 @@ function ImageAnalysisScreen() {
       }
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       } else {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        haptics.tap();
       }
     } catch (err) {
       console.error('Download single JSON error:', err);

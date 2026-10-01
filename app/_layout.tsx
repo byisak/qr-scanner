@@ -2,6 +2,7 @@ import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { setupNotificationListeners } from '../utils/lotteryNotification';
+import { loadHapticSettings } from '../utils/haptics';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { LanguageProvider } from '../contexts/LanguageContext';
@@ -29,6 +30,11 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError, isTrackingLoading]);
+
+  // 진동 세기·패턴 설정을 미리 읽어 둔다 (첫 스캔부터 반영)
+  useEffect(() => {
+    loadHapticSettings();
+  }, []);
 
   // 복권 알림 탭 → 히스토리 탭으로 이동 (이전엔 어디서도 연결돼 있지 않았다)
   useEffect(() => {

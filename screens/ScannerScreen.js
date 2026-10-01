@@ -19,7 +19,7 @@ import {
 import { Camera } from 'react-native-vision-camera';
 import { NativeQRScanner, useNativeCamera } from '../components/NativeQRScanner';
 import { useRouter, useFocusEffect } from 'expo-router';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 import { createAudioPlayer } from 'expo-audio';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -1375,9 +1375,9 @@ function ScannerScreen() {
     // 햅틱 피드백
     if (hapticEnabledRef.current) {
       if (Platform.OS === 'android') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        haptics.scan();
       } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        haptics.success();
       }
     }
 
@@ -1530,7 +1530,7 @@ function ScannerScreen() {
 
         // 햅틱 피드백 (새 코드 추가 시)
         if (hapticEnabledRef.current) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          haptics.success();
         }
         // 소음이 큰 곳에서는 진동만으로 잡혔는지 알기 어렵다 → 단일 모드처럼 비프도
         playScanBeep();
@@ -1592,7 +1592,7 @@ function ScannerScreen() {
 
       if (newCodesAdded) {
         if (hapticEnabledRef.current) {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          haptics.success();
         }
         playScanBeep();
       }
@@ -1818,7 +1818,7 @@ function ScannerScreen() {
 
           // 햅틱 피드백
           if (hapticEnabledRef.current) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            haptics.success();
           }
 
           // 스캔 소리
@@ -1919,9 +1919,9 @@ function ScannerScreen() {
           setContinuousScanCount(prev => prev + 1);
           if (hapticEnabledRef.current) {
             if (Platform.OS === 'android') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              haptics.scan();
             } else {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              haptics.success();
             }
           }
           playScanBeep();
@@ -1930,7 +1930,7 @@ function ScannerScreen() {
         // 카메라를 계속 대고 있으면 0.5초마다 다시 알리므로 같은 코드는 잠시 무시한다
         const giveDuplicateFeedback = () => {
           if (hapticEnabledRef.current) {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            haptics.warning();
           }
           if (lastScannedData.current === data) {
             lastScannedTime.current = Date.now() + DUPLICATE_NOTICE_COOLDOWN;
@@ -2049,7 +2049,7 @@ function ScannerScreen() {
           if (action === 'skip') {
             // 자동으로 건너뛰기. 무반응이면 인식이 안 된 줄 알고 계속 갖다 대므로 경고 진동 + 짧은 안내
             if (hapticEnabledRef.current) {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              haptics.warning();
             }
             feedback.info(t('scanner.duplicateSkipped'));
             safeTimeout(() => {
@@ -2096,10 +2096,10 @@ function ScannerScreen() {
       if (hapticEnabledRef.current) {
         if (Platform.OS === 'android') {
           // Android: Heavy impact로 더 강한 진동
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          haptics.scan();
         } else {
           // iOS: 기존 Success notification
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          haptics.success();
         }
       }
 
@@ -2266,7 +2266,7 @@ function ScannerScreen() {
               // 이 모드는 결과 화면이 안 열려서, 중복이어도 아무 표시가 없었다
               if (historyResult.isDuplicate) {
                 if (hapticEnabledRef.current) {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                  haptics.warning();
                 }
                 feedback.warning(t('scanner.alreadyScannedCount', { count: historyResult.count }));
               }

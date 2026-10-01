@@ -13,7 +13,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
 import { PinKeypadWithRef } from './PinKeypad';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 
 export default function AppLockScreen() {
   const { t, fonts } = useLanguage();
@@ -67,7 +67,7 @@ export default function AppLockScreen() {
     );
 
     if (result.success) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.success();
       // PIN 도트 애니메이션 후 잠금 해제
       if (pinKeypadRef.current?.fillDotsWithAnimation) {
         pinKeypadRef.current.fillDotsWithAnimation(() => {
@@ -85,10 +85,10 @@ export default function AppLockScreen() {
 
     const isValid = await verifyPin(pin);
     if (isValid) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await haptics.success();
       unlock();
     } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      await haptics.error();
       setErrorMessage(t('security.incorrectPin') || 'PIN이 올바르지 않습니다.');
       setTimeout(() => {
         pinKeypadRef.current?.resetPin();

@@ -348,6 +348,20 @@ export default {
 
   // 设置界面
   settings: {
+    hapticIntensity: '振动强度',
+    hapticPattern: '振动模式',
+    hapticPatternDesc: '“系统”使用设备自带触感，强度设置不生效',
+    hapticIntensities: {
+      light: '弱',
+      medium: '中',
+      strong: '强',
+    },
+    hapticPatterns: {
+      system: '系统',
+      tap: '轻点',
+      double: '双击',
+      long: '长振',
+    },
     singleCodeShowValueDesc: '普通扫描时也在代码边框下显示值',
     singleCodeShowValue: '显示识别到的值',
     saveFailed: '无法保存设置',

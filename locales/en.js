@@ -351,6 +351,20 @@ export default {
 
   // Settings screen
   settings: {
+    hapticIntensity: 'Vibration strength',
+    hapticPattern: 'Vibration pattern',
+    hapticPatternDesc: '\'System\' uses the device\'s built-in haptics, so strength doesn\'t apply',
+    hapticIntensities: {
+      light: 'Light',
+      medium: 'Medium',
+      strong: 'Strong',
+    },
+    hapticPatterns: {
+      system: 'System',
+      tap: 'Tap',
+      double: 'Double',
+      long: 'Long',
+    },
     singleCodeShowValueDesc: 'Show the value under the code outline in standard scan too',
     singleCodeShowValue: 'Show recognized value',
     saveFailed: 'Couldn\'t save the setting',

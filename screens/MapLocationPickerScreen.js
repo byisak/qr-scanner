@@ -13,7 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import * as Location from 'expo-location';
-import * as Haptics from 'expo-haptics';
+import haptics from '../utils/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -244,7 +244,7 @@ export default function MapLocationPickerScreen() {
     mapRef.current?.animateToRegion(newRegion, 500);
 
     // 햅틱 피드백
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.tap();
   };
 
   // 현재 위치 가져오기
@@ -290,7 +290,7 @@ export default function MapLocationPickerScreen() {
       reverseGeocode(location.coords.latitude, location.coords.longitude);
 
       // 햅틱 피드백
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      haptics.impact();
     } catch (error) {
       console.log('[MAP DEBUG] 현재 위치 에러:', error.message, error);
       Alert.alert(
@@ -307,7 +307,7 @@ export default function MapLocationPickerScreen() {
     const { latitude, longitude } = e.nativeEvent.coordinate;
     setMarkerPosition({ latitude, longitude });
     reverseGeocode(latitude, longitude);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.tap();
   };
 
   // 지도 탭 시 마커 이동
@@ -315,7 +315,7 @@ export default function MapLocationPickerScreen() {
     const { latitude, longitude } = e.nativeEvent.coordinate;
     setMarkerPosition({ latitude, longitude });
     reverseGeocode(latitude, longitude);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    haptics.tap();
   };
 
   // 위치 선택 확인
@@ -330,7 +330,7 @@ export default function MapLocationPickerScreen() {
       };
       await AsyncStorage.setItem(SELECTED_LOCATION_KEY, JSON.stringify(locationData));
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptics.success();
       router.back();
     } catch (error) {
       console.log('Save location error:', error);

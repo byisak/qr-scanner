@@ -1,0 +1,28 @@
+diff --git a/node_modules/expo-haptics/android/src/main/java/expo/modules/haptics/HapticsModule.kt b/node_modules/expo-haptics/android/src/main/java/expo/modules/haptics/HapticsModule.kt
+index 6102727..a13ce22 100644
+--- a/node_modules/expo-haptics/android/src/main/java/expo/modules/haptics/HapticsModule.kt
++++ b/node_modules/expo-haptics/android/src/main/java/expo/modules/haptics/HapticsModule.kt
+@@ -40,6 +40,23 @@ class HapticsModule : Module() {
+       vibrate(HapticsImpactType.fromString(style))
+     }
+ 
++    // 앱에서 세기·패턴을 직접 정하는 진동 (기본 impact/notification은 진폭이 30~70/255로 너무 약하다)
++    AsyncFunction("vibrateWaveformAsync") { timings: List<Long>, amplitudes: List<Int> ->
++      if (timings.isEmpty() || timings.size != amplitudes.size) return@AsyncFunction
++      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
++        val amps = amplitudes.map { it.coerceIn(0, 255) }.toIntArray()
++        vibrator.vibrate(VibrationEffect.createWaveform(timings.toLongArray(), amps, -1))
++      } else {
++        @Suppress("DEPRECATION")
++        vibrator.vibrate(timings.toLongArray(), -1)
++      }
++    }
++
++    // 기기가 진동 세기 조절을 지원하는지 (지원 안 하면 세기 설정이 무시되고 항상 최대)
++    Function("hasAmplitudeControl") {
++      Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && vibrator.hasAmplitudeControl()
++    }
++
+     AsyncFunction("performHapticsAsync") { type: HapticType ->
+       val view = appContext.currentActivity?.findViewById<View>(android.R.id.content)
+       view?.performHapticFeedback(type.toHapticFeedbackType())

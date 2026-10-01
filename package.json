@@ -90,5 +90,14 @@
     "patch-package": "^8.0.0",
     "react-native-svg-transformer": "^1.5.0",
     "typescript": "~5.9.2"
+  },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          "expo-haptics"
+        ]
+      }
+    }
   }
 }
