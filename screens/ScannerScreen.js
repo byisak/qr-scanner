@@ -2760,7 +2760,9 @@ function ScannerScreen() {
     try {
       setCurrentGroupId(groupId);
       setCurrentGroupName(groupName);
-      await AsyncStorage.setItem('selectedGroupId', groupId);
+      // 스캔에서 고른 그룹을 기록 화면도 따라가게 한다. (반대 방향은 일부러 안 한다:
+      // 기록에서 다른 그룹을 보기만 해도 스캔 저장 그룹이 바뀌던 버그가 있었다)
+      await AsyncStorage.multiSet([['selectedGroupId', groupId], ['historyViewGroupId', groupId]]);
       setGroupModalVisible(false);
 
       // 스캔 URL 그룹 선택 시 URL 활성화 연동
