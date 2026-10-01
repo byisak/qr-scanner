@@ -20,10 +20,14 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..650005b 100644
+index 54ea5ab..3382015 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-@@ -13,8 +13,10 @@ import com.mrousavy.camera.core.FrameInvalidError;
+@@ -10,11 +10,14 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
+ import com.google.mlkit.vision.barcode.common.Barcode;
+ import com.google.mlkit.vision.common.InputImage;
+ import com.mrousavy.camera.core.FrameInvalidError;
++import com.mrousavy.camera.core.types.Orientation;
  import com.mrousavy.camera.frameprocessors.Frame;
  import com.mrousavy.camera.frameprocessors.FrameProcessorPlugin;
  import com.mrousavy.camera.frameprocessors.VisionCameraProxy;
@@ -35,7 +39,7 @@ index 54ea5ab..650005b 100644
  import java.util.HashSet;
  import java.util.List;
  import java.util.Map;
-@@ -29,6 +31,10 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -29,6 +32,10 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
@@ -46,7 +50,7 @@ index 54ea5ab..650005b 100644
    CodeScannerProcessorPlugin(@NotNull VisionCameraProxy proxy,
                               @Nullable Map<String, Object> options) {
      Log.d(TAG,
-@@ -40,23 +46,25 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,23 +47,26 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -61,8 +65,9 @@ index 54ea5ab..650005b 100644
                  ". Only YUV_420_888 is supported for now.");
          return null;
        }
-+      // 이미지를 똑바로 세우기 위해 돌려야 하는 각도. ML Kit가 직접 처리하므로 비트맵 회전이 필요 없다
-+      rotationDegrees = frame.getImageProxy().getImageInfo().getRotationDegrees();
++      // 이미지를 똑바로 세우기 위해 돌려야 하는 각도. ML Kit가 직접 처리하므로 비트맵 회전이 필요 없다.
++      // getImageProxy()는 CameraX 타입이라 이 모듈 클래스패스에서 컴파일되지 않는다 → VisionCamera Orientation으로 역산
++      rotationDegrees = orientationToDegrees(frame.getOrientation());
      } catch (FrameInvalidError e) {
        Log.e(TAG, "Received an invalid frame.");
        return null;
@@ -77,7 +82,7 @@ index 54ea5ab..650005b 100644
  
      BarcodeScanner scanner = getBarcodeScannerClient(params);
  
-@@ -65,6 +73,21 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -65,6 +75,21 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        List<Barcode> barcodeList = Tasks.await(scanner.process(inputImage));
        barcodeList.forEach(
            barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
@@ -99,10 +104,21 @@ index 54ea5ab..650005b 100644
      } catch (ExecutionException | InterruptedException e) {
        Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
        return null;
-@@ -73,13 +96,37 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -73,13 +98,48 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
      return barcodes;
    }
  
++  /**
++   * Frame.getOrientation()은 rotationDegrees를 뒤집어 돌려준다(90° → LANDSCAPE_RIGHT).
++   * 그걸 다시 ML Kit가 받는 회전 각도로 되돌린다.
++   */
++  private int orientationToDegrees(Orientation orientation) {
++    if (orientation == Orientation.LANDSCAPE_RIGHT) return 90;
++    if (orientation == Orientation.PORTRAIT_UPSIDE_DOWN) return 180;
++    if (orientation == Orientation.LANDSCAPE_LEFT) return 270;
++    return 0;
++  }
++
 +  /**
 +   * 밝기(Y)만 반전한 NV21 이미지. 색차(UV)는 중립값으로 채워 회색조로 만든다.
 +   * 회전값을 같이 넘기므로 일반 경로와 같은 좌표계로 결과가 나온다.
@@ -142,7 +158,7 @@ index 54ea5ab..650005b 100644
        return null;
      }
    }
-@@ -105,15 +152,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +165,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");
