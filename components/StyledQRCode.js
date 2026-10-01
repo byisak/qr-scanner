@@ -1,6 +1,6 @@
 // components/StyledQRCode.js - WebView 기반 스타일 QR 코드 컴포넌트
 import React, { useRef, useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { QR_CODE_STYLING_LIB } from '../lib/qrCodeStylingLib';
 
@@ -16,9 +16,15 @@ export default function StyledQRCode({
   style = {},
   onCapture,
   qrStyle = {},
+  // 저장용: 캔버스를 이 배율로 크게 그린다 (화면 밀도만큼 키워야 캡처가 흐리지 않다)
+  renderScale = 1,
+  // 저장용: 다 그려지면 결과 이미지를 WebView 위에 Image로 덮는다.
+  // 실기기 Android는 WebView를 하드웨어 레이어에 그려서 react-native-view-shot 캡처에 잡히지 않는다
+  snapshotAsImage = false,
 }) {
   const webViewRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [snapshotUri, setSnapshotUri] = useState(null);
 
   const {
     dotType = 'square',
@@ -47,6 +53,8 @@ export default function StyledQRCode({
   // qrStyle에서 width/height가 있으면 사용, 없으면 size prop 사용
   const actualWidth = qrWidth || size;
   const actualHeight = qrHeight || size;
+  const canvasWidth = Math.round(actualWidth * renderScale);
+  const canvasHeight = Math.round(actualHeight * renderScale);
 
   // 이미지 옵션 기본값
   const imgOpts = {
@@ -138,6 +146,8 @@ export default function StyledQRCode({
           }
           #qr-container canvas {
             display: block;
+            width: 100%;
+            height: 100%;
           }
         </style>
       </head>
@@ -160,11 +170,11 @@ export default function StyledQRCode({
             const encodedData = toUTF8ByteString(rawData);
 
             const options = {
-              width: ${actualWidth},
-              height: ${actualHeight},
+              width: ${canvasWidth},
+              height: ${canvasHeight},
               type: "canvas",
               data: encodedData,
-              margin: ${margin},
+              margin: ${Math.round(margin * renderScale)},
               dotsOptions: ${dotOptions},
               cornersSquareOptions: ${cornerSquareOptions},
               cornersDotOptions: ${cornerDotOptions},
@@ -181,7 +191,7 @@ export default function StyledQRCode({
               crossOrigin: "anonymous",
               hideBackgroundDots: ${imgOpts.hideBackgroundDots},
               imageSize: ${imgOpts.imageSize},
-              margin: ${imgOpts.margin}
+              margin: ${Math.round(imgOpts.margin * renderScale)}
             };
             ` : ''}
 
@@ -222,8 +232,9 @@ export default function StyledQRCode({
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'loaded') {
         setIsLoading(false);
-      } else if (data.type === 'capture' && onCapture) {
-        onCapture(data.data);
+      } else if (data.type === 'capture') {
+        if (snapshotAsImage) setSnapshotUri(data.data);
+        if (onCapture) onCapture(data.data);
       } else if (data.type === 'error') {
         console.error('QR Code generation error:', data.message);
         setIsLoading(false);
@@ -235,7 +246,8 @@ export default function StyledQRCode({
 
   useEffect(() => {
     setIsLoading(true);
-  }, [value, JSON.stringify(qrStyle)]);
+    setSnapshotUri(null);
+  }, [value, JSON.stringify(qrStyle), renderScale]);
 
   if (!value) {
     return null;
@@ -258,7 +270,14 @@ export default function StyledQRCode({
         mixedContentMode="always"
         androidLayerType="hardware"
       />
-      {isLoading && (
+      {snapshotAsImage && snapshotUri && (
+        <Image
+          source={{ uri: snapshotUri }}
+          style={{ position: 'absolute', top: 0, left: 0, width: actualWidth, height: actualHeight }}
+          fadeDuration={0}
+        />
+      )}
+      {isLoading && !snapshotAsImage && (
         <View style={[styles.loadingContainer, { width: actualWidth, height: actualHeight }]}>
           <ActivityIndicator size="large" color="#007AFF" />
         </View>

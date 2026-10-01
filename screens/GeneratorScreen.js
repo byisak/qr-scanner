@@ -10,6 +10,7 @@ import {
   FlatList,
   Alert,
   Platform,
+  PixelRatio,
   Animated,
   Image,
   Modal,
@@ -394,6 +395,16 @@ export default function GeneratorScreen() {
   const [customPresets, setCustomPresets] = useState([]); // 사용자 커스텀 프리셋
   const [presetSaveModalVisible, setPresetSaveModalVisible] = useState(false); // 프리셋 저장 모달
   const highResQrRef = useRef(null); // 오프스크린 고해상도 캡처용 ref
+  // 오프스크린 저장용 스타일 QR이 이미지로 준비됐는지 (WebView는 그리는 데 시간이 걸린다)
+  const offscreenReadyRef = useRef(false);
+  const waitForOffscreenQr = useCallback(async (timeoutMs = 4000) => {
+    const start = Date.now();
+    while (!offscreenReadyRef.current && Date.now() - start < timeoutMs) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    // 이미지로 바뀐 직후 한 프레임 기다려 화면에 반영되게 한다
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }, []);
   const frameCarouselRef = useRef(null); // 프레임 캐러셀 ref
 
   // 현재 선택된 프레임 (인덱스 기반)
@@ -649,6 +660,13 @@ export default function GeneratorScreen() {
 
   const qrData = generateQRData();
   const hasData = qrData.length > 0;
+  // 스타일 QR(WebView)을 캡처해야 하는 저장 경로: 프레임이 있거나, 프레임 없이 고해상도로 저장할 때
+  const needsOffscreenQr = hasData && (!!selectedFrame || (qrResLevel > 0 && useStyledQR));
+  // 내용·스타일이 바뀌면 오프스크린 이미지를 새로 기다린다
+  const qrStyleKey = JSON.stringify(qrStyle);
+  useEffect(() => {
+    offscreenReadyRef.current = false;
+  }, [qrData, qrStyleKey, selectedFrame, qrResLevel, frameTextColor]);
 
   // 바코드 유효성 검사 (간소화 - bwip-js가 실제 검증 수행)
   const hasBarcodeData = barcodeValue.length > 0;
@@ -1165,8 +1183,9 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame) {
-          // 프레임: 오프스크린 뷰에서 캡처 (isDark=false로 렌더링됨)
+        if (needsOffscreenQr) {
+          // 프레임 또는 고해상도 스타일 QR: 오프스크린 뷰가 이미지로 바뀐 뒤 캡처
+          await waitForOffscreenQr();
           uri = await captureRef(highResQrRef, {
             format: 'png',
             quality: 1,
@@ -1288,8 +1307,9 @@ export default function GeneratorScreen() {
         }
       } else {
         // QR 코드 캡처
-        if (selectedFrame) {
-          // 프레임: 오프스크린 뷰에서 캡처 (isDark=false로 렌더링됨)
+        if (needsOffscreenQr) {
+          // 프레임 또는 고해상도 스타일 QR: 오프스크린 뷰가 이미지로 바뀐 뒤 캡처
+          await waitForOffscreenQr();
           uri = await captureRef(highResQrRef, {
             format: 'png',
             quality: 1,
@@ -3677,20 +3697,25 @@ export default function GeneratorScreen() {
         </View>
       </Modal>
 
-      {/* 오프스크린 저장용 뷰 (프레임이 있을 때 항상 렌더링, isDark=false로 저장) */}
-      {selectedFrame && hasData && (
+      {/* 오프스크린 저장용 뷰 (isDark=false로 저장).
+          스타일 QR은 WebView라 실기기 Android에서 캡처에 안 잡혀(프레임만 저장됐다) 결과 이미지를 덮어 그린다 */}
+      {needsOffscreenQr && (
         <View
           ref={highResQrRef}
           collapsable={false}
           style={s.offscreenContainer}
         >
           <QRFrameRenderer
-            frame={selectedFrame}
+            frame={selectedFrame || null}
             qrValue={qrData}
             qrStyle={qrStyle}
             size={qrResLevel > 0 ? QR_RES_LEVELS[qrResLevel].size : 280}
             frameTextColor={frameTextColor}
             isDark={false}
+            // 캡처 결과(크기 × 화면 밀도)와 같은 해상도로 그리되, WebView 캔버스 한도(약 4096px)를 넘지 않게
+            renderScale={Math.min(PixelRatio.get(), 4096 / (qrResLevel > 0 ? QR_RES_LEVELS[qrResLevel].size : 280))}
+            snapshotAsImage
+            onCapture={() => { offscreenReadyRef.current = true; }}
           />
         </View>
       )}

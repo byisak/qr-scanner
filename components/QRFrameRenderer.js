@@ -249,6 +249,9 @@ export default function QRFrameRenderer({
   onCapture,
   onLayout,
   isDark = false,
+  // 저장용 오프스크린 렌더링 옵션 (StyledQRCode로 그대로 전달)
+  renderScale = 1,
+  snapshotAsImage = false,
 }) {
   if (!frame || !frame.id || frame.id === 'none') {
     // 프레임이 없으면 QR 코드만 렌더링
@@ -260,6 +263,8 @@ export default function QRFrameRenderer({
             size={size - 48}
             qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
             onCapture={onCapture}
+            renderScale={renderScale}
+            snapshotAsImage={snapshotAsImage}
           />
         </View>
       </View>
@@ -290,6 +295,8 @@ export default function QRFrameRenderer({
             size={size - 48}
             qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
             onCapture={onCapture}
+            renderScale={renderScale}
+            snapshotAsImage={snapshotAsImage}
           />
         </View>
       </View>
@@ -335,6 +342,8 @@ export default function QRFrameRenderer({
           size={qrSize}
           qrStyle={{ ...qrStyle, backgroundColor: 'transparent', width: undefined, height: undefined, margin: 0 }}
           onCapture={onCapture}
+          renderScale={renderScale}
+          snapshotAsImage={snapshotAsImage}
         />
       </View>
       {/* 2. 프레임 SVG (가장 위) - 배경색에 맞춰 색상 조화 적용 */}

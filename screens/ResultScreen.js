@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -263,11 +264,17 @@ export default function ResultScreen() {
       }
 
       const asset = await MediaLibrary.createAssetAsync(photoUri);
-      const album = await MediaLibrary.getAlbumAsync('QR Scanner');
-      if (album == null) {
-        await MediaLibrary.createAlbumAsync('QR Scanner', asset, false);
-      } else {
-        await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+      // 앨범 정리는 읽기 권한이 필요하다. 쓰기 전용 권한(Android 사진 정책)에서는 실패하므로
+      // 사진은 이미 저장된 것으로 보고 앨범 정리 실패는 무시한다
+      try {
+        const album = await MediaLibrary.getAlbumAsync('QR Scanner');
+        if (album == null) {
+          await MediaLibrary.createAlbumAsync('QR Scanner', asset, false);
+        } else {
+          await MediaLibrary.addAssetsToAlbumAsync([asset], album, false);
+        }
+      } catch (albumError) {
+        console.warn('Album organize skipped:', albumError?.message);
       }
 
       Alert.alert(
@@ -288,10 +295,12 @@ export default function ResultScreen() {
     }
 
     try {
-      await Share.share({
-        url: photoUri,
-        message: t('result.scanPhoto'),
-      });
+      // RN Share는 Android에서 url(파일)을 무시하고 글자만 보낸다 → 파일을 실제로 넘기는 expo-sharing
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(photoUri, { mimeType: 'image/jpeg', dialogTitle: t('result.scanPhoto') });
+      } else {
+        await Share.share({ url: photoUri, message: t('result.scanPhoto') });
+      }
     } catch (error) {
       console.error('Share photo error:', error);
     }
