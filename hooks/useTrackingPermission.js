@@ -19,6 +19,18 @@ const PermissionStatus = TrackingTransparency?.PermissionStatus || { GRANTED: 'g
 
 const ATT_REQUESTED_KEY = '@att_requested';
 
+// 광고 SDK 초기화는 서버에서 설정을 받아와 느린 망에서는 ~10초까지 걸린다 (에뮬레이터 실측 10.5초).
+// 첫 화면에는 필요 없으므로 기다리지 않는다. 광고 요청은 초기화가 끝날 때까지 SDK가 대기시킨다
+let adsInitStarted = false;
+function initializeAdsInBackground() {
+  if (adsInitStarted) return;
+  adsInitStarted = true;
+  mobileAds().initialize().catch(error => {
+    adsInitStarted = false;
+    console.warn('Mobile Ads initialize failed:', error?.message);
+  });
+}
+
 export function useTrackingPermission() {
   const [isLoading, setIsLoading] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState(null);
@@ -28,12 +40,12 @@ export function useTrackingPermission() {
     try {
       // Android: 기본 동의 처리
       if (Platform.OS !== 'ios') {
-        const consent = await AsyncStorage.getItem('@analytics_consent');
-        if (consent === null) {
-          await setAnalyticsConsent(true);
-        }
-        await mobileAds().initialize();
+        // Android는 ATT가 없어 기다릴 게 없다 → 바로 첫 화면을 띄우고 나머지는 뒤에서
         setIsLoading(false);
+        AsyncStorage.getItem('@analytics_consent')
+          .then(consent => (consent === null ? setAnalyticsConsent(true) : null))
+          .catch(() => {});
+        initializeAdsInBackground();
         return;
       }
 
@@ -48,7 +60,7 @@ export function useTrackingPermission() {
           tagForChildDirectedTreatment: false,
           tagForUnderAgeOfConsent: false,
         });
-        await mobileAds().initialize();
+        initializeAdsInBackground();
         setPermissionStatus('denied');
         setIsLoading(false);
         return;
@@ -65,7 +77,7 @@ export function useTrackingPermission() {
         // 권한 상태에 따라 분석 동의 설정
         const granted = status === PermissionStatus.GRANTED;
         await setAnalyticsConsent(granted);
-        await mobileAds().initialize();
+        initializeAdsInBackground();
         setIsLoading(false);
         return;
       }
@@ -82,14 +94,14 @@ export function useTrackingPermission() {
       await setAnalyticsConsent(granted);
 
       // AdMob 초기화
-      await mobileAds().initialize();
+      initializeAdsInBackground();
 
       setIsLoading(false);
     } catch (error) {
       console.error('ATT permission error:', error);
       // 오류 시 비개인화 광고만 사용
       await setAnalyticsConsent(false);
-      await mobileAds().initialize();
+      initializeAdsInBackground();
       setIsLoading(false);
     }
   }, []);
