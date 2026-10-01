@@ -2263,12 +2263,10 @@ function ScannerScreen() {
                 isDuplicate: historyResult.isDuplicate,
                 scanCount: historyResult.count,
               } : null);
-              // 이 모드는 결과 화면이 안 열려서, 중복이어도 아무 표시가 없었다
-              if (historyResult.isDuplicate) {
-                if (hapticEnabledRef.current) {
-                  haptics.warning();
-                }
-                feedback.warning(t('scanner.alreadyScannedCount', { count: historyResult.count }));
+              // 이 모드는 결과 화면이 안 열려서, 중복이어도 아무 표시가 없었다.
+              // 문구는 하단 결과 카드 제목에 나오므로(스낵바까지 띄우면 두 번 보이고 카드를 가린다) 진동만 준다
+              if (historyResult.isDuplicate && hapticEnabledRef.current) {
+                haptics.warning();
               }
             }).catch(console.error);
 
