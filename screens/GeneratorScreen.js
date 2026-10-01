@@ -3741,7 +3741,7 @@ const s = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: Platform.OS === 'ios' ? 120 : 32, // Android 네이티브 탭바는 화면을 가리지 않는다
   },
   header: {
     paddingHorizontal: 20,

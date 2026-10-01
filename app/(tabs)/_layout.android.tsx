@@ -1,84 +1,45 @@
-import { StyleSheet, View } from 'react-native';
-import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { NativeTabs, Icon, Label, VectorIcon } from 'expo-router/unstable-native-tabs';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Colors } from '../../constants/Colors';
 
-// Android: 탭바 배경 컴포넌트
-function TabBarBackground() {
-  const { isDark } = useTheme();
-
-  return (
-    <View
-      style={[
-        StyleSheet.absoluteFill,
-        {
-          backgroundColor: isDark
-            ? 'rgba(28, 28, 30, 0.95)'
-            : 'rgba(255, 255, 255, 0.95)',
-        },
-      ]}
-    />
-  );
-}
-
+// Android: Material 3 하단 내비게이션(네이티브). iOS의 NativeTabs와 같은 구조.
+// 예전 JS 탭바는 화면 위에 반투명으로 떠 있어서, 탭 화면들이 탭바 높이만큼 아래를 비워 두고 있었다.
+// 네이티브 탭바는 화면을 탭바 위까지만 그리므로 그 여백은 Android에서 0이다 (hooks/useTabBarOverlap).
 export default function TabLayout() {
   const { t } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarStyle: {
-          position: 'absolute',
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          elevation: 0,
-        },
-        tabBarBackground: () => <TabBarBackground />,
+    <NativeTabs
+      backgroundColor={colors.surface}
+      iconColor={{ default: colors.textSecondary, selected: colors.primary }}
+      labelStyle={{
+        default: { color: colors.textSecondary, fontSize: 12 },
+        selected: { color: colors.primary, fontSize: 12 },
       }}
+      indicatorColor={colors.primary + '22'}
+      rippleColor={colors.primary + '22'}
+      labelVisibilityMode="labeled"
     >
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: t('history.title'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="generator"
-        options={{
-          title: t('generator.title'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="qr-code-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: t('scanner.title'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="scan-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: t('settings.title'),
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings-outline" size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+      <NativeTabs.Trigger name="history">
+        <Label>{t('history.title')}</Label>
+        <Icon src={<VectorIcon family={MaterialIcons} name="history" />} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="generator">
+        <Label>{t('generator.title')}</Label>
+        <Icon src={<VectorIcon family={MaterialIcons} name="qr-code-2" />} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="index">
+        <Label>{t('scanner.title')}</Label>
+        <Icon src={<VectorIcon family={MaterialIcons} name="qr-code-scanner" />} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <Label>{t('settings.title')}</Label>
+        <Icon src={<VectorIcon family={MaterialIcons} name="settings" />} />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }

@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Snackbar } from 'react-native-paper';
 import { useLanguage } from './LanguageContext';
 import { useTheme } from './ThemeContext';
 import { Colors } from '../constants/Colors';
@@ -132,6 +133,25 @@ export const FeedbackToastHost = () => {
       Animated.timing(translateY, { toValue: visible ? 0 : 20, duration: 180, useNativeDriver: true }),
     ]).start();
   }, [visible, opacity, translateY]);
+
+  // Android: Material 3 스낵바 (메시지 + 텍스트 버튼). iOS는 아래 기존 토스트 유지
+  if (Platform.OS === 'android') {
+    return (
+      <Snackbar
+        visible={visible}
+        onDismiss={hideToast}
+        // 숨김 시점은 컨텍스트 타이머가 정한다
+        duration={toast?.actionLabel ? 4000 : 2500}
+        action={toast?.actionLabel
+          ? { label: toast.actionLabel, onPress: () => { toast.onAction?.(); } }
+          : { label: t('common.close'), onPress: hideToast }}
+        wrapperStyle={{ bottom: Math.max(insets.bottom, 16) + 76, zIndex: 9999 }}
+        accessibilityLiveRegion="polite"
+      >
+        {toast?.message}
+      </Snackbar>
+    );
+  }
 
   if (!visible) return null;
 

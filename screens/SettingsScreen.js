@@ -8,13 +8,13 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   ScrollView,
-  TouchableOpacity,
   Platform,
   Alert,
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Ionicons } from '@expo/vector-icons';
+import MaterialPressable from '../components/MaterialPressable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -410,7 +410,7 @@ export default function SettingsScreen() {
         {/* 로그인/프로필 섹션 */}
         {isLoggedIn ? (
           // 로그인된 상태 - 프로필 표시
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.profileSection, { backgroundColor: colors.surface }]}
             onPress={() => router.push('/profile-settings')}
             activeOpacity={0.7}
@@ -428,16 +428,16 @@ export default function SettingsScreen() {
                 {user?.email || ''}
               </Text>
             </View>
-            <TouchableOpacity accessibilityRole="button"
+            <MaterialPressable accessibilityRole="button"
               style={s.settingsIconButton}
               onPress={() => router.push('/profile-settings')}
             >
               <Ionicons name="settings-outline" size={24} color={colors.textTertiary} />
-            </TouchableOpacity>
-          </TouchableOpacity>
+            </MaterialPressable>
+          </MaterialPressable>
         ) : (
           // 로그인 안된 상태 - 로그인 유도
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.loginSection, { backgroundColor: colors.surface }]}
             onPress={() => router.push('/login')}
             activeOpacity={0.7}
@@ -451,7 +451,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#E67E22" />
-          </TouchableOpacity>
+          </MaterialPressable>
         )}
 
         {/* 배너 광고 - AD_ENABLED일 때만 표시 */}
@@ -462,7 +462,7 @@ export default function SettingsScreen() {
         )}
 
         {/* Pro 버전 - TODO: 추후 프로버전 출시 시 주석 해제 */}
-        {/* <TouchableOpacity accessibilityRole="button"
+        {/* <MaterialPressable accessibilityRole="button"
           style={[s.proSection, { backgroundColor: colors.surface }]}
           onPress={() => router.push('/pro-version')}
           activeOpacity={0.7}
@@ -482,7 +482,7 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="chevron-forward" size={24} color="#fff" />
           </LinearGradient>
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={s.watchAdButton}
             onPress={() => router.push('/pro-features')}
             activeOpacity={0.7}
@@ -490,12 +490,12 @@ export default function SettingsScreen() {
             <Ionicons name="play-circle-outline" size={20} color={colors.primary} />
             <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
             <Text style={[s.watchAdSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}> - {t('proVersion.freeUnlock')}</Text>
-          </TouchableOpacity>
-        </TouchableOpacity> */}
+          </MaterialPressable>
+        </MaterialPressable> */}
 
         {/* 광고보기 - 기능 잠금 해제 (AD_ENABLED일 때만 표시) */}
         {AD_ENABLED && (
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.proSection, { backgroundColor: colors.surface }]}
             onPress={() => router.push('/pro-features')}
             activeOpacity={0.7}
@@ -515,7 +515,7 @@ export default function SettingsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={24} color="#fff" />
             </LinearGradient>
-          </TouchableOpacity>
+          </MaterialPressable>
         )}
 
         {/* 고급 스캔 기능 섹션 */}
@@ -536,7 +536,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* 연속 스캔 모드 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => {
               if (isLocked('batchScan')) {
@@ -558,10 +558,10 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 여러 코드 인식 모드 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/multi-code-mode-settings')}
             activeOpacity={0.7}
@@ -576,10 +576,10 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 스캔 연동 URL */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => {
               if (isLocked('scanUrlIntegration')) {
@@ -601,7 +601,7 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 스캔 연동 URL 목록 - 활성화 시에만 표시 */}
           {on && scanUrlList.length > 0 && (
@@ -625,7 +625,7 @@ export default function SettingsScreen() {
           )}
 
           {/* 실시간 서버전송 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => {
               if (isLocked('realtimeSync')) {
@@ -661,10 +661,10 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 복권 인식 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => {
               if (isLocked('lotteryScan')) {
@@ -686,7 +686,7 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 알림 섹션 */}
@@ -702,7 +702,7 @@ export default function SettingsScreen() {
             <Switch
               value={hapticEnabled}
               onValueChange={setHapticEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel={t('settings.hapticFeedback')}
             />
@@ -717,7 +717,7 @@ export default function SettingsScreen() {
             <Switch
               value={scanSoundEnabled}
               onValueChange={setScanSoundEnabled}
-              trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
               accessibilityLabel={t('settings.scanSound')}
             />
@@ -729,7 +729,7 @@ export default function SettingsScreen() {
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.scan')}</Text>
 
           {/* 바코드 선택 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push('/barcode-selection')}
             activeOpacity={0.7}
@@ -739,10 +739,10 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 카메라 선택 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/camera-selection')}
             activeOpacity={0.7}
@@ -752,10 +752,10 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.cameraSelectionDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 사진 저장 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => {
               if (isLocked('photoSave')) {
@@ -779,10 +779,10 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* URL 열기 방식 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/url-open-mode-selection')}
             activeOpacity={0.7}
@@ -794,10 +794,10 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 결과창 자동 열림 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/result-window-settings')}
             activeOpacity={0.7}
@@ -812,7 +812,7 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
 
         </View>
 
@@ -820,7 +820,7 @@ export default function SettingsScreen() {
         <View style={[s.section, { backgroundColor: colors.surface }]}>
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.productSearchSection')}</Text>
 
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => {
               if (isLocked('productSearch')) {
@@ -842,7 +842,7 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
         */}
 
@@ -851,7 +851,7 @@ export default function SettingsScreen() {
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.data')}</Text>
 
           {/* 기록 내보내기 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push('/export-history')}
             activeOpacity={0.7}
@@ -861,10 +861,10 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.exportHistoryDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 백업 내보내기 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/backup-export')}
             activeOpacity={0.7}
@@ -874,10 +874,10 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('backupExport.description')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 백업 가져오기 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/backup-import')}
             activeOpacity={0.7}
@@ -887,7 +887,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('backupImport.description')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 일반 섹션 */}
@@ -895,7 +895,7 @@ export default function SettingsScreen() {
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.general')}</Text>
 
           {/* 언어 선택 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push('/language-selection')}
             activeOpacity={0.7}
@@ -907,10 +907,10 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 화면 모드 선택 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/display-mode-selection')}
             activeOpacity={0.7}
@@ -922,10 +922,10 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 인증/보안 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push('/security-settings')}
             activeOpacity={0.7}
@@ -937,7 +937,7 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 앱 정보 및 지원 */}
@@ -945,7 +945,7 @@ export default function SettingsScreen() {
           <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
 
           {/* 개선제안하기 - 임시 주석처리
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => Alert.alert(t('settings.suggestImprovement'), '준비 중입니다')}
             activeOpacity={0.7}
@@ -955,11 +955,11 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.suggestImprovementDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
           */}
 
           {/* 1:1 문의하기 - 임시 주석처리
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => Alert.alert(t('settings.oneOnOneInquiry'), '준비 중입니다')}
             activeOpacity={0.7}
@@ -969,11 +969,11 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.oneOnOneInquiryDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
           */}
 
           {/* 서비스 이용약관 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopWidth: 0 }]}
             onPress={() => router.push({
               pathname: '/webview',
@@ -986,10 +986,10 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.termsOfServiceDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 개인정보 처리방침 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={() => router.push({
               pathname: '/webview',
@@ -1002,7 +1002,7 @@ export default function SettingsScreen() {
               <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.privacyPolicyDesc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </TouchableOpacity>
+          </MaterialPressable>
 
           {/* 사용 분석 동의 */}
           <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
@@ -1033,7 +1033,7 @@ export default function SettingsScreen() {
           </View>
 
           {/* 캐시 삭제 */}
-          <TouchableOpacity accessibilityRole="button"
+          <MaterialPressable accessibilityRole="button"
             style={[s.menuItem, { borderTopColor: colors.borderLight }]}
             onPress={handleClearCache}
             activeOpacity={0.7}
@@ -1048,11 +1048,11 @@ export default function SettingsScreen() {
               </Text>
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
-          </TouchableOpacity>
+          </MaterialPressable>
         </View>
 
         {/* 개발자 옵션 - 배포 시 주석 처리됨
-        <TouchableOpacity accessibilityRole="button"
+        <MaterialPressable accessibilityRole="button"
           style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}
           onPress={() => router.push('/developer-options')}
           activeOpacity={0.7}
@@ -1078,7 +1078,7 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
             </View>
           </View>
-        </TouchableOpacity>
+        </MaterialPressable>
         */}
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -1116,7 +1116,7 @@ const s = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 120,
+    paddingBottom: Platform.OS === 'ios' ? 120 : 32, // Android 네이티브 탭바는 화면을 가리지 않는다
   },
   header: {
     paddingTop: 50,
@@ -1159,6 +1159,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 56, // Material 목록 행 높이
     paddingVertical: 12,
     paddingHorizontal: 4,
     borderTopWidth: 1,

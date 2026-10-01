@@ -29,6 +29,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { useFeedback } from '../contexts/FeedbackContext';
+import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 
 // 중복을 알린 뒤 같은 코드를 다시 알리기까지 쉬는 시간 (ms)
 const DUPLICATE_NOTICE_COOLDOWN = 2500;
@@ -107,9 +108,12 @@ function ScannerScreen() {
   // (iOS 상수는 노치 기기 inset 47/34 기준으로 기존 값과 같아지게 잡았다)
   const topOffset = insets.top + (Platform.OS === 'ios' ? 13 : 10);
   const batchBadgeTop = insets.top + (Platform.OS === 'ios' ? 58 : 55);
-  const bottomOffset = insets.bottom + (Platform.OS === 'ios' ? 166 : 130);
-  const floatingButtonBottom = insets.bottom + 106;
-  const toastBottom = insets.bottom + 49;
+  // 하단 요소는 탭바에 가려지는 높이(tabBarOverlap) 위에 둔다. iOS는 반투명 탭바 밑까지 화면이 그려지고,
+  // Android 네이티브 탭바는 화면을 탭바 위까지만 그린다. (iOS 값은 이전과 동일)
+  const tabBarOverlap = useTabBarOverlap();
+  const bottomOffset = tabBarOverlap + (Platform.OS === 'ios' ? 117 : 81);
+  const floatingButtonBottom = tabBarOverlap + 57;
+  const toastBottom = tabBarOverlap;
 
   const [hasPermission, setHasPermission] = useState(null);
   const [torchOn, setTorchOn] = useState(false);

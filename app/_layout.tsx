@@ -11,6 +11,7 @@ import { SyncProvider } from '../contexts/SyncContext';
 import { FeatureLockProvider } from '../contexts/FeatureLockContext';
 import { AppLockProvider } from '../contexts/AppLockContext';
 import { FeedbackProvider } from '../contexts/FeedbackContext';
+import PaperThemeProvider from '../contexts/PaperThemeProvider';
 import { FontAssets } from '../constants/Fonts';
 import { useTrackingPermission } from '../hooks/useTrackingPermission';
 import AppLockScreen from '../components/AppLockScreen';
@@ -43,6 +44,7 @@ export default function RootLayout() {
     <LanguageProvider>
       <FeatureLockProvider>
         <ThemeProvider>
+          <PaperThemeProvider>
           <FeedbackProvider>
           <AuthProvider>
             <AppLockProvider>
@@ -133,6 +135,7 @@ export default function RootLayout() {
             </AppLockProvider>
           </AuthProvider>
           </FeedbackProvider>
+          </PaperThemeProvider>
         </ThemeProvider>
       </FeatureLockProvider>
     </LanguageProvider>

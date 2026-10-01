@@ -799,7 +799,8 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   listContent: {
-    paddingBottom: 100,
+    // iOS는 반투명 탭바 밑까지 목록이 그려져 여유가 필요. Android 네이티브 탭바는 가리지 않는다
+    paddingBottom: Platform.OS === 'ios' ? 100 : 24,
   },
   item: {
     marginHorizontal: 15,
