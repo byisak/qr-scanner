@@ -2,7 +2,7 @@
   "expo": {
     "name": "QR Scanner",
     "slug": "qr-scanner",
-    "version": "1.1.2",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -62,7 +62,8 @@
       },
       "config": {
         "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
-      }
+      },
+      "buildNumber": "120"
     },
     "android": {
       "splash": {
@@ -104,7 +105,8 @@
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW"
-      ]
+      ],
+      "versionCode": 120
     },
     "web": {
       "favicon": "./assets/favicon.png",

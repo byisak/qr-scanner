@@ -692,22 +692,12 @@ export default function SettingsScreen() {
             onPress={() => {
               if (isLocked('realtimeSync')) {
                 showUnlockAlert('realtimeSync', () => {
-                  // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
-                  // if (realtimeSyncExplained) {
-                  //   router.push('/realtime-sync-settings');
-                  // } else {
-                  //   router.push('/realtime-sync-explanation');
-                  // }
-                  router.push('/realtime-sync-explanation');
+                  // 설명은 처음 한 번만 보여 주고, 그다음부터는 바로 설정으로
+                  router.push(realtimeSyncExplained ? '/realtime-sync-settings' : '/realtime-sync-explanation');
                 });
               } else {
-                // TODO: 배포 시 아래 주석 해제하고 router.push('/realtime-sync-explanation') 삭제
-                // if (realtimeSyncExplained) {
-                //   router.push('/realtime-sync-settings');
-                // } else {
-                //   router.push('/realtime-sync-explanation');
-                // }
-                router.push('/realtime-sync-explanation');
+                // 설명은 처음 한 번만 보여 주고, 그다음부터는 바로 설정으로
+                router.push(realtimeSyncExplained ? '/realtime-sync-settings' : '/realtime-sync-explanation');
               }
             }}
             activeOpacity={0.7}
