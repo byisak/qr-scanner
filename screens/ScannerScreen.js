@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   Platform,
+  AppState,
   Alert,
   Modal,
   ScrollView,
@@ -32,6 +33,7 @@ import { useFeedback } from '../contexts/FeedbackContext';
 import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import NewLabelPatternModal from '../components/NewLabelPatternModal';
 import ScanRegionOverlay from '../components/ScanRegionOverlay';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import useHardwareKeys from '../hooks/useHardwareKeys';
 import { parseKeyMap, confirmKeyOf, DEFAULT_KEY_MAP } from '../utils/hardwareKeys';
 import * as Clipboard from 'expo-clipboard';
@@ -113,6 +115,7 @@ function ScannerScreen() {
   const [torchOn, setTorchOn] = useState(false);
   const [isActive, setIsActive] = useState(false);
   const [canScan, setCanScan] = useState(true); // 스캔 허용 여부 (카메라는 계속 활성)
+  const appStateSubRef = useRef(null);
   const [hapticEnabled, setHapticEnabled] = useState(true); // 햅틱 피드백 활성화 여부
   const [scanSoundEnabled, setScanSoundEnabled] = useState(true); // 스캔 소리 활성화 여부
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 사진 저장 활성화 여부 (기본값: 켬)
@@ -594,6 +597,19 @@ function ScannerScreen() {
 
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
+      // 스캔 중엔 화면이 꺼지거나 어두워지지 않게 (가만히 들고 있으면 시스템이 밝기를 낮췄다)
+      activateKeepAwakeAsync('scanner').catch(() => {});
+      // 다른 앱에 갔다 오면 카메라 세션이 끊겨 검은 화면이 남았다 → 백그라운드에서 끄고 돌아오면 다시 켠다
+      const appStateSub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') {
+          setIsActive(true);
+          setCanScan(true);
+          isProcessingRef.current = false;
+        } else if (state === 'background' || state === 'inactive') {
+          setIsActive(false);
+        }
+      });
+      appStateSubRef.current = appStateSub;
       historyCacheDirtyRef.current = true; // 히스토리 캐시 무효화 (다른 화면에서 변경 가능)
       sessionSavedCodesRef.current.clear(); // 다른 화면에서 기록을 지웠을 수 있다. 이후 중복은 히스토리로 판정
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
@@ -834,6 +850,8 @@ function ScannerScreen() {
         isCapturingPhotoRef.current = false;
 
         clearAllTimers();
+        if (appStateSubRef.current) { appStateSubRef.current.remove(); appStateSubRef.current = null; }
+        deactivateKeepAwake('scanner').catch(() => {});
 
         // 카메라 비활성화를 지연시켜 탭 전환 애니메이션이 먼저 실행되도록 함
         cleanupTimeoutRef.current = setTimeout(() => {

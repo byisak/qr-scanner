@@ -490,6 +490,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     return { width: 1920, height: 1440 };
   }, [device, format]);
 
+  // 1D 바코드(Code128·Code39 등)는 한 줄만 읽어서 한 프레임 오독이 잦다 → 같은 값이 연속 N프레임 나와야 넘긴다.
+  // 2D(QR·데이터 매트릭스)는 오류 정정이 있어 첫 프레임을 그대로 쓴다
+  const ONE_D_STABLE_FRAMES = 3;
+  const ONE_D_STABLE_WINDOW_MS = 700;
+  const oneDStabilityRef = useRef({ value: null, type: null, count: 0, lastAt: 0 });
+  const isOneDType = (type) => /^(code-?128|code-?39|code-?93|ean-?13|ean-?8|upc-?e|upc-?a|itf|itf-?14|codabar)$/i.test(String(type || ''));
+
   // 바코드 스캔 콜백 핸들러 (JS 스레드에서 실행)
   const handleBarcodeDetected = useCallback((barcodeData) => {
     if (!onCodeScannedRef.current) {
@@ -498,6 +505,17 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
     // 바코드 타입 역매핑 (expo-camera 형식으로 변환)
     const normalizedType = BARCODE_TYPE_REVERSE_MAP[barcodeData.type] || barcodeData.type;
+
+    if (isOneDType(normalizedType)) {
+      const now = Date.now();
+      const st = oneDStabilityRef.current;
+      const same = st.value === barcodeData.value && st.type === normalizedType && now - st.lastAt < ONE_D_STABLE_WINDOW_MS;
+      st.value = barcodeData.value;
+      st.type = normalizedType;
+      st.count = same ? st.count + 1 : 1;
+      st.lastAt = now;
+      if (st.count < ONE_D_STABLE_FRAMES) return;
+    }
 
     // cornerPoints를 bounds 형식으로 변환
     let bounds = null;
