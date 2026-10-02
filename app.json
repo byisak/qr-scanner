@@ -106,7 +106,7 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.SYSTEM_ALERT_WINDOW"
       ],
-      "versionCode": 120
+      "versionCode": 121
     },
     "web": {
       "favicon": "./assets/favicon.png",
