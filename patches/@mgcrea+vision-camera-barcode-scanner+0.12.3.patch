@@ -33,7 +33,7 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..9be1236 100644
+index 54ea5ab..97be124 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 @@ -10,16 +10,32 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
@@ -84,7 +84,7 @@ index 54ea5ab..9be1236 100644
 +
 +  // ML Kit가 못 읽는 작은·레이저 각인(반전) 데이터 매트릭스용 ZXing 보조 판독.
 +  // 화면 가운데(조준 코너) 영역만, N프레임마다, 정상 → 반전 순으로 시도한다
-+  private static final int DM_FALLBACK_EVERY_N_FRAMES = 2;
++  private static final int DM_FALLBACK_EVERY_N_FRAMES = 4;
 +  private static final double DM_FALLBACK_CROP = 0.6; // 짧은 변 대비 가운데 정사각 크롭 비율
 +
 +  // QR 값 → 오류 정정 레벨(L/M/Q/H). ML Kit는 이 값을 주지 않아 ZXing으로 한 번 읽고 기억해 둔다

@@ -19,14 +19,29 @@ async function readJson(key, fallback) {
 }
 
 export async function loadLabelSettings() {
-  const [categories, ignored, discovered, autoSplit] = await Promise.all([
+  const [rawCategories, ignored, discovered, autoSplit] = await Promise.all([
     readJson(LABEL_CATEGORIES_KEY, []),
     readJson(LABEL_IGNORED_KEY, []),
     readJson(LABEL_DISCOVERED_KEY, []),
     AsyncStorage.getItem(LABEL_AUTO_SPLIT_KEY),
   ]);
+  let categories = Array.isArray(rawCategories) ? rawCategories : [];
+  // 그룹 연결 전에 만든 카테고리에는 같은 이름의 그룹을 지금 붙여 준다 (한 번만)
+  if (categories.some(c => c && !c.groupId)) {
+    const migrated = [];
+    for (const c of categories) {
+      if (c && !c.groupId) {
+        const group = await ensureGroupNamed(c.name);
+        migrated.push(group ? { ...c, groupId: group.id, routeToGroup: c.routeToGroup == null ? null : c.routeToGroup } : c);
+      } else {
+        migrated.push(c);
+      }
+    }
+    categories = migrated;
+    await AsyncStorage.setItem(LABEL_CATEGORIES_KEY, JSON.stringify(categories));
+  }
   return {
-    categories: Array.isArray(categories) ? categories : [],
+    categories,
     ignored: Array.isArray(ignored) ? ignored : [],
     discovered: Array.isArray(discovered) ? discovered : [],
     autoSplit: autoSplit === null ? true : autoSplit === 'true',
@@ -48,13 +63,42 @@ export async function addCategory(category) {
   return category;
 }
 
-// 코드로 새 카테고리를 만들어 저장 (이미 같은 서명이 있으면 그것을 돌려준다)
+// 이름이 같은 스캔 그룹이 있으면 그것을, 없으면 새로 만들어 돌려준다
+export async function ensureGroupNamed(name) {
+  const trimmed = (name || '').trim();
+  if (!trimmed) return null;
+  let groups = [];
+  try {
+    const raw = await AsyncStorage.getItem('scanGroups');
+    groups = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(groups)) groups = [];
+  } catch {
+    groups = [];
+  }
+  const existing = groups.find(g => g && g.name === trimmed);
+  if (existing) return existing;
+  const group = { id: `group_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: trimmed, createdAt: Date.now() };
+  await AsyncStorage.setItem('scanGroups', JSON.stringify([...groups, group]));
+  return group;
+}
+
+// 코드로 새 카테고리를 만들어 저장 (이미 같은 서명이 있으면 그것을 돌려준다).
+// 같은 이름의 그룹도 함께 만든다. 그 그룹에 자동 저장할지(routeToGroup)는 다음에 같은 패턴을 찍을 때 묻는다
 export async function createCategoryFromCode(code, t, name) {
   const { categories } = await loadLabelSettings();
   const category = buildCategory(code, categories, t);
   if (!category) return null;
   if (name && name.trim()) category.name = name.trim();
+  const group = await ensureGroupNamed(category.name);
+  if (group) {
+    category.groupId = group.id;
+    category.routeToGroup = null; // null = 아직 안 물어봄, true = 그 그룹에 저장, false = 묻지 않고 현재 그룹
+  }
   return addCategory(category);
+}
+
+export async function setCategoryRouting(id, routeToGroup) {
+  return updateCategory(id, { routeToGroup });
 }
 
 export async function updateCategory(id, patch) {

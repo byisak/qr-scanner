@@ -42,7 +42,7 @@ import { keyValueOf } from '../utils/labelParser';
 import { getActiveStocktake, recordStocktakeScan, summarizeStocktake, upsertStocktake } from '../utils/stocktake';
 import { isNfcSupported, startNfcListening, readNfcOnce } from '../utils/nfcReader';
 import { parseLabel, signatureOf, labelOfItem, formatLabelSummary, splitLabel } from '../utils/labelParser';
-import { loadLabelSettings, createCategoryFromCode, ignorePattern, addDiscovered } from '../utils/labelCategories';
+import { loadLabelSettings, createCategoryFromCode, ignorePattern, addDiscovered, setCategoryRouting } from '../utils/labelCategories';
 
 // 중복을 알린 뒤 같은 코드를 다시 알리기까지 쉬는 시간 (ms)
 const DUPLICATE_NOTICE_COOLDOWN = 2500;
@@ -876,6 +876,35 @@ function ScannerScreen() {
   const pendingClearTimerRef = useRef(null);
   const confirmBypassRef = useRef(null);        // 확정 중인 코드 값: 수동 대기·연속 노출 가드를 건너뛴다
   const lastConfirmedCodeRef = useRef(null);    // 방금 확정한 코드는 계속 비추는 동안 다시 묻지 않는다
+  // "이 카테고리는 ○○ 그룹에 계속 저장할까요?" — 묻는 동안 들어오는 프레임은 버린다
+  const routePromptOpenRef = useRef(false);
+  const askCategoryRouting = useCallback((prompt) => new Promise((resolve) => {
+    const groupName = (availableGroups.find(g => g.id === prompt.groupId) || {}).name || prompt.categoryName;
+    routePromptOpenRef.current = true;
+    const finish = async (choice) => {
+      routePromptOpenRef.current = false;
+      if (choice !== null) {
+        try {
+          await setCategoryRouting(prompt.categoryId, choice);
+          await reloadLabelSettings();
+        } catch (e) {
+          console.error('Save category routing error:', e);
+        }
+      }
+      resolve(choice === true);
+    };
+    Alert.alert(
+      t('labelCategories.routePromptTitle', { group: groupName }),
+      t('labelCategories.routePromptMessage', { category: prompt.categoryName, group: groupName }),
+      [
+        { text: t('labelCategories.routeLater'), style: 'cancel', onPress: () => finish(null) },
+        { text: t('labelCategories.routeNo'), onPress: () => finish(false) },
+        { text: t('labelCategories.routeYes'), onPress: () => finish(true) },
+      ],
+      { cancelable: false }
+    );
+  }), [availableGroups, t, reloadLabelSettings]);
+
   const holdPendingScan = useCallback((scanResult) => {
     const code = scanResult.data;
     const type = String(scanResult.type || 'qr').toLowerCase().replace(/^org\.(iso|gs1)\./, '');
@@ -963,10 +992,17 @@ function ScannerScreen() {
     };
     // 1) 라벨 카테고리
     const { categories, ignored, autoSplit } = labelSettingsRef.current;
+    let categoryGroupId = null;
     if (autoSplit) {
       const parsed = parseLabel(code, categories);
       if (parsed) {
         meta.extra = { categoryId: parsed.categoryId, values: parsed.values };
+        // 카테고리에 연결된 그룹: 승인됐으면 그 그룹에 저장, 아직 안 물어봤으면 이번에 묻는다
+        const category = categories.find(c => c.id === parsed.categoryId);
+        if (category && category.groupId && category.groupId !== currentGroupIdRef.current) {
+          if (category.routeToGroup === true) categoryGroupId = category.groupId;
+          else if (category.routeToGroup == null) meta.routePrompt = { categoryId: category.id, categoryName: category.name, groupId: category.groupId };
+        }
       } else {
         const signature = signatureOf(code);
         if (signature && !ignored.includes(signature)) meta.newPattern = { signature, sample: code };
@@ -987,6 +1023,8 @@ function ScannerScreen() {
       };
       meta.decision = evaluateRules(rules, input).decision;
     }
+    // 규칙이 그룹을 정하지 않았으면 카테고리 그룹을 쓴다
+    if (categoryGroupId && !meta.decision.targetGroupId) meta.decision.targetGroupId = categoryGroupId;
     // 3) 현재 위치가 지정돼 있으면 (이 코드가 새 위치가 되는 경우 빼고) 기록에 붙인다
     if (currentLocationRef.current && !meta.decision.actions.some(a => a.type === 'setLocation')) {
       meta.extra = { ...(meta.extra || {}), location: currentLocationRef.current.code };
@@ -1106,6 +1144,9 @@ function ScannerScreen() {
       const category = await createCategoryFromCode(pattern.sample, t, name);
       await reloadLabelSettings();
       if (category) {
+        if (category.groupId && !availableGroups.some(g => g.id === category.groupId)) {
+          setAvailableGroups(prev => [...prev, { id: category.groupId, name: category.name, createdAt: Date.now() }]);
+        }
         await applyCategoryToHistory(pattern.sample, category);
         setLastScannedCode(prev => (prev && prev.code === pattern.sample)
           ? { ...prev, categoryId: category.id, values: splitLabel(pattern.sample, category.delimiter) }
@@ -1115,7 +1156,7 @@ function ScannerScreen() {
     } catch (e) {
       console.error('Create category error:', e);
     }
-  }, [newPatternPrompt, t, reloadLabelSettings, applyCategoryToHistory, feedback]);
+  }, [newPatternPrompt, t, reloadLabelSettings, applyCategoryToHistory, feedback, availableGroups]);
 
   const handleNeverAskPattern = useCallback(async () => {
     const pattern = newPatternPrompt;
@@ -2034,7 +2075,7 @@ function ScannerScreen() {
       if (lastSeenAtRef.current.size > 200) lastSeenAtRef.current.clear();
 
       // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
-      if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current) return;
+      if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current || routePromptOpenRef.current) return;
 
       // 수동 확정 모드: 저장하지 않고 들고 있다가 확정 키/버튼에서 처리한다 (여러 코드 모드는 "결과 보기"가 확정)
       if (scanConfirmModeRef.current === 'manual' && !multiCodeModeEnabledRef.current && confirmBypassRef.current !== data) {
@@ -2222,6 +2263,10 @@ function ScannerScreen() {
       // 결정 단계: 라벨 분리·자동 규칙 결과. 모든 모드가 이 값을 쓴다
       const scanMeta = buildScanMeta(data, normalizedType);
       runRuleActions(scanMeta, data);
+      if (scanMeta.routePrompt && !scanMeta.decision.skip) {
+        const route = await askCategoryRouting(scanMeta.routePrompt);
+        if (route && !scanMeta.decision.targetGroupId) scanMeta.decision.targetGroupId = scanMeta.routePrompt.groupId;
+      }
       if (!scanMeta.decision.skip) recordStocktake(data, scanMeta);
       if (scanMeta.decision.skip) {
         // 규칙이 "저장하지 않음"으로 정한 코드: 알리고 스캔만 다시 켠다
@@ -2715,7 +2760,7 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern, holdPendingScan, runRuleActions, recordStocktake],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern, holdPendingScan, runRuleActions, recordStocktake, askCategoryRouting],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);

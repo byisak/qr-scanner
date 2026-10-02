@@ -2129,6 +2129,14 @@ export default {
   },
 
   labelCategories: {
+    routePromptTitle: '¿Guardar en el grupo "{{group}}"?',
+    routePromptMessage: 'Este código coincide con el patrón "{{category}}". A partir de ahora puede guardarse siempre en el grupo "{{group}}".',
+    routeYes: 'Guardar siempre ahí',
+    routeNo: 'Mantener grupo actual',
+    routeLater: 'Más tarde',
+    autoRoute: 'Guardar automáticamente en "{{group}}"',
+    autoRouteAsk: 'Se te preguntará la próxima vez que escanees este patrón',
+    autoRouteDesc: 'Si está activo, este patrón se guarda en ese grupo sin importar el grupo seleccionado',
     created: 'Categoría creada: {{name}}',
     edit: 'Editar categoría',
     discoveredSnackbar: 'Nuevo patrón detectado · crea una categoría en Ajustes',

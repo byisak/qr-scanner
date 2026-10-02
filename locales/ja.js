@@ -2129,6 +2129,14 @@ export default {
   },
 
   labelCategories: {
+    routePromptTitle: '「{{group}}」グループに保存しますか？',
+    routePromptMessage: '「{{category}}」パターンのコードです。今後このパターンは「{{group}}」グループに常に保存できます。',
+    routeYes: '常に保存',
+    routeNo: '現在のグループのまま',
+    routeLater: '後で',
+    autoRoute: '「{{group}}」グループに自動保存',
+    autoRouteAsk: '次にこのパターンを読んだときに確認します',
+    autoRouteDesc: 'オンにすると、どのグループを選んでいてもこのパターンはそのグループに保存されます',
     created: 'カテゴリを作成しました: {{name}}',
     edit: 'カテゴリを編集',
     discoveredSnackbar: '新しいラベル形式を発見 · 設定でカテゴリにできます',

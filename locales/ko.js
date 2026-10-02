@@ -2151,6 +2151,14 @@ export default {
   },
 
   labelCategories: {
+    routePromptTitle: '"{{group}}" 그룹에 저장할까요?',
+    routePromptMessage: '"{{category}}" 패턴의 코드예요. 앞으로 이 패턴은 "{{group}}" 그룹에 계속 저장할 수 있어요.',
+    routeYes: '계속 저장',
+    routeNo: '현재 그룹 유지',
+    routeLater: '나중에',
+    autoRoute: '"{{group}}" 그룹에 자동 저장',
+    autoRouteAsk: '다음에 이 패턴을 찍을 때 물어봐요',
+    autoRouteDesc: '켜면 이 패턴은 어느 그룹을 보고 있어도 그 그룹에 저장돼요',
     created: '카테고리를 만들었어요: {{name}}',
     edit: '카테고리 편집',
     discoveredSnackbar: '새 라벨 형식 발견 · 설정에서 카테고리로 만들 수 있어요',

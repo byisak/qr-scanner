@@ -9,8 +9,10 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -34,6 +36,8 @@ export default function LabelCategoryEditScreen() {
   const [name, setName] = useState('');
   const [fields, setFields] = useState([]);
   const [keyField, setKeyField] = useState(0);
+  const [routeToGroup, setRouteToGroup] = useState(null); // null 아직 안 물어봄 / true / false
+  const [groupName, setGroupName] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -54,6 +58,17 @@ export default function LabelCategoryEditScreen() {
           })
         );
         setKeyField(Number.isInteger(found.keyField) ? found.keyField : 0);
+        setRouteToGroup(found.routeToGroup == null ? null : !!found.routeToGroup);
+        if (found.groupId) {
+          try {
+            const raw = await AsyncStorage.getItem('scanGroups');
+            const groups = raw ? JSON.parse(raw) : [];
+            const g = Array.isArray(groups) ? groups.find(x => x.id === found.groupId) : null;
+            setGroupName(g ? g.name : '');
+          } catch {
+            setGroupName('');
+          }
+        }
       } catch (error) {
         console.error('[LabelCategoryEdit] load error:', error);
       }
@@ -82,6 +97,7 @@ export default function LabelCategoryEditScreen() {
         name: name.trim() || category.name,
         fields: fields.map(f => (f || '').trim()),
         keyField,
+        routeToGroup,
       });
       feedback.success(t('common.save'));
       router.back();
@@ -181,6 +197,28 @@ export default function LabelCategoryEditScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* 연결된 그룹 + 자동 저장 */}
+              {category.groupId ? (
+                <View style={[cardStyle, { marginBottom: 16 }]}>
+                  <View style={styles.routeRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.fieldLabel, { color: colors.text, fontFamily: fonts.semiBold, marginBottom: 2 }]}>
+                        {t('labelCategories.autoRoute', { group: groupName || category.name })}
+                      </Text>
+                      <Text style={[styles.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                        {routeToGroup == null ? t('labelCategories.autoRouteAsk') : t('labelCategories.autoRouteDesc')}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={routeToGroup === true}
+                      onValueChange={(v) => setRouteToGroup(v)}
+                      trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                </View>
+              ) : null}
 
               {/* 필드 이름 + 대표 필드 */}
               <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
@@ -368,6 +406,11 @@ const styles = StyleSheet.create({
   patternValue: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   fieldRow: {
     flexDirection: 'row',

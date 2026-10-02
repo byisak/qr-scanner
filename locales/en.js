@@ -2161,6 +2161,14 @@ export default {
   },
 
   labelCategories: {
+    routePromptTitle: 'Save to group "{{group}}"?',
+    routePromptMessage: 'This code matches the "{{category}}" pattern. From now on, this pattern can always be saved to the "{{group}}" group.',
+    routeYes: 'Always save there',
+    routeNo: 'Keep current group',
+    routeLater: 'Later',
+    autoRoute: 'Auto-save to group "{{group}}"',
+    autoRouteAsk: 'You will be asked the next time this pattern is scanned',
+    autoRouteDesc: 'When on, this pattern is saved to that group no matter which group is selected',
     created: 'Category created: {{name}}',
     edit: 'Edit category',
     discoveredSnackbar: 'New label pattern found · create a category in Settings',

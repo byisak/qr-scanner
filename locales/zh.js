@@ -2129,6 +2129,14 @@ export default {
   },
 
   labelCategories: {
+    routePromptTitle: '保存到“{{group}}”分组？',
+    routePromptMessage: '此条码符合“{{category}}”模式。以后该模式可一直保存到“{{group}}”分组。',
+    routeYes: '一直保存',
+    routeNo: '保留当前分组',
+    routeLater: '稍后',
+    autoRoute: '自动保存到“{{group}}”分组',
+    autoRouteAsk: '下次扫描到该模式时会询问',
+    autoRouteDesc: '开启后，无论当前选择哪个分组，该模式都会保存到那个分组',
     created: '已创建类别：{{name}}',
     edit: '编辑类别',
     discoveredSnackbar: '发现新标签格式 · 可在设置中创建类别',
