@@ -33,7 +33,7 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..97be124 100644
+index 54ea5ab..ea8d850 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 @@ -10,16 +10,32 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
@@ -70,7 +70,7 @@ index 54ea5ab..97be124 100644
  import org.jetbrains.annotations.NotNull;
  import org.jetbrains.annotations.Nullable;
  
-@@ -29,6 +45,31 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -29,10 +45,41 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
@@ -81,6 +81,8 @@ index 54ea5ab..97be124 100644
 +  // 장비 명판처럼 밝은 코드 옆에 일반 QR 스티커가 같이 찍히면 반전 재시도가 영영 안 돌았다
 +  private static final int INVERT_RETRY_EVERY_N_FRAMES_WITH_RESULTS = 6;
 +  private int frameCount = 0;
++  // 반전 재시도는 화면 가운데 정사각 영역만 본다. 1080p 전체를 복사·판독하면 카메라 스레드가 밀려 프리뷰가 끊겼다
++  private static final double INVERT_CROP = 0.8; // 짧은 변 대비 가운데 정사각 크롭 비율
 +
 +  // ML Kit가 못 읽는 작은·레이저 각인(반전) 데이터 매트릭스용 ZXing 보조 판독.
 +  // 화면 가운데(조준 코너) 영역만, N프레임마다, 정상 → 반전 순으로 시도한다
@@ -99,10 +101,18 @@ index 54ea5ab..97be124 100644
 +      };
 +  private static final Map<String, Integer> ecAttempts = new LinkedHashMap<>();
 +
++  // 프레임 덤프 저장 위치(cacheDir)를 얻기 위해 들고 있는다
++  private final android.content.Context appContext;
++
    CodeScannerProcessorPlugin(@NotNull VisionCameraProxy proxy,
                               @Nullable Map<String, Object> options) {
      Log.d(TAG,
-@@ -40,31 +81,78 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+           "CodeScannerProcessorPlugin initialized with options: " + options);
++    appContext = proxy.getContext().getApplicationContext();
+   }
+ 
+   @Nullable
+@@ -40,46 +87,443 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -140,12 +150,22 @@ index 54ea5ab..97be124 100644
 +    final int sensorHeight = mediaImage.getHeight();
 +    final int rotation = rotationDegrees;
 +
++    // 개발자 옵션: 단계별 처리 시간(ms)과 값 없는 검출 박스 수를 결과 끝에 _meta 항목으로 실어 보낸다.
++    // JS 훅(useBarcodeScanner 패치)이 _meta를 떼어 onMeta로 넘기므로 바코드 목록에는 섞이지 않는다
++    boolean debugTiming = params != null && Boolean.TRUE.equals(params.get("debugTiming"));
++    boolean dumpFrame = params != null && Boolean.TRUE.equals(params.get("dumpFrame"));
++    long tStart = System.nanoTime();
++    long tMlKit = 0, tInvert = 0, tZxing = 0;
++    int emptyBoxes = 0;
++
      List<Object> barcodes = new ArrayList<>();
      try {
        List<Barcode> barcodeList = Tasks.await(scanner.process(inputImage));
 -      barcodeList.forEach(
 -          barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
++      tMlKit = System.nanoTime() - tStart;
 +      for (Barcode barcode : barcodeList) {
++        if (barcode.getRawValue() == null || barcode.getRawValue().isEmpty()) emptyBoxes++;
 +        Map<String, Object> converted =
 +            toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, sensorWidth, sensorHeight);
 +        if (barcode.getFormat() == Barcode.FORMAT_QR_CODE) {
@@ -165,33 +185,100 @@ index 54ea5ab..97be124 100644
 +      }
 +      // 어두운 배경 + 밝은 코드용 반전 재시도. Y 평면만 뒤집은 NV21로 만들어 비용을 줄인다
 +      if (retryInverted) {
-+        InputImage invertedImage = getInvertedInputImage(mediaImage, rotationDegrees);
++        long t0 = System.nanoTime();
++        // 짝수로 맞춘다 (NV21 색차 평면 크기)
++        int side = ((int) (Math.min(sensorWidth, sensorHeight) * INVERT_CROP)) & ~1;
++        int cropLeft = ((sensorWidth - side) / 2) & ~1;
++        int cropTop = ((sensorHeight - side) / 2) & ~1;
++        InputImage invertedImage = getInvertedInputImage(mediaImage, rotationDegrees, cropLeft, cropTop, side);
 +        if (invertedImage != null) {
 +          List<Barcode> invertedList = Tasks.await(scanner.process(invertedImage));
 +          for (Barcode barcode : invertedList) {
++            if (barcode.getRawValue() == null || barcode.getRawValue().isEmpty()) emptyBoxes++;
 +            if (!containsValue(barcodes, barcode.getRawValue())) {
-+              barcodes.add(toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, sensorWidth, sensorHeight));
++              Map<String, Object> converted = toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, side, side);
++              barcodes.add(offsetSensorSpace(converted, cropLeft, cropTop));
 +            }
 +          }
 +        }
++        tInvert = System.nanoTime() - t0;
 +      }
 +
-+      // 데이터 매트릭스를 찾는 중인데 ML Kit가 못 찾았으면 ZXing으로 가운데 영역을 한 번 더 본다
++      // 데이터 매트릭스를 찾는 중인데 ML Kit가 못 찾았으면 ZXing으로 가운데 영역을 한 번 더 본다.
++      // 반전 재시도를 한 프레임은 건너뛴다 — 한 프레임에 판독이 셋 겹치면 프리뷰가 끊겼다
 +      int formats = getFormatsBitmapFromParams(params);
 +      boolean wantsDataMatrix = formats == Barcode.FORMAT_ALL_FORMATS || (formats & Barcode.FORMAT_DATA_MATRIX) != 0;
-+      if (wantsDataMatrix && frameCount % DM_FALLBACK_EVERY_N_FRAMES == 0 && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX)) {
++      if (wantsDataMatrix && !retryInverted && frameCount % DM_FALLBACK_EVERY_N_FRAMES == 0 && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX)) {
++        long t0 = System.nanoTime();
 +        Map<String, Object> dm = decodeDataMatrixWithZxing(mediaImage);
 +        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
 +          barcodes.add(dm);
 +        }
++        tZxing = System.nanoTime() - t0;
 +      }
      } catch (ExecutionException | InterruptedException e) {
        Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
        return null;
-@@ -73,13 +161,273 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+     }
+ 
++    if (debugTiming || dumpFrame) {
++      Map<String, Object> meta = new java.util.HashMap<>();
++      meta.put("_meta", Boolean.TRUE);
++      meta.put("width", sensorWidth);
++      meta.put("height", sensorHeight);
++      meta.put("rotation", rotation);
++      meta.put("mlkitMs", tMlKit / 1e6);
++      meta.put("invertMs", tInvert / 1e6);
++      meta.put("zxingMs", tZxing / 1e6);
++      meta.put("totalMs", (System.nanoTime() - tStart) / 1e6);
++      meta.put("codes", barcodes.size());
++      meta.put("emptyBoxes", emptyBoxes);
++      if (dumpFrame) {
++        String path = dumpLuminance(mediaImage);
++        if (path != null) meta.put("dumpPath", path);
++      }
++      barcodes.add(meta);
++    }
++
      return barcodes;
    }
  
++  /**
++   * 현재 프레임의 밝기(Y) 평면을 PGM(P5)으로 cacheDir/frame-dumps/ 에 저장한다 (센서 좌표, 회전 전).
++   * 사진 대신 실제 분석 프레임으로 scripts/dm-bench 를 돌리기 위한 것. 저장한 경로를 돌려준다
++   */
+   @Nullable
+-  private InputImage getInputImageFromFrame(@NotNull Frame frame) {
++  private String dumpLuminance(Image image) {
+     try {
+-      Image mediaImage = frame.getImage();
+-      return InputImage.fromMediaImage(mediaImage, 0);
+-    } catch (FrameInvalidError e) {
+-      Log.e(TAG, "Received an invalid frame.");
++      int width = image.getWidth();
++      int height = image.getHeight();
++      Image.Plane yPlane = image.getPlanes()[0];
++      ByteBuffer yBuffer = yPlane.getBuffer();
++      int rowStride = yPlane.getRowStride();
++      java.io.File dir = new java.io.File(appContext.getCacheDir(), "frame-dumps");
++      if (!dir.exists() && !dir.mkdirs()) return null;
++      java.io.File out = new java.io.File(dir, "frame-" + System.currentTimeMillis() + ".pgm");
++      try (java.io.BufferedOutputStream os = new java.io.BufferedOutputStream(new java.io.FileOutputStream(out))) {
++        os.write(("P5\n" + width + " " + height + "\n255\n").getBytes("US-ASCII"));
++        byte[] row = new byte[width];
++        for (int y = 0; y < height; y++) {
++          yBuffer.position(y * rowStride);
++          yBuffer.get(row, 0, width);
++          os.write(row);
++        }
++      }
++      return out.getAbsolutePath();
++    } catch (Exception e) {
++      Log.e(TAG, "Failed to dump frame: " + e.getMessage());
++      return null;
++    }
++  }
++
 +  /**
 +   * QR 오류 정정 레벨을 결과에 붙인다. 같은 값은 캐시를 쓰고, 처음 보는 값만
 +   * 바운딩 박스 주변의 밝기(Y) 평면을 잘라 ZXing으로 디코드한다 (센서 좌표 기준, 회전 무관).
@@ -331,6 +418,28 @@ index 54ea5ab..97be124 100644
 +    return 0;
 +  }
 +
++  /** 크롭 영역 기준 센서 좌표를 프레임 전체 기준으로 옮긴다 */
++  @SuppressWarnings("unchecked")
++  private static Map<String, Object> offsetSensorSpace(Map<String, Object> barcode, int dx, int dy) {
++    Object cornersObj = barcode.get("cornerPoints");
++    if (cornersObj instanceof List) {
++      for (Object pointObj : (List<Object>) cornersObj) {
++        Map<String, Object> point = (Map<String, Object>) pointObj;
++        point.put("x", ((Number) point.get("x")).intValue() + dx);
++        point.put("y", ((Number) point.get("y")).intValue() + dy);
++      }
++    }
++    Object boxObj = barcode.get("boundingBox");
++    if (boxObj instanceof Map) {
++      Map<String, Object> box = (Map<String, Object>) boxObj;
++      box.put("left", ((Number) box.get("left")).intValue() + dx);
++      box.put("right", ((Number) box.get("right")).intValue() + dx);
++      box.put("top", ((Number) box.get("top")).intValue() + dy);
++      box.put("bottom", ((Number) box.get("bottom")).intValue() + dy);
++    }
++    return barcode;
++  }
++
 +  @SuppressWarnings("unchecked")
 +  private static boolean containsValue(List<Object> barcodes, @Nullable String value) {
 +    if (value == null) return false;
@@ -356,14 +465,9 @@ index 54ea5ab..97be124 100644
 +   * 정상 → 반전(어두운 바탕에 밝게 새긴 명판) 순으로 시도한다.
 +   * 결과는 BarcodeConverter와 같은 모양(rawValue·format·cornerPoints·boundingBox, 센서 좌표)으로 만든다.
 +   */
-   @Nullable
--  private InputImage getInputImageFromFrame(@NotNull Frame frame) {
++  @Nullable
 +  private static Map<String, Object> decodeDataMatrixWithZxing(Image image) {
-     try {
--      Image mediaImage = frame.getImage();
--      return InputImage.fromMediaImage(mediaImage, 0);
--    } catch (FrameInvalidError e) {
--      Log.e(TAG, "Received an invalid frame.");
++    try {
 +      int width = image.getWidth();
 +      int height = image.getHeight();
 +      int side = (int) (Math.min(width, height) * DM_FALLBACK_CROP);
@@ -434,40 +538,37 @@ index 54ea5ab..97be124 100644
 +  }
 +
 +  /**
-+   * 밝기(Y)만 반전한 NV21 이미지. 색차(UV)는 중립값으로 채워 회색조로 만든다.
-+   * 회전값을 같이 넘기므로 일반 경로와 같은 좌표계로 결과가 나온다.
++   * 센서 좌표 (left, top)부터 side×side 영역을 잘라 밝기(Y)만 반전한 NV21 이미지.
++   * 색차(UV)는 중립값으로 채워 회색조로 만든다. 회전값을 같이 넘기므로 결과는 크롭 영역 기준
++   * 똑바로 선 좌표로 나온다 → toSensorSpace(side, side) 뒤 offsetSensorSpace로 옮긴다.
 +   */
 +  @Nullable
-+  private InputImage getInvertedInputImage(@NotNull Image image, int rotationDegrees) {
++  private InputImage getInvertedInputImage(@NotNull Image image, int rotationDegrees, int left, int top, int side) {
 +    try {
-+      int width = image.getWidth();
-+      int height = image.getHeight();
 +      Image.Plane yPlane = image.getPlanes()[0];
 +      ByteBuffer yBuffer = yPlane.getBuffer();
 +      int yRowStride = yPlane.getRowStride();
 +
-+      int ySize = width * height;
++      int ySize = side * side;
 +      byte[] nv21 = new byte[ySize + ySize / 2];
-+      byte[] rowBuf = new byte[width];
 +
-+      for (int row = 0; row < height; row++) {
-+        yBuffer.position(row * yRowStride);
-+        yBuffer.get(rowBuf, 0, width);
-+        int base = row * width;
-+        for (int col = 0; col < width; col++) {
-+          nv21[base + col] = (byte) (255 - (rowBuf[col] & 0xFF));
-+        }
++      for (int row = 0; row < side; row++) {
++        yBuffer.position((top + row) * yRowStride + left);
++        yBuffer.get(nv21, row * side, side);
++      }
++      for (int i = 0; i < ySize; i++) {
++        nv21[i] = (byte) (255 - (nv21[i] & 0xFF));
 +      }
 +      Arrays.fill(nv21, ySize, nv21.length, (byte) 128);
 +
-+      return InputImage.fromByteArray(nv21, width, height, rotationDegrees,
++      return InputImage.fromByteArray(nv21, side, side, rotationDegrees,
 +                                      InputImage.IMAGE_FORMAT_NV21);
 +    } catch (Exception e) {
 +      Log.e(TAG, "Failed to create inverted image: " + e.getMessage());
        return null;
      }
    }
-@@ -105,15 +453,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +549,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");
@@ -493,6 +594,126 @@ index 54ea5ab..97be124 100644
      }
      return barcodeFormats.isEmpty() ? Barcode.FORMAT_ALL_FORMATS
                                      : barcodeFormatsToBitmap(barcodeFormats);
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
+index 121a08f..3fe2c4d 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
+@@ -354,7 +354,7 @@ var visionCameraProcessorPlugin = import_react_native_vision_camera.VisionCamera
+   MODULE_NAME,
+   {}
+ );
+-var scanCodes = (frame, options) => {
++var scanCodesWithMeta = (frame, options) => {
+   "worklet";
+   if (visionCameraProcessorPlugin == null) {
+     throw new Error(`Failed to load Frame Processor Plugin "${MODULE_NAME}"!`);
+@@ -370,9 +370,17 @@ var scanCodes = (frame, options) => {
+       `Native frame processor ${MODULE_NAME} failed to return a proper array!`,
+       nativeCodes
+     );
+-    return [];
++    return { codes: [], meta: null };
+   }
+-  return nativeCodes.slice().map((nativeBarcode) => normalizeNativeBarcode(nativeBarcode, frame));
++  // 네이티브가 끝에 붙이는 _meta(처리 시간·덤프 경로)는 바코드가 아니므로 떼어 둔다
++  const last = nativeCodes[nativeCodes.length - 1];
++  const meta = last && last._meta === true ? last : null;
++  const codes = meta ? nativeCodes.slice(0, -1) : nativeCodes.slice();
++  return { codes: codes.map((nativeBarcode) => normalizeNativeBarcode(nativeBarcode, frame)), meta };
++};
++var scanCodes = (frame, options) => {
++  "worklet";
++  return scanCodesWithMeta(frame, options).codes;
+ };
+ 
+ // src/hooks/useLatestSharedValue.ts
+@@ -395,7 +403,9 @@ var useBarcodeScanner = ({
+   resizeMode = "cover",
+   scanMode = "continuous",
+   isMountedRef,
+-  fps = 5
++  fps = 5,
++  extraOptions,
++  onMeta
+ }) => {
+   const layoutRef = (0, import_react_native_worklets_core2.useSharedValue)({ width: 0, height: 0 });
+   const onLayout = (event) => {
+@@ -428,7 +438,14 @@ var useBarcodeScanner = ({
+           const { x, y, width: width2, height: height2 } = regionOfInterest;
+           options.regionOfInterest = [x, y, width2, height2];
+         }
+-        const barcodes = scanCodes(frame, options);
++        // extraOptions: 매 프레임 네이티브에 같이 넘길 값(공유값). debugTiming·dumpFrame 같은 개발자 옵션용
++        if (extraOptions !== void 0 && extraOptions.value) {
++          Object.assign(options, extraOptions.value);
++        }
++        const { codes: barcodes, meta } = scanCodesWithMeta(frame, options);
++        if (meta && onMeta) {
++          onMeta(meta, frame);
++        }
+         if (barcodes.length > 0) {
+           if (scanMode === "continuous") {
+             onBarcodeScanned(barcodes, frame);
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
+index 940e7d4..fcf6460 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
+@@ -293,7 +293,7 @@ var visionCameraProcessorPlugin = VisionCameraProxy.initFrameProcessorPlugin(
+   MODULE_NAME,
+   {}
+ );
+-var scanCodes = (frame, options) => {
++var scanCodesWithMeta = (frame, options) => {
+   "worklet";
+   if (visionCameraProcessorPlugin == null) {
+     throw new Error(`Failed to load Frame Processor Plugin "${MODULE_NAME}"!`);
+@@ -309,9 +309,17 @@ var scanCodes = (frame, options) => {
+       `Native frame processor ${MODULE_NAME} failed to return a proper array!`,
+       nativeCodes
+     );
+-    return [];
++    return { codes: [], meta: null };
+   }
+-  return nativeCodes.slice().map((nativeBarcode) => normalizeNativeBarcode(nativeBarcode, frame));
++  // 네이티브가 끝에 붙이는 _meta(처리 시간·덤프 경로)는 바코드가 아니므로 떼어 둔다
++  const last = nativeCodes[nativeCodes.length - 1];
++  const meta = last && last._meta === true ? last : null;
++  const codes = meta ? nativeCodes.slice(0, -1) : nativeCodes.slice();
++  return { codes: codes.map((nativeBarcode) => normalizeNativeBarcode(nativeBarcode, frame)), meta };
++};
++var scanCodes = (frame, options) => {
++  "worklet";
++  return scanCodesWithMeta(frame, options).codes;
+ };
+ 
+ // src/hooks/useLatestSharedValue.ts
+@@ -334,7 +342,9 @@ var useBarcodeScanner = ({
+   resizeMode = "cover",
+   scanMode = "continuous",
+   isMountedRef,
+-  fps = 5
++  fps = 5,
++  extraOptions,
++  onMeta
+ }) => {
+   const layoutRef = useSharedValue2({ width: 0, height: 0 });
+   const onLayout = (event) => {
+@@ -367,7 +377,14 @@ var useBarcodeScanner = ({
+           const { x, y, width: width2, height: height2 } = regionOfInterest;
+           options.regionOfInterest = [x, y, width2, height2];
+         }
+-        const barcodes = scanCodes(frame, options);
++        // extraOptions: 매 프레임 네이티브에 같이 넘길 값(공유값). debugTiming·dumpFrame 같은 개발자 옵션용
++        if (extraOptions !== void 0 && extraOptions.value) {
++          Object.assign(options, extraOptions.value);
++        }
++        const { codes: barcodes, meta } = scanCodesWithMeta(frame, options);
++        if (meta && onMeta) {
++          onMeta(meta, frame);
++        }
+         if (barcodes.length > 0) {
+           if (scanMode === "continuous") {
+             onBarcodeScanned(barcodes, frame);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 index 28f1634..6644b4f 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
@@ -650,3 +871,94 @@ index 28f1634..6644b4f 100644
    return [observationRepresentation copy];
  }
  
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
+index b2e706a..0a75491 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
+@@ -7,7 +7,7 @@ import {
+   type Frame,
+ } from "react-native-vision-camera";
+ import { Worklets, useSharedValue } from "react-native-worklets-core";
+-import { ScanBarcodesOptions, scanCodes } from "src/module";
++import { ScanBarcodesOptions, scanCodesWithMeta } from "src/module";
+ import type { Barcode, BarcodeType, Highlight, Rect, Size } from "src/types";
+ import { computeHighlights } from "..";
+ import { useLatestSharedValue } from "./useLatestSharedValue";
+@@ -23,6 +23,10 @@ export type UseBarcodeScannerOptions = {
+   resizeMode?: ResizeMode;
+   scanMode?: "continuous" | "once";
+   isMountedRef?: { value: boolean };
++  /** 매 프레임 네이티브에 같이 넘길 값(공유값). debugTiming·dumpFrame 같은 개발자 옵션용 */
++  extraOptions?: { value: Record<string, unknown> | null };
++  /** 네이티브가 결과 끝에 붙인 _meta(처리 시간·덤프 경로) */
++  onMeta?: (meta: Record<string, unknown>, frame: Frame) => void;
+ };
+ 
+ export const useBarcodeScanner = ({
+@@ -34,6 +38,8 @@ export const useBarcodeScanner = ({
+   scanMode = "continuous",
+   isMountedRef,
+   fps = 5,
++  extraOptions,
++  onMeta,
+ }: UseBarcodeScannerOptions) => {
+   // Layout of the <Camera /> component
+   const layoutRef = useSharedValue<Size>({ width: 0, height: 0 });
+@@ -75,7 +81,13 @@ export const useBarcodeScanner = ({
+           const { x, y, width, height } = regionOfInterest;
+           options.regionOfInterest = [x, y, width, height];
+         }
+-        const barcodes = scanCodes(frame, options);
++        if (extraOptions !== undefined && extraOptions.value) {
++          Object.assign(options, extraOptions.value);
++        }
++        const { codes: barcodes, meta } = scanCodesWithMeta(frame, options);
++        if (meta && onMeta) {
++          onMeta(meta, frame);
++        }
+ 
+         if (barcodes.length > 0) {
+           // If the scanMode is "continuous", we stream all the barcodes responses
+diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/module.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/module.ts
+index 4b2a3ad..559c532 100644
+--- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/module.ts
++++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/module.ts
+@@ -54,10 +54,12 @@ export type ScanBarcodesOptions = {
+   regionOfInterest?: [number, number, number, number];
+ };
+ 
+-export const scanCodes = (
++export type ScanMeta = Record<string, unknown> & { _meta: true };
++
++export const scanCodesWithMeta = (
+   frame: Frame,
+   options?: ScanBarcodesOptions,
+-): Barcode[] => {
++): { codes: Barcode[]; meta: ScanMeta | null } => {
+   "worklet";
+   if (visionCameraProcessorPlugin == null) {
+     throw new Error(`Failed to load Frame Processor Plugin "${MODULE_NAME}"!`);
+@@ -78,9 +80,19 @@ export const scanCodes = (
+       `Native frame processor ${MODULE_NAME} failed to return a proper array!`,
+       nativeCodes,
+     );
+-    return [];
++    return { codes: [], meta: null };
+   }
+-  return nativeCodes
+-    .slice()
+-    .map((nativeBarcode) => normalizeNativeBarcode(nativeBarcode, frame));
++  // 네이티브가 끝에 붙이는 _meta(처리 시간·덤프 경로)는 바코드가 아니므로 떼어 둔다
++  const last = nativeCodes[nativeCodes.length - 1] as unknown as ScanMeta | undefined;
++  const meta = last && last._meta === true ? last : null;
++  const codes = meta ? nativeCodes.slice(0, -1) : nativeCodes.slice();
++  return { codes: codes.map((nativeBarcode) => normalizeNativeBarcode(nativeBarcode, frame)), meta };
++};
++
++export const scanCodes = (
++  frame: Frame,
++  options?: ScanBarcodesOptions,
++): Barcode[] => {
++  "worklet";
++  return scanCodesWithMeta(frame, options).codes;
+ };

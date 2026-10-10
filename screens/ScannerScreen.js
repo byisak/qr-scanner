@@ -196,6 +196,7 @@ function ScannerScreen() {
   const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 값 표시
   const [scanRegionMode, setScanRegionMode] = useState('full'); // 스캔 영역 제한: full | center | band
   const [scanRegionDebug, setScanRegionDebug] = useState(false); // 개발자 옵션: 영역 밖 판정 표시
+  const [scanTimingDebug, setScanTimingDebug] = useState(false); // 개발자 옵션: 네이티브 단계별 처리 시간 표시
   const [scanRegion, setScanRegion] = useState(null); // 오버레이가 잰 영역 사각형 (dp)
   const reticleRef = useRef(null);                     // 조준 코너 (confirm/shake)
   // 수량 누적: 같은 코드를 다시 찍으면 중복 알림 대신 수량 +1 (GS1 수량이 있으면 그만큼)
@@ -633,7 +634,7 @@ function ScannerScreen() {
             'scanResultMode', 'multiCodeModeEnabled', 'multiCodeShowValues', 'singleCodeShowValue',
             'resultWindowAutoOpen', 'lotteryScanEnabled', 'dontAskLotteryPrompt',
             'selectedGroupId', 'scanGroups', 'realtimeSyncEnabled',
-            'scanRegionMode', 'scanRegionDebug', 'scanConfirmMode', 'hardwareKeyMap',
+            'scanRegionMode', 'scanRegionDebug', 'scanTimingDebug', 'scanConfirmMode', 'hardwareKeyMap',
             'quantityMode', 'nfcReadEnabled',
           ];
           const settingsData = await AsyncStorage.multiGet(settingsKeys);
@@ -712,6 +713,7 @@ function ScannerScreen() {
           setSingleCodeShowValue(settings['singleCodeShowValue'] === 'true');
           setScanRegionMode(['center', 'band'].includes(settings['scanRegionMode']) ? settings['scanRegionMode'] : 'full');
           setScanRegionDebug(settings['scanRegionDebug'] === 'true');
+          setScanTimingDebug(settings['scanTimingDebug'] === 'true');
           setHardwareKeyMap(parseKeyMap(settings['hardwareKeyMap']));
           const qtyMode = settings['quantityMode'] === 'true';
           setQuantityMode(qtyMode);
@@ -2856,10 +2858,17 @@ function ScannerScreen() {
         if (pendingMultiScanData) handleViewMultiResults();
         else feedback.info(t('scanConfirm.nothingToConfirm'));
         break;
+      case 'dumpFrame':
+        // 개발자용: 다음 분석 프레임을 PGM으로 저장 (adb pull로 꺼내 scripts/dm-bench 에 쓴다)
+        cameraRef.current?.requestFrameDump?.();
+        break;
       default:
         break;
     }
   }, [pendingMultiScanData, handleViewMultiResults, commitPendingScan, toggleTorch, lastScannedCode, handleOpenResultWindow, feedback, t]);
+  const handleFrameDumped = useCallback((path) => {
+    feedback.info(t('scanner.frameDumped', { path: path.replace(/^.*\/cache\//, 'cache/') }));
+  }, [feedback, t]);
   useHardwareKeys({ keyMap: hardwareKeyMap, onAction: handleHardwareKeyAction });
 
   // 수동 확정 안내: 확정 키가 있으면 "볼륨 위 키를 눌러 확정", 없으면 화면 버튼 안내
@@ -3118,6 +3127,8 @@ function ScannerScreen() {
         onPrimaryHighlightChange={handlePrimaryHighlightChange}
         scanRegion={scanRegion}
         scanRegionDebug={scanRegionDebug}
+        scanTimingDebug={scanTimingDebug}
+        onFrameDumped={handleFrameDumped}
       />
 
       {/* 스캔 영역 제한 표시 (전체면 아무것도 안 그린다) */}

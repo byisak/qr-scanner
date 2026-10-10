@@ -30,6 +30,7 @@ const ACTION_ICONS = {
   result: 'open-outline',
   group: 'folder-open-outline',
   multiResults: 'albums-outline',
+  dumpFrame: 'bug-outline',
 };
 
 export default function HardwareKeysScreen() {

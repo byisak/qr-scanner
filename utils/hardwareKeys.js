@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const HARDWARE_KEY_MAP_KEY = 'hardwareKeyMap';
 export const SCAN_CONFIRM_MODE_KEY = 'scanConfirmMode';
 
-export const KEY_ACTIONS = ['none', 'confirm', 'torch', 'result', 'group', 'multiResults'];
+export const KEY_ACTIONS = ['none', 'confirm', 'torch', 'result', 'group', 'multiResults', 'dumpFrame'];
 export const DEFAULT_KEY_MAP = { volumeUp: 'none', volumeDown: 'none' };
 
 export function normalizeKeyMap(raw) {

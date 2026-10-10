@@ -82,6 +82,20 @@ export default function DeveloperOptionsScreen() {
     }
   };
 
+  // 스캔 처리 시간: 네이티브 단계별(ML Kit·반전·ZXing) ms를 스캔 화면 구석에 보여준다 (Android)
+  const [scanTimingDebug, setScanTimingDebug] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('scanTimingDebug').then(v => setScanTimingDebug(v === 'true')).catch(() => {});
+  }, []);
+  const toggleScanTimingDebug = async (value) => {
+    setScanTimingDebug(value);
+    try {
+      await AsyncStorage.setItem('scanTimingDebug', value ? 'true' : 'false');
+    } catch (error) {
+      console.error('Save scanTimingDebug error:', error);
+    }
+  };
+
   const isFeatureUnlocked = (featureId) => {
     return unlockedFeatures.includes(featureId);
   };
@@ -208,6 +222,22 @@ export default function DeveloperOptionsScreen() {
             <Switch
               value={scanRegionDebug}
               onValueChange={toggleScanRegionDebug}
+              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
+              thumbColor="#fff"
+            />
+          </View>
+          <View style={s.debugRow}>
+            <View style={s.featureInfo}>
+              <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t('developerOptions.scanTimingDebug')}
+              </Text>
+              <Text style={[s.featureId, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t('developerOptions.scanTimingDebugDesc')}
+              </Text>
+            </View>
+            <Switch
+              value={scanTimingDebug}
+              onValueChange={toggleScanTimingDebug}
               trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
               thumbColor="#fff"
             />

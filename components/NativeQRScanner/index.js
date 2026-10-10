@@ -2,7 +2,7 @@
 // @mgcrea/vision-camera-barcode-scanner 기반 네이티브 QR 스캐너 컴포넌트
 
 import React, { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import { StyleSheet, View, Text, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, Dimensions, Platform } from 'react-native';
 import {
   Camera,
   useCameraDevice,
@@ -389,6 +389,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   exposure = 0, // 노출 보정 (-1 ~ +1, 0이 기본)
   scanRegion = null, // 스캔 영역 제한 { x, y, width, height } (카메라 뷰 기준 dp). null이면 전체
   scanRegionDebug = false, // 영역 밖으로 판정된 코드를 빨간 테두리로 표시 (개발자 옵션)
+  scanTimingDebug = false, // 네이티브 단계별 처리 시간을 화면 구석에 표시 (개발자 옵션, Android)
+  onFrameDumped, // 볼륨 키 등으로 요청한 프레임 덤프가 저장되면 (path) => void
   hideHighlightBoxes = false, // 테두리 네모는 숨기고 값 칩만 (단일 모드: 조준 코너가 대신 붙는다)
   onPrimaryHighlightChange, // 대표 코드의 화면 사각형 { x, y, width, height } | null
 }, ref) {
@@ -427,6 +429,42 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const layoutShared = useSharedValue({ width: 0, height: 0 });
   const regionPristineShared = useSharedValue(true); // 첫 프레임은 가로세로가 뒤집혀 올 수 있어 건너뛴다 (라이브러리와 같은 처리)
   const [regionHighlights, setRegionHighlights] = useState({ kept: [], dropped: [] });
+
+  // 개발자 옵션: 네이티브에 매 프레임 같이 넘길 값. dumpFrame은 한 프레임만 켜고 바로 끈다
+  const extraOptionsShared = useSharedValue(null);
+  useEffect(() => {
+    extraOptionsShared.value = scanTimingDebug ? { debugTiming: true } : null;
+  }, [scanTimingDebug]);
+  const [timingText, setTimingText] = useState('');
+  const timingAccShared = useSharedValue({ n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: 0 });
+  const runOnJSSetTimingText = Worklets.createRunOnJS(setTimingText);
+  const runOnJSFrameDumped = Worklets.createRunOnJS((path) => {
+    extraOptionsShared.value = scanTimingDebug ? { debugTiming: true } : null;
+    if (onFrameDumped) onFrameDumped(path);
+  });
+  const handleMeta = (meta) => {
+    'worklet';
+    if (meta.dumpPath) {
+      runOnJSFrameDumped(meta.dumpPath);
+    }
+    if (meta.totalMs === undefined) return;
+    const acc = timingAccShared.value;
+    const now = Date.now();
+    if (acc.since === 0) acc.since = now;
+    acc.n += 1;
+    acc.ml += meta.mlkitMs; acc.inv += meta.invertMs; acc.zx += meta.zxingMs; acc.total += meta.totalMs;
+    if (meta.totalMs > acc.max) acc.max = meta.totalMs;
+    acc.codes += meta.codes; acc.empty += meta.emptyBoxes;
+    if (now - acc.since >= 1000) {
+      const n = acc.n;
+      const fps = Math.round((n * 1000) / (now - acc.since));
+      runOnJSSetTimingText(
+        `${meta.width}x${meta.height} ${fps}fps | ML ${(acc.ml / n).toFixed(1)} inv ${(acc.inv / n).toFixed(1)} zx ${(acc.zx / n).toFixed(1)} | ` +
+        `avg ${(acc.total / n).toFixed(1)} max ${acc.max.toFixed(0)}ms | codes ${acc.codes} empty ${acc.empty}`
+      );
+      timingAccShared.value = { n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: now };
+    }
+  };
   const runOnJSSetRegionHighlights = Worklets.createRunOnJS((kept, dropped) => {
     setRegionHighlights({ kept, dropped });
   });
@@ -619,9 +657,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
   // @mgcrea/vision-camera-barcode-scanner useBarcodeScanner 훅 사용
   const { props: cameraProps, highlights } = useBarcodeScanner({
-    fps: 30,
+    // 30이면 카메라 프레임마다 판독이 돌아 Android에서 프리뷰가 끊겼다 (판독은 카메라 스레드에서 동기로 돈다)
+    fps: 15,
     barcodeTypes: visionCameraCodeTypes,
     scanMode: 'continuous',
+    extraOptions: extraOptionsShared,
+    onMeta: handleMeta,
     onBarcodeScanned: (barcodes, frame) => {
       'worklet';
 
@@ -884,6 +925,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return null;
       }
     },
+    // 다음 프레임의 밝기 평면을 네이티브가 PGM으로 저장한다 (개발자 옵션). 저장되면 onFrameDumped(path)
+    requestFrameDump: () => {
+      extraOptionsShared.value = { ...(extraOptionsShared.value || {}), dumpFrame: true };
+    },
   }), []);
 
   if (!device || !hasPermission) {
@@ -927,6 +972,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           onPrimaryHighlightChange={onPrimaryHighlightChange}
           hideBoxes={hideHighlightBoxes}
         />
+      )}
+      {scanTimingDebug && !!timingText && (
+        <View pointerEvents="none" style={styles.timingBox}>
+          <Text style={styles.timingText}>{timingText}</Text>
+        </View>
       )}
       {scanRegion && scanRegionDebug && highlights.length > 0 && regionHighlights.dropped.map((r, i) => (
         <View
@@ -990,6 +1040,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  timingBox: {
+    position: 'absolute',
+    left: 8,
+    bottom: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  timingText: {
+    color: '#9f9',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
 });
 
