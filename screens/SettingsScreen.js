@@ -33,6 +33,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AdBanner, { AD_ENABLED } from '../components/AdBanner';
 import { getAnalyticsConsent, setAnalyticsConsent } from '../utils/analytics';
 
+// 로컬 테스트 빌드에서만 개발자 옵션 메뉴를 보인다 (EXPO_PUBLIC_DEV_OPTIONS=1 로 빌드). 스토어 빌드(EAS)는 이 값이 없다
+const SHOW_DEV_OPTIONS = process.env.EXPO_PUBLIC_DEV_OPTIONS === '1';
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { language, t, fonts } = useLanguage();
@@ -1262,7 +1265,9 @@ export default function SettingsScreen() {
           </MaterialPressable>
         </View>
 
-        {/* 개발자 옵션 - 배포 시 주석 처리됨
+        {/* 개발자 옵션: 스토어 빌드에는 안 보인다 (기능 잠금 해제가 들어 있어서).
+            로컬 테스트 빌드만 EXPO_PUBLIC_DEV_OPTIONS=1 로 빌드하면 보인다 — 번들 시점에 값이 박힌다 */}
+        {SHOW_DEV_OPTIONS && (
         <MaterialPressable accessibilityRole="button"
           style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}
           onPress={() => router.push('/developer-options')}
@@ -1290,7 +1295,7 @@ export default function SettingsScreen() {
             </View>
           </View>
         </MaterialPressable>
-        */}
+        )}
         </ScrollView>
       </TouchableWithoutFeedback>
     </View>
