@@ -40,7 +40,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
-import LockIcon, { HOT_PINK, LIGHT_PINK } from '../components/LockIcon';
+import LockIcon from '../components/LockIcon';
 import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -1984,7 +1984,7 @@ export default function GeneratorScreen() {
                 const isTypeLocked = isQrTypeLocked(type.id);
                 const qrFeatureId = getQrTypeFeatureId(type.id);
                 const hasQrProgress = qrFeatureId ? getAdProgress(qrFeatureId).current > 0 : false;
-                const qrLockColor = hasQrProgress ? LIGHT_PINK : HOT_PINK;
+                const qrLockColor = hasQrProgress ? colors.textSecondary : colors.error;
                 const isTypeSelected = selectedType === type.id;
                 return (
                   <MaterialPressable
@@ -3614,7 +3614,7 @@ export default function GeneratorScreen() {
                           const isBarcodeLocked = isBarcodeTypeLocked(format.bcid);
                           const barcodeFeatureId = getBarcodeFeatureId(format.bcid);
                           const hasBarcodeProgress = barcodeFeatureId ? getAdProgress(barcodeFeatureId).current > 0 : false;
-                          const barcodeLockColor = hasBarcodeProgress ? LIGHT_PINK : HOT_PINK;
+                          const barcodeLockColor = hasBarcodeProgress ? colors.textSecondary : colors.error;
 
                           return (
                             <MaterialPressable
