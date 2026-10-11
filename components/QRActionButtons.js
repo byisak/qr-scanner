@@ -8,9 +8,12 @@ import * as Contacts from 'expo-contacts';
 import WifiManager from 'react-native-wifi-reborn';
 import { QR_CONTENT_TYPES } from '../utils/qrContentParser';
 import MaterialPressable from './MaterialPressable';
+import { RADIUS, SIZE } from '../constants/Design';
 
 /**
- * QR 타입별 액션 버튼 컴포넌트
+ * QR 타입별 액션 버튼 컴포넌트.
+ * 타입마다 대표 동작 하나는 꽉 찬 주 버튼, 나머지는 같은 크기의 타일(3열)로 둔다.
+ * extraActions: 화면이 덧붙이는 타일 [{ icon, label, onPress }] (예: 코드 재생성)
  */
 export default function QRActionButtons({
   parsedContent,
@@ -20,6 +23,7 @@ export default function QRActionButtons({
   onCopy,
   onShare,
   onOpenUrl,
+  extraActions = [],
 }) {
   const { type, data, raw } = parsedContent;
 
@@ -441,200 +445,136 @@ export default function QRActionButtons({
     }
   };
 
-  // 액션 버튼 렌더링
-  const renderActionButton = (icon, label, onPress, color = colors.primary, loading = false, disabled = false) => (
-    <MaterialPressable
-      style={[styles.actionButton, { backgroundColor: color + '15', borderColor: color + '30' }, disabled && { opacity: 0.6 }]}
-      onPress={onPress}
-      activeOpacity={0.7}
-      disabled={loading || disabled}
-    >
-      {loading ? (
-        <ActivityIndicator size="small" color={color} />
-      ) : (
-        <Ionicons name={icon} size={22} color={color} />
-      )}
-      <Text style={[styles.actionLabel, { color, fontFamily: fonts.medium }]}>{label}</Text>
-    </MaterialPressable>
-  );
+  // 동작 하나: { key, icon, label, onPress, loading }
+  const act = (key, icon, label, onPress, loading = false) => ({ key, icon, label, onPress, loading });
+  const copy = act('copy', 'copy-outline', t('result.copy') || '복사', onCopy);
+  const share = act('share', 'share-outline', t('result.share') || '공유', onShare);
+  const call = act('call', 'call-outline', t('qrActions.call') || '전화걸기', handleCall);
+  const addContact = act('addContact', 'person-add-outline', t('qrActions.addContact') || '연락처 추가', handleAddContact);
+  const sendEmail = act('sendEmail', 'mail-outline', t('qrActions.sendEmail') || '이메일 보내기', handleSendEmail);
 
-  // WiFi 연결 버튼 (로딩 상태 포함)
-  const renderWifiConnectButton = () => (
-    <MaterialPressable
-      style={[styles.actionButton, { backgroundColor: '#34C759' + '15', borderColor: '#34C759' + '30' }, isConnecting && { opacity: 0.8 }]}
-      onPress={handleConnectWifi}
-      activeOpacity={0.7}
-      disabled={isConnecting}
-    >
-      {isConnecting ? (
-        <ActivityIndicator size="small" color="#34C759" />
-      ) : (
-        <Ionicons name="wifi" size={22} color="#34C759" />
-      )}
-      <Text style={[styles.actionLabel, { color: '#34C759', fontFamily: fonts.medium }]}>
-        {isConnecting ? (t('qrActions.connecting') || '연결 중...') : (t('qrActions.connect') || '연결')}
-      </Text>
-    </MaterialPressable>
-  );
-
-  // 타입별 액션 버튼 그룹
-  const renderActions = () => {
+  // 타입별 { primary, secondary[] }
+  const plan = (() => {
     switch (type) {
       case QR_CONTENT_TYPES.PHONE:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('call', t('qrActions.call') || '전화걸기', handleCall, '#34C759')}
-              {renderActionButton('person-add', t('qrActions.addContact') || '연락처 추가', handleAddContact, '#FF2D55')}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-          </>
-        );
-
+        return { primary: call, secondary: [addContact, copy, share] };
       case QR_CONTENT_TYPES.SMS:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('chatbubble', t('qrActions.sendSms') || '문자 보내기', handleSendSms, '#FF9500')}
-              {renderActionButton('call', t('qrActions.call') || '전화걸기', handleCall, '#34C759')}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-          </>
-        );
-
+        return { primary: act('sendSms', 'chatbubble-outline', t('qrActions.sendSms') || '문자 보내기', handleSendSms), secondary: [call, copy, share] };
       case QR_CONTENT_TYPES.EMAIL:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('mail', t('qrActions.sendEmail') || '이메일 보내기', handleSendEmail, '#2F6FEB')}
-              {renderActionButton('person-add', t('qrActions.addContact') || '연락처 추가', handleAddContact, '#FF2D55')}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-          </>
-        );
-
+        return { primary: sendEmail, secondary: [addContact, copy, share] };
       case QR_CONTENT_TYPES.WIFI:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderWifiConnectButton()}
-              {renderActionButton('copy', t('qrActions.copyNetworkName') || '네트워크 복사', handleCopyNetworkName)}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('key', t('qrActions.copyPassword') || '비밀번호 복사', handleCopyWifiPassword, '#FF9500')}
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-          </>
-        );
-
+        return {
+          primary: act('connect', 'wifi', isConnecting ? (t('qrActions.connecting') || '연결 중...') : (t('qrActions.connect') || '연결'), handleConnectWifi, isConnecting),
+          secondary: [
+            act('copyNetwork', 'copy-outline', t('qrActions.copyNetworkName') || '네트워크 복사', handleCopyNetworkName),
+            act('copyPassword', 'key-outline', t('qrActions.copyPassword') || '비밀번호 복사', handleCopyWifiPassword),
+            share,
+          ],
+        };
       case QR_CONTENT_TYPES.GEO:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('map', t('qrActions.openMap') || '지도에서 보기', handleOpenMap, '#FF3B30')}
-              {renderActionButton('navigate', t('qrActions.getDirections') || '길찾기', handleGetDirections, '#2F6FEB')}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-          </>
-        );
-
+        return {
+          primary: act('openMap', 'map-outline', t('qrActions.openMap') || '지도에서 보기', handleOpenMap),
+          secondary: [act('directions', 'navigate-outline', t('qrActions.getDirections') || '길찾기', handleGetDirections), copy, share],
+        };
       case QR_CONTENT_TYPES.CONTACT:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('person-add', t('qrActions.addContact') || '연락처 추가', handleAddContact, '#FF2D55')}
-              {data.phones?.[0] && renderActionButton('call', t('qrActions.call') || '전화걸기', handleCall, '#34C759')}
-            </View>
-            <View style={styles.actionRow}>
-              {data.emails?.[0] && renderActionButton('mail', t('qrActions.sendEmail') || '이메일', handleSendEmail, '#2F6FEB')}
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-            </View>
-          </>
-        );
-
+        return {
+          primary: addContact,
+          secondary: [data.phones?.[0] && call, data.emails?.[0] && sendEmail, copy, share].filter(Boolean),
+        };
       case QR_CONTENT_TYPES.EVENT:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('calendar', t('qrActions.addToCalendar') || '캘린더에 추가', handleAddToCalendar, '#FF9500')}
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-          </>
-        );
-
+        return { primary: act('calendar', 'calendar-outline', t('qrActions.addToCalendar') || '캘린더에 추가', handleAddToCalendar), secondary: [copy, share] };
       case QR_CONTENT_TYPES.URL:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('globe', t('result.open') || '열기', onOpenUrl, '#667eea')}
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-          </>
-        );
-
+        return { primary: act('open', 'open-outline', t('result.open') || '열기', onOpenUrl), secondary: [copy, share] };
       case QR_CONTENT_TYPES.TEXT:
       default:
-        return (
-          <>
-            <View style={styles.actionRow}>
-              {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
-              {renderActionButton('share-outline', t('result.share') || '공유', onShare)}
-            </View>
-            <View style={styles.actionRow}>
-              {renderActionButton('search', t('qrActions.searchWeb') || '웹 검색', handleSearchWeb, '#8E8E93')}
-            </View>
-          </>
-        );
+        // 텍스트는 대표 동작이 없다 → 타일만
+        return { primary: null, secondary: [copy, share, act('search', 'search-outline', t('qrActions.searchWeb') || '웹 검색', handleSearchWeb)] };
     }
-  };
+  })();
+
+  const tiles = [...plan.secondary, ...extraActions.map((a, i) => act(`extra-${i}`, a.icon, a.label, a.onPress))];
 
   return (
     <View style={styles.container}>
-      {renderActions()}
+      {plan.primary && (
+        <MaterialPressable
+          style={[styles.primaryButton, { backgroundColor: colors.primary }, plan.primary.loading && { opacity: 0.8 }]}
+          onPress={plan.primary.onPress}
+          disabled={plan.primary.loading}
+          accessibilityRole="button"
+          accessibilityLabel={plan.primary.label}
+        >
+          {plan.primary.loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name={plan.primary.icon} size={20} color="#fff" />
+          )}
+          <Text style={[styles.primaryLabel, { fontFamily: fonts.semiBold }]}>{plan.primary.label}</Text>
+        </MaterialPressable>
+      )}
+      <View style={styles.tileGrid}>
+        {tiles.map((a) => (
+          <MaterialPressable
+            key={a.key}
+            style={[styles.tile, { backgroundColor: colors.raised, borderColor: colors.border }]}
+            onPress={a.onPress}
+            accessibilityRole="button"
+            accessibilityLabel={a.label}
+          >
+            <Ionicons name={a.icon} size={20} color={colors.text} />
+            <Text style={[styles.tileLabel, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{a.label}</Text>
+          </MaterialPressable>
+        ))}
+        {/* 마지막 줄이 늘어나지 않게 빈 칸으로 3열을 채운다 */}
+        {Array.from({ length: (3 - (tiles.length % 3)) % 3 }, (_, i) => (
+          <View key={`spacer-${i}`} style={[styles.tile, styles.tileSpacer]} />
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 10,
+    gap: 8,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionButton: {
-    flex: 1,
+  primaryButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
     gap: 8,
-    ...Platform.select({ android: { borderRadius: 20, minHeight: 48, paddingVertical: 10, overflow: 'hidden' }, default: {} }),
+    overflow: 'hidden',
   },
-  actionLabel: {
-    fontSize: 14,
+  primaryLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  tileGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tile: {
+    // 3열: (100% - 간격 2개) / 3
+    flexBasis: '31%',
+    flexGrow: 1,
+    height: 64,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    overflow: 'hidden',
+  },
+  tileSpacer: {
+    borderWidth: 0,
+  },
+  tileLabel: {
+    fontSize: 13,
     fontWeight: '500',
   },
 });

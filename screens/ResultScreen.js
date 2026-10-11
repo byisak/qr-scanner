@@ -14,6 +14,7 @@ import { useSync } from '../contexts/SyncContext';
 import { useFeedback, FeedbackToastHost } from '../contexts/FeedbackContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, MONO } from '../constants/Design';
 import AdBanner from '../components/AdBanner';
 import { parseQRContent, QR_CONTENT_TYPES, formatPhoneNumber } from '../utils/qrContentParser';
 import QRActionButtons from '../components/QRActionButtons';
@@ -104,7 +105,6 @@ export default function ResultScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState(displayText);
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
-  const [ecLevelExpanded, setEcLevelExpanded] = useState(false);
   const [photoError, setPhotoError] = useState(false);
   const [groupName, setGroupName] = useState('');
   const [labelCategories, setLabelCategories] = useState([]);
@@ -800,16 +800,26 @@ export default function ResultScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* 메인 데이터 카드 */}
-        <View style={[styles.mainCard, { backgroundColor: colors.surface }]}>
-          {/* 콘텐츠 타입 뱃지 (바코드 타입은 메타 줄, EC 레벨은 하단 카드로) */}
-          {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+        <View style={[styles.mainCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {/* 배지 줄: 콘텐츠 종류(왼쪽) · 중복 스캔(오른쪽). 바코드 타입은 메타 줄, EC 레벨은 하단 카드로 */}
+          {((isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT) || showDuplicate) && (
             <View style={styles.badgeRow}>
-              <View style={[styles.typeBadge, { backgroundColor: parsedContent.color + '15' }]}>
-                <Ionicons name={parsedContent.icon} size={14} color={parsedContent.color} />
-                <Text style={[styles.typeBadgeText, { color: parsedContent.color }]}>
-                  {getContentTypeLabel(parsedContent.type)}
-                </Text>
-              </View>
+              {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT ? (
+                <View style={[styles.typeBadge, { backgroundColor: colors.primarySoft }]}>
+                  <Ionicons name={parsedContent.icon} size={14} color={colors.primaryText} />
+                  <Text style={[styles.typeBadgeText, { color: colors.primaryText }]}>
+                    {getContentTypeLabel(parsedContent.type)}
+                  </Text>
+                </View>
+              ) : <View />}
+              {showDuplicate && (
+                <View style={[styles.duplicateBadge, { backgroundColor: colors.warningSoft }]}>
+                  <Ionicons name="repeat" size={13} color={colors.warning} />
+                  <Text style={[styles.typeBadgeText, { color: colors.warning }]}>
+                    {t('result.duplicateScan')} · {count}{t('result.duplicateCount')}
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -828,7 +838,7 @@ export default function ResultScreen() {
             ) : (
               <ScrollView style={styles.dataScrollView} nestedScrollEnabled>
                 {displayText ? (
-                  <Text style={[styles.dataText, { color: colors.text }]} selectable>
+                  <Text style={[styles.dataText, displayText.length <= 80 && styles.dataTextLarge, { color: colors.text }]} selectable>
                     {displayText}
                   </Text>
                 ) : (
@@ -896,31 +906,6 @@ export default function ResultScreen() {
             </View>
           )}
 
-          {/* 메모 (기록에 저장된 항목만) */}
-          {!isEditing && historyItemFound && (
-            <View style={[styles.labelCard, { backgroundColor: colors.inputBackground, paddingVertical: 10 }]}>
-              <View style={styles.labelHeader}>
-                <Ionicons name="create-outline" size={14} color={colors.primary} />
-                <Text style={[styles.labelTitle, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('memo.title')}</Text>
-                {memo.trim() !== memoSaved && (
-                  <MaterialPressable onPress={saveMemo} style={styles.memoSaveButton} accessibilityRole="button">
-                    <Text style={[styles.labelHint, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('memo.save')}</Text>
-                  </MaterialPressable>
-                )}
-              </View>
-              <TextInput
-                value={memo}
-                onChangeText={setMemo}
-                onBlur={saveMemo}
-                placeholder={t('memo.placeholder')}
-                placeholderTextColor={colors.textTertiary}
-                multiline
-                maxLength={500}
-                style={[styles.memoInput, { color: colors.text, fontFamily: fonts.regular }]}
-              />
-            </View>
-          )}
-
           {/* 라벨 필드 (구분자로 나뉜 값을 카테고리의 필드 이름으로) */}
           {!isEditing && labelInfo && (
             <View style={[styles.labelCard, { backgroundColor: colors.inputBackground }]}>
@@ -969,19 +954,12 @@ export default function ResultScreen() {
                 onCopy={handleCopy}
                 onShare={handleShare}
                 onOpenUrl={handleOpenUrl}
+                extraActions={[{
+                  icon: isGeneratedCode ? 'create-outline' : 'qr-code-outline',
+                  label: isGeneratedCode ? (t('result.editCode') || '편집') : (t('result.regenerateCode') || '코드 재생성'),
+                  onPress: handleRegenerateCode,
+                }]}
               />
-
-              {/* 코드 재생성/편집 버튼 */}
-              <MaterialPressable
-                style={[styles.regenerateButton, { backgroundColor: isGeneratedCode ? '#9C27B0' + '15' : colors.inputBackground, borderColor: isGeneratedCode ? '#9C27B0' + '30' : colors.border }]}
-                onPress={handleRegenerateCode}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={isGeneratedCode ? "create-outline" : "qr-code-outline"} size={18} color={isGeneratedCode ? '#9C27B0' : colors.textSecondary} />
-                <Text style={[styles.regenerateButtonText, { color: isGeneratedCode ? '#9C27B0' : colors.textSecondary, fontFamily: fonts.medium }]}>
-                  {isGeneratedCode ? (t('result.editCode') || '편집') : (t('result.regenerateCode') || '코드 재생성')}
-                </Text>
-              </MaterialPressable>
             </View>
           ) : (
             <View style={styles.editActions}>
@@ -992,7 +970,7 @@ export default function ResultScreen() {
                 <Text style={[styles.editButtonText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
               </MaterialPressable>
               <MaterialPressable
-                style={[styles.editButton, styles.saveEditButton, { backgroundColor: colors.success }]}
+                style={[styles.editButton, styles.saveEditButton, { backgroundColor: colors.primary }]}
                 onPress={handleSaveEdit}
               >
                 <Text style={styles.saveEditButtonText}>{t('common.save')}</Text>
@@ -1011,33 +989,54 @@ export default function ResultScreen() {
           )}
         </View>
 
-        {/* 중복 스캔 알림 */}
-        {showDuplicate && (
-          <View style={[styles.infoCard, { backgroundColor: '#FF950010', borderColor: '#FF9500' }]}>
-            <View style={styles.infoCardHeader}>
-              <Ionicons name="repeat" size={18} color="#FF9500" />
-              <Text style={styles.infoCardTitle}>
+        {/* 메모 (기록에 저장된 항목만) */}
+        {!isEditing && historyItemFound && (
+          <View style={[styles.sideCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.labelHeader}>
+              <Ionicons name="create-outline" size={15} color={colors.textSecondary} />
+              <Text style={[styles.labelTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('memo.title')}</Text>
+              {memo.trim() !== memoSaved && (
+                <MaterialPressable onPress={saveMemo} style={styles.memoSaveButton} accessibilityRole="button">
+                  <Text style={[styles.labelHint, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>{t('memo.save')}</Text>
+                </MaterialPressable>
+              )}
+            </View>
+            <TextInput
+              value={memo}
+              onChangeText={setMemo}
+              onBlur={saveMemo}
+              placeholder={t('memo.placeholder')}
+              placeholderTextColor={colors.textTertiary}
+              multiline
+              maxLength={500}
+              style={[styles.memoInput, { color: colors.text, fontFamily: fonts.regular }]}
+            />
+          </View>
+        )}
+
+        {/* 중복 스캔: 배지는 메인 카드에, 여기는 스캔 시각 목록(두 번 이상일 때만) */}
+        {showDuplicate && allScanTimes.length > 1 && (
+          <View style={[styles.sideCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.labelHeader}>
+              <Ionicons name="repeat" size={15} color={colors.textSecondary} />
+              <Text style={[styles.labelTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                 {t('result.duplicateScan')} ({count}{t('result.duplicateCount')})
               </Text>
             </View>
-            {allScanTimes.length > 1 && (
-              <View style={styles.scanTimesList}>
-                {allScanTimes.slice().reverse().slice(0, 5).map((time, index) => (
-                  <Text key={index} style={styles.scanTimeItem}>
-                    {allScanTimes.length - index}. {formatDateTime(time)}
-                  </Text>
-                ))}
-              </View>
-            )}
+            {allScanTimes.slice().reverse().slice(0, 5).map((time, index) => (
+              <Text key={index} style={[styles.scanTimeItem, { color: colors.textSecondary }]}>
+                {allScanTimes.length - index}. {formatDateTime(time)}
+              </Text>
+            ))}
           </View>
         )}
 
         {/* 생성 코드 미리보기 */}
         {isGeneratedCode && (
-          <View style={[styles.photoCard, { backgroundColor: colors.surface }]}>
+          <View style={[styles.photoCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
             <View style={styles.photoHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Ionicons name="create-outline" size={16} color="#9C27B0" />
+                <Ionicons name="create-outline" size={16} color={colors.textSecondary} />
                 <Text style={[styles.photoLabel, { color: colors.text }]}>
                   {t('result.generatedPreview') || '생성 미리보기'}
                 </Text>
@@ -1050,9 +1049,9 @@ export default function ResultScreen() {
                 resizeMode="contain"
               />
             ) : (
-              <View style={[styles.scanPhoto, styles.barcodePreviewContainer, { backgroundColor: '#9C27B0' + '10' }]}>
-                <Ionicons name="barcode-outline" size={64} color="#9C27B0" />
-                <Text style={[styles.barcodePreviewType, { color: '#9C27B0' }]}>
+              <View style={[styles.scanPhoto, styles.barcodePreviewContainer, { backgroundColor: colors.raised }]}>
+                <Ionicons name="barcode-outline" size={64} color={colors.textSecondary} />
+                <Text style={[styles.barcodePreviewType, { color: colors.textSecondary }]}>
                   {formatBarcodeType(barcodeType) || 'BARCODE'}
                 </Text>
               </View>
@@ -1062,7 +1061,7 @@ export default function ResultScreen() {
 
         {/* 스캔 사진 */}
         {hasPhoto && (
-          <View style={[styles.photoCard, { backgroundColor: colors.surface }]}>
+          <View style={[styles.photoCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
             <View style={styles.photoHeader}>
               <Text style={[styles.photoLabel, { color: colors.text }]}>{t('result.scanPhoto')}</Text>
               <View style={styles.photoActions}>
@@ -1116,71 +1115,40 @@ export default function ResultScreen() {
           </View>
         )}
 
-        {/* QR 코드 오류 검증 레벨 표시 */}
+        {/* QR 코드 오류 검증 레벨: L·M·Q·H 막대 중 현재 단계만 채운다 */}
         {ecLevelInfo && isQRCode && (
-          <View style={[styles.ecLevelContainer, {
-            backgroundColor: isDark ? 'rgba(47, 111, 235, 0.15)' : 'rgba(47, 111, 235, 0.1)',
-            borderColor: colors.primary
-          }]}>
-            <View style={styles.ecLevelHeader}>
-              <Ionicons name="shield-checkmark" size={18} color={colors.primary} />
-              <Text style={[styles.ecLevelTitle, { color: colors.primary }]}>
+          <View style={[styles.sideCard, styles.ecCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.ecHeader}>
+              <Text style={[styles.labelTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                 {t('result.errorCorrectionLevel')}
               </Text>
-            </View>
-            <View style={styles.ecLevelContent}>
-              <View style={[styles.ecLevelBadge, { backgroundColor: colors.primary }]}>
-                <Text style={styles.ecLevelBadgeText}>{ecLevelInfo.level}</Text>
-              </View>
-              <View style={styles.ecLevelInfo}>
-                <Text style={[styles.ecLevelDesc, { color: colors.text }]}>{ecLevelInfo.desc}</Text>
-                <Text style={[styles.ecLevelPercent, { color: colors.textSecondary }]}>
-                  {t('result.recoveryRate')}: {ecLevelInfo.percent}
-                </Text>
-              </View>
-            </View>
-
-            {/* 펼침 버튼 */}
-            <MaterialPressable
-              style={styles.ecLevelExpandButton}
-              onPress={() => setEcLevelExpanded(!ecLevelExpanded)}
-            >
-              <Text style={[styles.ecLevelExpandText, { color: colors.textSecondary }]}>
-                {ecLevelExpanded ? t('result.hideEcLevelInfo') : t('result.showEcLevelInfo')}
+              <Text style={[styles.labelHint, { color: colors.textSecondary }]}>
+                {t('result.recoveryRate')}: {ecLevelInfo.percent}
               </Text>
-              <Ionicons
-                name={ecLevelExpanded ? "chevron-up" : "chevron-down"}
-                size={16}
-                color={colors.textSecondary}
-              />
-            </MaterialPressable>
-
-            {/* 펼쳐진 EC 레벨 설명 */}
-            {ecLevelExpanded && (
-              <View style={[styles.ecLevelExpandedContent, { borderTopColor: colors.border }]}>
-                <Text style={[styles.ecLevelExpandedTitle, { color: colors.text }]}>
-                  {t('result.ecLevelTypes')}
-                </Text>
-                <View style={styles.ecLevelList}>
-                  {['L', 'M', 'Q', 'H'].map((level) => {
-                    const isActive = ecLevel?.toUpperCase() === level;
-                    const levelName = { L: 'Low', M: 'Medium', Q: 'Quartile', H: 'High' }[level];
-                    const levelPercent = { L: '~7%', M: '~15%', Q: '~25%', H: '~30%' }[level];
-                    return (
-                      <View key={level} style={[styles.ecLevelListItem, isActive && styles.ecLevelListItemActive, isActive && { backgroundColor: colors.primary + '20' }]}>
-                        <View style={[styles.ecLevelListBadge, { backgroundColor: isActive ? colors.primary : colors.textSecondary }]}>
-                          <Text style={styles.ecLevelListBadgeText}>{level}</Text>
-                        </View>
-                        <View style={styles.ecLevelListInfo}>
-                          <Text style={[styles.ecLevelListName, { color: colors.text }]}>{levelName}</Text>
-                          <Text style={[styles.ecLevelListPercent, { color: colors.textSecondary }]}>{levelPercent} {t('result.recoverable')}</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
+            </View>
+            <View style={styles.ecTitleRow}>
+              <Text style={[styles.ecLevelName, { color: colors.text, fontFamily: fonts.bold }]}>{ecLevelInfo.desc}</Text>
+              <Text style={[styles.ecLevelCode, { color: colors.primaryText }]}>{ecLevelInfo.level}</Text>
+            </View>
+            <View
+              style={styles.ecBars}
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={`${t('result.errorCorrectionLevel')}: ${ecLevelInfo.level}`}
+            >
+              {['L', 'M', 'Q', 'H'].map((level) => {
+                const isActive = ecLevel?.toUpperCase() === level;
+                const levelPercent = { L: '7%', M: '15%', Q: '25%', H: '30%' }[level];
+                return (
+                  <View key={level} style={styles.ecBarCell}>
+                    <View style={[styles.ecBar, { backgroundColor: isActive ? colors.primary : colors.border }]} />
+                    <Text style={[styles.ecBarLabel, { color: isActive ? colors.text : colors.textTertiary, fontWeight: isActive ? '600' : '400' }]}>
+                      {level} · {levelPercent}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -1221,24 +1189,32 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mainCard: {
-    borderRadius: 16,
-    padding: 16,
-    ...Platform.select({ android: { borderRadius: 12, elevation: 1 }, default: {} }),
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    padding: 20,
   },
   badgeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   typeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 28,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 5,
-    ...Platform.select({ android: { borderRadius: 8, minHeight: 28 }, default: {} }),
+    borderRadius: RADIUS.badge,
+    gap: 6,
+  },
+  duplicateBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 28,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    gap: 6,
   },
   typeBadgeText: {
     fontSize: 12,
@@ -1289,10 +1265,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   labelCard: {
-    borderRadius: 12,
+    borderRadius: RADIUS.control,
     paddingVertical: 4,
     paddingHorizontal: 12,
     marginTop: 12,
+  },
+  sideCard: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
   },
   labelHeader: {
     flexDirection: 'row',
@@ -1335,8 +1317,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dataText: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontFamily: MONO,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  dataTextLarge: {
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '500',
   },
   dataInput: {
     fontSize: 16,
@@ -1387,34 +1375,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  infoCard: {
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-  },
-  infoCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  infoCardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FF9500',
-  },
-  scanTimesList: {
-    marginTop: 10,
-  },
   scanTimeItem: {
     fontSize: 12,
-    color: '#FF9500',
     marginVertical: 2,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontFamily: MONO,
   },
   photoCard: {
-    borderRadius: 16,
+    borderRadius: RADIUS.group,
     padding: 16,
-    ...Platform.select({ android: { borderRadius: 12, elevation: 1 }, default: {} }),
   },
   photoHeader: {
     flexDirection: 'row',
@@ -1479,124 +1447,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  ecLevelContainer: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    padding: 14,
-  },
-  ecLevelHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  ecLevelTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
-  ecLevelContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ecLevelBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ecLevelBadgeText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  ecLevelInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  ecLevelDesc: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  ecLevelPercent: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  ecLevelExpandButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-    paddingTop: 10,
-  },
-  ecLevelExpandText: {
-    fontSize: 13,
-    marginRight: 4,
-  },
-  ecLevelExpandedContent: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-  },
-  ecLevelExpandedTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  ecLevelList: {
-    gap: 8,
-  },
-  ecLevelListItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-  },
-  ecLevelListItemActive: {
-    borderWidth: 1,
-    borderColor: 'rgba(47, 111, 235, 0.3)',
-  },
-  ecLevelListBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ecLevelListBadgeText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  ecLevelListInfo: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  ecLevelListName: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  ecLevelListPercent: {
-    fontSize: 12,
-    marginTop: 1,
-  },
   actionSection: {
     gap: 12,
   },
-  regenerateButton: {
+  ecCard: {
+    paddingVertical: 16,
+    gap: 12,
+  },
+  ecHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
-    ...Platform.select({ android: { borderRadius: 20, minHeight: 48, paddingVertical: 10, overflow: 'hidden' }, default: {} }),
+    justifyContent: 'space-between',
   },
-  regenerateButtonText: {
+  ecTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 10,
+  },
+  ecLevelName: {
+    fontSize: 24,
+    letterSpacing: -0.5,
+  },
+  ecLevelCode: {
+    fontFamily: MONO,
     fontSize: 14,
-    fontWeight: '500',
+  },
+  ecBars: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  ecBarCell: {
+    flex: 1,
+    gap: 6,
+  },
+  ecBar: {
+    height: 8,
+    borderRadius: 4,
+  },
+  ecBarLabel: {
+    fontSize: 12,
+    textAlign: 'center',
   },
 });
