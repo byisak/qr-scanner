@@ -93,7 +93,7 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
 
           {/* Done Button */}
           <MaterialPressable
-            style={[styles.doneButton, { backgroundColor: colors?.primary || '#007AFF' }]}
+            style={[styles.doneButton, { backgroundColor: colors?.primary || '#2F6FEB' }]}
             onPress={onClose}
           >
             <Text style={styles.doneText}>확인</Text>

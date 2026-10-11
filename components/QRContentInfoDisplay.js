@@ -187,7 +187,7 @@ export default function QRContentInfoDisplay({
   const renderEmailInfo = () => (
     <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={styles.infoHeader}>
-        <Ionicons name="mail" size={24} color="#007AFF" />
+        <Ionicons name="mail" size={24} color="#2F6FEB" />
         <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>
           {t('qrTypes.email') || '이메일'}
         </Text>

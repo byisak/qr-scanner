@@ -365,7 +365,7 @@ export default function QRActionButtons({
           if (defaultCalendarSource) {
             const newCalendarId = await Calendar.createCalendarAsync({
               title: 'QR Scanner Events',
-              color: '#007AFF',
+              color: '#2F6FEB',
               entityType: Calendar.EntityTypes.EVENT,
               sourceId: defaultCalendarSource.id,
               source: defaultCalendarSource,
@@ -379,7 +379,7 @@ export default function QRActionButtons({
           // Android: 계정 캘린더가 없는 기기(구글 계정 미로그인 등)용 로컬 캘린더
           const newCalendarId = await Calendar.createCalendarAsync({
             title: 'QR Scanner Events',
-            color: '#007AFF',
+            color: '#2F6FEB',
             entityType: Calendar.EntityTypes.EVENT,
             source: { isLocalAccount: true, name: 'QR Scanner', type: Calendar.SourceType.LOCAL },
             name: 'qrScannerCalendar',
@@ -512,7 +512,7 @@ export default function QRActionButtons({
         return (
           <>
             <View style={styles.actionRow}>
-              {renderActionButton('mail', t('qrActions.sendEmail') || '이메일 보내기', handleSendEmail, '#007AFF')}
+              {renderActionButton('mail', t('qrActions.sendEmail') || '이메일 보내기', handleSendEmail, '#2F6FEB')}
               {renderActionButton('person-add', t('qrActions.addContact') || '연락처 추가', handleAddContact, '#FF2D55')}
             </View>
             <View style={styles.actionRow}>
@@ -541,7 +541,7 @@ export default function QRActionButtons({
           <>
             <View style={styles.actionRow}>
               {renderActionButton('map', t('qrActions.openMap') || '지도에서 보기', handleOpenMap, '#FF3B30')}
-              {renderActionButton('navigate', t('qrActions.getDirections') || '길찾기', handleGetDirections, '#007AFF')}
+              {renderActionButton('navigate', t('qrActions.getDirections') || '길찾기', handleGetDirections, '#2F6FEB')}
             </View>
             <View style={styles.actionRow}>
               {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
@@ -558,7 +558,7 @@ export default function QRActionButtons({
               {data.phones?.[0] && renderActionButton('call', t('qrActions.call') || '전화걸기', handleCall, '#34C759')}
             </View>
             <View style={styles.actionRow}>
-              {data.emails?.[0] && renderActionButton('mail', t('qrActions.sendEmail') || '이메일', handleSendEmail, '#007AFF')}
+              {data.emails?.[0] && renderActionButton('mail', t('qrActions.sendEmail') || '이메일', handleSendEmail, '#2F6FEB')}
               {renderActionButton('copy', t('result.copy') || '복사', onCopy)}
             </View>
           </>

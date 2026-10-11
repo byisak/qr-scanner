@@ -1518,7 +1518,7 @@ function ImageAnalysisScreen() {
               {/* 로딩 오버레이 */}
               {isLoading && (
                 <View style={styles.loadingOverlay}>
-                  <ActivityIndicator size="large" color="#007AFF" />
+                  <ActivityIndicator size="large" color="#2F6FEB" />
                   <Text style={styles.loadingText}>{loadingMessage || t('imageAnalysis.analyzing')}</Text>
                 </View>
               )}
@@ -2218,7 +2218,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#2F6FEB',
   },
   jsonButton: {
     backgroundColor: '#2E7D32',
@@ -2234,7 +2234,7 @@ const styles = StyleSheet.create({
   zoomHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.9)',
+    backgroundColor: 'rgba(47, 111, 235, 0.9)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -2265,7 +2265,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#6c757d',
   },
   reanalyzeButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#2F6FEB',
   },
   zoomButtonText: {
     color: '#fff',

@@ -24,7 +24,7 @@ const FEATURE_CATEGORIES = {
   settings: {
     titleKey: 'proFeatures.settingsFeatures',
     features: [
-      { id: 'batchScan', icon: 'layers-outline', color: '#007AFF' },
+      { id: 'batchScan', icon: 'layers-outline', color: '#2F6FEB' },
       { id: 'realtimeSync', icon: 'sync-outline', color: '#34C759' },
       { id: 'scanUrlIntegration', icon: 'link-outline', color: '#FF9500' },
       { id: 'productSearch', icon: 'search-outline', color: '#5856D6' },
@@ -58,7 +58,7 @@ const FEATURE_CATEGORIES = {
       { id: 'barcodeCode39ext', icon: 'barcode-outline', color: '#764ba2', barcodeName: 'Code 39 Ext' },
       { id: 'barcodeCode93', icon: 'barcode-outline', color: '#5856D6', barcodeName: 'Code 93' },
       { id: 'barcodeCode93ext', icon: 'barcode-outline', color: '#AF52DE', barcodeName: 'Code 93 Ext' },
-      { id: 'barcodeCode11', icon: 'barcode-outline', color: '#007AFF', barcodeName: 'Code 11' },
+      { id: 'barcodeCode11', icon: 'barcode-outline', color: '#2F6FEB', barcodeName: 'Code 11' },
       { id: 'barcodeIndustrial2of5', icon: 'barcode-outline', color: '#34C759', barcodeName: 'Industrial 2/5' },
       { id: 'barcodeInterleaved2of5', icon: 'barcode-outline', color: '#30D158', barcodeName: 'Interleaved 2/5' },
       { id: 'barcodeItf14', icon: 'barcode-outline', color: '#FF9500', barcodeName: 'ITF-14' },
@@ -162,7 +162,7 @@ const FEATURE_CATEGORIES = {
     titleKey: 'proFeatures.backupFeatures',
     features: [
       // iCloud는 iOS에만 있다. Android에서 보여주면 광고를 보고 해제해도 쓸 곳이 없다
-      ...(Platform.OS === 'ios' ? [{ id: 'icloudBackup', icon: 'cloud-outline', color: '#007AFF' }] : []),
+      ...(Platform.OS === 'ios' ? [{ id: 'icloudBackup', icon: 'cloud-outline', color: '#2F6FEB' }] : []),
       { id: 'googleDriveBackup', icon: 'logo-google', color: '#4285F4' },
     ],
   },

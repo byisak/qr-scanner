@@ -1119,7 +1119,7 @@ export default function ResultScreen() {
         {/* QR 코드 오류 검증 레벨 표시 */}
         {ecLevelInfo && isQRCode && (
           <View style={[styles.ecLevelContainer, {
-            backgroundColor: isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)',
+            backgroundColor: isDark ? 'rgba(47, 111, 235, 0.15)' : 'rgba(47, 111, 235, 0.1)',
             borderColor: colors.primary
           }]}>
             <View style={styles.ecLevelHeader}>
@@ -1555,7 +1555,7 @@ const styles = StyleSheet.create({
   },
   ecLevelListItemActive: {
     borderWidth: 1,
-    borderColor: 'rgba(0, 122, 255, 0.3)',
+    borderColor: 'rgba(47, 111, 235, 0.3)',
   },
   ecLevelListBadge: {
     width: 28,

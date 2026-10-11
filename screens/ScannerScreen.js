@@ -3925,7 +3925,7 @@ const styles = StyleSheet.create({
   realtimeSyncGuideContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.95)',
+    backgroundColor: 'rgba(47, 111, 235, 0.95)',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
@@ -3969,7 +3969,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 122, 255, 0.95)',
+    backgroundColor: 'rgba(47, 111, 235, 0.95)',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
@@ -4065,7 +4065,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#2F6FEB',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 12,
@@ -4138,9 +4138,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
   },
   groupItemActive: {
-    backgroundColor: '#007AFF15',
+    backgroundColor: '#2F6FEB15',
     borderWidth: 2,
-    borderColor: '#007AFF',
+    borderColor: '#2F6FEB',
   },
   groupItemContent: {
     flexDirection: 'row',
@@ -4153,7 +4153,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   groupItemTextActive: {
-    color: '#007AFF',
+    color: '#2F6FEB',
   },
   multiScanButtonContainer: {
     position: 'absolute',

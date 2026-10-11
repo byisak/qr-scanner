@@ -15,13 +15,13 @@ export default function TabLayout() {
 
   return (
     <NativeTabs
-      backgroundColor={colors.surface}
-      iconColor={{ default: colors.textSecondary, selected: colors.primary }}
+      backgroundColor={colors.tabBar}
+      iconColor={{ default: colors.textTertiary, selected: colors.text }}
       labelStyle={{
-        default: { color: colors.textSecondary, fontSize: 12 },
-        selected: { color: colors.primary, fontSize: 12 },
+        default: { color: colors.textTertiary, fontSize: 12 },
+        selected: { color: colors.text, fontSize: 12, fontWeight: '600' },
       }}
-      indicatorColor={colors.primary + '22'}
+      indicatorColor={colors.primarySoft}
       rippleColor={colors.primary + '22'}
       labelVisibilityMode="labeled"
     >

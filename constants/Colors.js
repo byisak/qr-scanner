@@ -29,35 +29,51 @@ export const LABEL_COLORS = [
   '#4A148C', // 퍼플다크
 ];
 
+// 2026-10 리디자인 (docs: 아티팩트 "공통 디자인 규칙"): 바탕 하나, 강조색(파랑) 하나.
+// 상태색은 진한 글자색 + 연한 바탕(…Soft) 쌍으로 배지·알림에 쓴다
 export const Colors = {
   light: {
-    background: '#f9f9f9',
-    surface: '#fff',
-    primary: '#007AFF',
-    text: '#000',
-    textSecondary: '#666',
-    textTertiary: '#6E6E73', // 흰 배경 5.1:1, 입력창 배경 4.5:1 (WCAG AA). 이전 #8E8E93은 3.3:1
-    border: '#e0e0e0',
-    borderLight: '#F0F0F0',
-    inputBackground: '#F2F2F7',
-    success: '#34C759',
-    warning: '#FF9500',
-    error: '#FF3B30',
+    background: '#F5F6F8',
+    surface: '#FFFFFF',
+    raised: '#F0F2F5', // 카드 안의 보조 버튼·하위 카드
+    primary: '#2F6FEB',
+    primaryText: '#2457C5', // 바탕 위 강조 글자 (primary는 채움용)
+    primarySoft: '#E6EEFF',
+    text: '#0B0D10',
+    textSecondary: '#5B6470',
+    textTertiary: '#646C78', // 흰 바탕 5.3:1, raised 위 4.8:1 (WCAG AA)
+    border: '#E3E6EB',
+    borderLight: '#EDEFF2',
+    inputBackground: '#F0F2F5',
+    success: '#1F9D61',
+    successSoft: '#E5F6EE',
+    warning: '#C77700',
+    warningSoft: '#FFF3E0',
+    error: '#D93636',
+    errorSoft: '#FDECEC',
+    tabBar: '#FFFFFF',
     shadow: '#000',
   },
   dark: {
-    background: '#000',
-    surface: '#1c1c1e',
-    primary: '#0A84FF',
-    text: '#fff',
-    textSecondary: '#98989d',
-    textTertiary: '#939398', // 카드·입력창 배경 모두 4.5:1 이상 (WCAG AA). 이전 #636366은 2.8:1
-    border: '#38383a',
-    borderLight: '#2c2c2e',
-    inputBackground: '#2c2c2e',
-    success: '#30D158',
-    warning: '#FF9F0A',
-    error: '#FF453A',
+    background: '#0B0D10',
+    surface: '#15181D',
+    raised: '#1B1F26',
+    primary: '#2F6FEB',
+    primaryText: '#8FB3FF',
+    primarySoft: '#1B2A45',
+    text: '#F2F4F7',
+    textSecondary: '#9AA3AF',
+    textTertiary: '#8A929E', // 카드 바탕 5.6:1, raised 위 5.1:1 (WCAG AA)
+    border: '#232831',
+    borderLight: '#1E232B',
+    inputBackground: '#1B1F26',
+    success: '#4CC38A',
+    successSoft: '#0F2A1E',
+    warning: '#F5B34A',
+    warningSoft: '#2A1E0C',
+    error: '#FF7A7A',
+    errorSoft: '#2E1414',
+    tabBar: '#0F1215',
     shadow: '#000',
   },
 };

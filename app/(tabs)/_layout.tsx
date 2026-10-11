@@ -14,9 +14,7 @@ function TabBarBackground() {
       style={[
         StyleSheet.absoluteFill,
         {
-          backgroundColor: isDark
-            ? 'rgba(28, 28, 30, 0.95)'
-            : 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: isDark ? Colors.dark.tabBar : Colors.light.tabBar,
         },
       ]}
     />

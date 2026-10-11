@@ -166,7 +166,7 @@ export default function ScanToast({
                   </Text>
                 </View>
               ) : quantity ? (
-                <View style={[styles.duplicateBadge, { backgroundColor: '#0A84FF' }]}>
+                <View style={[styles.duplicateBadge, { backgroundColor: '#2F6FEB' }]}>
                   <Text style={styles.duplicateBadgeText}>{t('scanner.quantityBadge', { count: quantity })}</Text>
                 </View>
               ) : isDuplicate && (

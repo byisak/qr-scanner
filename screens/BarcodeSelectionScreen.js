@@ -135,7 +135,7 @@ export default function BarcodeSelectionScreen() {
                 style={[
                   s.barcodeItem,
                   { backgroundColor: colors.inputBackground, borderColor: isSelected ? colors.primary : 'transparent' },
-                  isSelected && { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : '#E3F2FD' }
+                  isSelected && { backgroundColor: isDark ? 'rgba(47, 111, 235, 0.2)' : '#E3F2FD' }
                 ]}
                 onPress={() => toggleBarcode(barcode.key)}
                 disabled={isQROnly}

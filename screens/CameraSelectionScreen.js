@@ -88,7 +88,7 @@ export default function CameraSelectionScreen() {
                 style={[
                   s.cameraItem,
                   { backgroundColor: colors.surface, borderColor: isSelected ? colors.primary : colors.border },
-                  isSelected && { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : '#f0f8ff' }
+                  isSelected && { backgroundColor: isDark ? 'rgba(47, 111, 235, 0.2)' : '#f0f8ff' }
                 ]}
                 onPress={() => selectCamera(camera.key)}
                 activeOpacity={0.7}

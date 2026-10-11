@@ -279,7 +279,7 @@ export default function StyledQRCode({
       )}
       {isLoading && !snapshotAsImage && (
         <View style={[styles.loadingContainer, { width: actualWidth, height: actualHeight }]}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color="#2F6FEB" />
         </View>
       )}
     </View>

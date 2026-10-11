@@ -546,7 +546,7 @@ export default function HistoryScreen() {
               switch (level.toUpperCase()) {
                 case 'L': return '#FF9500';
                 case 'M': return '#34C759';
-                case 'Q': return '#007AFF';
+                case 'Q': return '#2F6FEB';
                 case 'H': return '#5856D6';
                 default: return colors.textSecondary;
               }
