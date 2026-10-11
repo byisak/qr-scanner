@@ -323,7 +323,7 @@ export default function BackupExportScreen() {
     { icon: 'barcode-outline', key: 'barcodeTypeSettings' },
   ];
 
-  const switchOff = isDark ? '#343A44' : colors.border;
+  const switchOff = colors.switchOff;
   const separator = { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight };
 
   return (

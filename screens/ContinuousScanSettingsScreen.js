@@ -133,9 +133,9 @@ export default function ContinuousScanSettingsScreen() {
 
   // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
   const switchColors = {
-    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    trackColor: { true: colors.primary, false: colors.switchOff },
     thumbColor: '#fff',
-    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+    ios_backgroundColor: colors.switchOff,
   };
   // 중복 처리 방식 (한 가지 선택)
   const duplicateActions = [

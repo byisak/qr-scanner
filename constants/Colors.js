@@ -52,6 +52,7 @@ export const Colors = {
     error: '#D93636',
     errorSoft: '#FDECEC',
     tabBar: '#FFFFFF',
+    switchOff: '#8E96A2', // 꺼진 스위치 트랙: 흰 바탕 3:1 (WCAG 비텍스트 대비)
     shadow: '#000',
   },
   dark: {
@@ -74,6 +75,7 @@ export const Colors = {
     error: '#FF7A7A',
     errorSoft: '#2E1414',
     tabBar: '#0F1215',
+    switchOff: '#566070', // 꺼진 스위치 트랙: 카드 바탕 위에서 구분되게
     shadow: '#000',
   },
 };

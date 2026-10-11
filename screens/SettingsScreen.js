@@ -430,9 +430,9 @@ export default function SettingsScreen() {
 
   // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
   const switchColors = {
-    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    trackColor: { true: colors.primary, false: colors.switchOff },
     thumbColor: '#fff',
-    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+    ios_backgroundColor: colors.switchOff,
   };
   // 상단 그라데이션은 화면 바탕색에서 투명으로
   const bgRgb = [1, 3, 5].map(i => parseInt(colors.background.slice(i, i + 2), 16)).join(',');

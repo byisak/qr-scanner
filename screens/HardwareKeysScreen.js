@@ -82,9 +82,9 @@ export default function HardwareKeysScreen() {
   const keysSupported = Platform.OS === 'android' && isHardwareKeysAvailable;
 
   const switchColors = {
-    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    trackColor: { true: colors.primary, false: colors.switchOff },
     thumbColor: '#fff',
-    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+    ios_backgroundColor: colors.switchOff,
   };
 
   return (

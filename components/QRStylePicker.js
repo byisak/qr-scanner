@@ -982,7 +982,7 @@ export default function QRStylePicker({
         <Switch
           value={tempStyle.imageOptions?.hideBackgroundDots ?? true}
           onValueChange={(value) => updateStyle('imageOptions', { ...tempStyle.imageOptions, hideBackgroundDots: value })}
-          trackColor={{ false: colors.border, true: colors.primary }}
+          trackColor={{ false: colors.switchOff, true: colors.primary }}
           thumbColor="#fff"
         />
       </View>
