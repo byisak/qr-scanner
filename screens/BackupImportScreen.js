@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
@@ -43,7 +44,6 @@ export default function BackupImportScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
-  const statusBarHeight = Platform.OS === 'ios' ? 50 : insets.top;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
   const [showFileListModal, setShowFileListModal] = useState(false);
@@ -134,7 +134,6 @@ export default function BackupImportScreen() {
       title: t('backupImport.restoreFromIcloud'),
       description: t('backupImport.restoreFromIcloudDesc'),
       icon: 'cloud-outline',
-      iconColor: '#5AC8FA',
       available: Platform.OS === 'ios',
     },
     {
@@ -142,7 +141,7 @@ export default function BackupImportScreen() {
       title: t('backupImport.importFromGoogleDrive'),
       description: t('backupImport.importFromGoogleDriveDesc'),
       icon: 'logo-google',
-      iconColor: '#4285F4',
+      iconColor: '#4285F4', // Google 브랜드 색
       available: true,
     },
   ];
@@ -326,32 +325,40 @@ export default function BackupImportScreen() {
     }
   };
 
-  const renderGoogleFileItem = ({ item }) => (
+  const renderGoogleFileItem = ({ item, index }) => (
     <MaterialPressable
-      style={[styles.fileItem, { borderBottomColor: colors.border }]}
+      style={[styles.fileItem, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
       onPress={() => downloadGoogleDriveFile(item.id)}
+      accessibilityRole="button"
     >
-      <Ionicons name="document-text-outline" size={24} color={colors.primary} />
-      <View style={styles.fileInfo}>
-        <Text style={[styles.fileName, { color: colors.text, fontFamily: fonts.semiBold }]}>
+      <View style={[styles.tile, { backgroundColor: colors.primarySoft }]}>
+        <Ionicons name="document-text-outline" size={20} color={colors.primaryText} />
+      </View>
+      <View style={styles.rowText}>
+        <Text style={[styles.rowLabel, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1} ellipsizeMode="middle">
           {item.name}
         </Text>
-        <Text style={[styles.fileDate, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+        <Text style={[styles.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
           {new Date(item.modifiedTime).toLocaleDateString()}
         </Text>
       </View>
-      <Ionicons name="download-outline" size={24} color={colors.textTertiary} />
+      <Ionicons name="download-outline" size={20} color={colors.textTertiary} />
     </MaterialPressable>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: statusBarHeight, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <MaterialPressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          onPress={() => router.back()}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('backupImport.title')}
         </Text>
         <View style={styles.headerRight} />
@@ -359,80 +366,81 @@ export default function BackupImportScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 24 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 경고 문구 */}
-        <View style={[styles.warningCard, { backgroundColor: '#FEF3C7' }]}>
-          <Ionicons name="warning-outline" size={24} color="#D97706" />
-          <Text style={[styles.warningText, { color: '#92400E', fontFamily: fonts.regular }]}>
+        <View style={[styles.warningCard, { backgroundColor: colors.warningSoft }]}>
+          <Ionicons name="warning-outline" size={20} color={colors.warning} />
+          <Text style={[styles.warningText, { color: colors.warning, fontFamily: fonts.medium }]}>
             {t('backupImport.warningOverwrite')}
           </Text>
         </View>
 
         {/* 가져오기 옵션들 */}
-        <View style={[styles.optionsContainer, { backgroundColor: colors.surface }]}>
-          {importOptions.map((option, index) => (
-            <MaterialPressable
-              key={option.id}
-              style={[
-                styles.optionItem,
-                index > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
-                !option.available && styles.optionDisabled,
-              ]}
-              onPress={() => handleImport(option.id)}
-              disabled={isLoading || !option.available}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.optionIconContainer, { backgroundColor: `${option.iconColor}15` }]}>
-                <Ionicons name={option.icon} size={28} color={option.available ? option.iconColor : colors.textTertiary} />
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={[
-                  styles.optionTitle,
-                  { color: option.available ? colors.text : colors.textTertiary, fontFamily: fonts.semiBold }
-                ]}>
-                  {option.title}
-                </Text>
-                <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {option.description}
-                </Text>
-                {!option.available && Platform.OS === 'android' && option.id === 'icloud' && (
-                  <Text style={[styles.unavailableText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    {t('backupImport.iosOnly')}
+        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {importOptions.map((option, index) => {
+            const tint = option.available ? (option.iconColor || colors.primaryText) : colors.textTertiary;
+            return (
+              <MaterialPressable
+                key={option.id}
+                style={[
+                  styles.row,
+                  index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
+                  !option.available && styles.optionDisabled,
+                ]}
+                onPress={() => handleImport(option.id)}
+                disabled={isLoading || !option.available}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: isLoading || !option.available }}
+              >
+                <View style={[styles.tile, { backgroundColor: option.iconColor ? colors.raised : colors.primarySoft }]}>
+                  <Ionicons name={option.icon} size={20} color={tint} />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={[
+                    styles.rowLabel,
+                    { color: option.available ? colors.text : colors.textTertiary, fontFamily: fonts.medium }
+                  ]}>
+                    {option.title}
                   </Text>
+                  <Text style={[styles.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {option.description}
+                  </Text>
+                  {!option.available && Platform.OS === 'android' && option.id === 'icloud' && (
+                    <View style={[styles.badge, { backgroundColor: colors.raised }]}>
+                      <Text style={[styles.badgeText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                        {t('backupImport.iosOnly')}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {isLoading && loadingType === option.id ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                 )}
-              </View>
-              {isLoading && loadingType === option.id ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Ionicons name="chevron-forward" size={24} color={option.available ? colors.textTertiary : colors.border} />
-              )}
-            </MaterialPressable>
-          ))}
+              </MaterialPressable>
+            );
+          })}
         </View>
 
         {/* 복원 안내 */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('backupImport.howToRestore')}
-          </Text>
-          <View style={styles.guideList}>
-            {[
-              t('backupImport.guideIcloud'),
-              t('backupImport.guideGoogleDrive'),
-              t('backupImport.guideRestart'),
-            ].map((text, index) => (
-              <View key={index} style={styles.guideItem}>
-                <Text style={[styles.guideText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                  {text}
-                </Text>
-              </View>
-            ))}
-          </View>
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+          {t('backupImport.howToRestore')}
+        </Text>
+        <View style={[styles.guideBox, { backgroundColor: colors.raised }]}>
+          {[
+            t('backupImport.guideIcloud'),
+            t('backupImport.guideGoogleDrive'),
+            t('backupImport.guideRestart'),
+          ].map((text, index) => (
+            <Text key={index} style={[styles.guideText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {text}
+            </Text>
+          ))}
         </View>
-
-        <View style={styles.bottomSpace} />
       </ScrollView>
 
       {/* Google Drive File List Modal */}
@@ -445,11 +453,16 @@ export default function BackupImportScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface, maxHeight: '70%', paddingBottom: 20 + insets.bottom }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
                 {t('backupImport.googleDriveBackupFiles')}
               </Text>
-              <MaterialPressable onPress={() => setShowFileListModal(false)}>
-                <Ionicons name="close" size={28} color={colors.text} />
+              <MaterialPressable
+                onPress={() => setShowFileListModal(false)}
+                style={styles.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
               </MaterialPressable>
             </View>
 
@@ -457,13 +470,15 @@ export default function BackupImportScreen() {
               {t('backupImport.selectBackupFile')}
             </Text>
 
-            <FlatList
-              data={googleFiles}
-              renderItem={renderGoogleFileItem}
-              keyExtractor={(item) => item.id}
-              style={styles.fileList}
-              showsVerticalScrollIndicator={false}
-            />
+            <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <FlatList
+                data={googleFiles}
+                renderItem={renderGoogleFileItem}
+                keyExtractor={(item) => item.id}
+                style={styles.fileList}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
           </View>
         </View>
       </Modal>
@@ -479,105 +494,105 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
   },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
+  iconButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   headerRight: {
-    width: 44,
+    width: SIZE.touch,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
   warningCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 20,
-    gap: 12,
+    padding: 14,
+    borderRadius: RADIUS.control,
+    gap: 10,
   },
   warningText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
   },
-  optionsContainer: {
-    borderRadius: 16,
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
-  optionItem: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 14,
+    gap: 12,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   optionDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
-  optionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
+  tile: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  optionContent: {
+  rowText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  optionTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
+  rowLabel: {
+    ...TYPE.body,
   },
-  optionDescription: {
-    fontSize: 13,
-    lineHeight: 18,
+  rowDesc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
-  unavailableText: {
-    fontSize: 12,
+  badge: {
+    alignSelf: 'flex-start',
     marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: RADIUS.badge,
   },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  guideList: {
-    gap: 12,
-  },
-  guideItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+  guideBox: {
+    borderRadius: RADIUS.control,
+    padding: 14,
+    gap: 8,
   },
   guideText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  bottomSpace: {
-    height: 40,
+    fontSize: 13,
+    lineHeight: 19,
   },
   modalOverlay: {
     flex: 1,
@@ -585,23 +600,27 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
+    borderTopLeftRadius: RADIUS.card,
+    borderTopRightRadius: RADIUS.card,
+    paddingHorizontal: SPACE.card,
+    paddingTop: 12,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 4,
+    marginRight: -10,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '600',
   },
   modalDescription: {
-    fontSize: 14,
-    marginBottom: 16,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 14,
   },
   fileList: {
     maxHeight: 300,
@@ -609,18 +628,9 @@ const styles = StyleSheet.create({
   fileItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     gap: 12,
-  },
-  fileInfo: {
-    flex: 1,
-  },
-  fileName: {
-    fontSize: 15,
-    marginBottom: 4,
-  },
-  fileDate: {
-    fontSize: 13,
   },
 });

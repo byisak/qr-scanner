@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,6 +19,7 @@ import * as Sharing from 'expo-sharing';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 
 const DEFAULT_GROUP_ID = 'default';
@@ -301,28 +301,55 @@ export default function ExportHistoryScreen() {
     return history.length;
   };
 
+  const selectedRecordCount = selectedGroups.reduce((sum, groupId) => sum + getGroupScanCount(groupId), 0);
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={[s.backButton, Platform.OS === 'android' && s.androidIconButton]}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text }]}>{t('exportHistory.title')}</Text>
-        <View style={{ width: 40 }} />
+      {/* 하위 화면 헤더: 뒤로 · 제목 · 전체 선택/해제 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            onPress={() => router.back()}
+            style={s.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+          {t('exportHistory.title')}
+        </Text>
+        <View style={[s.headerSide, s.headerSideRight]}>
+          <MaterialPressable onPress={toggleAll} style={s.headerAction} accessibilityRole="button">
+            <Text style={[s.headerActionText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>
+              {allSelected ? t('exportHistory.deselectAll') : t('exportHistory.selectAll')}
+            </Text>
+          </MaterialPressable>
+        </View>
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={[s.info, { color: colors.textSecondary }]}>
+        {/* 요약: 선택한 그룹의 기록 수 */}
+        <View style={[s.summary, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.summaryTile, { backgroundColor: colors.primarySoft }]}>
+            <Ionicons name="download-outline" size={22} color={colors.primaryText} />
+          </View>
+          <View style={s.rowText}>
+            <Text style={[s.summaryTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              {t('exportHistory.scanRecords', { count: selectedRecordCount })}
+            </Text>
+            <Text style={[s.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
               {t('exportHistory.selectedCount', { count: selectedGroups.length })}
             </Text>
-            <MaterialPressable onPress={toggleAll} style={[s.toggleAllBtn, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}>
-              <Text style={s.toggleAllText}>{allSelected ? t('exportHistory.deselectAll') : t('exportHistory.selectAll')}</Text>
-            </MaterialPressable>
           </View>
+        </View>
 
-          {groups.map((group) => {
+        <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+          {t('exportHistory.selectGroup')}
+        </Text>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {groups.map((group, index) => {
             const isSelected = selectedGroups.includes(group.id);
             const isOnlyOne = selectedGroups.length === 1 && isSelected;
             const scanCount = getGroupScanCount(group.id);
@@ -330,62 +357,72 @@ export default function ExportHistoryScreen() {
             return (
               <MaterialPressable
                 key={group.id}
-                style={[
-                  s.groupItem,
-                  Platform.OS === 'android' && s.groupItemAndroid,
-                  { backgroundColor: colors.surface, borderColor: isSelected ? colors.primary : colors.border },
-                  isSelected && { backgroundColor: isDark ? 'rgba(47, 111, 235, 0.2)' : '#f0f8ff' }
-                ]}
+                style={[s.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
                 onPress={() => toggleGroup(group.id)}
                 disabled={isOnlyOne}
                 activeOpacity={0.7}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected, disabled: isOnlyOne }}
               >
-                <View style={s.groupInfo}>
-                  <View style={s.groupHeader}>
-                    <Text style={[s.groupName, { color: isSelected ? colors.primary : colors.text }]}>
-                      {group.name}
-                    </Text>
-                    {scanCount > 0 && (
-                      <View style={[s.countBadge, { backgroundColor: colors.success }]}>
-                        <Text style={s.countBadgeText}>{t('exportHistory.countBadge', { count: scanCount })}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[s.groupDesc, { color: colors.textSecondary }]}>
+                <View
+                  style={[
+                    s.checkbox,
+                    isSelected
+                      ? { backgroundColor: colors.primary }
+                      : { borderWidth: 2, borderColor: isDark ? '#4A5260' : colors.textTertiary },
+                  ]}
+                >
+                  {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                </View>
+                <View style={s.rowText}>
+                  <Text style={[s.rowLabel, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
+                    {group.name}
+                  </Text>
+                  <Text style={[s.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                     {scanCount > 0 ? t('exportHistory.scanRecords', { count: scanCount }) : t('exportHistory.noRecords')}
                   </Text>
                 </View>
-                <View style={[s.checkbox, { borderColor: isSelected ? colors.primary : colors.borderLight, backgroundColor: isSelected ? colors.primary : 'transparent' }]}>
-                  {isSelected && <Ionicons name="checkmark" size={18} color="#fff" />}
-                </View>
+                {scanCount > 0 && (
+                  <View style={[s.countBadge, { backgroundColor: colors.successSoft }]}>
+                    <Text style={[s.countBadgeText, { color: colors.success, fontFamily: fonts.semiBold }]}>
+                      {t('exportHistory.countBadge', { count: scanCount })}
+                    </Text>
+                  </View>
+                )}
               </MaterialPressable>
             );
           })}
         </View>
 
-        <MaterialPressable
-          style={[s.exportButton, Platform.OS === 'android' && s.androidClip, { backgroundColor: isExporting ? colors.borderLight : colors.primary }]}
-          onPress={handleExport}
-          disabled={isExporting}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="download-outline" size={20} color="#fff" />
-          <Text style={s.exportButtonText}>
-            {isExporting ? t('exportHistory.exporting') : t('exportHistory.exportCSV')}
-          </Text>
-        </MaterialPressable>
+        <View style={s.actions}>
+          <MaterialPressable
+            style={[s.primaryButton, { backgroundColor: isExporting ? colors.raised : colors.primary }]}
+            onPress={handleExport}
+            disabled={isExporting}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isExporting }}
+          >
+            <Ionicons name="download-outline" size={20} color={isExporting ? colors.textTertiary : '#FFFFFF'} />
+            <Text style={[s.primaryButtonText, { color: isExporting ? colors.textTertiary : '#FFFFFF', fontFamily: fonts.semiBold }]}>
+              {isExporting ? t('exportHistory.exporting') : t('exportHistory.exportCSV')}
+            </Text>
+          </MaterialPressable>
 
-        <MaterialPressable
-          style={[s.exportButton, Platform.OS === 'android' && s.androidClip, { backgroundColor: isExportingTxt ? colors.borderLight : colors.success }]}
-          onPress={handleExportTXT}
-          disabled={isExportingTxt}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="document-text-outline" size={20} color="#fff" />
-          <Text style={s.exportButtonText}>
-            {isExportingTxt ? t('exportHistory.exporting') : t('exportHistory.exportTXT')}
-          </Text>
-        </MaterialPressable>
+          <MaterialPressable
+            style={[s.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
+            onPress={handleExportTXT}
+            disabled={isExportingTxt}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isExportingTxt }}
+          >
+            <Ionicons name="document-text-outline" size={18} color={isExportingTxt ? colors.textTertiary : colors.text} />
+            <Text style={[s.secondaryButtonText, { color: isExportingTxt ? colors.textTertiary : colors.text, fontFamily: fonts.semiBold }]}>
+              {isExportingTxt ? t('exportHistory.exporting') : t('exportHistory.exportTXT')}
+            </Text>
+          </MaterialPressable>
+        </View>
       </ScrollView>
     </View>
   );
@@ -398,119 +435,143 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  headerSideRight: {
+    alignItems: 'flex-end',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  headerAction: {
+    minHeight: SIZE.touch,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerActionText: {
+    fontSize: 14,
     fontWeight: '600',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
-  section: {
-    marginBottom: 24,
+  summary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: SPACE.card,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+  },
+  summaryTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  summaryTitle: {
+    fontSize: 17,
+    fontWeight: '600',
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
   },
-  info: {
-    fontSize: 14,
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 14,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rowText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  toggleAllBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+  rowLabel: {
+    ...TYPE.body,
   },
-  toggleAllText: {
-    fontSize: 14,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  groupItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-  },
-  groupInfo: {
-    flex: 1,
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  groupName: {
-    fontSize: 16,
-    fontWeight: '600',
+  rowDesc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   countBadge: {
-    marginLeft: 8,
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
   },
   countBadgeText: {
     fontSize: 12,
-    color: '#fff',
     fontWeight: '600',
   },
-  groupDesc: {
-    fontSize: 14,
+  actions: {
+    marginTop: SPACE.section,
+    gap: SPACE.gap,
   },
-  checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
-  },
-  exportButton: {
+  primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  // Android 전용 Material 3 규격 (iOS 값은 기본 스타일 그대로)
-  groupItemAndroid: {
-    borderRadius: 12,
-    elevation: 1,
-    overflow: 'hidden', // 물결이 카드 모서리 안에 머물게
-  },
-  androidIconButton: {
-    borderRadius: 20,
+    gap: 8,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     overflow: 'hidden',
   },
-  androidClip: {
-    overflow: 'hidden',
-  },
-  exportButtonText: {
+  primaryButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-    marginLeft: 8,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  secondaryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

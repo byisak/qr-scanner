@@ -6,9 +6,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
-  Platform,
   Share,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -16,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
+import MaterialPressable from '../components/MaterialPressable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { parseLotteryQR, getLottoNumberColor } from '../utils/lotteryParser';
 import { checkLotteryResult, formatPrize, getWinMessage } from '../utils/lotteryChecker';
@@ -118,6 +118,41 @@ export default function LotteryResultScreen() {
     }
   };
 
+  // 상태 배지: 당첨은 성공, 낙첨은 중립, 추첨 전은 주의 (연한 바탕 + 진한 글자)
+  const WIN_TONE = { bg: colors.successSoft, fg: colors.success };
+  const LOSE_TONE = { bg: colors.raised, fg: colors.textSecondary };
+  const WAIT_TONE = { bg: colors.warningSoft, fg: colors.warning };
+
+  // 게임 구분(A~E, 본추첨/보너스) 배지
+  const renderGameLabel = (text, isPension, isMainDraw) => (
+    <View
+      style={[
+        styles.gameLabel,
+        isPension && styles.pensionGameLabel,
+        { backgroundColor: isPension && isMainDraw ? colors.primarySoft : colors.raised },
+      ]}
+    >
+      <Text
+        style={[
+          styles.gameLabelText,
+          isPension && styles.pensionGameLabelText,
+          { color: isPension && isMainDraw ? colors.primaryText : colors.textSecondary, fontFamily: fonts.semiBold },
+        ]}
+      >
+        {text}
+      </Text>
+    </View>
+  );
+
+  const renderRankBadge = (label, tone) => (
+    <View style={[styles.rankBadge, { backgroundColor: tone.bg }]}>
+      <Text style={[styles.rankText, { color: tone.fg, fontFamily: fonts.semiBold }]}>{label}</Text>
+    </View>
+  );
+
+  // 묶음 카드 안의 행: 첫 행 말고는 위쪽에 얇은 구분선
+  const rowSeparator = (index) => (index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight } : null);
+
   const renderNumberBall = (num, isBonus = false, size = 40) => {
     const bgColor = getLottoNumberColor(num);
 
@@ -132,7 +167,7 @@ export default function LotteryResultScreen() {
             borderRadius: size / 2,
             backgroundColor: bgColor,
             borderWidth: isBonus ? 3 : 0,
-            borderColor: isBonus ? '#333' : 'transparent',
+            borderColor: isBonus ? colors.text : 'transparent',
           }
         ]}
       >
@@ -143,33 +178,17 @@ export default function LotteryResultScreen() {
     );
   };
 
-  const renderGameResult = (game, winNumbers, bonusNumber) => {
+  const renderGameResult = (game, winNumbers, bonusNumber, index) => {
     const isWinner = game.rank > 0;
-    const rankColor = game.rankColor || colors.textSecondary;
     const rankLabel = isWinner ? `${game.rank}등당첨` : '낙첨';
 
     return (
-      <View
-        key={game.label}
-        style={[
-          styles.gameRow,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          }
-        ]}
-      >
+      <View key={game.label} style={[styles.gameRow, rowSeparator(index)]}>
         {/* 게임 라벨 */}
-        <View style={[styles.gameLabel, { backgroundColor: '#FF9800' }]}>
-          <Text style={[styles.gameLabelText, { color: '#fff', fontFamily: fonts.bold }]}>
-            {game.label}
-          </Text>
-        </View>
+        {renderGameLabel(game.label, false, false)}
 
         {/* 등수 배지 */}
-        <View style={[styles.rankBadge, { backgroundColor: isWinner ? rankColor : '#9E9E9E' }]}>
-          <Text style={styles.rankText}>{rankLabel}</Text>
-        </View>
+        {renderRankBadge(rankLabel, isWinner ? WIN_TONE : LOSE_TONE)}
 
         {/* 번호들 - 맞춘 번호 강조 */}
         <View style={styles.gameNumbers}>
@@ -187,16 +206,16 @@ export default function LotteryResultScreen() {
                     width: isHighlighted ? 36 : 32,
                     height: isHighlighted ? 36 : 32,
                     borderRadius: isHighlighted ? 18 : 16,
-                    backgroundColor: isHighlighted ? bgColor : '#555',
+                    backgroundColor: isHighlighted ? bgColor : colors.raised,
                     borderWidth: isHighlighted ? 3 : 0,
-                    borderColor: isBonusMatch ? '#FFD700' : (isMatch ? '#00FF00' : 'transparent'),
+                    borderColor: isBonusMatch ? colors.warning : (isMatch ? colors.success : 'transparent'),
                   }
                 ]}
               >
                 <Text style={[
                   styles.numberText,
                   {
-                    color: isHighlighted ? '#fff' : '#888',
+                    color: isHighlighted ? '#fff' : colors.textTertiary,
                     fontSize: isHighlighted ? 14 : 12,
                     fontWeight: isHighlighted ? 'bold' : 'normal',
                   }
@@ -204,8 +223,8 @@ export default function LotteryResultScreen() {
                   {num}
                 </Text>
                 {isHighlighted && (
-                  <View style={styles.matchIndicator}>
-                    <Text style={styles.matchIndicatorText}>✓</Text>
+                  <View style={[styles.matchIndicator, { backgroundColor: colors.success, borderColor: colors.surface }]}>
+                    <Ionicons name="checkmark" size={10} color="#FFFFFF" />
                   </View>
                 )}
               </View>
@@ -217,9 +236,8 @@ export default function LotteryResultScreen() {
   };
 
   // 연금복권 게임 결과 렌더링
-  const renderPensionGameResult = (game) => {
+  const renderPensionGameResult = (game, index) => {
     const isWinner = game.rank > 0 || game.rank === 'bonus';
-    const rankColor = game.rankColor || colors.textSecondary;
     let rankLabel;
     if (game.rank === 'bonus') {
       rankLabel = '보너스당첨';
@@ -230,31 +248,12 @@ export default function LotteryResultScreen() {
     }
 
     return (
-      <View
-        key={game.label}
-        style={[
-          styles.gameRow,
-          {
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          }
-        ]}
-      >
+      <View key={game.label} style={[styles.gameRow, rowSeparator(index)]}>
         {/* 게임 라벨 */}
-        <View style={[
-          styles.gameLabel,
-          styles.pensionGameLabel,
-          { backgroundColor: game.label === '본 추첨' ? '#3498db' : '#9b59b6' }
-        ]}>
-          <Text style={[styles.gameLabelText, styles.pensionGameLabelText, { color: '#fff', fontFamily: fonts.bold }]}>
-            {game.label === '본 추첨' ? '본추첨' : '보너스'}
-          </Text>
-        </View>
+        {renderGameLabel(game.label === '본 추첨' ? '본추첨' : '보너스', true, game.label === '본 추첨')}
 
         {/* 등수 배지 */}
-        <View style={[styles.rankBadge, { backgroundColor: isWinner ? rankColor : '#9E9E9E' }]}>
-          <Text style={styles.rankText}>{rankLabel}</Text>
-        </View>
+        {renderRankBadge(rankLabel, isWinner ? WIN_TONE : LOSE_TONE)}
 
         {/* 번호 + 당첨금 */}
         <View style={styles.gameNumbers}>
@@ -265,7 +264,7 @@ export default function LotteryResultScreen() {
 
         {/* 당첨금 표시 */}
         {isWinner && game.prizeText && (
-          <Text style={[styles.prizeText, { color: rankColor }]}>
+          <Text style={[styles.prizeText, { color: colors.success, fontFamily: fonts.semiBold }]}>
             {game.prizeText}
           </Text>
         )}
@@ -273,117 +272,111 @@ export default function LotteryResultScreen() {
     );
   };
 
+  const cardStyle = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }];
+  const groupStyle = [styles.group, { backgroundColor: colors.surface, borderColor: colors.border }];
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 · 공유 */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          onPress={() => router.back()}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        </MaterialPressable>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           구매복권 당첨결과
         </Text>
-        <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-          <Ionicons name="share-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
+        <MaterialPressable
+          onPress={handleShare}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('result.share')}
+        >
+          <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
+        </MaterialPressable>
       </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+          <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
             당첨 확인 중...
           </Text>
         </View>
       ) : error ? (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color={colors.textSecondary} />
+          <View style={[styles.stateTile, { backgroundColor: colors.errorSoft }]}>
+            <Ionicons name="alert-circle-outline" size={32} color={colors.error} />
+          </View>
           <Text style={[styles.errorText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
             {error}
           </Text>
-          <TouchableOpacity
+          <MaterialPressable
             style={[styles.retryButton, { backgroundColor: colors.primary }]}
             onPress={loadLotteryResult}
+            accessibilityRole="button"
           >
-            <Text style={styles.retryButtonText}>다시 시도</Text>
-          </TouchableOpacity>
+            <Text style={[styles.retryButtonText, { fontFamily: fonts.semiBold }]}>다시 시도</Text>
+          </MaterialPressable>
         </View>
       ) : isBeforeDraw && lotteryData ? (
-        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
-          {/* 회차 정보 */}
-          <View style={[styles.roundInfo, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.roundText, { color: colors.primary, fontFamily: fonts.bold }]}>
+        <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
+          {/* 회차 정보 + 당첨 번호 - 추첨 전 */}
+          <View style={cardStyle}>
+            <Text style={[styles.roundText, { color: colors.text, fontFamily: fonts.bold }]}>
               {lotteryData.round}회
             </Text>
             {nextDrawTime && (
-              <Text style={[styles.drawDate, { color: colors.textSecondary }]}>
+              <Text style={[styles.drawDate, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 추첨 예정: {formatDate(nextDrawTime)}
               </Text>
             )}
-          </View>
-
-          {/* 당첨 번호 - 추첨 전 */}
-          <View style={[styles.winNumbersCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+            <Text style={[styles.cardLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               당첨번호
             </Text>
             <View style={styles.beforeDrawContainer}>
-              <Ionicons name="time-outline" size={32} color={colors.textSecondary} />
-              <Text style={[styles.beforeDrawText, { color: colors.textSecondary }]}>
+              <View style={[styles.stateTile, { backgroundColor: colors.raised }]}>
+                <Ionicons name="time-outline" size={28} color={colors.textSecondary} />
+              </View>
+              <Text style={[styles.beforeDrawText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
                 추첨 전입니다
               </Text>
             </View>
           </View>
 
           {/* 대기중 안내 */}
-          <View style={[styles.totalPrizeCard, { backgroundColor: '#FF9800' }]}>
-            <Text style={[styles.totalPrizeLabel, { color: '#fff' }]}>
+          <View style={[styles.totalPrizeCard, { backgroundColor: colors.warningSoft }]}>
+            <Text style={[styles.totalPrizeLabel, { color: colors.warning, fontFamily: fonts.semiBold }]}>
               ⏰ 추첨 대기중
             </Text>
-            <Text style={[styles.totalPrizeAmount, { color: '#fff', fontFamily: fonts.bold, fontSize: 18 }]}>
+            <Text style={[styles.totalPrizeAmount, styles.totalPrizeAmountSmall, { color: colors.text, fontFamily: fonts.bold }]}>
               추첨 후 당첨 결과를 확인하세요
             </Text>
           </View>
 
           {/* 내 복권 번호 */}
-          <View style={styles.gamesSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold, marginBottom: 12 }]}>
-              내 복권 번호
-            </Text>
+          <Text accessibilityRole="header" style={[styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+            내 복권 번호
+          </Text>
+          <View style={groupStyle}>
             {(lotteryData?.games || []).map((game, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.gameRow,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                  }
-                ]}
-              >
+              <View key={index} style={[styles.gameRow, rowSeparator(index)]}>
                 {/* 게임 라벨 */}
-                <View style={[
-                  styles.gameLabel,
-                  lotteryData.type === 'pension' && styles.pensionGameLabel,
+                {renderGameLabel(
                   lotteryData.type === 'pension'
-                    ? { backgroundColor: game.label === '본 추첨' ? '#3498db' : '#9b59b6' }
-                    : { backgroundColor: '#FF9800' }
-                ]}>
-                  <Text style={[
-                    styles.gameLabelText,
-                    { color: '#fff', fontFamily: fonts.bold },
-                    lotteryData.type === 'pension' && styles.pensionGameLabelText
-                  ]}>
-                    {lotteryData.type === 'pension'
-                      ? (game.label === '본 추첨' ? '본추첨' : '보너스')
-                      : String.fromCharCode(65 + index)}
-                  </Text>
-                </View>
+                    ? (game.label === '본 추첨' ? '본추첨' : '보너스')
+                    : String.fromCharCode(65 + index),
+                  lotteryData.type === 'pension',
+                  game.label === '본 추첨'
+                )}
 
                 {/* 대기중 배지 */}
-                <View style={[styles.rankBadge, { backgroundColor: '#FF9800' }]}>
-                  <Text style={styles.rankText}>대기중</Text>
-                </View>
+                {renderRankBadge('대기중', WAIT_TONE)}
 
                 {/* 번호들 */}
                 <View style={styles.gameNumbers}>
@@ -422,46 +415,41 @@ export default function LotteryResultScreen() {
           </View>
 
           {/* 안내 메시지 */}
-          <View style={[styles.infoBox, { backgroundColor: colors.surface }]}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-            <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+          <View style={[styles.infoBox, { backgroundColor: colors.raised }]}>
+            <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+            <Text style={[styles.infoText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
               복권 번호가 기록탭에 저장되었습니다.{'\n'}
               추첨 후 다시 확인하시면 당첨 결과를 볼 수 있습니다.
             </Text>
           </View>
-
-          <View style={{ height: 40 }} />
         </ScrollView>
       ) : result ? (
-        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
-          {/* 회차 정보 */}
-          <View style={[styles.roundInfo, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.roundText, { color: colors.primary, fontFamily: fonts.bold }]}>
+        <ScrollView style={styles.content} contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 24 }]} showsVerticalScrollIndicator={false}>
+          {/* 회차 정보 + 당첨 번호 */}
+          <View style={cardStyle}>
+            <Text style={[styles.roundText, { color: colors.text, fontFamily: fonts.bold }]}>
               {result.round}회
             </Text>
             {lotteryData?.type === 'lotto' && result.drawDate && (
-              <Text style={[styles.drawDate, { color: colors.textSecondary }]}>
+              <Text style={[styles.drawDate, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 추첨일: {result.drawDate}
               </Text>
             )}
-          </View>
-
-          {/* 당첨 번호 */}
-          <View style={[styles.winNumbersCard, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
+            <Text style={[styles.cardLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               당첨번호
             </Text>
             {lotteryData?.type === 'pension' ? (
               /* 연금복권 당첨번호 */
               <View style={styles.pensionWinNumbers}>
                 <View style={styles.pensionWinRow}>
-                  <Text style={[styles.pensionWinLabel, { color: colors.textSecondary }]}>1등</Text>
+                  <Text style={[styles.pensionWinLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>1등</Text>
                   <Text style={[styles.pensionWinNumber, { color: colors.text, fontFamily: fonts.bold }]}>
                     {result.winGroup}조 {result.winNumber}
                   </Text>
                 </View>
                 <View style={styles.pensionWinRow}>
-                  <Text style={[styles.pensionWinLabel, { color: colors.textSecondary }]}>보너스</Text>
+                  <Text style={[styles.pensionWinLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>보너스</Text>
                   <Text style={[styles.pensionWinNumber, { color: colors.text, fontFamily: fonts.bold }]}>
                     각 조 {result.bonusNumber}
                   </Text>
@@ -480,20 +468,20 @@ export default function LotteryResultScreen() {
           {/* 총 당첨금 */}
           <View style={[
             styles.totalPrizeCard,
-            {
-              backgroundColor: result.hasWin ? '#4CAF50' : colors.surface,
-            }
+            result.hasWin
+              ? { backgroundColor: colors.successSoft }
+              : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
           ]}>
             <Text style={[
               styles.totalPrizeLabel,
-              { color: result.hasWin ? '#fff' : colors.textSecondary }
+              { color: result.hasWin ? colors.success : colors.textSecondary, fontFamily: fonts.semiBold }
             ]}>
               {result.hasWin ? '축하합니다!' : '아쉽습니다'}
             </Text>
             <Text style={[
               styles.totalPrizeAmount,
               {
-                color: result.hasWin ? '#fff' : colors.text,
+                color: colors.text,
                 fontFamily: fonts.bold,
               }
             ]}>
@@ -502,44 +490,44 @@ export default function LotteryResultScreen() {
           </View>
 
           {/* 게임별 결과 */}
-          <View style={styles.gamesSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold, marginBottom: 12 }]}>
-              게임별 결과
-            </Text>
+          <Text accessibilityRole="header" style={[styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+            게임별 결과
+          </Text>
+          <View style={groupStyle}>
             {lotteryData?.type === 'pension' ? (
               /* 연금복권 게임별 결과 */
-              (result?.games || []).map((game) => renderPensionGameResult(game))
+              (result?.games || []).map((game, index) => renderPensionGameResult(game, index))
             ) : (
               /* 로또 게임별 결과 */
-              (result?.games || []).map((game) =>
-                renderGameResult(game, result.winNumbers || [], result.bonusNumber)
+              (result?.games || []).map((game, index) =>
+                renderGameResult(game, result.winNumbers || [], result.bonusNumber, index)
               )
             )}
           </View>
 
           {/* 1등 당첨 정보 (로또만) */}
           {lotteryData?.type === 'lotto' && result.firstWinAmount > 0 && (
-            <View style={[styles.firstPrizeInfo, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.firstPrizeTitle, { color: colors.textSecondary }]}>
+            <View style={[cardStyle, styles.firstPrizeInfo]}>
+              <Text style={[styles.firstPrizeTitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 이번 회차 1등 당첨금
               </Text>
               <Text style={[styles.firstPrizeAmount, { color: colors.text, fontFamily: fonts.bold }]}>
                 {formatPrize(result.firstWinAmount)}
               </Text>
-              <Text style={[styles.firstPrizeCount, { color: colors.textSecondary }]}>
+              <Text style={[styles.firstPrizeCount, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 당첨자 {result.firstWinCount}명
               </Text>
             </View>
           )}
 
           {/* 당첨 조건 설명 */}
-          <View style={[styles.prizeConditionBox, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.prizeConditionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-              당첨 조건
-            </Text>
+          <Text accessibilityRole="header" style={[styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+            당첨 조건
+          </Text>
+          <View style={[styles.infoBox, styles.prizeConditionList, { backgroundColor: colors.raised }]}>
             {lotteryData?.type === 'pension' ? (
               /* 연금복권 당첨 조건 */
-              <View style={styles.prizeConditionList}>
+              <>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>1등: 조 + 6자리 번호 모두 일치 (월 700만원 x 20년)</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>2등: 끝 6자리 일치 (월 100만원 x 10년)</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>3등: 끝 5자리 일치 (100만원)</Text>
@@ -548,20 +536,18 @@ export default function LotteryResultScreen() {
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>6등: 끝 2자리 일치 (5천원)</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>7등: 끝 1자리 일치 (1천원)</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>보너스: 보너스 번호 6자리 일치 (월 100만원 x 10년)</Text>
-              </View>
+              </>
             ) : (
               /* 로또 당첨 조건 */
-              <View style={styles.prizeConditionList}>
+              <>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>1등: 6개 번호 모두 일치</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>2등: 5개 번호 + 보너스 번호 일치</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>3등: 5개 번호 일치</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>4등: 4개 번호 일치 (5만원)</Text>
                 <Text style={[styles.prizeConditionItem, { color: colors.textSecondary }]}>5등: 3개 번호 일치 (5천원)</Text>
-              </View>
+              </>
             )}
           </View>
-
-          <View style={{ height: 40 }} />
         </ScrollView>
       ) : null}
     </View>
@@ -576,18 +562,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
-  backButton: {
-    padding: 8,
+  iconButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  shareButton: {
-    padding: 8,
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -596,7 +586,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 15,
   },
   errorContainer: {
     flex: 1,
@@ -604,51 +594,72 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
+  stateTile: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   errorText: {
     marginTop: 16,
-    fontSize: 16,
+    fontSize: 15,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   retryButton: {
     marginTop: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    height: SIZE.primaryButton,
+    paddingHorizontal: 28,
+    borderRadius: RADIUS.button,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   retryButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
   },
-  roundInfo: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 16,
+  contentContainer: {
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
+  },
+  card: {
+    padding: SPACE.card,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
   },
   roundText: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: -0.4,
   },
   drawDate: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 4,
   },
-  winNumbersCard: {
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 16,
+  divider: {
+    height: 1,
+    marginVertical: 16,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 16,
+  cardLabel: {
+    ...TYPE.sectionHeader,
+    marginBottom: 12,
+  },
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   winNumbersRow: {
     flexDirection: 'row',
@@ -660,11 +671,6 @@ const styles = StyleSheet.create({
   numberBall: {
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
     position: 'relative',
   },
   numberText: {
@@ -677,16 +683,9 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#00C853',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#fff',
-  },
-  matchIndicatorText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: 'bold',
   },
   pensionNumber: {
     fontSize: 16,
@@ -702,7 +701,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   pensionWinLabel: {
-    fontSize: 14,
+    fontSize: 13,
     width: 50,
     textAlign: 'right',
   },
@@ -716,63 +715,64 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   totalPrizeCard: {
-    padding: 24,
-    borderRadius: 16,
+    padding: SPACE.card,
+    borderRadius: RADIUS.card,
     alignItems: 'center',
-    marginBottom: 16,
   },
   totalPrizeLabel: {
-    fontSize: 18,
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 6,
   },
   totalPrizeAmount: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  gamesSection: {
-    marginBottom: 16,
+  totalPrizeAmountSmall: {
+    fontSize: 17,
+    letterSpacing: 0,
   },
   gameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 8,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
   },
   gameLabel: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#E0E0E0',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
   },
   gameLabelText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '600',
   },
   pensionGameLabel: {
     width: 'auto',
     paddingHorizontal: 8,
-    borderRadius: 12,
+    borderRadius: RADIUS.badge,
   },
   pensionGameLabelText: {
     fontSize: 11,
   },
   rankBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    height: 24,
+    borderRadius: RADIUS.badge,
     marginRight: 8,
     minWidth: 50,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   rankText: {
-    color: '#fff',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   gameNumbers: {
     flex: 1,
@@ -781,58 +781,50 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   prizeText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '600',
     marginLeft: 8,
   },
   firstPrizeInfo: {
-    padding: 16,
-    borderRadius: 12,
     alignItems: 'center',
   },
   firstPrizeTitle: {
-    fontSize: 14,
+    fontSize: 13,
   },
   firstPrizeAmount: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginTop: 4,
   },
   firstPrizeCount: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 4,
   },
   beforeDrawContainer: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 8,
   },
   beforeDrawText: {
-    fontSize: 16,
-    marginTop: 8,
+    fontSize: 15,
+    marginTop: 10,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
+    padding: 14,
+    borderRadius: RADIUS.control,
+    gap: 10,
+    marginTop: SPACE.gap,
   },
   infoText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  prizeConditionBox: {
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  prizeConditionTitle: {
-    fontSize: 14,
-    marginBottom: 12,
+    fontSize: 13,
+    lineHeight: 19,
   },
   prizeConditionList: {
+    flexDirection: 'column',
     gap: 6,
+    marginTop: 0,
   },
   prizeConditionItem: {
     fontSize: 12,

@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
   ScrollView,
   Dimensions,
@@ -20,6 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
+import MaterialPressable from '../components/MaterialPressable';
 import * as Clipboard from 'expo-clipboard';
 import haptics from '../utils/haptics';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -34,6 +35,9 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
 import { scheduleLotteryNotification } from '../utils/lotteryNotification';
+
+// 이미지 위 바코드 번호 라벨 글자색 (연한 오버레이 색 위라 테마와 무관하게 진하게)
+const BARCODE_LABEL_TEXT = '#0B0D10';
 
 // 분석 타임아웃 (15초)
 const ANALYSIS_TIMEOUT = 15000;
@@ -213,7 +217,7 @@ function ImageAnalysisScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { imageUri, detectedBarcodes: detectedBarcodesParam } = params;
-  const { t } = useLanguage();
+  const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
@@ -1441,18 +1445,26 @@ function ImageAnalysisScreen() {
     return colorList[index % colorList.length];
   };
 
+  const otherGroups = availableGroups.filter(g => !g.isDeleted && !g.isLotteryGroup && !g.id.startsWith('lottery-'));
+  const cardBorder = { backgroundColor: colors.surface, borderColor: colors.border };
+  const rowSeparator = (index) => (index > 0 ? { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight } : null);
+  const secondaryIcon = [styles.resultIconButton, { backgroundColor: colors.raised, borderColor: colors.border, borderWidth: 1 }];
+  const headerIcon = [styles.iconButton, { backgroundColor: colors.raised, borderColor: colors.border }];
+
   return (
-    <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <TouchableOpacity
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
+        </MaterialPressable>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('imageAnalysis.title')}
         </Text>
         <View style={styles.headerRight} />
@@ -1460,7 +1472,7 @@ function ImageAnalysisScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         scrollEnabled={!isZoomed}
       >
@@ -1468,9 +1480,9 @@ function ImageAnalysisScreen() {
         <View style={styles.imageSection}>
           {/* 줌 상태 안내 */}
           {isZoomed && (
-            <View style={styles.zoomHint}>
-              <Ionicons name="scan-outline" size={16} color="#fff" />
-              <Text style={styles.zoomHintText}>
+            <View style={[styles.zoomHint, { backgroundColor: colors.primarySoft }]}>
+              <Ionicons name="scan-outline" size={16} color={colors.primaryText} />
+              <Text style={[styles.zoomHintText, { color: colors.primaryText, fontFamily: fonts.medium }]}>
                 {t('imageAnalysis.zoomHint')}
               </Text>
             </View>
@@ -1518,8 +1530,8 @@ function ImageAnalysisScreen() {
               {/* 로딩 오버레이 */}
               {isLoading && (
                 <View style={styles.loadingOverlay}>
-                  <ActivityIndicator size="large" color="#2F6FEB" />
-                  <Text style={styles.loadingText}>{loadingMessage || t('imageAnalysis.analyzing')}</Text>
+                  <ActivityIndicator size="large" color="#FFFFFF" />
+                  <Text style={[styles.loadingText, { fontFamily: fonts.medium }]}>{loadingMessage || t('imageAnalysis.analyzing')}</Text>
                 </View>
               )}
             </View>
@@ -1528,36 +1540,38 @@ function ImageAnalysisScreen() {
           {/* 줌 컨트롤 버튼 */}
           {isZoomed && (
             <View style={styles.zoomControls}>
-              <TouchableOpacity
-                style={[styles.zoomButton, styles.resetButton]}
+              <MaterialPressable
+                style={[styles.zoomButton, { backgroundColor: colors.raised, borderColor: colors.border, borderWidth: 1 }]}
                 onPress={handleResetZoom}
                 activeOpacity={0.7}
+                accessibilityRole="button"
               >
-                <Ionicons name="contract-outline" size={20} color="#fff" />
-                <Text style={styles.zoomButtonText}>{t('imageAnalysis.resetZoom')}</Text>
-              </TouchableOpacity>
+                <Ionicons name="contract-outline" size={18} color={colors.text} />
+                <Text style={[styles.zoomButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('imageAnalysis.resetZoom')}</Text>
+              </MaterialPressable>
 
-              <TouchableOpacity
-                style={[styles.zoomButton, styles.reanalyzeButton]}
+              <MaterialPressable
+                style={[styles.zoomButton, { backgroundColor: colors.primary }]}
                 onPress={handleReanalyze}
                 activeOpacity={0.7}
                 disabled={isLoading || isReanalyzing}
+                accessibilityRole="button"
               >
                 {isReanalyzing ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
-                    <Ionicons name="scan" size={20} color="#fff" />
-                    <Text style={styles.zoomButtonText}>{t('imageAnalysis.reanalyze')}</Text>
+                    <Ionicons name="scan" size={18} color="#FFFFFF" />
+                    <Text style={[styles.zoomButtonText, { color: '#FFFFFF', fontFamily: fonts.semiBold }]}>{t('imageAnalysis.reanalyze')}</Text>
                   </>
                 )}
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           )}
 
           {/* 줌 사용법 안내 (줌되지 않은 상태에서만 표시) */}
           {!isZoomed && !isLoading && (
-            <Text style={[styles.gestureHint, { color: colors.textSecondary }]}>
+            <Text style={[styles.gestureHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
               {t('imageAnalysis.gestureHint')}
             </Text>
           )}
@@ -1567,209 +1581,233 @@ function ImageAnalysisScreen() {
         {scannerDetectedBarcodes.length > 0 && (
           <View style={styles.resultsSection}>
             <View style={styles.resultsSectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              <Text accessibilityRole="header" style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                 {t('imageAnalysis.scannerDetected') || '스캐너 감지'} ({scannerDetectedBarcodes.length})
               </Text>
             </View>
 
-            <Text style={[styles.scannerDetectedInfo, { color: colors.textSecondary }]}>
+            <Text style={[styles.scannerDetectedInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
               {t('imageAnalysis.scannerDetectedDesc') || '실시간 스캐너에서 감지된 코드입니다'}
             </Text>
 
-            {scannerDetectedBarcodes.map((barcode, index) => {
-              const color = getBarcodeColor(index);
-              return (
-                <View
-                  key={`scanner-${index}`}
-                  style={[styles.resultCard, { backgroundColor: colors.surface, borderLeftColor: color }]}
-                >
-                  <View style={styles.resultHeader}>
-                    <View style={[styles.resultIndex, { backgroundColor: color }]}>
-                      <Ionicons name="scan" size={12} color="#fff" />
+            <View style={[styles.group, cardBorder]}>
+              {scannerDetectedBarcodes.map((barcode, index) => {
+                const color = getBarcodeColor(index);
+                return (
+                  <View key={`scanner-${index}`} style={[styles.resultCard, rowSeparator(index)]}>
+                    <View style={styles.resultHeader}>
+                      <View style={[styles.resultIndex, { backgroundColor: color }]}>
+                        <Ionicons name="scan" size={16} color={BARCODE_LABEL_TEXT} />
+                      </View>
+                      <View style={styles.resultBody}>
+                        <Text style={[styles.resultFormat, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                          {formatName(barcode.type)}
+                        </Text>
+                        <Text style={[styles.resultText, { color: colors.text }]} numberOfLines={3}>
+                          {barcode.value}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={[styles.resultFormat, { color: colors.textSecondary }]}>
-                      {formatName(barcode.type)}
-                    </Text>
+
+                    <View style={styles.resultActions}>
+                      {/* 복사 */}
+                      <MaterialPressable
+                        style={secondaryIcon}
+                        onPress={() => handleCopyResult(barcode.value)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('common.copy')}
+                      >
+                        <Ionicons name="copy-outline" size={20} color={colors.text} />
+                      </MaterialPressable>
+
+                      {/* 열기 */}
+                      <MaterialPressable
+                        style={[styles.resultIconButton, { backgroundColor: colors.primary }]}
+                        onPress={() => handleOpenResult({ text: barcode.value, format: barcode.type })}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="open-outline" size={20} color="#FFFFFF" />
+                      </MaterialPressable>
+
+                      {/* 기록 저장 */}
+                      <MaterialPressable
+                        style={[styles.resultIconButton, { backgroundColor: colors.primarySoft }]}
+                        onPress={() => handleSaveToHistory({ text: barcode.value, format: barcode.type }, index)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('imageAnalysis.saveToHistory')}
+                      >
+                        <Ionicons name="bookmark-outline" size={20} color={colors.primaryText} />
+                      </MaterialPressable>
+                    </View>
                   </View>
-
-                  <Text style={[styles.resultText, { color: colors.text }]} numberOfLines={3}>
-                    {barcode.value}
-                  </Text>
-
-                  <View style={styles.resultActions}>
-                    {/* 복사 */}
-                    <TouchableOpacity
-                      style={[styles.resultIconButton, { backgroundColor: colors.border }]}
-                      onPress={() => handleCopyResult(barcode.value)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="copy-outline" size={20} color={colors.text} />
-                    </TouchableOpacity>
-
-                    {/* 열기 */}
-                    <TouchableOpacity
-                      style={[styles.resultIconButton, styles.primaryButton]}
-                      onPress={() => handleOpenResult({ text: barcode.value, format: barcode.type })}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="open-outline" size={20} color="#fff" />
-                    </TouchableOpacity>
-
-                    {/* 기록 저장 */}
-                    <TouchableOpacity
-                      style={[styles.resultIconButton, styles.historyButton]}
-                      onPress={() => handleSaveToHistory({ text: barcode.value, format: barcode.type }, index)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="bookmark-outline" size={20} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
         )}
 
         {/* 이미지 분석 결과 섹션 */}
         <View style={styles.resultsSection}>
           <View style={styles.resultsSectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            <Text accessibilityRole="header" style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               {t('imageAnalysis.results')} ({results.length})
             </Text>
             {results.length > 0 && (
               <View style={styles.headerButtons}>
                 {/* JSON 다운로드 버튼 */}
-                <TouchableOpacity
-                  style={[styles.iconButton, { backgroundColor: '#2E7D32' }]}
+                <MaterialPressable
+                  style={headerIcon}
                   onPress={handleDownloadAllJson}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('imageAnalysis.downloadJson')}
                 >
-                  <Ionicons name="code-download-outline" size={20} color="#fff" />
-                </TouchableOpacity>
+                  <Ionicons name="code-download-outline" size={20} color={colors.text} />
+                </MaterialPressable>
 
                 {/* 이미지 모두 저장 버튼 */}
                 {results.some(r => r.position) && (
-                  <TouchableOpacity
-                    style={[styles.iconButton, { backgroundColor: colors.primary }]}
+                  <MaterialPressable
+                    style={headerIcon}
                     onPress={handleSaveAllBarcodes}
                     activeOpacity={0.7}
                     disabled={isSaving}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('imageAnalysis.saveAll')}
                   >
                     {isSaving ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={colors.textSecondary} />
                     ) : (
-                      <Ionicons name="images-outline" size={20} color="#fff" />
+                      <Ionicons name="images-outline" size={20} color={colors.text} />
                     )}
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 )}
 
                 {/* 기록 모두 저장 버튼 */}
-                <TouchableOpacity
-                  style={[styles.iconButton, { backgroundColor: '#E67E22' }]}
+                <MaterialPressable
+                  style={[styles.iconButton, { backgroundColor: colors.primary, borderColor: colors.primary }]}
                   onPress={handleSaveAllToHistory}
                   activeOpacity={0.7}
                   disabled={isSavingHistory}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('imageAnalysis.saveAllToHistory')}
                 >
                   {isSavingHistory ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Ionicons name="bookmarks-outline" size={20} color="#fff" />
+                    <Ionicons name="bookmarks-outline" size={20} color="#FFFFFF" />
                   )}
-                </TouchableOpacity>
+                </MaterialPressable>
               </View>
             )}
           </View>
 
           {error && (
-            <View style={[styles.errorCard, { backgroundColor: colors.surface }]}>
-              <Ionicons name="warning-outline" size={24} color="#FF3B30" />
-              <Text style={[styles.errorText, { color: colors.text }]}>{error}</Text>
+            <View style={[styles.errorCard, { backgroundColor: colors.errorSoft }]}>
+              <Ionicons name="warning-outline" size={20} color={colors.error} />
+              <Text style={[styles.errorText, { color: colors.error, fontFamily: fonts.medium }]}>{error}</Text>
             </View>
           )}
 
           {!isLoading && !error && results.length === 0 && (
-            <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
-              <Ionicons name="scan-outline" size={48} color={colors.textSecondary} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            <View style={[styles.emptyCard, cardBorder]}>
+              <View style={[styles.emptyIcon, { backgroundColor: colors.raised }]}>
+                <Ionicons name="scan-outline" size={28} color={colors.textSecondary} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                 {t('imageAnalysis.noResults')}
               </Text>
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('imageAnalysis.noResultsDesc')}
               </Text>
             </View>
           )}
 
-          {results.map((result, index) => {
-            const color = getBarcodeColor(index + scannerDetectedBarcodes.length);
-            return (
-              <View
-                key={result.id}
-                style={[styles.resultCard, { backgroundColor: colors.surface, borderLeftColor: color }]}
-              >
-                <View style={styles.resultHeader}>
-                  <View style={[styles.resultIndex, { backgroundColor: color }]}>
-                    <Text style={styles.resultIndexText}>{index + scannerDetectedBarcodes.length + 1}</Text>
+          {results.length > 0 && (
+            <View style={[styles.group, cardBorder]}>
+              {results.map((result, index) => {
+                const color = getBarcodeColor(index + scannerDetectedBarcodes.length);
+                return (
+                  <View key={result.id} style={[styles.resultCard, rowSeparator(index)]}>
+                    <View style={styles.resultHeader}>
+                      <View style={[styles.resultIndex, { backgroundColor: color }]}>
+                        <Text style={styles.resultIndexText}>{index + scannerDetectedBarcodes.length + 1}</Text>
+                      </View>
+                      <View style={styles.resultBody}>
+                        <Text style={[styles.resultFormat, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                          {formatName(result.format)}
+                        </Text>
+                        <Text style={[styles.resultText, { color: colors.text }]} numberOfLines={3}>
+                          {result.text}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.resultActions}>
+                      {/* 복사 */}
+                      <MaterialPressable
+                        style={secondaryIcon}
+                        onPress={() => handleCopyResult(result.text)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('common.copy')}
+                      >
+                        <Ionicons name="copy-outline" size={20} color={colors.text} />
+                      </MaterialPressable>
+
+                      {/* 이미지 저장 */}
+                      {result.position && (
+                        <MaterialPressable
+                          style={secondaryIcon}
+                          onPress={() => handleSaveBarcode(result, index)}
+                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityLabel={t('imageAnalysis.saveImage')}
+                        >
+                          <Ionicons name="image-outline" size={20} color={colors.text} />
+                        </MaterialPressable>
+                      )}
+
+                      {/* 열기 */}
+                      <MaterialPressable
+                        style={[styles.resultIconButton, { backgroundColor: colors.primary }]}
+                        onPress={() => handleOpenResult(result)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="open-outline" size={20} color="#FFFFFF" />
+                      </MaterialPressable>
+
+                      {/* 기록 저장 */}
+                      <MaterialPressable
+                        style={[styles.resultIconButton, { backgroundColor: colors.primarySoft }]}
+                        onPress={() => handleSaveToHistory(result, index)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('imageAnalysis.saveToHistory')}
+                      >
+                        <Ionicons name="bookmark-outline" size={20} color={colors.primaryText} />
+                      </MaterialPressable>
+
+                      {/* JSON */}
+                      <MaterialPressable
+                        style={secondaryIcon}
+                        onPress={() => handleDownloadSingleJson(result, index)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('imageAnalysis.downloadJson')}
+                      >
+                        <Ionicons name="code-slash-outline" size={20} color={colors.text} />
+                      </MaterialPressable>
+                    </View>
                   </View>
-                  <Text style={[styles.resultFormat, { color: colors.textSecondary }]}>
-                    {formatName(result.format)}
-                  </Text>
-                </View>
-
-                <Text style={[styles.resultText, { color: colors.text }]} numberOfLines={3}>
-                  {result.text}
-                </Text>
-
-                <View style={styles.resultActions}>
-                  {/* 복사 */}
-                  <TouchableOpacity
-                    style={[styles.resultIconButton, { backgroundColor: colors.border }]}
-                    onPress={() => handleCopyResult(result.text)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="copy-outline" size={20} color={colors.text} />
-                  </TouchableOpacity>
-
-                  {/* 이미지 저장 */}
-                  {result.position && (
-                    <TouchableOpacity
-                      style={[styles.resultIconButton, { backgroundColor: colors.border }]}
-                      onPress={() => handleSaveBarcode(result, index)}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="image-outline" size={20} color={colors.text} />
-                    </TouchableOpacity>
-                  )}
-
-                  {/* 열기 */}
-                  <TouchableOpacity
-                    style={[styles.resultIconButton, styles.primaryButton]}
-                    onPress={() => handleOpenResult(result)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="open-outline" size={20} color="#fff" />
-                  </TouchableOpacity>
-
-                  {/* 기록 저장 */}
-                  <TouchableOpacity
-                    style={[styles.resultIconButton, styles.historyButton]}
-                    onPress={() => handleSaveToHistory(result, index)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="bookmark-outline" size={20} color="#fff" />
-                  </TouchableOpacity>
-
-                  {/* JSON */}
-                  <TouchableOpacity
-                    style={[styles.resultIconButton, styles.jsonButton]}
-                    onPress={() => handleDownloadSingleJson(result, index)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="code-slash-outline" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -1803,32 +1841,34 @@ function ImageAnalysisScreen() {
         <View style={styles.lotteryPromptOverlay}>
           <View style={[styles.lotteryPromptContent, { backgroundColor: colors.surface }]}>
             {/* 닫기 버튼 */}
-            <TouchableOpacity
+            <MaterialPressable
               style={styles.lotteryPromptCloseButton}
               onPress={() => {
                 setLotteryPromptVisible(false);
                 setPendingLotteryResult(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
             >
-              <Ionicons name="close" size={24} color={colors.textTertiary} />
-            </TouchableOpacity>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </MaterialPressable>
 
             {/* 아이콘 */}
-            <View style={[styles.lotteryPromptIconContainer, { backgroundColor: '#f39c1220' }]}>
-              <Ionicons name="ticket" size={40} color="#f39c12" />
+            <View style={[styles.lotteryPromptIconContainer, { backgroundColor: colors.warningSoft }]}>
+              <Ionicons name="ticket" size={30} color={colors.warning} />
             </View>
 
             {/* 메시지 */}
-            <Text style={[styles.lotteryPromptTitle, { color: colors.text }]}>
+            <Text style={[styles.lotteryPromptTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
               복권이 스캔되었습니다
             </Text>
-            <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary }]}>
+            <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
               설정에서 복권인식을 활성화 하여, 자동으로 그룹관리되도록 하겠습니까?
             </Text>
 
             {/* 버튼들 */}
             <View style={styles.lotteryPromptButtons}>
-              <TouchableOpacity
+              <MaterialPressable
                 style={[styles.lotteryPromptButton, { backgroundColor: colors.primary }]}
                 onPress={async () => {
                   // 복권 인식 활성화
@@ -1843,14 +1883,15 @@ function ImageAnalysisScreen() {
                   setPendingLotteryResult(null);
                   Alert.alert('완료', '복권 인식이 활성화되었습니다. 다시 저장 버튼을 눌러주세요.');
                 }}
+                accessibilityRole="button"
               >
-                <Text style={[styles.lotteryPromptButtonText, { color: '#fff' }]}>
+                <Text style={[styles.lotteryPromptButtonText, { color: '#FFFFFF', fontFamily: fonts.semiBold }]}>
                   활성화
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
 
-              <TouchableOpacity
-                style={[styles.lotteryPromptButton, { backgroundColor: colors.inputBackground }]}
+              <MaterialPressable
+                style={[styles.lotteryPromptButton, styles.lotteryPromptSecondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
                 onPress={async () => {
                   // 다시 묻지 않기 저장
                   setDontAskLotteryPrompt(true);
@@ -1858,11 +1899,12 @@ function ImageAnalysisScreen() {
                   setLotteryPromptVisible(false);
                   setPendingLotteryResult(null);
                 }}
+                accessibilityRole="button"
               >
-                <Text style={[styles.lotteryPromptButtonText, { color: colors.textSecondary }]}>
+                <Text style={[styles.lotteryPromptButtonText, styles.lotteryPromptSecondaryText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                   다시 묻지 않기
                 </Text>
-              </TouchableOpacity>
+              </MaterialPressable>
             </View>
           </View>
         </View>
@@ -1881,36 +1923,39 @@ function ImageAnalysisScreen() {
         <View style={styles.lotteryPromptOverlay}>
           <View style={[styles.lotteryPromptContent, { backgroundColor: colors.surface, maxHeight: '70%' }]}>
             {/* 닫기 버튼 */}
-            <TouchableOpacity
+            <MaterialPressable
               style={styles.lotteryPromptCloseButton}
               onPress={() => {
                 setGroupSelectForNonLotteryVisible(false);
                 setPendingNonLotteryResult(null);
               }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
             >
-              <Ionicons name="close" size={24} color={colors.textTertiary} />
-            </TouchableOpacity>
+              <Ionicons name="close" size={22} color={colors.textSecondary} />
+            </MaterialPressable>
 
             {/* 아이콘 */}
-            <View style={[styles.lotteryPromptIconContainer, { backgroundColor: colors.primary + '20' }]}>
-              <Ionicons name="folder-open" size={40} color={colors.primary} />
+            <View style={[styles.lotteryPromptIconContainer, { backgroundColor: colors.primarySoft }]}>
+              <Ionicons name="folder-open" size={30} color={colors.primaryText} />
             </View>
 
             {/* 메시지 */}
-            <Text style={[styles.lotteryPromptTitle, { color: colors.text }]}>
+            <Text style={[styles.lotteryPromptTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
               복권 그룹이 선택되어 있습니다
             </Text>
-            <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary }]}>
+            <Text style={[styles.lotteryPromptMessage, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
               일반 QR/바코드를 어디에 저장할까요?
             </Text>
 
             {/* 그룹 선택 리스트 */}
             <ScrollView style={styles.groupSelectList} showsVerticalScrollIndicator={false}>
               {/* 현재 그룹에 계속 저장 옵션 */}
-              <TouchableOpacity
+              <MaterialPressable
                 style={[
                   styles.groupSelectItem,
-                  { backgroundColor: colors.inputBackground, borderColor: colors.primary, borderWidth: 2 }
+                  styles.groupSelectCurrent,
+                  { backgroundColor: colors.primarySoft, borderColor: colors.primary }
                 ]}
                 onPress={async () => {
                   setKeepSavingToLotteryGroup(true);
@@ -1930,55 +1975,60 @@ function ImageAnalysisScreen() {
                     }
                   }
                 }}
+                accessibilityRole="button"
               >
                 <View style={styles.groupSelectItemContent}>
-                  <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+                  <Ionicons name="checkmark-circle" size={22} color={colors.primaryText} />
                   <View style={styles.groupSelectItemTextContainer}>
-                    <Text style={[styles.groupSelectItemText, { color: colors.text, fontWeight: '600' }]}>
+                    <Text style={[styles.groupSelectItemText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                       현재 그룹에 계속 저장
                     </Text>
-                    <Text style={[styles.groupSelectItemSubtext, { color: colors.textSecondary }]}>
+                    <Text style={[styles.groupSelectItemSubtext, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                       다시 묻지 않고 복권 그룹에 저장합니다
                     </Text>
                   </View>
                 </View>
-              </TouchableOpacity>
+              </MaterialPressable>
 
               {/* 다른 그룹 목록 */}
-              {availableGroups
-                .filter(g => !g.isDeleted && !g.isLotteryGroup && !g.id.startsWith('lottery-'))
-                .map((group) => (
-                  <TouchableOpacity
-                    key={group.id}
-                    style={[styles.groupSelectItem, { backgroundColor: colors.inputBackground }]}
-                    onPress={async () => {
-                      setGroupSelectForNonLotteryVisible(false);
+              {otherGroups.length > 0 && (
+              <View style={[styles.group, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                {otherGroups
+                  .map((group, index) => (
+                    <MaterialPressable
+                      key={group.id}
+                      style={[styles.groupSelectItem, rowSeparator(index)]}
+                      onPress={async () => {
+                        setGroupSelectForNonLotteryVisible(false);
 
-                      // 선택한 그룹에 저장
-                      if (pendingNonLotteryResult) {
-                        if (pendingNonLotteryResult.isAll) {
-                          const { result, index, isAll, ...rest } = pendingNonLotteryResult;
-                          setPendingNonLotteryResult(null);
-                          await handleSaveAllToHistoryWithGroup(group.id);
-                        } else {
-                          await handleSaveToHistoryWithGroup(pendingNonLotteryResult.result, pendingNonLotteryResult.index, group.id);
-                          setPendingNonLotteryResult(null);
+                        // 선택한 그룹에 저장
+                        if (pendingNonLotteryResult) {
+                          if (pendingNonLotteryResult.isAll) {
+                            const { result, index, isAll, ...rest } = pendingNonLotteryResult;
+                            setPendingNonLotteryResult(null);
+                            await handleSaveAllToHistoryWithGroup(group.id);
+                          } else {
+                            await handleSaveToHistoryWithGroup(pendingNonLotteryResult.result, pendingNonLotteryResult.index, group.id);
+                            setPendingNonLotteryResult(null);
+                          }
                         }
-                      }
-                    }}
-                  >
-                    <View style={styles.groupSelectItemContent}>
-                      <Ionicons
-                        name={group.icon || 'folder'}
-                        size={24}
-                        color={group.color || colors.textSecondary}
-                      />
-                      <Text style={[styles.groupSelectItemText, { color: colors.text, marginLeft: 12 }]}>
-                        {group.id === 'default' ? t('groupEdit.defaultGroup') : group.name}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
+                      }}
+                      accessibilityRole="button"
+                    >
+                      <View style={styles.groupSelectItemContent}>
+                        <Ionicons
+                          name={group.icon || 'folder'}
+                          size={22}
+                          color={group.color || colors.textSecondary}
+                        />
+                        <Text style={[styles.groupSelectItemText, styles.groupSelectItemName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
+                          {group.id === 'default' ? t('groupEdit.defaultGroup') : group.name}
+                        </Text>
+                      </View>
+                    </MaterialPressable>
+                  ))}
+              </View>
+              )}
             </ScrollView>
           </View>
         </View>
@@ -1988,12 +2038,6 @@ function ImageAnalysisScreen() {
 }
 
 const styles = StyleSheet.create({
-  absoluteContainer: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  fullScreen: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },
@@ -2015,46 +2059,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   headerRight: {
-    width: 40,
+    width: SIZE.touch,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 40,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
   },
   imageSection: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     paddingTop: 28, // 라벨 높이 + 여백 (잘림 방지)
   },
   imageContainer: {
     position: 'relative',
-    borderRadius: 12,
+    borderRadius: RADIUS.group,
     overflow: 'visible', // 라벨이 이미지 밖으로 나올 수 있도록
-    backgroundColor: '#000',
+    backgroundColor: '#000', // 사진 바탕 (테마와 무관)
   },
   image: {
-    borderRadius: 12,
+    borderRadius: RADIUS.group,
   },
   barcodeBox: {
     position: 'absolute',
@@ -2072,7 +2116,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   barcodeLabelText: {
-    color: '#fff',
+    color: BARCODE_LABEL_TEXT,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -2081,168 +2125,155 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: RADIUS.group,
   },
   loadingText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 14,
     marginTop: 12,
     fontWeight: '500',
   },
   resultsSection: {
+    marginTop: 14,
   },
   resultsSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    minHeight: SIZE.touch,
+    marginHorizontal: 4,
+    marginBottom: 6,
+    gap: 8,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...TYPE.sectionHeader,
+    flexShrink: 1,
   },
   scannerDetectedInfo: {
-    fontSize: 13,
-    marginBottom: 12,
-    fontStyle: 'italic',
+    ...TYPE.caption,
+    lineHeight: 17,
+    marginHorizontal: 4,
+    marginTop: -4,
+    marginBottom: 8,
   },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  saveAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
     gap: 6,
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
-  saveAllButtonText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   errorCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
+    padding: 14,
+    borderRadius: RADIUS.control,
+    gap: 10,
+    marginBottom: SPACE.gap,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 19,
     flex: 1,
   },
   emptyCard: {
     alignItems: 'center',
-    padding: 32,
-    borderRadius: 12,
+    padding: SPACE.card,
+    paddingVertical: 28,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 14,
+    marginBottom: 6,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 19,
   },
   resultCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
   resultHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+    gap: 12,
   },
   resultIndex: {
-    width: 24,
-    height: 24,
+    width: 40,
+    height: 40,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
   },
   resultIndexText: {
-    color: '#fff',
-    fontSize: 12,
+    color: BARCODE_LABEL_TEXT,
+    fontFamily: MONO,
+    fontSize: 14,
     fontWeight: '700',
   },
+  resultBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
   resultFormat: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   resultText: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 16,
+    fontFamily: MONO,
+    fontSize: 14,
+    lineHeight: 20,
   },
   resultActions: {
     flexDirection: 'row',
-    gap: 10,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    gap: 6,
+    gap: SPACE.gap,
   },
   resultIconButton: {
     flex: 1,
-    height: 44,
-    borderRadius: 10,
+    height: SIZE.touch,
+    borderRadius: RADIUS.control,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: '#2F6FEB',
-  },
-  jsonButton: {
-    backgroundColor: '#2E7D32',
-  },
-  historyButton: {
-    backgroundColor: '#E67E22',
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    overflow: 'hidden',
   },
   // 줌 관련 스타일
   zoomHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(47, 111, 235, 0.9)',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: RADIUS.control,
     marginBottom: 8,
     gap: 8,
+    alignSelf: 'stretch',
   },
   zoomHintText: {
-    color: '#fff',
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
@@ -2250,38 +2281,34 @@ const styles = StyleSheet.create({
   zoomControls: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    gap: SPACE.gap,
     marginTop: 12,
+    alignSelf: 'stretch',
   },
   zoomButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    justifyContent: 'center',
+    height: SIZE.button,
     paddingHorizontal: 16,
-    borderRadius: 10,
+    borderRadius: RADIUS.control,
     gap: 6,
-  },
-  resetButton: {
-    backgroundColor: '#6c757d',
-  },
-  reanalyzeButton: {
-    backgroundColor: '#2F6FEB',
+    overflow: 'hidden',
   },
   zoomButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   gestureHint: {
-    fontSize: 12,
+    ...TYPE.caption,
     textAlign: 'center',
     marginTop: 8,
-    fontStyle: 'italic',
   },
   // 복권 인식 활성화 유도 모달 스타일
   lotteryPromptOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -2289,55 +2316,69 @@ const styles = StyleSheet.create({
   lotteryPromptContent: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: RADIUS.card,
+    padding: SPACE.card,
+    paddingTop: 24,
     alignItems: 'center',
     position: 'relative',
   },
   lotteryPromptCloseButton: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    width: 32,
-    height: 32,
+    top: 8,
+    right: 8,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
   },
   lotteryPromptIconContainer: {
-    width: 80,
-    height: 80,
+    width: 64,
+    height: 64,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 8,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   lotteryPromptTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   lotteryPromptMessage: {
-    fontSize: 15,
+    fontSize: 14,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    lineHeight: 21,
+    marginBottom: 20,
     paddingHorizontal: 8,
   },
   lotteryPromptButtons: {
     width: '100%',
-    gap: 12,
+    gap: SPACE.gap,
   },
   lotteryPromptButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 14,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  lotteryPromptSecondaryButton: {
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
   },
   lotteryPromptButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  lotteryPromptSecondaryText: {
+    fontSize: 15,
   },
   // 복권 그룹에서 일반 QR 저장 시 그룹 선택 모달 스타일
   groupSelectList: {
@@ -2346,10 +2387,16 @@ const styles = StyleSheet.create({
   },
   groupSelectItem: {
     width: '100%',
-    paddingVertical: 14,
+    minHeight: SIZE.row,
+    justifyContent: 'center',
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 10,
+  },
+  groupSelectCurrent: {
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    marginBottom: SPACE.gap,
+    overflow: 'hidden',
   },
   groupSelectItemContent: {
     flexDirection: 'row',
@@ -2360,10 +2407,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   groupSelectItemText: {
-    fontSize: 16,
+    fontSize: 15,
+  },
+  groupSelectItemName: {
+    flex: 1,
+    marginLeft: 12,
   },
   groupSelectItemSubtext: {
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 2,
   },
 });

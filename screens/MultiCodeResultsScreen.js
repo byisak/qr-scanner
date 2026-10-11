@@ -10,7 +10,6 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +20,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { parseQRContent, QR_CONTENT_TYPES } from '../utils/qrContentParser';
 import { parseLabel, labelOfItem, formatLabelSummary } from '../utils/labelParser';
@@ -240,125 +240,150 @@ export default function MultiCodeResultsScreen() {
 
   const allSaved = codes.length > 0 && savedCodes.size === codes.length;
 
+  // 왼쪽 40x40 종류 배지 (기록 화면과 같은 규칙): URL은 강조, 2D는 성공, 1D 바코드는 주의, 그 밖의 QR은 중립
+  const getKindBadge = (item, isQRCode, parsedContent) => {
+    if (isQRCode) {
+      if (parsedContent && parsedContent.type === QR_CONTENT_TYPES.URL) {
+        return { label: 'URL', bg: colors.primarySoft, fg: colors.primaryText };
+      }
+      return { label: 'QR', bg: colors.raised, fg: colors.textSecondary };
+    }
+    const twoD = { datamatrix: 'DM', pdf417: 'PDF', aztec: 'AZ' };
+    const type = String(item.type || '').toLowerCase();
+    if (twoD[type]) return { label: twoD[type], bg: colors.successSoft, fg: colors.success };
+    return { label: '1D', bg: colors.warningSoft, fg: colors.warning };
+  };
+
   const renderCodeItem = ({ item, index }) => {
     const isSaved = savedCodes.has(index);
     const isQRCode = !item.type || item.type === 'qr' || item.type === 'qrcode';
     const parsedContent = isQRCode ? parseQRContent(item.value) : null;
+    const kind = getKindBadge(item, isQRCode, parsedContent);
+    const first = index === 0;
+    const last = index === codes.length - 1;
 
     return (
       <MaterialPressable
-        style={[styles.item, { backgroundColor: colors.surface }]}
+        style={[
+          styles.item,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderTopWidth: first ? 1 : 0,
+            borderBottomWidth: last ? 1 : StyleSheet.hairlineWidth,
+            borderBottomColor: last ? colors.border : colors.borderLight,
+          },
+          first && styles.itemFirst,
+          last && styles.itemLast,
+        ]}
         onPress={() => handleCopy(item.value)}
         activeOpacity={0.7}
       >
-        <View style={styles.itemContent}>
-          <View style={styles.itemInfo}>
-            {/* 1줄: 스캔값 */}
-            <Text style={[styles.codeValue, { color: colors.text, fontFamily: fonts.bold }]} numberOfLines={2}>
-              {item.value}
-            </Text>
-            {(() => {
-              const summary = formatLabelSummary(labelOfItem({ code: item.value }, labelSettings.categories), 3, t);
-              return summary ? (
-                <Text style={[styles.labelSummary, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1} ellipsizeMode="middle">
-                  {summary}
-                </Text>
-              ) : null;
-            })()}
+        <View style={[styles.lead, { backgroundColor: kind.bg }]}>
+          <Text style={[styles.leadText, { color: kind.fg }]}>{kind.label}</Text>
+        </View>
 
-            {/* 2줄: 바코드타입, 콘텐츠타입 뱃지 */}
-            <View style={styles.badgeRow}>
-              {/* 바코드 타입 */}
-              <View style={[styles.badge, { backgroundColor: colors.primary + '15' }]}>
-                <Ionicons
-                  name={isQRCode ? 'qr-code' : 'barcode'}
-                  size={11}
-                  color={colors.primary}
-                />
-                <Text style={[styles.badgeText, { color: colors.primary }]}>
-                  {getTypeDisplayName(item.type)}
+        <View style={styles.itemInfo}>
+          {/* 1줄: 스캔값 */}
+          <Text style={[styles.codeValue, { color: colors.text }]} numberOfLines={2}>
+            {item.value}
+          </Text>
+          {(() => {
+            const summary = formatLabelSummary(labelOfItem({ code: item.value }, labelSettings.categories), 3, t);
+            return summary ? (
+              <Text style={[styles.labelSummary, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1} ellipsizeMode="middle">
+                {summary}
+              </Text>
+            ) : null;
+          })()}
+
+          {/* 2줄: 바코드타입, 콘텐츠타입 뱃지 */}
+          <View style={styles.badgeRow}>
+            <View style={[styles.badge, { backgroundColor: colors.raised }]}>
+              <Text style={[styles.badgeText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                {getTypeDisplayName(item.type)}
+              </Text>
+            </View>
+
+            {/* 콘텐츠 타입 (QR 코드이고 TEXT가 아닌 경우만) */}
+            {parsedContent && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
+              <View style={[styles.badge, { backgroundColor: colors.primarySoft }]}>
+                <Ionicons name={parsedContent.icon} size={11} color={colors.primaryText} />
+                <Text style={[styles.badgeText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>
+                  {getContentTypeLabel(parsedContent.type)}
                 </Text>
               </View>
+            )}
 
-              {/* 콘텐츠 타입 (QR 코드이고 TEXT가 아닌 경우만) */}
-              {parsedContent && parsedContent.type !== QR_CONTENT_TYPES.TEXT && (
-                <View style={[styles.badge, { backgroundColor: parsedContent.color + '15' }]}>
-                  <Ionicons name={parsedContent.icon} size={11} color={parsedContent.color} />
-                  <Text style={[styles.badgeText, { color: parsedContent.color }]}>
-                    {getContentTypeLabel(parsedContent.type)}
-                  </Text>
-                </View>
-              )}
-
-              {/* 저장됨 표시 */}
-              {isSaved && (
-                <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
-                  <Ionicons name="checkmark-circle" size={11} color={colors.success} />
-                  <Text style={[styles.badgeText, { color: colors.success }]}>
-                    {t('multiCodeResults.saved') || '저장됨'}
-                  </Text>
-                </View>
-              )}
-            </View>
+            {/* 저장됨 표시 */}
+            {isSaved && (
+              <View style={[styles.badge, { backgroundColor: colors.successSoft }]}>
+                <Ionicons name="checkmark-circle" size={11} color={colors.success} />
+                <Text style={[styles.badgeText, { color: colors.success, fontFamily: fonts.semiBold }]}>
+                  {t('multiCodeResults.saved') || '저장됨'}
+                </Text>
+              </View>
+            )}
           </View>
+        </View>
 
-          {/* 액션 버튼들 */}
-          <View style={styles.itemActions}>
-            <MaterialPressable
-              style={[styles.actionButton, { backgroundColor: colors.inputBackground }]}
-              onPress={() => handleCopy(item.value)}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.copy')}
-            >
-              <Ionicons name="copy-outline" size={20} color={colors.primary} />
-            </MaterialPressable>
-            <MaterialPressable
-              style={[
-                styles.actionButton,
-                { backgroundColor: isSaved ? colors.success : colors.primary }
-              ]}
-              onPress={() => handleSaveCode(item, index)}
-              disabled={isSaved || isSaving}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={isSaved ? t('multiCodeResults.saved') : t('common.save')}
-              accessibilityState={{ disabled: isSaved || isSaving }}
-            >
-              <Ionicons
-                name={isSaved ? "checkmark" : "bookmark-outline"}
-                size={20}
-                color="#fff"
-              />
-            </MaterialPressable>
-          </View>
+        {/* 액션 버튼들 */}
+        <View style={styles.itemActions}>
+          <MaterialPressable
+            style={styles.actionButton}
+            onPress={() => handleCopy(item.value)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.copy')}
+          >
+            <Ionicons name="copy-outline" size={20} color={colors.textSecondary} />
+          </MaterialPressable>
+          <MaterialPressable
+            style={[
+              styles.actionButton,
+              { backgroundColor: isSaved ? colors.successSoft : colors.primarySoft }
+            ]}
+            onPress={() => handleSaveCode(item, index)}
+            disabled={isSaved || isSaving}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={isSaved ? t('multiCodeResults.saved') : t('common.save')}
+            accessibilityState={{ disabled: isSaved || isSaving }}
+          >
+            <Ionicons
+              name={isSaved ? "checkmark" : "bookmark-outline"}
+              size={20}
+              color={isSaved ? colors.success : colors.primaryText}
+            />
+          </MaterialPressable>
         </View>
       </MaterialPressable>
     );
   };
 
+  const saveAllDisabled = allSaved || isSaving;
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top }]}>
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 4 }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
 
-      {/* 헤더 */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목(저장 그룹) */}
+      <View style={styles.header}>
         <MaterialPressable
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+          <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
             {t('multiCodeResults.title')} ({codes.length})
           </Text>
           {/* 어느 그룹에 저장되는지 보여준다 */}
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
             {t('multiCodeResults.saveTo', { group: groupName })}
           </Text>
         </View>
@@ -368,8 +393,10 @@ export default function MultiCodeResultsScreen() {
       {/* 코드 목록 */}
       {codes.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="qr-code-outline" size={64} color={colors.textTertiary} />
-          <Text style={[styles.emptyText, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
+          <View style={[styles.emptyIcon, { backgroundColor: colors.raised }]}>
+            <Ionicons name="qr-code-outline" size={32} color={colors.textTertiary} />
+          </View>
+          <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
             {t('multiCodeResults.noResults') || '감지된 코드가 없습니다'}
           </Text>
         </View>
@@ -383,30 +410,46 @@ export default function MultiCodeResultsScreen() {
         />
       )}
 
-      {/* 하단 버튼 */}
+      {/* 하단 버튼: 보조(닫기) + 주(모두 저장) */}
       {codes.length > 0 && (
-        <View style={[styles.bottomContainer, { backgroundColor: colors.background, borderTopColor: colors.border, paddingBottom: 16 + insets.bottom }]}>
+        <View style={[styles.bottomContainer, { backgroundColor: colors.background, borderTopColor: colors.borderLight, paddingBottom: 12 + insets.bottom }]}>
+          <MaterialPressable
+            style={[styles.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.secondaryButtonText, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+              {t('common.close')}
+            </Text>
+          </MaterialPressable>
           <MaterialPressable
             style={[
               styles.saveAllButton,
-              { backgroundColor: allSaved ? colors.success : colors.primary }
+              { backgroundColor: allSaved ? colors.successSoft : isSaving ? colors.raised : colors.primary }
             ]}
             onPress={handleSaveAll}
-            disabled={allSaved || isSaving}
+            disabled={saveAllDisabled}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityState={{ disabled: allSaved || isSaving, busy: isSaving }}
+            accessibilityState={{ disabled: saveAllDisabled, busy: isSaving }}
           >
             {isSaving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.textTertiary} />
             ) : (
               <Ionicons
                 name={allSaved ? "checkmark-circle" : "bookmark"}
-                size={22}
-                color="#fff"
+                size={20}
+                color={allSaved ? colors.success : '#FFFFFF'}
               />
             )}
-            <Text style={[styles.saveAllButtonText, { fontFamily: fonts.semiBold }]}>
+            <Text
+              style={[
+                styles.saveAllButtonText,
+                { color: allSaved ? colors.success : isSaving ? colors.textTertiary : '#FFFFFF', fontFamily: fonts.semiBold },
+              ]}
+              numberOfLines={1}
+            >
               {allSaved
                 ? t('multiCodeResults.allSaved')
                 : isSaving
@@ -428,53 +471,76 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   backButton: {
-    padding: 4,
-    ...Platform.select({ android: { borderRadius: 18, overflow: 'hidden' }, default: {} }),
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
+    marginHorizontal: 8,
   },
   headerTitle: {
-    fontSize: 18,
+    ...TYPE.screenTitle,
   },
   headerSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
+    ...TYPE.caption,
+    marginTop: 1,
   },
   placeholder: {
-    width: 36,
+    width: SIZE.touch,
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 100,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
   },
   item: {
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 14,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    ...Platform.select({ android: { borderRadius: 12, elevation: 1, overflow: 'hidden' }, default: {} }),
-  },
-  itemContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 12,
+    paddingLeft: 16,
+    paddingRight: 8,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    overflow: 'hidden',
+  },
+  itemFirst: {
+    borderTopLeftRadius: RADIUS.group,
+    borderTopRightRadius: RADIUS.group,
+  },
+  itemLast: {
+    borderBottomLeftRadius: RADIUS.group,
+    borderBottomRightRadius: RADIUS.group,
+  },
+  lead: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leadText: {
+    fontFamily: MONO,
+    fontSize: 11,
+    fontWeight: '500',
   },
   itemInfo: {
     flex: 1,
+    minWidth: 0,
   },
   codeValue: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontFamily: MONO,
+    fontSize: 14,
+    lineHeight: 20,
   },
   labelSummary: {
     fontSize: 12,
@@ -484,16 +550,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 8,
+    marginTop: 6,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    height: 22,
+    paddingHorizontal: 8,
     borderRadius: 6,
     gap: 3,
-    ...Platform.select({ android: { borderRadius: 8, minHeight: 28, paddingHorizontal: 8 }, default: {} }),
   },
   badgeText: {
     fontSize: 11,
@@ -501,16 +566,15 @@ const styles = StyleSheet.create({
   },
   itemActions: {
     flexDirection: 'row',
-    gap: 8,
-    marginLeft: 12,
+    gap: 4,
   },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: RADIUS.control,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({ android: { overflow: 'hidden' }, default: {} }),
+    overflow: 'hidden',
   },
   emptyContainer: {
     flex: 1,
@@ -518,48 +582,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
   },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyText: {
-    fontSize: 16,
+    fontSize: 15,
   },
   bottomContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
-    borderTopWidth: 1,
+    flexDirection: 'row',
+    gap: SPACE.gap,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  secondaryButton: {
+    flex: 1,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  secondaryButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   saveAllButton: {
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     gap: 8,
-    ...Platform.select({ android: { borderRadius: 20, minHeight: 48, paddingVertical: 12, overflow: 'hidden' }, default: {} }),
+    overflow: 'hidden',
   },
   saveAllButtonText: {
-    color: '#fff',
     fontSize: 16,
-    ...Platform.select({ android: { fontSize: 15 }, default: {} }),
-  },
-  toast: {
-    position: 'absolute',
-    bottom: 100,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 25,
-    gap: 8,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  toastText: {
-    fontSize: 14,
+    fontWeight: '600',
+    flexShrink: 1,
   },
 });

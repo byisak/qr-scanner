@@ -17,6 +17,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSync } from '../contexts/SyncContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import LockIcon from '../components/LockIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -46,7 +47,6 @@ export default function BackupExportScreen() {
   const { syncStatus, lastSyncTime, iCloudEnabled, autoSyncEnabled, syncNow, toggleAutoSync, SYNC_STATUS } = useSync();
   const { isLocked, showUnlockAlert } = useFeatureLock();
 
-  const statusBarHeight = Platform.OS === 'ios' ? 50 : insets.top;
   const [isLoading, setIsLoading] = useState(false);
   const [loadingType, setLoadingType] = useState(null);
   const [lastGoogleBackupTime, setLastGoogleBackupTime] = useState(null);
@@ -303,11 +303,11 @@ export default function BackupExportScreen() {
   const getSyncStatusColor = () => {
     switch (syncStatus) {
       case SYNC_STATUS.SYNCING:
-        return colors.primary;
+        return colors.primaryText;
       case SYNC_STATUS.SUCCESS:
-        return '#34C759';
+        return colors.success;
       case SYNC_STATUS.ERROR:
-        return '#FF3B30';
+        return colors.error;
       case SYNC_STATUS.DISABLED:
         return colors.textTertiary;
       default:
@@ -323,14 +323,22 @@ export default function BackupExportScreen() {
     { icon: 'barcode-outline', key: 'barcodeTypeSettings' },
   ];
 
+  const switchOff = isDark ? '#343A44' : colors.border;
+  const separator = { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: statusBarHeight, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <MaterialPressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          onPress={() => router.back()}
+          style={styles.backButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('backupExport.title')}
         </Text>
         <View style={styles.headerRight} />
@@ -338,30 +346,30 @@ export default function BackupExportScreen() {
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: 24 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* iCloud 자동 동기화 섹션 */}
         {Platform.OS === 'ios' && (
-          <View style={[styles.icloudSection, { backgroundColor: colors.surface }]}>
-            <View style={styles.icloudHeader}>
-              <View style={{ position: 'relative' }}>
-                <View style={[styles.icloudIconContainer, { backgroundColor: '#5AC8FA15' }]}>
-                  <Ionicons name="cloud-outline" size={28} color="#5AC8FA" />
+          <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.row, styles.rowWithDesc]}>
+              <View>
+                <View style={[styles.tile, { backgroundColor: colors.primarySoft }]}>
+                  <Ionicons name="cloud-outline" size={20} color={colors.primaryText} />
                 </View>
                 <View style={styles.iconLockBadge}>
                   <LockIcon featureId="icloudBackup" size={12} badge style={{ marginLeft: 0 }} />
                 </View>
               </View>
-              <View style={styles.icloudInfo}>
-                <Text style={[styles.icloudTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              <View style={styles.rowText}>
+                <Text style={[styles.rowLabel, { color: colors.text, fontFamily: fonts.medium }]}>
                   {t('backupExport.icloudAutoSync')}
                 </Text>
                 <View style={styles.syncStatusRow}>
                   {syncStatus === SYNC_STATUS.SYNCING && (
                     <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 6 }} />
                   )}
-                  <Text style={[styles.syncStatusText, { color: getSyncStatusColor(), fontFamily: fonts.regular }]}>
+                  <Text style={[styles.rowDesc, { color: getSyncStatusColor(), fontFamily: fonts.regular }]}>
                     {getSyncStatusText()}
                   </Text>
                 </View>
@@ -376,27 +384,30 @@ export default function BackupExportScreen() {
                   }
                 }}
                 disabled={!iCloudEnabled}
-                trackColor={{ false: colors.border, true: Platform.OS === 'android' ? colors.primary + '99' : '#5AC8FA' }}
+                trackColor={{ false: switchOff, true: colors.primary }}
                 thumbColor="#FFFFFF"
+                ios_backgroundColor={switchOff}
+                accessibilityLabel={t('backupExport.icloudAutoSync')}
               />
             </View>
 
             {iCloudEnabled && autoSyncEnabled && (
-              <View style={[styles.icloudActions, { borderTopColor: colors.border }]}>
-                <Text style={[styles.icloudDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              <View style={[styles.icloudActions, separator]}>
+                <Text style={[styles.hintText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('backupExport.icloudAutoSyncDesc')}
                 </Text>
                 <MaterialPressable
-                  style={[styles.syncNowButton, { backgroundColor: colors.background }]}
+                  style={[styles.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
                   onPress={handleSyncNow}
                   disabled={isLoading || syncStatus === SYNC_STATUS.SYNCING}
+                  accessibilityRole="button"
                 >
                   {isLoading && loadingType === 'icloud' ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
                     <>
-                      <Ionicons name="sync-outline" size={18} color={colors.primary} />
-                      <Text style={[styles.syncNowText, { color: colors.primary, fontFamily: fonts.medium }]}>
+                      <Ionicons name="sync-outline" size={18} color={colors.text} />
+                      <Text style={[styles.secondaryButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                         {t('backupExport.syncNow')}
                       </Text>
                     </>
@@ -406,17 +417,22 @@ export default function BackupExportScreen() {
             )}
 
             {!iCloudEnabled && (
-              <Text style={[styles.icloudDisabledText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t('backupExport.enableIcloud')}
-              </Text>
+              <View style={[styles.icloudActions, separator]}>
+                <View style={[styles.infoBox, { backgroundColor: colors.raised }]}>
+                  <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+                  <Text style={[styles.hintText, styles.rowText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('backupExport.enableIcloud')}
+                  </Text>
+                </View>
+              </View>
             )}
           </View>
         )}
 
         {/* Google Drive 백업 */}
-        <View style={[styles.optionsContainer, { backgroundColor: colors.surface }]}>
+        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <MaterialPressable
-            style={styles.optionItem}
+            style={[styles.row, styles.rowWithDesc]}
             onPress={() => {
               if (isLocked('googleDriveBackup')) {
                 showUnlockAlert('googleDriveBackup', handleGoogleBackup);
@@ -426,20 +442,21 @@ export default function BackupExportScreen() {
             }}
             disabled={isLoading}
             activeOpacity={0.7}
+            accessibilityRole="button"
           >
-            <View style={{ position: 'relative' }}>
-              <View style={[styles.optionIconContainer, { backgroundColor: '#4285F415' }]}>
-                <Ionicons name="logo-google" size={28} color="#4285F4" />
+            <View>
+              <View style={[styles.tile, { backgroundColor: colors.raised }]}>
+                <Ionicons name="logo-google" size={20} color="#4285F4" />
               </View>
               <View style={styles.iconLockBadge}>
                 <LockIcon featureId="googleDriveBackup" size={12} badge style={{ marginLeft: 0 }} />
               </View>
             </View>
-            <View style={styles.optionContent}>
-              <Text style={[styles.optionTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+            <View style={styles.rowText}>
+              <Text style={[styles.rowLabel, { color: colors.text, fontFamily: fonts.medium }]}>
                 {t('backupExport.googleDriveBackup')}
               </Text>
-              <Text style={[styles.optionDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              <Text style={[styles.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {lastGoogleBackupTime
                   ? `${t('backupExport.lastBackup')}: ${lastGoogleBackupTime.toLocaleDateString()} ${lastGoogleBackupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
                   : t('backupExport.neverBackedUp')}
@@ -448,29 +465,28 @@ export default function BackupExportScreen() {
             {isLoading && loadingType === 'google' ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             )}
           </MaterialPressable>
         </View>
 
         {/* 백업 포함 항목 */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('backupExport.backupIncludes')}
-          </Text>
-          <View style={styles.includeList}>
-            {backupItems.map((item, index) => (
-              <View key={index} style={styles.includeItem}>
-                <Ionicons name={item.icon} size={20} color={colors.success} />
-                <Text style={[styles.includeText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                  {t(`backupExport.${item.key}`)}
-                </Text>
+        <Text accessibilityRole="header" style={[styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+          {t('backupExport.backupIncludes')}
+        </Text>
+        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {backupItems.map((item, index) => (
+            <View key={index} style={[styles.row, index > 0 && separator]}>
+              <View style={[styles.tileSmall, { backgroundColor: colors.successSoft }]}>
+                <Ionicons name={item.icon} size={18} color={colors.success} />
               </View>
-            ))}
-          </View>
+              <Text style={[styles.rowLabel, styles.rowText, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t(`backupExport.${item.key}`)}
+              </Text>
+              <Ionicons name="checkmark" size={18} color={colors.success} />
+            </View>
+          ))}
         </View>
-
-        <View style={styles.bottomSpace} />
       </ScrollView>
     </View>
   );
@@ -484,42 +500,78 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   headerRight: {
-    width: 44,
+    width: SIZE.touch,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
-  icloudSection: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
   },
-  icloudHeader: {
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  icloudIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  rowLabel: {
+    ...TYPE.body,
+  },
+  rowDesc: {
+    ...TYPE.caption,
+    lineHeight: 17,
+  },
+  tile: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tileSmall: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -529,106 +581,38 @@ const styles = StyleSheet.create({
     left: -4,
     zIndex: 1,
   },
-  icloudInfo: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  icloudTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
   syncStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  syncStatusText: {
-    fontSize: 13,
-  },
   icloudActions: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
   },
-  icloudDescription: {
-    flex: 1,
+  hintText: {
     fontSize: 13,
     lineHeight: 18,
   },
-  syncNowButton: {
+  infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginLeft: 12,
-    gap: 6,
+    gap: 8,
+    padding: 12,
+    borderRadius: RADIUS.control,
   },
-  syncNowText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  icloudDisabledText: {
-    fontSize: 13,
-    marginTop: 12,
-  },
-  optionsContainer: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
-  },
-  optionItem: {
+  secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    gap: 14,
-  },
-  optionIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 6,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  optionContent: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  optionDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 16,
-  },
-  includeList: {
-    gap: 12,
-  },
-  includeItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  includeText: {
+  secondaryButtonText: {
     fontSize: 15,
-  },
-  bottomSpace: {
-    height: 40,
+    fontWeight: '600',
   },
 });
