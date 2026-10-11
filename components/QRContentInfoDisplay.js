@@ -1,10 +1,11 @@
 // components/QRContentInfoDisplay.js - QR 콘텐츠 정보 표시 컴포넌트
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { QR_CONTENT_TYPES } from '../utils/qrContentParser';
 import MaterialPressable from './MaterialPressable';
+import { RADIUS, TYPE, MONO } from '../constants/Design';
 
 /**
  * QR 콘텐츠 정보 표시 컴포넌트
@@ -41,56 +42,66 @@ export default function QRContentInfoDisplay({
     }
   };
 
-  // 정보 라인 렌더링
-  const renderInfoLine = (label, value, icon = null) => {
+  // 정보 라인 렌더링 (결과 화면 라벨 행과 같은 모양: 이름 13 · 값 15)
+  const renderInfoLine = (label, value) => {
     if (!value) return null;
     return (
       <View style={styles.infoLine}>
-        {icon && <Ionicons name={icon} size={16} color={colors.textSecondary} style={styles.infoIcon} />}
-        <Text style={[styles.infoLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-          {label}:
+        <Text style={[styles.infoLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
+          {label}
         </Text>
-        <Text style={[styles.infoValue, { color: colors.text, fontFamily: fonts.regular }]} numberOfLines={2}>
+        <Text style={[styles.infoValue, { color: colors.text, fontFamily: fonts.regular }]} numberOfLines={2} selectable>
           {value}
         </Text>
       </View>
     );
   };
 
-  // WiFi 정보 렌더링
-  const renderWifiInfo = () => (
-    <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+  // 하위 상자: 보조 바탕 + 작은 머리글(아이콘·제목)
+  const renderBox = (icon, title, children, extra = null) => (
+    <View style={[styles.infoContainer, { backgroundColor: colors.inputBackground }]}>
       <View style={styles.infoHeader}>
-        <Ionicons name="wifi" size={24} color="#5856D6" />
-        <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>WiFi</Text>
+        <Ionicons name={icon} size={14} color={colors.textSecondary} />
+        <Text style={[styles.infoTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+          {title}
+        </Text>
       </View>
-
-      <View style={styles.infoContent}>
-        {renderInfoLine(t('qrActions.networkName') || '네트워크', data.ssid, 'globe-outline')}
-
-        <View style={styles.infoLine}>
-          <Ionicons name="key-outline" size={16} color={colors.textSecondary} style={styles.infoIcon} />
-          <Text style={[styles.infoLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-            {t('qrActions.password') || '비밀번호'}:
-          </Text>
-          <Text style={[styles.infoValue, { color: colors.text, fontFamily: fonts.regular }]}>
-            {showPassword ? data.password || '-' : maskPassword(data.password) || '-'}
-          </Text>
-          {data.password && (
-            <MaterialPressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-              <Ionicons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={18}
-                color={colors.textSecondary}
-              />
-            </MaterialPressable>
-          )}
-        </View>
-
-        {renderInfoLine(t('qrActions.security') || '암호화', data.security || 'WPA', 'shield-checkmark-outline')}
-      </View>
+      {children}
+      {extra}
     </View>
   );
+
+  // WiFi 정보 렌더링
+  const renderWifiInfo = () => renderBox('wifi-outline', 'WiFi', (
+    <>
+      {renderInfoLine(t('qrActions.networkName') || '네트워크', data.ssid)}
+
+      <View style={styles.infoLine}>
+        <Text style={[styles.infoLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
+          {t('qrActions.password') || '비밀번호'}
+        </Text>
+        <Text style={[styles.infoValue, { color: colors.text, fontFamily: showPassword && data.password ? MONO : fonts.regular }]} selectable={showPassword}>
+          {showPassword ? data.password || '-' : maskPassword(data.password) || '-'}
+        </Text>
+        {data.password && (
+          <MaterialPressable
+            onPress={() => setShowPassword(!showPassword)}
+            style={styles.eyeButton}
+            hitSlop={6}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={18}
+              color={colors.textSecondary}
+            />
+          </MaterialPressable>
+        )}
+      </View>
+
+      {renderInfoLine(t('qrActions.security') || '암호화', data.security || 'WPA')}
+    </>
+  ));
 
   // 위치 정보 렌더링 (미니맵 포함)
   const renderGeoInfo = () => {
@@ -98,139 +109,83 @@ export default function QRContentInfoDisplay({
     const lng = parseFloat(data.longitude);
     const hasValidCoords = !isNaN(lat) && !isNaN(lng);
 
-    return (
-      <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={styles.infoHeader}>
-          <Ionicons name="location" size={24} color="#FF3B30" />
-          <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('qrTypes.location') || '위치'}
-          </Text>
-        </View>
-
-        <View style={styles.infoContent}>
-          {renderInfoLine(t('qrActions.latitude') || '위도', data.latitude)}
-          {renderInfoLine(t('qrActions.longitude') || '경도', data.longitude)}
-          {data.query && renderInfoLine(t('qrActions.address') || '주소', data.query)}
-        </View>
-
-        {/* 미니맵 */}
-        {hasValidCoords && (
-          <View style={styles.miniMapContainer}>
-            <MapView
-              style={styles.miniMap}
-              initialRegion={{
-                latitude: lat,
-                longitude: lng,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }}
-              scrollEnabled={false}
-              zoomEnabled={false}
-              pitchEnabled={false}
-              rotateEnabled={false}
-              pointerEvents="none"
-            >
-              <Marker
-                coordinate={{ latitude: lat, longitude: lng }}
-                pinColor="#FF3B30"
-              />
-            </MapView>
-          </View>
-        )}
+    return renderBox('location-outline', t('qrTypes.location') || '위치', (
+      <>
+        {renderInfoLine(t('qrActions.latitude') || '위도', data.latitude)}
+        {renderInfoLine(t('qrActions.longitude') || '경도', data.longitude)}
+        {data.query && renderInfoLine(t('qrActions.address') || '주소', data.query)}
+      </>
+    ), hasValidCoords ? (
+      /* 미니맵 */
+      <View style={[styles.miniMapContainer, { borderColor: colors.border }]}>
+        <MapView
+          style={styles.miniMap}
+          initialRegion={{
+            latitude: lat,
+            longitude: lng,
+            latitudeDelta: 0.01,
+            longitudeDelta: 0.01,
+          }}
+          scrollEnabled={false}
+          zoomEnabled={false}
+          pitchEnabled={false}
+          rotateEnabled={false}
+          pointerEvents="none"
+        >
+          <Marker
+            coordinate={{ latitude: lat, longitude: lng }}
+            pinColor={colors.error}
+          />
+        </MapView>
       </View>
-    );
+    ) : null);
   };
 
   // 연락처 정보 렌더링
-  const renderContactInfo = () => (
-    <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={styles.infoHeader}>
-        <Ionicons name="person" size={24} color="#FF2D55" />
-        <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('qrTypes.contact') || '연락처'}
-        </Text>
-      </View>
-
-      <View style={styles.infoContent}>
-        {renderInfoLine(t('generator.fields.nameLabel') || '이름', data.fullName || `${data.firstName || ''} ${data.lastName || ''}`.trim(), 'person-outline')}
-        {data.phones?.[0] && renderInfoLine(t('generator.fields.phoneLabel') || '전화', data.phones[0], 'call-outline')}
-        {data.emails?.[0] && renderInfoLine(t('generator.fields.emailLabel') || '이메일', data.emails[0], 'mail-outline')}
-        {data.organization && renderInfoLine(t('generator.fields.companyLabel') || '회사', data.organization, 'business-outline')}
-        {data.title && renderInfoLine(t('generator.fields.titleLabel') || '직함', data.title)}
-        {data.addresses?.[0] && renderInfoLine(t('generator.fields.addressLabel') || '주소', data.addresses[0], 'location-outline')}
-        {data.urls?.[0] && renderInfoLine('URL', data.urls[0], 'globe-outline')}
-      </View>
-    </View>
-  );
+  const renderContactInfo = () => renderBox('person-outline', t('qrTypes.contact') || '연락처', (
+    <>
+      {renderInfoLine(t('generator.fields.nameLabel') || '이름', data.fullName || `${data.firstName || ''} ${data.lastName || ''}`.trim())}
+      {data.phones?.[0] && renderInfoLine(t('generator.fields.phoneLabel') || '전화', data.phones[0])}
+      {data.emails?.[0] && renderInfoLine(t('generator.fields.emailLabel') || '이메일', data.emails[0])}
+      {data.organization && renderInfoLine(t('generator.fields.companyLabel') || '회사', data.organization)}
+      {data.title && renderInfoLine(t('generator.fields.titleLabel') || '직함', data.title)}
+      {data.addresses?.[0] && renderInfoLine(t('generator.fields.addressLabel') || '주소', data.addresses[0])}
+      {data.urls?.[0] && renderInfoLine('URL', data.urls[0])}
+    </>
+  ));
 
   // 일정 정보 렌더링
-  const renderEventInfo = () => (
-    <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={styles.infoHeader}>
-        <Ionicons name="calendar" size={24} color="#FF9500" />
-        <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('qrTypes.event') || '일정'}
-        </Text>
-      </View>
-
-      <View style={styles.infoContent}>
-        {renderInfoLine(t('generator.fields.eventTitleLabel') || '제목', data.title, 'document-text-outline')}
-        {data.startDate && renderInfoLine(t('generator.fields.startDateLabel') || '시작', formatDate(data.startDate), 'time-outline')}
-        {data.endDate && renderInfoLine(t('generator.fields.endDateLabel') || '종료', formatDate(data.endDate), 'timer-outline')}
-        {data.location && renderInfoLine(t('generator.fields.eventLocationLabel') || '장소', data.location, 'location-outline')}
-        {data.description && renderInfoLine(t('generator.fields.descriptionLabel') || '설명', data.description, 'chatbox-outline')}
-      </View>
-    </View>
-  );
+  const renderEventInfo = () => renderBox('calendar-outline', t('qrTypes.event') || '일정', (
+    <>
+      {renderInfoLine(t('generator.fields.eventTitleLabel') || '제목', data.title)}
+      {data.startDate && renderInfoLine(t('generator.fields.startDateLabel') || '시작', formatDate(data.startDate))}
+      {data.endDate && renderInfoLine(t('generator.fields.endDateLabel') || '종료', formatDate(data.endDate))}
+      {data.location && renderInfoLine(t('generator.fields.eventLocationLabel') || '장소', data.location)}
+      {data.description && renderInfoLine(t('generator.fields.descriptionLabel') || '설명', data.description)}
+    </>
+  ));
 
   // 이메일 정보 렌더링
-  const renderEmailInfo = () => (
-    <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={styles.infoHeader}>
-        <Ionicons name="mail" size={24} color="#2F6FEB" />
-        <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('qrTypes.email') || '이메일'}
-        </Text>
-      </View>
-
-      <View style={styles.infoContent}>
-        {renderInfoLine(t('generator.fields.recipientLabel') || '수신자', data.email, 'person-outline')}
-        {data.subject && renderInfoLine(t('generator.fields.subjectLabel') || '제목', data.subject, 'document-text-outline')}
-        {data.body && renderInfoLine(t('generator.fields.messageLabel') || '내용', data.body, 'chatbox-outline')}
-      </View>
-    </View>
-  );
+  const renderEmailInfo = () => renderBox('mail-outline', t('qrTypes.email') || '이메일', (
+    <>
+      {renderInfoLine(t('generator.fields.recipientLabel') || '수신자', data.email)}
+      {data.subject && renderInfoLine(t('generator.fields.subjectLabel') || '제목', data.subject)}
+      {data.body && renderInfoLine(t('generator.fields.messageLabel') || '내용', data.body)}
+    </>
+  ));
 
   // SMS 정보 렌더링
-  const renderSmsInfo = () => (
-    <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={styles.infoHeader}>
-        <Ionicons name="chatbubble" size={24} color="#FF9500" />
-        <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>SMS</Text>
-      </View>
-
-      <View style={styles.infoContent}>
-        {renderInfoLine(t('generator.fields.phoneLabel') || '전화번호', data.phoneNumber, 'call-outline')}
-        {data.body && renderInfoLine(t('generator.fields.messageLabel') || '메시지', data.body, 'chatbox-outline')}
-      </View>
-    </View>
-  );
+  const renderSmsInfo = () => renderBox('chatbubble-outline', 'SMS', (
+    <>
+      {renderInfoLine(t('generator.fields.phoneLabel') || '전화번호', data.phoneNumber)}
+      {data.body && renderInfoLine(t('generator.fields.messageLabel') || '메시지', data.body)}
+    </>
+  ));
 
   // 전화번호 정보 렌더링
-  const renderPhoneInfo = () => (
-    <View style={[styles.infoContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <View style={styles.infoHeader}>
-        <Ionicons name="call" size={24} color="#34C759" />
-        <Text style={[styles.infoTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('qrTypes.phone') || '전화번호'}
-        </Text>
-      </View>
-
-      <View style={styles.infoContent}>
-        {renderInfoLine(t('generator.fields.phoneLabel') || '전화번호', data.phoneNumber, 'call-outline')}
-      </View>
-    </View>
-  );
+  const renderPhoneInfo = () => renderBox('call-outline', t('qrTypes.phone') || '전화번호', (
+    renderInfoLine(t('generator.fields.phoneLabel') || '전화번호', data.phoneNumber)
+  ));
 
   // 타입별 렌더링
   switch (type) {
@@ -254,56 +209,53 @@ export default function QRContentInfoDisplay({
 }
 
 const styles = StyleSheet.create({
+  // 결과 화면 labelCard와 같은 하위 상자
   infoContainer: {
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
     marginBottom: 16,
-    overflow: 'hidden',
   },
   infoHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    gap: 6,
+    paddingVertical: 8,
   },
   infoTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  infoContent: {
-    padding: 16,
-    gap: 10,
+    flex: 1,
+    ...TYPE.sectionHeader,
   },
   infoLine: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
-  },
-  infoIcon: {
-    marginTop: 2,
-    width: 18,
+    gap: 10,
+    paddingVertical: 7,
   },
   infoLabel: {
-    fontSize: 14,
-    minWidth: 70,
+    width: 88,
+    fontSize: 13,
+    paddingTop: 1,
   },
   infoValue: {
-    fontSize: 14,
     flex: 1,
+    fontSize: 15,
   },
   eyeButton: {
-    padding: 4,
-    marginLeft: 8,
-    ...Platform.select({ android: { borderRadius: 13, overflow: 'hidden' }, default: {} }),
+    width: 32,
+    height: 32,
+    marginVertical: -7,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   miniMapContainer: {
     height: 150,
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginTop: 4,
+    marginBottom: 8,
     borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
   miniMap: {

@@ -6,12 +6,21 @@ import ColorPicker, { Panel1, HueSlider, Preview } from 'reanimated-color-picker
 import { runOnJS } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialPressable from './MaterialPressable';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 
 // Material 3 (Android 전용) 스타일 조정에 쓰는 플랫폼 플래그
 const IS_ANDROID = Platform.OS === 'android';
 
 export default function NativeColorPicker({ visible, onClose, color, onColorChange, colors }) {
   const insets = useSafeAreaInsets();
+  const { t, fonts } = useLanguage();
+  const { isDark } = useTheme();
+  // 넘겨받은 colors가 없으면 현재 테마 토큰을 쓴다
+  const c = colors || (isDark ? Colors.dark : Colors.light);
+  const [hexFocused, setHexFocused] = useState(false);
   const [tempColor, setTempColor] = useState(color || '#ffffff');
 
   useEffect(() => {
@@ -48,13 +57,19 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.container, { backgroundColor: colors?.surface || '#fff', paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom + 6, 20) : insets.bottom + 20 }]}>
-          {IS_ANDROID && <View style={[styles.sheetHandle, { backgroundColor: colors?.textTertiary || '#999' }]} />}
-          {/* Header */}
+        <View style={[styles.container, { backgroundColor: c.surface, paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom + 6, 20) : insets.bottom + 20 }]}>
+          {IS_ANDROID && <View style={[styles.sheetHandle, { backgroundColor: c.textTertiary }]} />}
+          {/* Header: 왼쪽 여백(닫기 버튼 폭) · 가운데 제목 · 오른쪽 닫기 */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors?.text || '#000' }]}>색상 선택</Text>
-            <MaterialPressable onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors?.text || '#000'} />
+            <View style={styles.headerSide} />
+            <Text style={[styles.title, { color: c.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>색상 선택</Text>
+            <MaterialPressable
+              onPress={onClose}
+              style={styles.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <Ionicons name="close" size={22} color={c.text} />
             </MaterialPressable>
           </View>
 
@@ -72,19 +87,23 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
 
             {/* HEX Input */}
             <View style={styles.hexInputContainer}>
-              <Text style={[styles.hexLabel, { color: colors?.text || '#000' }]}>HEX</Text>
+              <Text style={[styles.hexLabel, { color: c.textSecondary, fontFamily: fonts.semiBold }]}>HEX</Text>
               <TextInput
                 style={[styles.hexInput, {
-                  color: colors?.text || '#000',
-                  borderColor: colors?.border || '#ddd',
-                  backgroundColor: colors?.inputBackground || '#f5f5f5'
+                  color: c.text,
+                  borderColor: hexFocused ? c.primary : c.border,
+                  backgroundColor: c.inputBackground,
                 }]}
                 value={tempColor}
                 onChangeText={handleHexChange}
-                onBlur={handleHexSubmit}
+                onFocus={() => setHexFocused(true)}
+                onBlur={() => {
+                  setHexFocused(false);
+                  handleHexSubmit();
+                }}
                 onSubmitEditing={handleHexSubmit}
                 placeholder="#000000"
-                placeholderTextColor={colors?.textTertiary || '#999'}
+                placeholderTextColor={c.textTertiary}
                 autoCapitalize="characters"
                 maxLength={7}
               />
@@ -93,10 +112,11 @@ export default function NativeColorPicker({ visible, onClose, color, onColorChan
 
           {/* Done Button */}
           <MaterialPressable
-            style={[styles.doneButton, { backgroundColor: colors?.primary || '#2F6FEB' }]}
+            style={[styles.doneButton, { backgroundColor: c.primary }]}
             onPress={onClose}
+            accessibilityRole="button"
           >
-            <Text style={styles.doneText}>확인</Text>
+            <Text style={[styles.doneText, { fontFamily: fonts.semiBold }]}>확인</Text>
           </MaterialPressable>
         </View>
       </View>
@@ -119,45 +139,51 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   container: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    ...(IS_ANDROID && { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }),
+    borderTopLeftRadius: RADIUS.card,
+    borderTopRightRadius: RADIUS.card,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  headerSide: {
+    width: SIZE.touch,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
   },
   closeButton: {
-    padding: 4,
-    ...(IS_ANDROID && { borderRadius: 20, overflow: 'hidden' }),
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   content: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: SPACE.card,
+    paddingVertical: 12,
   },
   colorPicker: {
     width: '100%',
     gap: 16,
   },
   preview: {
-    height: 50,
-    borderRadius: 12,
+    height: 48,
+    borderRadius: RADIUS.control,
   },
   panel: {
     height: 200,
-    borderRadius: 12,
+    borderRadius: RADIUS.control,
   },
   hueSlider: {
-    height: 36,
-    borderRadius: 18,
+    height: 32,
+    borderRadius: 16,
   },
   hexInputContainer: {
     flexDirection: 'row',
@@ -166,26 +192,26 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   hexLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPE.sectionHeader,
   },
   hexInput: {
     flex: 1,
-    height: 44,
+    height: 48,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: RADIUS.control,
     paddingHorizontal: 14,
-    fontSize: 16,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 15,
+    fontFamily: MONO,
     fontWeight: '600',
   },
   doneButton: {
-    marginHorizontal: 20,
+    marginHorizontal: SPACE.card,
     marginTop: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     alignItems: 'center',
-    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, overflow: 'hidden' }),
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   doneText: {
     color: '#fff',

@@ -3,8 +3,9 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { SCAN_THEME, SCAN_TEXT } from '../constants/scanTheme';
 import { Colors } from '../constants/Colors';
+import { RADIUS, MONO } from '../constants/Design';
 import { ANIMATION_DURATIONS } from '../constants/Timing';
 
 export default function DuplicateConfirmToast({
@@ -15,8 +16,6 @@ export default function DuplicateConfirmToast({
   bottomOffset = 0,
 }) {
   const { t, fonts } = useLanguage();
-  const { isDark } = useTheme();
-  const colors = isDark ? Colors.dark : Colors.light;
 
   const toastOpacity = useRef(new Animated.Value(0)).current;
   const toastTranslateY = useRef(new Animated.Value(50)).current;
@@ -91,11 +90,11 @@ export default function DuplicateConfirmToast({
       accessibilityRole="alert"
       accessibilityLabel={t('batchScan.duplicateAlertTitle')}
     >
-      <View style={[styles.content, { backgroundColor: 'rgba(24,24,26,0.94)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.22)' }]}>
+      <View style={styles.content}>
         {/* 상단: 중복 아이콘과 정보 */}
         <View style={styles.header}>
-          <View style={[styles.iconContainer, { backgroundColor: '#FF9500' + '20' }]}>
-            <Ionicons name="copy" size={24} color="#FF9500" />
+          <View style={styles.iconContainer}>
+            <Ionicons name="copy-outline" size={20} color={SCAN_THEME.warning} />
             {scanCount > 1 && (
               <View style={styles.countBadge}>
                 <Text style={styles.countBadgeText}>
@@ -106,17 +105,17 @@ export default function DuplicateConfirmToast({
           </View>
           <View style={styles.textContainer}>
             <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: '#fff', fontFamily: fonts.semiBold }]}>
+              <Text style={[styles.title, { fontFamily: fonts.semiBold }]} numberOfLines={1}>
                 {t('batchScan.duplicateAlertTitle')}
               </Text>
               <View style={styles.duplicateBadge}>
-                <Text style={styles.duplicateBadgeText}>
+                <Text style={[styles.duplicateBadgeText, { fontFamily: fonts.semiBold }]}>
                   {t('scanner.duplicate') || '중복'}
                 </Text>
               </View>
             </View>
             <Text
-              style={[styles.data, { color: 'rgba(255,255,255,0.72)', fontFamily: fonts.regular }]}
+              style={styles.data}
               numberOfLines={1}
               ellipsizeMode="middle"
             >
@@ -134,8 +133,8 @@ export default function DuplicateConfirmToast({
             accessibilityLabel={t('batchScan.duplicateAlertCancel')}
             accessibilityRole="button"
           >
-            <Ionicons name="close" size={18} color="#8E8E93" />
-            <Text style={[styles.buttonText, styles.skipButtonText, { fontFamily: fonts.medium }]}>
+            <Ionicons name="close" size={18} color={SCAN_TEXT.secondary} />
+            <Text style={[styles.buttonText, styles.skipButtonText, { fontFamily: fonts.semiBold }]} numberOfLines={1}>
               {t('batchScan.duplicateAlertCancel')}
             </Text>
           </TouchableOpacity>
@@ -146,8 +145,8 @@ export default function DuplicateConfirmToast({
             accessibilityLabel={t('batchScan.duplicateAlertAdd')}
             accessibilityRole="button"
           >
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={[styles.buttonText, styles.addButtonText, { fontFamily: fonts.medium }]}>
+            <Ionicons name="add" size={18} color={SCAN_TEXT.primary} />
+            <Text style={[styles.buttonText, styles.addButtonText, { fontFamily: fonts.semiBold }]} numberOfLines={1}>
               {t('batchScan.duplicateAlertAdd')}
             </Text>
           </TouchableOpacity>
@@ -157,6 +156,9 @@ export default function DuplicateConfirmToast({
   );
 }
 
+// 경고색(SCAN_THEME.warning)을 옅게 깐 바탕 (어두운 유리 위)
+const WARNING_FILL = SCAN_THEME.warning + '2E';
+
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
@@ -164,15 +166,14 @@ const styles = StyleSheet.create({
     right: 16,
     zIndex: 1001, // ScanToast보다 위에 표시
   },
+  // 어두운 유리 카드 (카메라 위)
   content: {
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 10,
+    borderRadius: SCAN_THEME.cardRadius,
+    backgroundColor: SCAN_THEME.glassCard,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
   },
   header: {
     flexDirection: 'row',
@@ -180,18 +181,19 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+    backgroundColor: WARNING_FILL,
   },
   countBadge: {
     position: 'absolute',
     top: -4,
-    right: -4,
-    backgroundColor: '#FF3B30',
+    right: -6,
+    backgroundColor: SCAN_THEME.warning,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -200,7 +202,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   countBadgeText: {
-    color: '#fff',
+    color: Colors.dark.background, // 주황 바탕 위 어두운 글자
     fontSize: 10,
     fontWeight: '700',
   },
@@ -214,51 +216,57 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
+    flexShrink: 1,
+    color: SCAN_TEXT.primary,
     fontSize: 15,
     fontWeight: '600',
   },
   duplicateBadge: {
-    backgroundColor: '#FF9500',
+    backgroundColor: WARNING_FILL,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
   },
   duplicateBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
+    color: SCAN_THEME.warning,
+    fontSize: 11,
+    fontWeight: '600',
   },
   data: {
+    color: SCAN_TEXT.secondary,
+    fontFamily: MONO,
     fontSize: 13,
   },
   buttons: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   button: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.control,
     gap: 6,
   },
   skipButton: {
-    backgroundColor: 'rgba(142, 142, 147, 0.15)',
+    backgroundColor: SCAN_THEME.glassLight,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
   },
   addButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: SCAN_THEME.primary,
   },
   buttonText: {
     fontSize: 14,
     fontWeight: '600',
   },
   skipButtonText: {
-    color: '#8E8E93',
+    color: SCAN_TEXT.primary,
   },
   addButtonText: {
-    color: '#fff',
+    color: SCAN_TEXT.primary,
   },
 });

@@ -13,10 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from './MaterialPressable';
-
-// Material 3 (Android 전용) 스타일 조정에 쓰는 플랫폼 플래그
-const IS_ANDROID = Platform.OS === 'android';
 
 export default function PresetSaveModal({
   visible,
@@ -32,6 +30,8 @@ export default function PresetSaveModal({
 
   const [presetName, setPresetName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const canSave = !!presetName.trim() && !isSaving;
 
   const handleSave = async () => {
     if (!presetName.trim()) return;
@@ -76,34 +76,41 @@ export default function PresetSaveModal({
           onPress={handleClose}
         />
 
-        <View style={[s.container, { backgroundColor: colors.surface }]}>
+        <View style={[s.container, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* 헤더 */}
           <View style={s.header}>
-            <Text style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
+            <Text style={[s.title, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
               {t('generator.savePreset') || '프리셋 저장'}
             </Text>
-            <MaterialPressable onPress={handleClose} style={s.closeButton}>
-              <Ionicons name="close" size={24} color={colors.textTertiary} />
+            <MaterialPressable
+              onPress={handleClose}
+              style={s.closeButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <Ionicons name="close" size={22} color={colors.text} />
             </MaterialPressable>
           </View>
 
           {/* 프리셋 이름 입력 */}
           <View style={s.inputContainer}>
-            <Text style={[s.label, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+            <Text style={[s.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               {t('generator.presetName') || '프리셋 이름'}
             </Text>
             <TextInput
               style={[
                 s.input,
                 {
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
+                  backgroundColor: colors.inputBackground,
+                  borderColor: focused ? colors.primary : colors.border,
                   color: colors.text,
                   fontFamily: fonts.regular,
                 },
               ]}
               value={presetName}
               onChangeText={setPresetName}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               placeholder={t('generator.presetNamePlaceholder') || '프리셋 이름을 입력하세요'}
               placeholderTextColor={colors.textTertiary}
               maxLength={20}
@@ -114,25 +121,24 @@ export default function PresetSaveModal({
           {/* 버튼 */}
           <View style={s.buttonContainer}>
             <MaterialPressable
-              style={[s.button, s.cancelButton, { borderColor: colors.border }]}
-              onPress={handleClose}
-            >
-              <Text style={[s.buttonText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-                {t('common.cancel') || '취소'}
-              </Text>
-            </MaterialPressable>
-
-            <MaterialPressable
               style={[
-                s.button,
-                s.saveButton,
-                { backgroundColor: presetName.trim() ? colors.primary : colors.border },
+                s.primaryButton,
+                { backgroundColor: canSave ? colors.primary : colors.raised },
               ]}
               onPress={handleSave}
               disabled={!presetName.trim() || isSaving}
             >
-              <Text style={[s.buttonText, { color: '#fff', fontFamily: fonts.semiBold }]}>
+              <Text style={[s.primaryButtonText, { color: canSave ? '#fff' : colors.textTertiary, fontFamily: fonts.semiBold }]}>
                 {isSaving ? (t('common.saving') || '저장 중...') : (t('common.save') || '저장')}
+              </Text>
+            </MaterialPressable>
+
+            <MaterialPressable
+              style={[s.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
+              onPress={handleClose}
+            >
+              <Text style={[s.secondaryButtonText, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t('common.cancel') || '취소'}
               </Text>
             </MaterialPressable>
           </View>
@@ -147,68 +153,77 @@ const s = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: SPACE.screen,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   container: {
-    width: '85%',
-    maxWidth: 340,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    ...(IS_ANDROID && { borderRadius: 28 }),
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    padding: SPACE.card,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: -8,
+    marginRight: -10,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...TYPE.screenTitle,
+    flex: 1,
   },
   closeButton: {
-    padding: 4,
-    ...(IS_ANDROID && { borderRadius: 20, overflow: 'hidden' }),
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   label: {
-    fontSize: 14,
-    marginBottom: 8,
+    ...TYPE.sectionHeader,
+    marginBottom: 6,
   },
   input: {
     height: 48,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
+    borderRadius: RADIUS.control,
+    paddingHorizontal: 14,
+    fontSize: 15,
   },
   buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
+    gap: SPACE.gap,
   },
-  button: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
+  primaryButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     justifyContent: 'center',
     alignItems: 'center',
-    ...(IS_ANDROID && { height: 40, borderRadius: 20, overflow: 'hidden' }),
+    overflow: 'hidden',
   },
-  cancelButton: {
-    borderWidth: 1,
-  },
-  saveButton: {},
-  buttonText: {
+  primaryButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  secondaryButtonText: {
+    fontSize: 15,
   },
 });

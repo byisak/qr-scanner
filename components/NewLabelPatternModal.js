@@ -7,6 +7,7 @@ import MaterialPressable from './MaterialPressable';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { splitLabel, parseSignature, DELIMITER_LABELS, nextCategoryName, defaultFieldName } from '../utils/labelParser';
 
 export default function NewLabelPatternModal({ visible, pattern, categories = [], onCreate, onSkip, onNeverAsk }) {
@@ -15,6 +16,7 @@ export default function NewLabelPatternModal({ visible, pattern, categories = []
   const insets = useSafeAreaInsets();
   const colors = isDark ? Colors.dark : Colors.light;
   const [name, setName] = useState('');
+  const [focused, setFocused] = useState(false);
 
   // 열릴 때마다 "라벨 A" 같은 다음 이름을 기본값으로
   useEffect(() => {
@@ -30,10 +32,10 @@ export default function NewLabelPatternModal({ visible, pattern, categories = []
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onSkip}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
         <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.primary + '20' }]}>
-            <Ionicons name="pricetags-outline" size={28} color={colors.primary} />
+          <View style={[styles.iconWrap, { backgroundColor: colors.primarySoft }]}>
+            <Ionicons name="pricetags-outline" size={22} color={colors.primaryText} />
           </View>
-          <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
+          <Text style={[styles.title, { color: colors.text, fontFamily: fonts.semiBold }]}>
             {t('labelCategories.newPatternTitle')}
           </Text>
           <Text style={[styles.message, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
@@ -41,24 +43,27 @@ export default function NewLabelPatternModal({ visible, pattern, categories = []
           </Text>
 
           {/* 샘플 값을 칸으로 나눠 보여준다 */}
-          <View style={[styles.preview, { backgroundColor: colors.inputBackground }]}>
+          <View style={[styles.preview, { backgroundColor: colors.raised }]}>
             {values.map((value, index) => (
               <View key={index} style={styles.previewRow}>
-                <Text style={[styles.previewName, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
+                <Text style={[styles.previewName, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
                   {defaultFieldName(index, t)}
                 </Text>
-                <Text style={[styles.previewValue, { color: colors.text, fontFamily: fonts.regular }]} numberOfLines={1} ellipsizeMode="middle">
+                <Text style={[styles.previewValue, { color: value === '' ? colors.textTertiary : colors.text, fontFamily: fonts.regular }]} numberOfLines={1} ellipsizeMode="middle">
                   {value === '' ? '—' : value}
                 </Text>
               </View>
             ))}
           </View>
 
-          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.medium }]}>{t('labelCategories.name')}</Text>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('labelCategories.name')}</Text>
           <TextInput
             value={name}
             onChangeText={setName}
-            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground, fontFamily: fonts.regular }]}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            style={[styles.input, { color: colors.text, borderColor: focused ? colors.primary : colors.border, backgroundColor: colors.inputBackground, fontFamily: fonts.regular }]}
+            placeholderTextColor={colors.textTertiary}
             returnKeyType="done"
             onSubmitEditing={() => onCreate(name)}
             accessibilityLabel={t('labelCategories.name')}
@@ -72,11 +77,11 @@ export default function NewLabelPatternModal({ visible, pattern, categories = []
             <Text style={[styles.primaryButtonText, { fontFamily: fonts.semiBold }]}>{t('labelCategories.create')}</Text>
           </MaterialPressable>
           <View style={styles.secondaryRow}>
-            <MaterialPressable style={styles.secondaryButton} onPress={onSkip} accessibilityRole="button">
-              <Text style={[styles.secondaryText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>{t('labelCategories.skipOnce')}</Text>
+            <MaterialPressable style={[styles.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]} onPress={onSkip} accessibilityRole="button">
+              <Text style={[styles.secondaryText, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{t('labelCategories.skipOnce')}</Text>
             </MaterialPressable>
-            <MaterialPressable style={styles.secondaryButton} onPress={onNeverAsk} accessibilityRole="button">
-              <Text style={[styles.secondaryText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>{t('labelCategories.neverAsk')}</Text>
+            <MaterialPressable style={styles.textButton} onPress={onNeverAsk} accessibilityRole="button">
+              <Text style={[styles.secondaryText, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>{t('labelCategories.neverAsk')}</Text>
             </MaterialPressable>
           </View>
         </View>
@@ -92,65 +97,66 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 20,
+    borderTopLeftRadius: RADIUS.card,
+    borderTopRightRadius: RADIUS.card,
+    padding: SPACE.card,
     alignItems: 'stretch',
   },
   iconWrap: {
     alignSelf: 'center',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   title: {
-    fontSize: 18,
+    ...TYPE.screenTitle,
     textAlign: 'center',
     marginBottom: 6,
   },
   message: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 19,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   preview: {
-    borderRadius: 12,
-    paddingVertical: 6,
+    borderRadius: RADIUS.control,
+    paddingVertical: 4,
     paddingHorizontal: 12,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   previewRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    gap: 10,
+    paddingVertical: 7,
   },
   previewName: {
-    width: 72,
-    fontSize: 12,
+    width: 88,
+    fontSize: 13,
   },
   previewValue: {
     flex: 1,
     fontSize: 15,
   },
   label: {
-    fontSize: 13,
+    ...TYPE.sectionHeader,
     marginBottom: 6,
   },
   input: {
+    height: 48,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    marginBottom: 14,
+    borderRadius: RADIUS.control,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    marginBottom: 16,
   },
   primaryButton: {
-    minHeight: 48,
-    borderRadius: 24,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -158,20 +164,34 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
   secondaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 6,
+    alignItems: 'center',
+    gap: SPACE.gap,
+    marginTop: SPACE.gap,
   },
   secondaryButton: {
-    minHeight: 44,
-    paddingHorizontal: 8,
+    flex: 1,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  textButton: {
+    flex: 1,
+    height: SIZE.button,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: RADIUS.control,
     overflow: 'hidden',
   },
   secondaryText: {
-    fontSize: 14,
+    fontSize: 15,
   },
 });

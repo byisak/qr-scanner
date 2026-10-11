@@ -5,10 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS } from '../constants/Design';
 
-// 핫핑크 색상 (완전 잠금)
+// 예전 핑크 색상: 다른 화면(GeneratorScreen)이 아직 가져다 쓰므로 내보내기만 유지한다.
+// 이 컴포넌트는 테마 토큰(colors.error / colors.textSecondary)을 쓴다
 const HOT_PINK = '#FF1493';
-// 연한 핑크 색상 (광고 시청 중 - 진행 중)
 const LIGHT_PINK = '#FFB6C1';
 
 /**
@@ -16,10 +17,10 @@ const LIGHT_PINK = '#FFB6C1';
  *
  * @param {string} featureId - 잠금 기능 ID (lockedFeatures.js 참조)
  * @param {number} size - 아이콘 크기 (기본: 14)
- * @param {string} color - 아이콘 색상 (기본: 핫핑크, 진행 중이면 연한 핑크)
+ * @param {string} color - 아이콘 색상 (기본: colors.error, 광고 시청 진행 중이면 colors.textSecondary)
  * @param {object} style - 추가 스타일
  * @param {boolean} locked - 직접 잠금 상태 지정 (featureId 대신 사용)
- * @param {boolean} badge - 원형 배지 스타일 사용 (설정 화면용)
+ * @param {boolean} badge - 연한 오류색 배지 스타일 사용 (설정 화면용)
  * @param {number} progress - 직접 진행률 지정 (0~1, featureId 대신 사용)
  *
  * 사용법:
@@ -57,13 +58,13 @@ const LockIcon = ({
     hasProgress = progressProp > 0;
   }
 
-  // 색상 결정: 사용자 지정 > 진행 중이면 연한 핑크 > 기본 핫핑크
-  const iconColor = color || (hasProgress ? LIGHT_PINK : HOT_PINK);
+  // 색상 결정: 사용자 지정 > 진행 중이면 보조 글자색 > 기본 오류색
+  const iconColor = color || (hasProgress ? colors.textSecondary : colors.error);
 
   // 배지 스타일 (설정 화면용)
   if (badge) {
     return (
-      <View style={[styles.badgeContainer, style]}>
+      <View style={[styles.badgeContainer, { backgroundColor: colors.errorSoft }, style]}>
         <Ionicons name="lock-closed" size={size} color={iconColor} />
       </View>
     );
@@ -81,8 +82,14 @@ const styles = StyleSheet.create({
   container: {
     marginLeft: 6,
   },
+  // 연한 오류색 배지 (style로 바탕·여백 덮어쓰기 가능)
   badgeContainer: {
     marginLeft: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
