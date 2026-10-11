@@ -19,6 +19,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import {
   CONDITION_TYPES, FIELD_OPS, ACTION_TYPES, FEEDBACK_HAPTICS,
@@ -33,12 +34,13 @@ const BARCODE_TYPES = ['qr', 'ean13', 'ean8', 'code128', 'code39', 'code93', 'up
 function Chip({ label, selected, onPress, colors, fonts }) {
   return (
     <MaterialPressable
-      style={[s.chip, { backgroundColor: selected ? colors.primary : colors.inputBackground, borderColor: selected ? colors.primary : colors.border }]}
+      style={[s.chip, { backgroundColor: selected ? colors.text : colors.surface, borderColor: selected ? colors.text : colors.border }]}
       onPress={onPress}
+      hitSlop={{ top: 4, bottom: 4 }}
       accessibilityRole="radio"
       accessibilityState={{ selected }}
     >
-      <Text style={[s.chipText, { color: selected ? '#fff' : colors.text, fontFamily: selected ? fonts.semiBold : fonts.regular }]}>{label}</Text>
+      <Text style={[s.chipText, { color: selected ? colors.background : colors.text, fontFamily: selected ? fonts.semiBold : fonts.medium, fontWeight: selected ? '600' : '500' }]}>{label}</Text>
     </MaterialPressable>
   );
 }
@@ -48,6 +50,19 @@ function ChipRow({ children }) {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow} keyboardShouldPersistTaps="handled">
       {children}
     </ScrollView>
+  );
+}
+
+// 입력칸: 포커스되면 테두리를 강조색으로
+function Field({ style, colors, ...props }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <TextInput
+      {...props}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={[style, focused && { borderColor: colors.primary }]}
+    />
   );
 }
 
@@ -138,18 +153,20 @@ export default function ScanRuleEditScreen() {
 
   if (!rule) return <View style={[s.container, { backgroundColor: colors.background }]} />;
 
+  // 카드 바로 안의 입력칸은 inputBackground, 조건·동작 하위 카드(raised) 안에서는 surface
   const inputStyle = [s.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground, fontFamily: fonts.regular }];
+  const itemInputStyle = [s.input, s.itemInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface, fontFamily: MONO }];
 
   const renderCondition = (condition, index) => {
     const category = categories.find(c => c.id === condition.categoryId);
     const needsValue = condition.type === 'field' ? !['empty', 'notEmpty'].includes(condition.op || 'eq') : !['barcodeType', 'category'].includes(condition.type);
     return (
-      <View key={index} style={[s.itemCard, { borderColor: colors.border }]}>
+      <View key={index} style={[s.itemCard, { backgroundColor: colors.raised }]}>
         <View style={s.itemHeader}>
-          <Text style={[s.itemIndex, { color: colors.textTertiary, fontFamily: fonts.medium }]}>{index + 1}</Text>
+          <Text style={[s.itemIndex, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{index + 1}</Text>
           <View style={{ flex: 1 }} />
           {rule.conditions.length > 1 && (
-            <MaterialPressable style={s.removeButton} onPress={() => update({ conditions: rule.conditions.filter((_, i) => i !== index) })} accessibilityLabel={t('common.delete')}>
+            <MaterialPressable style={s.removeButton} onPress={() => update({ conditions: rule.conditions.filter((_, i) => i !== index) })} accessibilityRole="button" accessibilityLabel={t('common.delete')}>
               <Ionicons name="close" size={18} color={colors.textSecondary} />
             </MaterialPressable>
           )}
@@ -169,7 +186,7 @@ export default function ScanRuleEditScreen() {
         )}
         {(condition.type === 'category' || condition.type === 'field') && (
           categories.length === 0 ? (
-            <Text style={[s.hint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('scanRules.noCategories')}</Text>
+            <Text style={[s.hint, s.itemHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('scanRules.noCategories')}</Text>
           ) : (
             <ChipRow>
               {categories.map(c => (
@@ -195,12 +212,13 @@ export default function ScanRuleEditScreen() {
           </>
         )}
         {needsValue && (
-          <TextInput
+          <Field
+            colors={colors}
             value={String(condition.value ?? '')}
             onChangeText={(v) => updateCondition(index, { value: v })}
             placeholder={condition.type === 'regex' ? t('scanRules.regexPlaceholder') : t('scanRules.valuePlaceholder')}
             placeholderTextColor={colors.textTertiary}
-            style={inputStyle}
+            style={itemInputStyle}
             autoCapitalize="none"
             autoCorrect={false}
           />
@@ -210,12 +228,12 @@ export default function ScanRuleEditScreen() {
   };
 
   const renderAction = (action, index) => (
-    <View key={index} style={[s.itemCard, { borderColor: colors.border }]}>
+    <View key={index} style={[s.itemCard, { backgroundColor: colors.raised }]}>
       <View style={s.itemHeader}>
-        <Text style={[s.itemIndex, { color: colors.textTertiary, fontFamily: fonts.medium }]}>{index + 1}</Text>
+        <Text style={[s.itemIndex, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{index + 1}</Text>
         <View style={{ flex: 1 }} />
         {rule.actions.length > 1 && (
-          <MaterialPressable style={s.removeButton} onPress={() => update({ actions: rule.actions.filter((_, i) => i !== index) })} accessibilityLabel={t('common.delete')}>
+          <MaterialPressable style={s.removeButton} onPress={() => update({ actions: rule.actions.filter((_, i) => i !== index) })} accessibilityRole="button" accessibilityLabel={t('common.delete')}>
             <Ionicons name="close" size={18} color={colors.textSecondary} />
           </MaterialPressable>
         )}
@@ -235,17 +253,18 @@ export default function ScanRuleEditScreen() {
       )}
       {action.type === 'openUrl' && (
         <>
-          <TextInput
+          <Field
+            colors={colors}
             value={action.url || ''}
             onChangeText={(v) => updateAction(index, { url: v })}
             placeholder={t('scanRules.urlPlaceholder')}
             placeholderTextColor={colors.textTertiary}
-            style={inputStyle}
+            style={itemInputStyle}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
           />
-          <Text style={[s.hint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('scanRules.urlHint')}</Text>
+          <Text style={[s.hint, s.itemHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('scanRules.urlHint')}</Text>
           <ChipRow>
             {['open', 'send'].map(mode => (
               <Chip key={mode} label={t(`scanRules.urlModes.${mode}`)} selected={(action.mode || 'open') === mode} colors={colors} fonts={fonts} onPress={() => updateAction(index, { mode })} />
@@ -263,22 +282,32 @@ export default function ScanRuleEditScreen() {
     </View>
   );
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+  const cardStyle = [s.section, { backgroundColor: colors.surface, borderColor: colors.border }];
+  const labelStyle = [s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }];
+
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable onPress={() => router.back()} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{editingId ? t('scanRules.editTitle') : t('scanRules.newTitle')}</Text>
-        <MaterialPressable onPress={save} style={s.backButton} accessibilityLabel={t('scanRules.save')}>
-          <Ionicons name="checkmark" size={26} color={colors.primary} />
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{editingId ? t('scanRules.editTitle') : t('scanRules.newTitle')}</Text>
+        <MaterialPressable onPress={save} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('scanRules.save')}>
+          <Ionicons name="checkmark" size={26} color={colors.primaryText} />
         </MaterialPressable>
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 32 + insets.bottom }]} keyboardShouldPersistTaps="handled">
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('scanRules.name')}</Text>
-          <TextInput
+        <View style={cardStyle}>
+          <Text style={labelStyle}>{t('scanRules.name')}</Text>
+          <Field
+            colors={colors}
             value={rule.name}
             onChangeText={(v) => update({ name: v })}
             placeholder={t('scanRules.namePlaceholder')}
@@ -287,56 +316,56 @@ export default function ScanRuleEditScreen() {
           />
         </View>
 
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('scanRules.conditions')}</Text>
-          <Text style={[s.hint, { color: colors.textTertiary, fontFamily: fonts.regular, marginBottom: 8 }]}>{t('scanRules.conditionsDesc')}</Text>
+        <View style={cardStyle}>
+          <Text style={labelStyle}>{t('scanRules.conditions')}</Text>
+          <Text style={[s.hint, s.hintBlock, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('scanRules.conditionsDesc')}</Text>
           {rule.conditions.map(renderCondition)}
           <MaterialPressable style={s.addRow} onPress={() => update({ conditions: [...rule.conditions, { type: 'contains', value: '' }] })} accessibilityRole="button">
-            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-            <Text style={[s.addRowText, { color: colors.primary, fontFamily: fonts.medium }]}>{t('scanRules.addCondition')}</Text>
+            <Ionicons name="add-circle-outline" size={20} color={colors.primaryText} />
+            <Text style={[s.addRowText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>{t('scanRules.addCondition')}</Text>
           </MaterialPressable>
         </View>
 
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('scanRules.actionsTitle')}</Text>
-          <Text style={[s.hint, { color: colors.textTertiary, fontFamily: fonts.regular, marginBottom: 8 }]}>{t('scanRules.actionsDesc')}</Text>
+        <View style={cardStyle}>
+          <Text style={labelStyle}>{t('scanRules.actionsTitle')}</Text>
+          <Text style={[s.hint, s.hintBlock, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('scanRules.actionsDesc')}</Text>
           {rule.actions.map(renderAction)}
           <MaterialPressable style={s.addRow} onPress={() => update({ actions: [...rule.actions, { type: 'copy' }] })} accessibilityRole="button">
-            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
-            <Text style={[s.addRowText, { color: colors.primary, fontFamily: fonts.medium }]}>{t('scanRules.addAction')}</Text>
+            <Ionicons name="add-circle-outline" size={20} color={colors.primaryText} />
+            <Text style={[s.addRowText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>{t('scanRules.addAction')}</Text>
           </MaterialPressable>
         </View>
 
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRules.stopAfterMatch')}</Text>
-              <Text style={[s.hint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('scanRules.stopAfterMatchDesc')}</Text>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>{t('scanRules.stopAfterMatch')}</Text>
+              <Text style={[s.hint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('scanRules.stopAfterMatchDesc')}</Text>
             </View>
             <Switch
               value={rule.stopAfterMatch !== false}
               onValueChange={(v) => update({ stopAfterMatch: v })}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
 
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('scanRules.previewTitle')}</Text>
-          <TextInput
+        <View style={cardStyle}>
+          <Text style={labelStyle}>{t('scanRules.previewTitle')}</Text>
+          <Field
+            colors={colors}
             value={previewValue}
             onChangeText={setPreviewValue}
             placeholder={t('scanRules.testPlaceholder')}
             placeholderTextColor={colors.textTertiary}
-            style={inputStyle}
+            style={[inputStyle, { fontFamily: MONO }]}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {previewMatch !== null && (
-            <View style={s.previewRow}>
-              <Ionicons name={previewMatch ? 'checkmark-circle' : 'close-circle'} size={18} color={previewMatch ? colors.success : colors.textTertiary} />
-              <Text style={[s.previewText, { color: previewMatch ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
+            <View style={[s.previewRow, { backgroundColor: previewMatch ? colors.successSoft : colors.raised }]}>
+              <Ionicons name={previewMatch ? 'checkmark-circle' : 'close-circle'} size={18} color={previewMatch ? colors.success : colors.textSecondary} />
+              <Text style={[s.previewText, { color: previewMatch ? colors.success : colors.textSecondary, fontFamily: fonts.medium }]}>
                 {previewMatch ? t('scanRules.previewMatch') : t('scanRules.previewNoMatch')}
               </Text>
             </View>
@@ -347,8 +376,9 @@ export default function ScanRuleEditScreen() {
           <Text style={[s.saveButtonText, { fontFamily: fonts.semiBold }]}>{t('scanRules.save')}</Text>
         </MaterialPressable>
         {editingId && (
-          <MaterialPressable style={s.deleteButton} onPress={remove} accessibilityRole="button">
-            <Text style={[s.deleteButtonText, { color: colors.error || '#FF3B30', fontFamily: fonts.medium }]}>{t('scanRules.delete')}</Text>
+          <MaterialPressable style={[s.deleteButton, { backgroundColor: colors.errorSoft }]} onPress={remove} accessibilityRole="button">
+            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <Text style={[s.deleteButtonText, { color: colors.error, fontFamily: fonts.semiBold }]}>{t('scanRules.delete')}</Text>
           </MaterialPressable>
         )}
       </ScrollView>
@@ -358,43 +388,35 @@ export default function ScanRuleEditScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
-  },
-  headerTitle: { fontSize: 18 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingBottom: 8 },
+  iconButton: { width: SIZE.touch, height: SIZE.touch, justifyContent: 'center', alignItems: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
+  headerTitle: { ...TYPE.screenTitle, flex: 1, textAlign: 'center', marginHorizontal: 8 },
   content: { flex: 1 },
-  scrollContent: { padding: 16 },
-  section: { borderRadius: 12, padding: 16, marginBottom: 12 },
-  sectionTitle: { fontSize: 13, marginBottom: 8, textTransform: 'uppercase' },
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: 12 },
-  label: { fontSize: 16 },
-  hint: { fontSize: 12, lineHeight: 17, marginTop: 4 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, marginTop: 8 },
-  itemCard: { borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10 },
-  itemHeader: { flexDirection: 'row', alignItems: 'center', minHeight: 24 },
-  itemIndex: { fontSize: 12 },
-  removeButton: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  scrollContent: { paddingHorizontal: SPACE.screen, paddingTop: 4 },
+  section: { borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.card, marginBottom: SPACE.section },
+  sectionTitle: { ...TYPE.sectionHeader, marginBottom: 8 },
+  group: { borderRadius: RADIUS.group, borderWidth: 1, overflow: 'hidden', marginBottom: SPACE.section },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: SIZE.rowWithDesc, paddingVertical: 10, paddingHorizontal: 16 },
+  rowText: { flex: 1, minWidth: 0, gap: 2 },
+  label: { ...TYPE.body },
+  hint: { ...TYPE.caption, lineHeight: 17 },
+  hintBlock: { marginBottom: 12 },
+  itemHint: { marginTop: 6 },
+  input: { borderWidth: 1, borderRadius: RADIUS.control, height: 48, paddingHorizontal: 14, fontSize: 15 },
+  itemInput: { marginTop: 8 },
+  itemCard: { borderRadius: RADIUS.control, padding: 12, marginBottom: SPACE.gap },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', minHeight: 32, marginBottom: 2 },
+  itemIndex: { fontSize: 12, fontWeight: '600' },
+  removeButton: { width: SIZE.touch, height: SIZE.touch, borderRadius: SIZE.touch / 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginVertical: -6, marginRight: -8 },
   chipRow: { flexDirection: 'row', gap: 6, paddingVertical: 4 },
-  chip: { paddingHorizontal: 12, minHeight: 34, borderRadius: 17, borderWidth: 1, justifyContent: 'center', overflow: 'hidden' },
+  chip: { height: SIZE.chip, paddingHorizontal: 12, borderRadius: RADIUS.chip, borderWidth: 1, justifyContent: 'center', overflow: 'hidden' },
   chipText: { fontSize: 13 },
-  addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, borderRadius: 8, overflow: 'hidden' },
-  addRowText: { fontSize: 14 },
-  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  previewText: { fontSize: 14 },
-  saveButton: { minHeight: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginTop: 4, overflow: 'hidden' },
-  saveButtonText: { color: '#fff', fontSize: 16 },
-  deleteButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 8, borderRadius: 8, overflow: 'hidden' },
-  deleteButtonText: { fontSize: 15 },
+  addRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: SIZE.touch, borderRadius: RADIUS.control, overflow: 'hidden' },
+  addRowText: { fontSize: 14, fontWeight: '600' },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, borderRadius: RADIUS.control, paddingHorizontal: 12, paddingVertical: 10 },
+  previewText: { flex: 1, fontSize: 13 },
+  saveButton: { height: SIZE.primaryButton, borderRadius: RADIUS.button, alignItems: 'center', justifyContent: 'center', marginTop: 4, overflow: 'hidden' },
+  saveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  deleteButton: { flexDirection: 'row', gap: 6, height: SIZE.button, alignItems: 'center', justifyContent: 'center', marginTop: SPACE.section, borderRadius: RADIUS.control, overflow: 'hidden' },
+  deleteButtonText: { fontSize: 15, fontWeight: '600' },
 });

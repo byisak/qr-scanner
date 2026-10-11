@@ -7,7 +7,6 @@ import {
   ScrollView,
   Switch,
   TextInput,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +16,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { evaluateRules, describeCondition, describeAction } from '../utils/scanRules';
 import { loadScanRules, saveScanRules, setScanRulesEnabled } from '../utils/scanRulesStore';
@@ -44,6 +44,7 @@ export default function ScanRulesScreen() {
   const [groups, setGroups] = useState([]);
   const [categories, setCategories] = useState([]);
   const [testValue, setTestValue] = useState('');
+  const [testFocused, setTestFocused] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -124,113 +125,125 @@ export default function ScanRulesScreen() {
     return { text: parts.join(' · '), matched: true };
   }, [testValue, rules, categories, groups, context, t]);
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable onPress={() => router.back()} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('common.back')}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRules.title')}</Text>
-        <MaterialPressable onPress={() => router.push('/scan-rule-edit')} style={s.backButton} accessibilityLabel={t('scanRules.addRule')}>
-          <Ionicons name="add" size={26} color={colors.primary} />
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{t('scanRules.title')}</Text>
+        <MaterialPressable onPress={() => router.push('/scan-rule-edit')} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('scanRules.addRule')}>
+          <Ionicons name="add" size={26} color={colors.primaryText} />
         </MaterialPressable>
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]} keyboardShouldPersistTaps="handled">
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRules.enableAll')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('scanRules.description')}</Text>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>{t('scanRules.enableAll')}</Text>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('scanRules.description')}</Text>
             </View>
-            <Switch
-              value={enabled}
-              onValueChange={toggleAll}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-            />
+            <Switch value={enabled} onValueChange={toggleAll} {...switchColors} />
           </View>
         </View>
 
         {rules.length === 0 ? (
-          <View style={[s.empty, { backgroundColor: colors.surface }]}>
+          <View style={[s.empty, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="git-branch-outline" size={40} color={colors.textTertiary} />
             <Text style={[s.emptyTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRules.emptyTitle')}</Text>
             <Text style={[s.emptyDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('scanRules.emptyDesc')}</Text>
-            <Text style={[s.example, { color: colors.textTertiary, fontFamily: fonts.regular }]}>• {t('scanRules.example1')}</Text>
-            <Text style={[s.example, { color: colors.textTertiary, fontFamily: fonts.regular }]}>• {t('scanRules.example2')}</Text>
-            <MaterialPressable style={[s.addButton, { backgroundColor: colors.primary }]} onPress={() => router.push('/scan-rule-edit')} accessibilityRole="button">
-              <Ionicons name="add" size={20} color="#fff" />
-              <Text style={[s.addButtonText, { fontFamily: fonts.semiBold }]}>{t('scanRules.addRule')}</Text>
+            <View style={[s.exampleBox, { backgroundColor: colors.raised }]}>
+              <Text style={[s.example, { color: colors.textSecondary, fontFamily: fonts.regular }]}>• {t('scanRules.example1')}</Text>
+              <Text style={[s.example, { color: colors.textSecondary, fontFamily: fonts.regular }]}>• {t('scanRules.example2')}</Text>
+            </View>
+            <MaterialPressable style={[s.primaryButton, { backgroundColor: colors.primary }]} onPress={() => router.push('/scan-rule-edit')} accessibilityRole="button">
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={[s.primaryButtonText, { fontFamily: fonts.semiBold }]}>{t('scanRules.addRule')}</Text>
             </MaterialPressable>
           </View>
         ) : (
-          rules.map((rule, index) => {
-            const conditionText = rule.conditions.map(c => describeCondition(c, context, t)).filter(Boolean).join(' + ');
-            const dimmed = !enabled || rule.enabled === false;
-            return (
-              <View key={rule.id} style={[s.ruleCard, { backgroundColor: colors.surface, opacity: dimmed ? 0.6 : 1 }]}>
-                <MaterialPressable
-                  style={s.ruleMain}
-                  onPress={() => router.push({ pathname: '/scan-rule-edit', params: { id: rule.id } })}
-                  activeOpacity={0.7}
-                  accessibilityRole="button"
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.ruleName, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{rule.name}</Text>
-                    <Text style={[s.ruleCondition, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={2}>{conditionText}</Text>
-                    <View style={s.actionRow}>
-                      {rule.actions.map((a, i) => (
-                        <View key={i} style={[s.actionChip, { backgroundColor: colors.primary + '15' }]}>
-                          <Ionicons name={ACTION_ICONS[a.type] || 'ellipse-outline'} size={12} color={colors.primary} />
-                          <Text style={[s.actionChipText, { color: colors.primary, fontFamily: fonts.medium }]} numberOfLines={1}>{describeAction(a, context, t)}</Text>
+          <View style={[s.group, s.rulesGroup, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {rules.map((rule, index) => {
+              const conditionText = rule.conditions.map(c => describeCondition(c, context, t)).filter(Boolean).join(' + ');
+              const dimmed = !enabled || rule.enabled === false;
+              return (
+                <View key={rule.id} style={index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }}>
+                  <View style={{ opacity: dimmed ? 0.6 : 1 }}>
+                    <MaterialPressable
+                      style={s.ruleMain}
+                      onPress={() => router.push({ pathname: '/scan-rule-edit', params: { id: rule.id } })}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                    >
+                      <View style={s.rowText}>
+                        <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{rule.name}</Text>
+                        <Text style={[s.ruleCondition, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={2}>{conditionText}</Text>
+                        <View style={s.actionRow}>
+                          {rule.actions.map((a, i) => (
+                            <View key={i} style={[s.actionChip, { backgroundColor: colors.primarySoft }]}>
+                              <Ionicons name={ACTION_ICONS[a.type] || 'ellipse-outline'} size={12} color={colors.primaryText} />
+                              <Text style={[s.actionChipText, { color: colors.primaryText, fontFamily: fonts.semiBold }]} numberOfLines={1}>{describeAction(a, context, t)}</Text>
+                            </View>
+                          ))}
                         </View>
-                      ))}
-                    </View>
+                      </View>
+                      <Switch
+                        value={rule.enabled !== false}
+                        onValueChange={(v) => toggleRule(rule.id, v)}
+                        {...switchColors}
+                      />
+                    </MaterialPressable>
                   </View>
-                  <Switch
-                    value={rule.enabled !== false}
-                    onValueChange={(v) => toggleRule(rule.id, v)}
-                    trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                    thumbColor="#fff"
-                  />
-                </MaterialPressable>
-                <View style={[s.ruleTools, { borderTopColor: colors.borderLight }]}>
-                  <MaterialPressable style={s.toolButton} onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={t('scanRules.moveUp')}>
-                    <Ionicons name="chevron-up" size={20} color={index === 0 ? colors.textTertiary : colors.textSecondary} />
-                  </MaterialPressable>
-                  <MaterialPressable style={s.toolButton} onPress={() => move(index, 1)} disabled={index === rules.length - 1} accessibilityLabel={t('scanRules.moveDown')}>
-                    <Ionicons name="chevron-down" size={20} color={index === rules.length - 1 ? colors.textTertiary : colors.textSecondary} />
-                  </MaterialPressable>
-                  <View style={{ flex: 1 }} />
-                  {rule.stopAfterMatch !== false && (
-                    <Text style={[s.stopHint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('scanRules.stopAfterMatch')}</Text>
-                  )}
-                  <MaterialPressable style={s.toolButton} onPress={() => remove(rule, index)} accessibilityLabel={t('scanRules.delete')}>
-                    <Ionicons name="trash-outline" size={20} color={colors.error || '#FF3B30'} />
-                  </MaterialPressable>
+                  <View style={s.ruleTools}>
+                    <MaterialPressable style={s.toolButton} onPress={() => move(index, -1)} disabled={index === 0} accessibilityLabel={t('scanRules.moveUp')}>
+                      <Ionicons name="chevron-up" size={20} color={index === 0 ? colors.border : colors.textSecondary} />
+                    </MaterialPressable>
+                    <MaterialPressable style={s.toolButton} onPress={() => move(index, 1)} disabled={index === rules.length - 1} accessibilityLabel={t('scanRules.moveDown')}>
+                      <Ionicons name="chevron-down" size={20} color={index === rules.length - 1 ? colors.border : colors.textSecondary} />
+                    </MaterialPressable>
+                    <View style={{ flex: 1 }} />
+                    {rule.stopAfterMatch !== false && (
+                      <Text style={[s.stopHint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('scanRules.stopAfterMatch')}</Text>
+                    )}
+                    <MaterialPressable style={s.toolButton} onPress={() => remove(rule, index)} accessibilityLabel={t('scanRules.delete')}>
+                      <Ionicons name="trash-outline" size={20} color={colors.error} />
+                    </MaterialPressable>
+                  </View>
                 </View>
-              </View>
-            );
-          })
+              );
+            })}
+          </View>
         )}
 
         {/* 값으로 시험하기 */}
-        <View style={[s.section, { backgroundColor: colors.surface, marginTop: 8 }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('scanRules.testTitle')}</Text>
+        <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('scanRules.testTitle')}</Text>
+        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
             value={testValue}
             onChangeText={setTestValue}
+            onFocus={() => setTestFocused(true)}
+            onBlur={() => setTestFocused(false)}
             placeholder={t('scanRules.testPlaceholder')}
             placeholderTextColor={colors.textTertiary}
-            style={[s.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground, fontFamily: fonts.regular }]}
+            style={[s.input, { color: colors.text, borderColor: testFocused ? colors.primary : colors.border, backgroundColor: colors.inputBackground, fontFamily: MONO }]}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {testResult && (
-            <Text style={[s.testResult, { color: testResult.matched ? colors.primary : colors.textTertiary, fontFamily: fonts.medium }]}>
-              {testResult.text}
-            </Text>
+            <View style={[s.testResult, { backgroundColor: testResult.matched ? colors.primarySoft : colors.raised }]}>
+              <Ionicons name={testResult.matched ? 'checkmark-circle-outline' : 'information-circle-outline'} size={16} color={testResult.matched ? colors.primaryText : colors.textSecondary} />
+              <Text style={[s.testResultText, { color: testResult.matched ? colors.primaryText : colors.textSecondary, fontFamily: fonts.medium }]}>
+                {testResult.text}
+              </Text>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -240,45 +253,36 @@ export default function ScanRulesScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
-  },
-  headerTitle: { fontSize: 18 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingBottom: 8 },
+  iconButton: { width: SIZE.touch, height: SIZE.touch, justifyContent: 'center', alignItems: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
+  headerTitle: { ...TYPE.screenTitle, flex: 1, textAlign: 'center', marginHorizontal: 8 },
   content: { flex: 1 },
-  scrollContent: { padding: 16 },
-  section: { borderRadius: 12, padding: 16, marginBottom: 12 },
-  sectionTitle: { fontSize: 13, marginBottom: 10, textTransform: 'uppercase' },
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
-  label: { fontSize: 16 },
-  desc: { fontSize: 13, marginTop: 2, lineHeight: 18 },
-  empty: { borderRadius: 12, padding: 24, alignItems: 'center', marginBottom: 12 },
-  emptyTitle: { fontSize: 16, marginTop: 12 },
+  scrollContent: { paddingHorizontal: SPACE.screen, paddingTop: 4 },
+  sectionHeader: { ...TYPE.sectionHeader, marginTop: 14, marginHorizontal: 4, marginBottom: 8 },
+  group: { borderRadius: RADIUS.group, borderWidth: 1, overflow: 'hidden' },
+  rulesGroup: { marginTop: SPACE.section },
+  card: { borderRadius: RADIUS.group, borderWidth: 1, padding: 16 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: SIZE.row, paddingVertical: 10, paddingHorizontal: 16 },
+  rowWithDesc: { minHeight: SIZE.rowWithDesc },
+  rowText: { flex: 1, minWidth: 0, gap: 2 },
+  label: { ...TYPE.body },
+  desc: { ...TYPE.caption, lineHeight: 17 },
+  empty: { borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.card, alignItems: 'center', marginTop: SPACE.section },
+  emptyTitle: { fontSize: 16, fontWeight: '600', marginTop: 12 },
   emptyDesc: { fontSize: 14, marginTop: 6, textAlign: 'center', lineHeight: 20 },
-  example: { fontSize: 13, marginTop: 6, alignSelf: 'flex-start', lineHeight: 18 },
-  addButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 18, minHeight: 44, borderRadius: 22, marginTop: 16, overflow: 'hidden' },
-  addButtonText: { color: '#fff', fontSize: 15 },
-  ruleCard: { borderRadius: 12, marginBottom: 12, overflow: 'hidden' },
-  ruleMain: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  ruleName: { fontSize: 16 },
-  ruleCondition: { fontSize: 13, marginTop: 2, lineHeight: 18 },
-  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
-  actionChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, maxWidth: '100%' },
-  actionChipText: { fontSize: 12, flexShrink: 1 },
-  ruleTools: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, paddingHorizontal: 8, paddingVertical: 2 },
-  toolButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20, overflow: 'hidden' },
+  exampleBox: { alignSelf: 'stretch', borderRadius: RADIUS.control, paddingHorizontal: 14, paddingVertical: 10, marginTop: 14, gap: 4 },
+  example: { fontSize: 13, lineHeight: 18 },
+  primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, alignSelf: 'stretch', height: SIZE.primaryButton, borderRadius: RADIUS.button, marginTop: 16, overflow: 'hidden' },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  ruleMain: { flexDirection: 'row', alignItems: 'center', paddingTop: 12, paddingBottom: 4, paddingHorizontal: 16, gap: 12 },
+  ruleCondition: { fontSize: 12, lineHeight: 17 },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  actionChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: RADIUS.badge, maxWidth: '100%' },
+  actionChipText: { fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  ruleTools: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingBottom: 4 },
+  toolButton: { width: SIZE.touch, height: SIZE.touch, alignItems: 'center', justifyContent: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
   stopHint: { fontSize: 11, marginRight: 4 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
-  testResult: { fontSize: 14, marginTop: 10, lineHeight: 20 },
+  input: { borderWidth: 1, borderRadius: RADIUS.control, height: 48, paddingHorizontal: 14, fontSize: 15 },
+  testResult: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: RADIUS.control, paddingHorizontal: 12, paddingVertical: 10, marginTop: 12 },
+  testResultText: { flex: 1, fontSize: 13, lineHeight: 19 },
 });

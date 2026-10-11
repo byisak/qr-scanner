@@ -19,9 +19,23 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { describeSignature, splitLabel, defaultFieldName } from '../utils/labelParser';
 import { loadLabelSettings, updateCategory, deleteCategory } from '../utils/labelCategories';
+
+// 입력칸: 포커스되면 테두리를 강조색으로
+function Field({ style, colors, ...props }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <TextInput
+      {...props}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={[style, focused && { borderColor: colors.primary }]}
+    />
+  );
+}
 
 export default function LabelCategoryEditScreen() {
   const insets = useSafeAreaInsets();
@@ -129,24 +143,31 @@ export default function LabelCategoryEditScreen() {
     );
   };
 
-  const cardStyle = [styles.card, { backgroundColor: colors.surface }];
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+  const cardStyle = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border }];
   const inputStyle = [
     styles.input,
     { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, fontFamily: fonts.regular },
   ];
+  const sectionHeaderStyle = [styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }];
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <MaterialPressable
           onPress={() => router.back()}
-          style={styles.backButton}
+          style={styles.iconButton}
           accessibilityRole="button"
           accessibilityLabel={t('common.back')}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('labelCategories.edit')}
         </Text>
         <MaterialPressable
@@ -156,7 +177,7 @@ export default function LabelCategoryEditScreen() {
           accessibilityRole="button"
           accessibilityLabel={t('common.save')}
         >
-          <Text style={[styles.saveText, { color: colors.primary, fontFamily: fonts.bold }]}>
+          <Text style={[styles.saveText, { color: category ? colors.primaryText : colors.textTertiary, fontFamily: fonts.semiBold }]} numberOfLines={1}>
             {t('common.save')}
           </Text>
         </MaterialPressable>
@@ -176,10 +197,11 @@ export default function LabelCategoryEditScreen() {
             <>
               {/* 이름 · 패턴 */}
               <View style={cardStyle}>
-                <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                   {t('labelCategories.name')}
                 </Text>
-                <TextInput
+                <Field
+                  colors={colors}
                   style={inputStyle}
                   value={name}
                   onChangeText={setName}
@@ -189,46 +211,47 @@ export default function LabelCategoryEditScreen() {
                   accessibilityLabel={t('labelCategories.name')}
                 />
                 <View style={[styles.patternRow, { borderTopColor: colors.borderLight }]}>
-                  <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: fonts.medium, marginBottom: 0 }]}>
+                  <Text style={[styles.fieldLabel, styles.fieldLabelInRow, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                     {t('labelCategories.pattern')}
                   </Text>
-                  <Text style={[styles.patternValue, { color: colors.text, fontFamily: fonts.bold }]}>
-                    {describeSignature(category.signature)}
-                  </Text>
+                  <View style={[styles.patternBadge, { backgroundColor: colors.raised }]}>
+                    <Text style={[styles.patternValue, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                      {describeSignature(category.signature)}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
               {/* 연결된 그룹 + 자동 저장 */}
               {category.groupId ? (
-                <View style={[cardStyle, { marginBottom: 16 }]}>
+                <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={styles.routeRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.fieldLabel, { color: colors.text, fontFamily: fonts.semiBold, marginBottom: 2 }]}>
+                    <View style={styles.rowText}>
+                      <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
                         {t('labelCategories.autoRoute', { group: groupName || category.name })}
                       </Text>
-                      <Text style={[styles.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                      <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                         {routeToGroup == null ? t('labelCategories.autoRouteAsk') : t('labelCategories.autoRouteDesc')}
                       </Text>
                     </View>
                     <Switch
                       value={routeToGroup === true}
                       onValueChange={(v) => setRouteToGroup(v)}
-                      trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                      thumbColor="#fff"
+                      {...switchColors}
                     />
                   </View>
                 </View>
               ) : null}
 
               {/* 필드 이름 + 대표 필드 */}
-              <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+              <Text accessibilityRole="header" style={sectionHeaderStyle}>
                 {t('labelCategories.fields')}
               </Text>
               <View style={cardStyle}>
-                <Text style={[styles.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('labelCategories.fieldsDesc')}
                 </Text>
-                <Text style={[styles.desc, { color: colors.textTertiary, fontFamily: fonts.regular, marginTop: 4 }]}>
+                <Text style={[styles.desc, styles.descGap, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('labelCategories.keyField')} · {t('labelCategories.keyFieldDesc')}
                 </Text>
                 {fields.map((value, index) => {
@@ -243,13 +266,12 @@ export default function LabelCategoryEditScreen() {
                         accessibilityState={{ selected }}
                         accessibilityLabel={`${t('labelCategories.keyField')}: ${fieldLabel(index)}`}
                       >
-                        <Ionicons
-                          name={selected ? 'radio-button-on' : 'radio-button-off'}
-                          size={22}
-                          color={selected ? colors.primary : colors.textTertiary}
-                        />
+                        <View style={[styles.radioOuter, { borderColor: selected ? colors.primary : colors.textTertiary }]}>
+                          {selected && <View style={[styles.radioInner, { backgroundColor: colors.primary }]} />}
+                        </View>
                       </MaterialPressable>
-                      <TextInput
+                      <Field
+                        colors={colors}
                         style={[inputStyle, styles.inputFlex]}
                         value={value}
                         onChangeText={(text) => setFieldAt(index, text)}
@@ -264,32 +286,34 @@ export default function LabelCategoryEditScreen() {
               </View>
 
               {/* 미리보기 */}
-              <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+              <Text accessibilityRole="header" style={sectionHeaderStyle}>
                 {t('labelCategories.preview')}
               </Text>
               <View style={cardStyle}>
-                <Text style={[styles.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                <Text style={[styles.fieldLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                   {t('labelCategories.sample')}
                 </Text>
-                <Text
-                  style={[styles.mono, { color: colors.textSecondary }]}
-                  numberOfLines={1}
-                  ellipsizeMode="middle"
-                >
-                  {category.sample || '—'}
-                </Text>
-                <View style={[styles.previewTable, { borderColor: colors.borderLight }]}>
+                <View style={[styles.sampleBox, { backgroundColor: colors.raised }]}>
+                  <Text
+                    style={[styles.mono, { color: colors.text }]}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {category.sample || '—'}
+                  </Text>
+                </View>
+                <View style={[styles.previewTable, { borderColor: colors.border }]}>
                   {fields.map((_, index) => (
                     <View
                       key={index}
                       style={[
                         styles.previewRow,
-                        index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight },
+                        index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
                       ]}
                     >
                       <View style={styles.previewNameCell}>
                         <Text
-                          style={[styles.previewName, { color: keyField === index ? colors.primary : colors.textSecondary, fontFamily: fonts.medium }]}
+                          style={[styles.previewName, { color: keyField === index ? colors.primaryText : colors.textSecondary, fontFamily: keyField === index ? fonts.semiBold : fonts.medium }]}
                           numberOfLines={1}
                         >
                           {fieldLabel(index)}
@@ -310,12 +334,12 @@ export default function LabelCategoryEditScreen() {
               {/* 삭제 */}
               <MaterialPressable
                 onPress={handleDelete}
-                style={[styles.deleteButton, { borderColor: colors.error }]}
+                style={[styles.deleteButton, { backgroundColor: colors.errorSoft }]}
                 accessibilityRole="button"
                 accessibilityLabel={t('common.delete')}
               >
                 <Ionicons name="trash-outline" size={18} color={colors.error} />
-                <Text style={[styles.deleteText, { color: colors.error, fontFamily: fonts.bold }]}>
+                <Text style={[styles.deleteText, { color: colors.error, fontFamily: fonts.semiBold }]}>
                   {t('common.delete')}
                 </Text>
               </MaterialPressable>
@@ -328,142 +352,39 @@ export default function LabelCategoryEditScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 4,
-    ...(Platform.OS === 'android' ? { borderRadius: 16, overflow: 'hidden' } : {}),
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  saveButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    ...(Platform.OS === 'android' ? { borderRadius: 8, overflow: 'hidden' } : {}),
-  },
-  saveText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-  },
-  card: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    ...(Platform.OS === 'android' ? { elevation: 1 } : {}),
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  fieldLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginBottom: 6,
-  },
-  desc: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  input: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-    fontSize: 15,
-  },
-  inputFlex: {
-    flex: 1,
-  },
-  patternRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 14,
-    paddingTop: 14,
-    borderTopWidth: 1,
-  },
-  patternValue: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  fieldRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    gap: 6,
-  },
-  radioButton: {
-    padding: 6,
-    borderRadius: 18,
-    ...(Platform.OS === 'android' ? { overflow: 'hidden' } : {}),
-  },
-  mono: {
-    fontSize: 13,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    marginTop: 4,
-  },
-  previewTable: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  previewNameCell: {
-    width: '38%',
-    paddingRight: 8,
-  },
-  previewName: {
-    fontSize: 14,
-  },
-  previewValue: {
-    flex: 1,
-    fontSize: 14,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 8,
-    ...(Platform.OS === 'android' ? { overflow: 'hidden' } : {}),
-  },
-  deleteText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingBottom: 8 },
+  iconButton: { width: SIZE.touch, height: SIZE.touch, justifyContent: 'center', alignItems: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
+  headerTitle: { ...TYPE.screenTitle, flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  saveButton: { minWidth: SIZE.touch, height: SIZE.touch, paddingHorizontal: 8, justifyContent: 'center', alignItems: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
+  saveText: { fontSize: 16, fontWeight: '600' },
+  container: { flex: 1 },
+  content: { paddingHorizontal: SPACE.screen, paddingTop: 4 },
+  card: { borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.card, marginBottom: SPACE.section },
+  group: { borderRadius: RADIUS.group, borderWidth: 1, overflow: 'hidden', marginBottom: SPACE.section },
+  sectionHeader: { ...TYPE.sectionHeader, marginTop: 2, marginHorizontal: 4, marginBottom: 8 },
+  fieldLabel: { ...TYPE.sectionHeader, marginBottom: 8 },
+  fieldLabelInRow: { marginBottom: 0 },
+  label: { ...TYPE.body },
+  desc: { ...TYPE.caption, lineHeight: 17 },
+  descGap: { marginTop: 4 },
+  input: { height: 48, paddingHorizontal: 14, borderRadius: RADIUS.control, borderWidth: 1, fontSize: 15 },
+  inputFlex: { flex: 1 },
+  patternRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth },
+  patternBadge: { borderRadius: RADIUS.badge, paddingHorizontal: 10, paddingVertical: 4 },
+  patternValue: { fontSize: 13, fontWeight: '600' },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: SIZE.rowWithDesc, paddingVertical: 10, paddingHorizontal: 16 },
+  rowText: { flex: 1, minWidth: 0, gap: 2 },
+  fieldRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 4 },
+  radioButton: { width: SIZE.touch, height: SIZE.touch, marginLeft: -11, borderRadius: SIZE.touch / 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  radioInner: { width: 10, height: 10, borderRadius: 5 },
+  sampleBox: { borderRadius: RADIUS.control, paddingHorizontal: 12, paddingVertical: 10 },
+  mono: { fontSize: 13, fontFamily: MONO },
+  previewTable: { marginTop: 12, borderWidth: 1, borderRadius: RADIUS.control, overflow: 'hidden' },
+  previewRow: { flexDirection: 'row', alignItems: 'center', minHeight: SIZE.touch, paddingVertical: 10, paddingHorizontal: 12 },
+  previewNameCell: { width: '38%', paddingRight: 8 },
+  previewName: { fontSize: 13 },
+  previewValue: { flex: 1, fontSize: 14 },
+  deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: SIZE.button, borderRadius: RADIUS.control, marginTop: 4, overflow: 'hidden' },
+  deleteText: { fontSize: 15, fontWeight: '600' },
 });

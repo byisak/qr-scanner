@@ -18,11 +18,25 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import config from '../config/config';
 import MaterialPressable from '../components/MaterialPressable';
 
 const DEFAULT_GROUP_ID = 'default';
+
+// 입력칸: 포커스되면 테두리를 강조색으로
+function Field({ style, colors, ...props }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <TextInput
+      {...props}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={[style, focused && { borderColor: colors.primary }]}
+    />
+  );
+}
 
 export default function GroupEditScreen() {
   const router = useRouter();
@@ -248,21 +262,24 @@ export default function GroupEditScreen() {
     await saveGroups(data);
   };
 
-  // 그룹 아이템 렌더링
+  // 그룹 아이템 렌더링 (한 묶음 카드 안의 행)
   const renderItem = useCallback(({ item, drag, isActive }) => {
-    // 아이콘 및 색상 결정
+    // 아이콘 및 색상 결정 (연한 바탕 + 진한 아이콘)
     let iconName = 'folder';
-    let iconColor = colors.primary;
+    let tone = { bg: colors.primarySoft, fg: colors.primaryText };
     if (item.isCloudSync) {
       iconName = 'cloud';
-      iconColor = colors.primary;
     } else if (item.isScanUrlGroup) {
       iconName = 'link';
-      iconColor = colors.success;
+      tone = { bg: colors.successSoft, fg: colors.success };
     } else if (item.id === DEFAULT_GROUP_ID) {
       iconName = 'home';
-      iconColor = colors.primary;
     }
+    // 순서가 바뀌면 groups가 바뀌어 모든 행이 다시 그려지므로 첫·끝 행 모서리가 맞게 유지된다
+    const index = groups.findIndex(g => g.id === item.id);
+    const isFirst = index <= 0;
+    const isLast = index === groups.length - 1;
+    const isDefault = item.id === DEFAULT_GROUP_ID;
 
     return (
       <ScaleDecorator>
@@ -272,38 +289,36 @@ export default function GroupEditScreen() {
           disabled={isActive}
           style={[
             s.reorderItem,
-            Platform.OS === 'android' && s.reorderItemAndroid,
-            {
-              backgroundColor: isActive ? colors.primary + '20' : colors.surface,
-              borderColor: colors.border,
-            },
-            isActive && { shadowOpacity: 0.3, elevation: 8, borderColor: colors.primary }
+            isFirst && s.reorderItemFirst,
+            isLast && s.reorderItemLast,
+            !isFirst && !isActive && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
+            isActive && { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primary, borderRadius: RADIUS.control },
           ]}
         >
           {/* 드래그 핸들 */}
           <MaterialPressable
             onPressIn={drag}
-            style={[s.dragHandle, Platform.OS === 'android' && s.androidIconButton]}
+            style={s.dragHandle}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="menu" size={22} color={colors.textTertiary} />
           </MaterialPressable>
 
           {/* 아이콘 */}
-          <View style={[s.reorderItemIcon, { backgroundColor: iconColor + '15' }]}>
-            <Ionicons name={iconName} size={20} color={iconColor} />
+          <View style={[s.reorderItemIcon, { backgroundColor: tone.bg }]}>
+            <Ionicons name={iconName} size={20} color={tone.fg} />
           </View>
 
           {/* 그룹 이름 */}
           <View style={s.reorderItemTextContainer}>
-            <Text style={[s.reorderItemText, { color: colors.text }]}>{item.name}</Text>
-            {item.id === DEFAULT_GROUP_ID && (
-              <Text style={[s.reorderItemSubtext, { color: colors.textSecondary }]}>
+            <Text style={[s.reorderItemText, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{item.name}</Text>
+            {isDefault && (
+              <Text style={[s.reorderItemSubtext, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('groupEdit.defaultGroup') || '기본'}
               </Text>
             )}
             {item.isCloudSync && (
-              <Text style={[s.reorderItemSubtext, { color: colors.primary }]}>
+              <Text style={[s.reorderItemSubtext, { color: colors.primaryText, fontFamily: fonts.medium }]}>
                 Cloud Sync
               </Text>
             )}
@@ -313,34 +328,34 @@ export default function GroupEditScreen() {
           <View style={s.groupActions}>
             {/* 이름 변경 버튼 */}
             <MaterialPressable
-              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled, Platform.OS === 'android' && s.androidIconButton]}
+              style={[s.actionButton, isDefault && s.actionButtonDisabled]}
               onPress={() => openEditModal(item)}
-              disabled={item.id === DEFAULT_GROUP_ID}
+              disabled={isDefault}
             >
               <Ionicons
                 name="create-outline"
                 size={20}
-                color={item.id === DEFAULT_GROUP_ID ? colors.textTertiary : colors.primary}
+                color={isDefault ? colors.textTertiary : colors.textSecondary}
               />
             </MaterialPressable>
 
             {/* 삭제 버튼 */}
             <MaterialPressable
-              style={[s.actionButton, item.id === DEFAULT_GROUP_ID && s.actionButtonDisabled, Platform.OS === 'android' && s.androidIconButton]}
+              style={[s.actionButton, isDefault && s.actionButtonDisabled]}
               onPress={() => deleteGroup(item.id)}
-              disabled={item.id === DEFAULT_GROUP_ID}
+              disabled={isDefault}
             >
               <Ionicons
                 name="trash-outline"
                 size={20}
-                color={item.id === DEFAULT_GROUP_ID ? colors.textTertiary : colors.error}
+                color={isDefault ? colors.textTertiary : colors.error}
               />
             </MaterialPressable>
           </View>
         </MaterialPressable>
       </ScaleDecorator>
     );
-  }, [colors, t]);
+  }, [colors, t, fonts, groups]);
 
   // 그룹 이름 변경 모달 열기
   const openEditModal = (group) => {
@@ -349,49 +364,57 @@ export default function GroupEditScreen() {
     setShowEditModal(true);
   };
 
-  const headerPaddingTop = Platform.OS === 'ios' ? 60 : insets.top + 10;
+  const modalInputStyle = [s.modalInput, {
+    backgroundColor: colors.inputBackground,
+    borderColor: colors.border,
+    color: colors.text,
+    fontFamily: fonts.regular,
+  }];
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={[s.container, { backgroundColor: colors.background }]}>
         {/* 헤더 */}
-        <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: headerPaddingTop }]}>
+        <View style={[s.header, { paddingTop: insets.top + 4 }]}>
           <MaterialPressable
-            style={[s.backButton, Platform.OS === 'android' && s.androidIconButton]}
+            style={s.iconButton}
             onPress={() => router.back()}
+            accessibilityRole="button"
             accessibilityLabel={t('common.back')}
           >
-            <Ionicons name="arrow-back" size={28} color={colors.primary} />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </MaterialPressable>
-          <Text style={[s.headerTitle, { color: colors.text }]}>{t('groupEdit.title')}</Text>
-          <View style={{ width: 28 }} />
+          <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{t('groupEdit.title')}</Text>
+          <View style={s.headerSpacer} />
         </View>
 
         {/* 서브타이틀 - 드래그 안내 */}
         <View style={s.subtitleContainer}>
-          <Text style={[s.subtitle, { color: colors.textSecondary }]}>
+          <Text style={[s.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
             {t('groupEdit.dragToReorder') || '≡ 아이콘을 길게 눌러 순서를 변경하세요'}
           </Text>
         </View>
 
-        {/* 그룹 목록 (드래그 가능) */}
+        {/* 그룹 목록 (드래그 가능) - 한 묶음 카드 */}
         <DraggableFlatList
           data={groups}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           onDragEnd={handleDragEnd}
-          contentContainerStyle={s.listContent}
+          containerStyle={s.listContainer}
+          contentContainerStyle={[s.listContent, { backgroundColor: colors.surface, borderColor: colors.border }]}
           activationDistance={10}
         />
 
         {/* 그룹 추가 버튼 */}
-        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 20 }]}>
+        <View style={[s.addButtonContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 16 }]}>
           <MaterialPressable
-            style={[s.addButton, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}
+            style={[s.addButton, { backgroundColor: colors.primary }]}
             onPress={() => setShowAddModal(true)}
+            accessibilityRole="button"
           >
-            <Ionicons name="add-circle" size={24} color="#fff" />
-            <Text style={s.addButtonText}>{t('groupEdit.addGroup')}</Text>
+            <Ionicons name="add-circle" size={22} color="#FFFFFF" />
+            <Text style={[s.addButtonText, { fontFamily: fonts.semiBold }]}>{t('groupEdit.addGroup')}</Text>
           </MaterialPressable>
         </View>
 
@@ -416,14 +439,11 @@ export default function GroupEditScreen() {
             style={s.bottomSheetWrapper}
           >
             <MaterialPressable activeOpacity={1} rippleColor="transparent" onPress={(e) => e.stopPropagation()}>
-              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
-                <Text style={[s.modalTitle, { color: colors.text }]}>{t('groupEdit.addGroup')}</Text>
-                <TextInput
-                  style={[s.modalInput, {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.border,
-                    color: colors.text
-                  }]}
+              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('groupEdit.addGroup')}</Text>
+                <Field
+                  colors={colors}
+                  style={modalInputStyle}
                   placeholder={t('groupEdit.groupNamePlaceholder')}
                   placeholderTextColor={colors.textTertiary}
                   value={newGroupName}
@@ -432,19 +452,21 @@ export default function GroupEditScreen() {
                 />
                 <View style={s.modalButtons}>
                   <MaterialPressable
-                    style={[s.modalButton, s.modalButtonCancel, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.inputBackground }]}
+                    style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.raised, borderColor: colors.border }]}
                     onPress={() => {
                       setShowAddModal(false);
                       setNewGroupName('');
                     }}
+                    accessibilityRole="button"
                   >
-                    <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+                    <Text style={[s.modalButtonTextCancel, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('common.cancel')}</Text>
                   </MaterialPressable>
                   <MaterialPressable
-                    style={[s.modalButton, s.modalButtonConfirm, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}
+                    style={[s.modalButton, { backgroundColor: colors.primary }]}
                     onPress={addGroup}
+                    accessibilityRole="button"
                   >
-                    <Text style={s.modalButtonTextConfirm}>{t('groupEdit.create')}</Text>
+                    <Text style={[s.modalButtonTextConfirm, { fontFamily: fonts.semiBold }]}>{t('groupEdit.create')}</Text>
                   </MaterialPressable>
                 </View>
               </View>
@@ -475,14 +497,11 @@ export default function GroupEditScreen() {
             style={s.bottomSheetWrapper}
           >
             <MaterialPressable activeOpacity={1} rippleColor="transparent" onPress={(e) => e.stopPropagation()}>
-              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface }]}>
-                <Text style={[s.modalTitle, { color: colors.text }]}>{t('common.edit')}</Text>
-                <TextInput
-                  style={[s.modalInput, {
-                    backgroundColor: colors.inputBackground,
-                    borderColor: colors.border,
-                    color: colors.text
-                  }]}
+              <View style={[s.bottomSheetContent, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('common.edit')}</Text>
+                <Field
+                  colors={colors}
+                  style={modalInputStyle}
                   placeholder={t('groupEdit.groupNamePlaceholder')}
                   placeholderTextColor={colors.textTertiary}
                   value={newGroupName}
@@ -491,20 +510,22 @@ export default function GroupEditScreen() {
                 />
                 <View style={s.modalButtons}>
                   <MaterialPressable
-                    style={[s.modalButton, s.modalButtonCancel, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.inputBackground }]}
+                    style={[s.modalButton, s.modalButtonCancel, { backgroundColor: colors.raised, borderColor: colors.border }]}
                     onPress={() => {
                       setShowEditModal(false);
                       setNewGroupName('');
                       setEditingGroup(null);
                     }}
+                    accessibilityRole="button"
                   >
-                    <Text style={[s.modalButtonTextCancel, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+                    <Text style={[s.modalButtonTextCancel, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('common.cancel')}</Text>
                   </MaterialPressable>
                   <MaterialPressable
-                    style={[s.modalButton, s.modalButtonConfirm, Platform.OS === 'android' && s.androidClip, { backgroundColor: colors.primary }]}
+                    style={[s.modalButton, { backgroundColor: colors.primary }]}
                     onPress={editGroupName}
+                    accessibilityRole="button"
                   >
-                    <Text style={s.modalButtonTextConfirm}>{t('common.save')}</Text>
+                    <Text style={[s.modalButtonTextConfirm, { fontFamily: fonts.semiBold }]}>{t('common.save')}</Text>
                   </MaterialPressable>
                 </View>
               </View>
@@ -518,45 +539,32 @@ export default function GroupEditScreen() {
 }
 
 const s = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  subtitleContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  subtitle: {
-    fontSize: 14,
-  },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingBottom: 8 },
+  iconButton: { width: SIZE.touch, height: SIZE.touch, justifyContent: 'center', alignItems: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
+  headerTitle: { ...TYPE.screenTitle, flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  headerSpacer: { width: SIZE.touch },
+  subtitleContainer: { paddingHorizontal: SPACE.screen + 4, paddingTop: 4, paddingBottom: 8 },
+  subtitle: { fontSize: 13, lineHeight: 18 },
+  listContainer: { flex: 1 },
+  // 묶음 카드: 드래그 중 커지는 행이 잘리지 않게 overflow는 열어 둔다 (첫·끝 행에만 모서리)
   listContent: {
-    paddingVertical: 8,
-    paddingBottom: 280,
+    marginHorizontal: SPACE.screen,
+    marginBottom: SPACE.screen,
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
   },
   reorderItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 6,
+    paddingLeft: 4,
+    paddingRight: 6,
+    overflow: 'hidden',
   },
+  reorderItemFirst: { borderTopLeftRadius: RADIUS.group, borderTopRightRadius: RADIUS.group },
+  reorderItemLast: { borderBottomLeftRadius: RADIUS.group, borderBottomRightRadius: RADIUS.group },
   reorderItemIcon: {
     width: 36,
     height: 36,
@@ -565,72 +573,39 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  reorderItemTextContainer: {
-    flex: 1,
-  },
-  reorderItemText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  reorderItemSubtext: {
-    fontSize: 12,
-    marginTop: 2,
-  },
+  reorderItemTextContainer: { flex: 1, minWidth: 0 },
+  reorderItemText: { ...TYPE.body },
+  reorderItemSubtext: { fontSize: 12, marginTop: 2 },
   dragHandle: {
-    padding: 8,
-    marginRight: 8,
-  },
-  groupActions: {
-    flexDirection: 'row',
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    marginRight: 2,
+    overflow: 'hidden',
   },
+  groupActions: { flexDirection: 'row', alignItems: 'center' },
   actionButton: {
-    padding: 8,
-    borderRadius: 8,
-  },
-  actionButtonDisabled: {
-    opacity: 0.4,
-  },
-  // Android 전용 Material 3 규격 (iOS 값은 기본 스타일 그대로)
-  reorderItemAndroid: {
-    borderRadius: 12,
-    elevation: 1,
-    overflow: 'hidden', // 물결이 카드 모서리 안에 머물게
-  },
-  androidIconButton: {
-    borderRadius: 20,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
     overflow: 'hidden',
   },
-  androidClip: {
-    overflow: 'hidden',
-  },
-  addButtonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
+  actionButtonDisabled: { opacity: 0.4 },
+  addButtonContainer: { paddingHorizontal: SPACE.screen, paddingTop: 8 },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    elevation: 4,
-    shadowColor: '#2F6FEB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    gap: 8,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    overflow: 'hidden',
   },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
+  addButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -638,63 +613,27 @@ const s = StyleSheet.create({
     paddingTop: 120,
     paddingHorizontal: 20,
   },
-  bottomSheetWrapper: {
-    width: '100%',
-  },
-  bottomSheetContent: {
-    borderRadius: 20,
-    padding: 24,
-    paddingTop: 20,
-  },
-  bottomSheetHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#ccc',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  modalContent: {
-    borderRadius: 16,
-    padding: 24,
-    width: '85%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
+  bottomSheetWrapper: { width: '100%' },
+  bottomSheetContent: { borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.card },
+  modalTitle: { fontSize: 17, fontWeight: '600', marginBottom: 16 },
   modalInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
+    borderRadius: RADIUS.control,
+    height: 48,
+    paddingHorizontal: 14,
+    fontSize: 15,
     marginBottom: 20,
   },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+  modalButtons: { flexDirection: 'row', gap: SPACE.gap },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  modalButtonCancel: {
-    marginRight: 8,
-  },
-  modalButtonConfirm: {
-    marginLeft: 8,
-  },
-  modalButtonTextCancel: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalButtonTextConfirm: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  modalButtonCancel: { borderWidth: 1 },
+  modalButtonTextCancel: { fontSize: 16, fontWeight: '600' },
+  modalButtonTextConfirm: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });
