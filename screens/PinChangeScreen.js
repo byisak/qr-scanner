@@ -4,22 +4,23 @@ import {
   View,
   Text,
   StyleSheet,
-  Platform,
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
+import { SIZE } from '../constants/Design';
 import { PinKeypadWithRef } from '../components/PinKeypad';
 import haptics from '../utils/haptics';
 
 export default function PinChangeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const { verifyPin, setPin } = useAppLock();
@@ -108,30 +109,35 @@ export default function PinChangeScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
+    <View style={[styles.container, { backgroundColor: colors.background, paddingTop: insets.top + 4 }]}>
+      {/* 헤더: 닫기 */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.closeButton}
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
         >
-          <Ionicons name="close" size={28} color={colors.text} />
+          <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
       {/* 타이틀 */}
       <View style={styles.titleContainer}>
+        <View style={[styles.iconTile, { backgroundColor: colors.primarySoft }]}>
+          <Ionicons name="lock-closed-outline" size={24} color={colors.primaryText} />
+        </View>
         <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
           {getTitle()}
         </Text>
-        {errorMessage ? (
-          <Text style={[styles.errorText, { fontFamily: fonts.regular }]}>
-            {errorMessage}
+        {t('security.changePin') ? (
+          <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            {t('security.changePin')}
           </Text>
         ) : null}
       </View>
 
-      {/* PIN 키패드 */}
+      {/* PIN 키패드 (오류 문구는 점 아래에 표시) */}
       <PinKeypadWithRef
         ref={pinKeypadRef}
         onComplete={handlePinComplete}
@@ -139,8 +145,9 @@ export default function PinChangeScreen() {
         shuffleKeys={true}
         colors={colors}
         fonts={fonts}
+        errorMessage={errorMessage}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -150,30 +157,38 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 10 : 0,
+    paddingHorizontal: 8,
   },
   closeButton: {
-    width: 44,
-    height: 44,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   titleContainer: {
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  iconTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.3,
     textAlign: 'center',
   },
-  errorText: {
-    fontSize: 14,
-    color: '#E74C3C',
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 21,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: 8,
   },
 });

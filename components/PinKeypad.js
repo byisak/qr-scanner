@@ -3,18 +3,160 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import haptics from '../utils/haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLanguage } from '../contexts/LanguageContext';
+import { Colors } from '../constants/Colors';
 
-const { width } = Dimensions.get('window');
-const KEYPAD_WIDTH = Math.min(width - 40, 320);
-const KEY_SIZE = KEYPAD_WIDTH / 3;
-const KEY_HEIGHT = Math.min(KEY_SIZE * 0.8, 70);
+// 2026-10 리디자인: 바탕 위 투명 키(72 원형), 누르면 raised 바탕
+const KEY_SIZE = Dimensions.get('window').height < 700 ? 64 : 72; // 작은 화면(SE 등)은 64
+const KEY_GAP = 24;
+
+// 점 + 오류 문구 + 키패드 (PinKeypad / PinKeypadWithRef 공용 화면)
+function PinPadView({
+  pin,
+  pinLength,
+  shuffledNumbers,
+  onKeyPress,
+  onDelete,
+  keysDisabled,
+  disabled,
+  colors: colorsProp,
+  fonts,
+  showBiometric,
+  onBiometricPress,
+  bottomLink,
+  onBottomLinkPress,
+  errorMessage,
+}) {
+  const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
+  const colors = colorsProp || Colors.light;
+  const showError = !!errorMessage && pin.length === 0;
+
+  const keyStyle = ({ pressed }) => [
+    styles.key,
+    pressed && { backgroundColor: colors.raised },
+  ];
+
+  // PIN 입력 상태 표시 (점)
+  const renderPinDots = () => (
+    <View style={styles.dotsContainer}>
+      {Array(pinLength)
+        .fill(0)
+        .map((_, index) => {
+          const filled = index < pin.length;
+          return (
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                filled
+                  ? { backgroundColor: colors.text, borderColor: colors.text }
+                  : { borderColor: showError ? colors.error : colors.textTertiary },
+              ]}
+            />
+          );
+        })}
+    </View>
+  );
+
+  // 숫자 키 렌더링
+  const renderNumberKey = (number) => (
+    <Pressable
+      key={`num-${number}`}
+      style={keyStyle}
+      onPress={() => onKeyPress(number)}
+      disabled={keysDisabled}
+      accessibilityRole="button"
+      accessibilityLabel={number}
+    >
+      <Text style={[styles.keyText, { color: colors.text, fontFamily: fonts?.medium }]}>{number}</Text>
+    </Pressable>
+  );
+
+  return (
+    <View style={styles.container}>
+      {renderPinDots()}
+      <View style={styles.errorSlot}>
+        {errorMessage ? (
+          <Text style={[styles.errorText, { color: colors.error, fontFamily: fonts?.regular }]}>
+            {errorMessage}
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.keypadWrapper}>
+        <View style={[styles.keypadContainer, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
+          {/* Row 1 */}
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[0])}
+            {renderNumberKey(shuffledNumbers[1])}
+            {renderNumberKey(shuffledNumbers[2])}
+          </View>
+
+          {/* Row 2 */}
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[3])}
+            {renderNumberKey(shuffledNumbers[4])}
+            {renderNumberKey(shuffledNumbers[5])}
+          </View>
+
+          {/* Row 3 */}
+          <View style={styles.row}>
+            {renderNumberKey(shuffledNumbers[6])}
+            {renderNumberKey(shuffledNumbers[7])}
+            {renderNumberKey(shuffledNumbers[8])}
+          </View>
+
+          {/* Row 4: 생체인증, 마지막 숫자, 삭제 */}
+          <View style={styles.row}>
+            {showBiometric ? (
+              <Pressable
+                style={keyStyle}
+                onPress={onBiometricPress}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel={t('security.biometric')}
+              >
+                <Ionicons name="scan-outline" size={28} color={colors.primaryText} />
+              </Pressable>
+            ) : (
+              <View style={styles.key} />
+            )}
+            {renderNumberKey(shuffledNumbers[9])}
+            <Pressable
+              style={keyStyle}
+              onPress={onDelete}
+              disabled={disabled}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.delete')}
+            >
+              <Ionicons name="backspace-outline" size={26} color={colors.textSecondary} />
+            </Pressable>
+          </View>
+
+          {/* 하단 링크 */}
+          {bottomLink && (
+            <Pressable
+              style={styles.bottomLinkContainer}
+              onPress={onBottomLinkPress}
+              accessibilityRole="button"
+            >
+              <Text style={[styles.bottomLinkText, { color: colors.primaryText, fontFamily: fonts?.medium }]}>
+                {bottomLink}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
 
 export default function PinKeypad({
   onPinChange,
@@ -30,7 +172,6 @@ export default function PinKeypad({
   onBottomLinkPress,
   errorMessage,
 }) {
-  const insets = useSafeAreaInsets();
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
   const completedRef = useRef(false);
@@ -78,109 +219,23 @@ export default function PinKeypad({
     setPin((prev) => prev.slice(0, -1));
   };
 
-  // PIN 입력 상태 표시 (점)
-  const renderPinDots = () => {
-    return (
-      <View style={styles.dotsContainer}>
-        {Array(pinLength)
-          .fill(0)
-          .map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                {
-                  backgroundColor: index < pin.length
-                    ? (colors?.primary || '#0066FF')
-                    : (colors?.border || '#D1D1D6'),
-                },
-              ]}
-            />
-          ))}
-      </View>
-    );
-  };
-
-  // 숫자 키 렌더링
-  const renderNumberKey = (number) => (
-    <TouchableOpacity
-      key={`num-${number}`}
-      style={styles.key}
-      onPress={() => handleKeyPress(number)}
-      activeOpacity={0.6}
-      disabled={disabled || completedRef.current}
-    >
-      <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{number}</Text>
-    </TouchableOpacity>
-  );
-
   return (
-    <View style={styles.container}>
-      {renderPinDots()}
-      {errorMessage ? (
-        <Text style={[styles.errorText, { fontFamily: fonts?.regular }]}>
-          {errorMessage}
-        </Text>
-      ) : null}
-      <View style={styles.keypadWrapper}>
-        <View style={[styles.keypadContainer, { paddingBottom: Math.max(insets.bottom, 16) + 34 }]}>
-          {/* Row 1 */}
-          <View style={styles.row}>
-            {renderNumberKey(shuffledNumbers[0])}
-            {renderNumberKey(shuffledNumbers[1])}
-            {renderNumberKey(shuffledNumbers[2])}
-          </View>
-
-          {/* Row 2 */}
-          <View style={styles.row}>
-            {renderNumberKey(shuffledNumbers[3])}
-            {renderNumberKey(shuffledNumbers[4])}
-            {renderNumberKey(shuffledNumbers[5])}
-          </View>
-
-          {/* Row 3 */}
-          <View style={styles.row}>
-            {renderNumberKey(shuffledNumbers[6])}
-            {renderNumberKey(shuffledNumbers[7])}
-            {renderNumberKey(shuffledNumbers[8])}
-          </View>
-
-          {/* Row 4: 생체인증, 마지막 숫자, 삭제 */}
-          <View style={styles.row}>
-            {showBiometric ? (
-              <TouchableOpacity
-                style={styles.key}
-                onPress={onBiometricPress}
-                activeOpacity={0.6}
-                disabled={disabled}
-              >
-                <Ionicons name="scan-outline" size={30} color="#fff" />
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.key} />
-            )}
-            {renderNumberKey(shuffledNumbers[9])}
-            <TouchableOpacity
-              style={styles.key}
-              onPress={handleDelete}
-              activeOpacity={0.6}
-              disabled={disabled}
-            >
-              <Ionicons name="backspace-outline" size={30} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          {/* 하단 링크 */}
-          {bottomLink && (
-            <TouchableOpacity style={styles.bottomLinkContainer} onPress={onBottomLinkPress}>
-              <Text style={[styles.bottomLinkText, { fontFamily: fonts?.medium }]}>
-                {bottomLink}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </View>
+    <PinPadView
+      pin={pin}
+      pinLength={pinLength}
+      shuffledNumbers={shuffledNumbers}
+      onKeyPress={handleKeyPress}
+      onDelete={handleDelete}
+      keysDisabled={disabled || completedRef.current}
+      disabled={disabled}
+      colors={colors}
+      fonts={fonts}
+      showBiometric={showBiometric}
+      onBiometricPress={onBiometricPress}
+      bottomLink={bottomLink}
+      onBottomLinkPress={onBottomLinkPress}
+      errorMessage={errorMessage}
+    />
   );
 }
 
@@ -199,7 +254,6 @@ export const PinKeypadWithRef = React.forwardRef(({
   onBottomLinkPress,
   errorMessage,
 }, ref) => {
-  const insets = useSafeAreaInsets();
   const [pin, setPin] = useState('');
   const [shuffledNumbers, setShuffledNumbers] = useState(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
   const completedRef = useRef(false);
@@ -273,97 +327,23 @@ export const PinKeypadWithRef = React.forwardRef(({
     fillDotsWithAnimation,
   }), [resetPin, fillDotsWithAnimation]);
 
-  const renderPinDots = () => (
-    <View style={styles.dotsContainer}>
-      {Array(pinLength)
-        .fill(0)
-        .map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              {
-                backgroundColor: index < pin.length
-                  ? (colors?.primary || '#0066FF')
-                  : (colors?.border || '#D1D1D6'),
-              },
-            ]}
-          />
-        ))}
-    </View>
-  );
-
-  const renderNumberKey = (number) => (
-    <TouchableOpacity
-      key={`num-${number}`}
-      style={styles.key}
-      onPress={() => handleKeyPress(number)}
-      activeOpacity={0.6}
-      disabled={disabled || completedRef.current}
-    >
-      <Text style={[styles.keyText, { fontFamily: fonts?.semiBold }]}>{number}</Text>
-    </TouchableOpacity>
-  );
-
   return (
-    <View style={styles.container}>
-      {renderPinDots()}
-      {errorMessage ? (
-        <Text style={[styles.errorText, { fontFamily: fonts?.regular }]}>
-          {errorMessage}
-        </Text>
-      ) : null}
-      <View style={styles.keypadWrapper}>
-        <View style={[styles.keypadContainer, { paddingBottom: Math.max(insets.bottom, 16) + 34 }]}>
-          <View style={styles.row}>
-            {renderNumberKey(shuffledNumbers[0])}
-            {renderNumberKey(shuffledNumbers[1])}
-            {renderNumberKey(shuffledNumbers[2])}
-          </View>
-          <View style={styles.row}>
-            {renderNumberKey(shuffledNumbers[3])}
-            {renderNumberKey(shuffledNumbers[4])}
-            {renderNumberKey(shuffledNumbers[5])}
-          </View>
-          <View style={styles.row}>
-            {renderNumberKey(shuffledNumbers[6])}
-            {renderNumberKey(shuffledNumbers[7])}
-            {renderNumberKey(shuffledNumbers[8])}
-          </View>
-          <View style={styles.row}>
-            {showBiometric ? (
-              <TouchableOpacity
-                style={styles.key}
-                onPress={onBiometricPress}
-                activeOpacity={0.6}
-                disabled={disabled}
-              >
-                <Ionicons name="scan-outline" size={30} color="#fff" />
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.key} />
-            )}
-            {renderNumberKey(shuffledNumbers[9])}
-            <TouchableOpacity
-              style={styles.key}
-              onPress={handleDelete}
-              activeOpacity={0.6}
-              disabled={disabled}
-            >
-              <Ionicons name="backspace-outline" size={30} color="#fff" />
-            </TouchableOpacity>
-          </View>
-
-          {bottomLink && (
-            <TouchableOpacity style={styles.bottomLinkContainer} onPress={onBottomLinkPress}>
-              <Text style={[styles.bottomLinkText, { fontFamily: fonts?.medium }]}>
-                {bottomLink}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    </View>
+    <PinPadView
+      pin={pin}
+      pinLength={pinLength}
+      shuffledNumbers={shuffledNumbers}
+      onKeyPress={handleKeyPress}
+      onDelete={handleDelete}
+      keysDisabled={disabled || completedRef.current}
+      disabled={disabled}
+      colors={colors}
+      fonts={fonts}
+      showBiometric={showBiometric}
+      onBiometricPress={onBiometricPress}
+      bottomLink={bottomLink}
+      onBottomLinkPress={onBottomLinkPress}
+      errorMessage={errorMessage}
+    />
   );
 });
 
@@ -376,55 +356,60 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
-    paddingTop: 30,
-    paddingBottom: 10,
-  },
-  errorText: {
-    fontSize: 14,
-    color: '#E74C3C',
-    textAlign: 'center',
-    marginBottom: 10,
+    paddingTop: 28,
   },
   dot: {
     width: 14,
     height: 14,
     borderRadius: 7,
+    borderWidth: 2,
+  },
+  errorSlot: {
+    minHeight: 44,
+    paddingHorizontal: 24,
+    paddingTop: 14,
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   keypadWrapper: {
     flex: 1,
     justifyContent: 'flex-end',
   },
   keypadContainer: {
-    backgroundColor: '#0A2A5E',
-    paddingTop: 20,
-    paddingHorizontal: 10,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    gap: 12,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    gap: KEY_GAP,
   },
   key: {
     width: KEY_SIZE,
-    height: KEY_HEIGHT,
+    height: KEY_SIZE,
+    borderRadius: KEY_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keyText: {
     fontSize: 28,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: '500',
   },
   bottomLinkContainer: {
+    alignSelf: 'center',
+    minHeight: 44,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 16,
-    paddingBottom: 10,
   },
   bottomLinkText: {
     fontSize: 14,
-    textDecorationLine: 'underline',
-    color: '#fff',
+    fontWeight: '600',
   },
 });
