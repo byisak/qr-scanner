@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Switch,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialPressable from '../components/MaterialPressable';
 
@@ -89,45 +89,60 @@ export default function BatchScanSettingsScreen() {
     }
   };
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+  // 중복 처리 방식 (한 가지 선택)
+  const duplicateActions = [
+    { id: 'alert', icon: 'alert-circle-outline', labelKey: 'batchScan.actionAlert' },
+    { id: 'skip', icon: 'play-skip-forward-outline', labelKey: 'batchScan.actionSkip' },
+    { id: 'allow', icon: 'checkmark-done-outline', labelKey: 'batchScan.actionAllow' },
+  ];
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable
-          style={s.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            style={s.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('batchScan.title')}
         </Text>
-        <View style={s.headerRight} />
+        <View style={s.headerSide} />
       </View>
 
-      <ScrollView style={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={s.content}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 배치 스캔 활성화 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.row}>
-            <View style={s.rowLeft}>
-              <View style={[s.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-                <Ionicons name="rocket" size={22} color={colors.primary} />
-              </View>
-              <View style={s.rowTextContainer}>
-                <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  {t('batchScan.enable')}
-                </Text>
-                <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {t('batchScan.enableDesc')}
-                </Text>
-              </View>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t('batchScan.enable')}
+              </Text>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                {t('batchScan.enableDesc')}
+              </Text>
             </View>
             <Switch
               value={batchScanEnabled}
               onValueChange={handleBatchScanToggle}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
@@ -136,164 +151,90 @@ export default function BatchScanSettingsScreen() {
         {batchScanEnabled && (
           <>
             {/* 스캔 카운터 */}
-            <View style={[s.section, { backgroundColor: colors.surface }]}>
-              <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-                {t('batchScan.displayOptions')}
-              </Text>
-
-              <View style={s.row}>
-                <View style={s.rowLeft}>
-                  <View style={[s.iconContainer, { backgroundColor: '#3498db20' }]}>
-                    <Ionicons name="speedometer" size={22} color="#3498db" />
-                  </View>
-                  <View style={s.rowTextContainer}>
-                    <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                      {t('batchScan.showCounter')}
-                    </Text>
-                    <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                      {t('batchScan.showCounterDesc')}
-                    </Text>
-                  </View>
+            <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+              {t('batchScan.displayOptions')}
+            </Text>
+            <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[s.row, s.rowWithDesc]}>
+                <View style={s.rowText}>
+                  <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t('batchScan.showCounter')}
+                  </Text>
+                  <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('batchScan.showCounterDesc')}
+                  </Text>
                 </View>
                 <Switch
                   value={showScanCounter}
                   onValueChange={handleScanCounterToggle}
-                  trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                  thumbColor="#fff"
+                  {...switchColors}
                 />
               </View>
             </View>
 
             {/* 중복 감지 */}
-            <View style={[s.section, { backgroundColor: colors.surface }]}>
-              <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-                {t('batchScan.duplicateSection')}
-              </Text>
-
-              <View style={s.row}>
-                <View style={s.rowLeft}>
-                  <View style={[s.iconContainer, { backgroundColor: '#e74c3c20' }]}>
-                    <Ionicons name="copy" size={22} color="#e74c3c" />
-                  </View>
-                  <View style={s.rowTextContainer}>
-                    <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                      {t('batchScan.duplicateDetection')}
-                    </Text>
-                    <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                      {t('batchScan.duplicateDetectionDesc')}
-                    </Text>
-                  </View>
+            <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+              {t('batchScan.duplicateSection')}
+            </Text>
+            <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[s.row, s.rowWithDesc]}>
+                <View style={s.rowText}>
+                  <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t('batchScan.duplicateDetection')}
+                  </Text>
+                  <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('batchScan.duplicateDetectionDesc')}
+                  </Text>
                 </View>
                 <Switch
                   value={duplicateDetection}
                   onValueChange={handleDuplicateDetectionToggle}
-                  trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                  thumbColor="#fff"
+                  {...switchColors}
                 />
               </View>
-
-              {/* 중복 처리 방식 - 중복 감지 활성화 시에만 표시 */}
-              {duplicateDetection && (
-                <View style={[s.actionOptions, { borderTopColor: colors.borderLight }]}>
-                  <Text style={[s.actionLabel, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-                    {t('batchScan.duplicateAction')}
-                  </Text>
-
-                  {/* 알림 후 추가 */}
-                  <MaterialPressable
-                    style={[
-                      s.actionItem,
-                      duplicateAction === 'alert' && { backgroundColor: colors.primary + '15' }
-                    ]}
-                    onPress={() => handleDuplicateActionChange('alert')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={s.actionItemLeft}>
-                      <Ionicons
-                        name="alert-circle"
-                        size={20}
-                        color={duplicateAction === 'alert' ? colors.primary : colors.textTertiary}
-                      />
-                      <Text style={[
-                        s.actionItemText,
-                        { color: duplicateAction === 'alert' ? colors.primary : colors.text, fontFamily: fonts.medium }
-                      ]}>
-                        {t('batchScan.actionAlert')}
-                      </Text>
-                    </View>
-                    {duplicateAction === 'alert' && (
-                      <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                    )}
-                  </MaterialPressable>
-
-                  {/* 자동 스킵 */}
-                  <MaterialPressable
-                    style={[
-                      s.actionItem,
-                      duplicateAction === 'skip' && { backgroundColor: colors.primary + '15' }
-                    ]}
-                    onPress={() => handleDuplicateActionChange('skip')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={s.actionItemLeft}>
-                      <Ionicons
-                        name="play-skip-forward"
-                        size={20}
-                        color={duplicateAction === 'skip' ? colors.primary : colors.textTertiary}
-                      />
-                      <Text style={[
-                        s.actionItemText,
-                        { color: duplicateAction === 'skip' ? colors.primary : colors.text, fontFamily: fonts.medium }
-                      ]}>
-                        {t('batchScan.actionSkip')}
-                      </Text>
-                    </View>
-                    {duplicateAction === 'skip' && (
-                      <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                    )}
-                  </MaterialPressable>
-
-                  {/* 모두 허용 */}
-                  <MaterialPressable
-                    style={[
-                      s.actionItem,
-                      duplicateAction === 'allow' && { backgroundColor: colors.primary + '15' }
-                    ]}
-                    onPress={() => handleDuplicateActionChange('allow')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={s.actionItemLeft}>
-                      <Ionicons
-                        name="checkmark-done"
-                        size={20}
-                        color={duplicateAction === 'allow' ? colors.primary : colors.textTertiary}
-                      />
-                      <Text style={[
-                        s.actionItemText,
-                        { color: duplicateAction === 'allow' ? colors.primary : colors.text, fontFamily: fonts.medium }
-                      ]}>
-                        {t('batchScan.actionAllow')}
-                      </Text>
-                    </View>
-                    {duplicateAction === 'allow' && (
-                      <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
-                    )}
-                  </MaterialPressable>
-                </View>
-              )}
             </View>
 
+            {/* 중복 처리 방식 - 중복 감지 활성화 시에만 표시 */}
+            {duplicateDetection && (
+              <>
+                <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                  {t('batchScan.duplicateAction')}
+                </Text>
+                <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  {duplicateActions.map((action, index) => {
+                    const isSelected = duplicateAction === action.id;
+                    return (
+                      <MaterialPressable
+                        key={action.id}
+                        style={[s.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
+                        onPress={() => handleDuplicateActionChange(action.id)}
+                        activeOpacity={0.7}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: isSelected }}
+                      >
+                        <Ionicons name={action.icon} size={20} color={colors.textSecondary} />
+                        <Text style={[s.label, s.rowText, { color: colors.text, fontFamily: fonts.medium }]}>
+                          {t(action.labelKey)}
+                        </Text>
+                        <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
+                          {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
+                        </View>
+                      </MaterialPressable>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
             {/* 안내 메시지 */}
-            <View style={[s.infoBox, { backgroundColor: colors.primary + '10' }]}>
-              <Ionicons name="information-circle" size={20} color={colors.primary} />
+            <View style={[s.infoBox, { backgroundColor: colors.raised }]}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
               <Text style={[s.infoText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('batchScan.infoMessage')}
               </Text>
             </View>
           </>
         )}
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -306,110 +247,90 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerRight: {
-    width: 40,
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
   },
-  section: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  scrollContent: {
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 16,
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
     flex: 1,
-    marginRight: 12,
+    minWidth: 0,
+    gap: 2,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  label: {
+    ...TYPE.body,
   },
-  rowTextContainer: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  rowDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  actionOptions: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-  },
-  actionLabel: {
-    fontSize: 13,
-    marginBottom: 12,
-  },
-  actionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  actionItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  actionItemText: {
-    fontSize: 15,
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 12,
     gap: 10,
+    padding: 12,
+    borderRadius: RADIUS.control,
   },
   infoText: {
     flex: 1,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 18,
+  },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });

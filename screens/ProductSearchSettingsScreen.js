@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Platform,
   Switch,
   TextInput,
   Alert,
@@ -16,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialPressable from '../components/MaterialPressable';
@@ -222,8 +222,6 @@ export default function ProductSearchSettingsScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
 
-  const statusBarHeight = Platform.OS === 'ios' ? 50 : insets.top;
-
   const [autoSearchEnabled, setAutoSearchEnabled] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState('KR');
   const [searchSites, setSearchSites] = useState(DEFAULT_SEARCH_SITES);
@@ -231,6 +229,7 @@ export default function ProductSearchSettingsScreen() {
   const [showAddSiteModal, setShowAddSiteModal] = useState(false);
   const [newSiteName, setNewSiteName] = useState('');
   const [newSiteUrl, setNewSiteUrl] = useState('');
+  const [focusedInput, setFocusedInput] = useState(null); // 입력칸 포커스 테두리용
 
   useEffect(() => {
     loadSettings();
@@ -348,109 +347,127 @@ export default function ProductSearchSettingsScreen() {
 
   const selectedCountryData = COUNTRIES.find(c => c.code === selectedCountry);
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: statusBarHeight, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <MaterialPressable onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            style={s.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('productSearch.title')}
         </Text>
-        <View style={styles.headerRight} />
+        <View style={s.headerSide} />
       </View>
 
       <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
+        style={s.content}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 자동 검색 토글 */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.toggleRow}>
-            <View style={styles.toggleContent}>
-              <Text style={[styles.toggleTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
                 {t('productSearch.autoProductSearch')}
               </Text>
-              <Text style={[styles.toggleDescription, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('productSearch.autoProductSearchDesc')}
               </Text>
             </View>
             <Switch
               value={autoSearchEnabled}
               onValueChange={handleAutoSearchToggle}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
 
         {/* 국가 선택 */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-            {t('productSearch.countrySettings')}
-          </Text>
+        <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+          {t('productSearch.countrySettings')}
+        </Text>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <MaterialPressable
-            style={[styles.countrySelector, { borderColor: colors.border }]}
+            style={s.row}
             onPress={() => setShowCountryPicker(true)}
             activeOpacity={0.7}
+            accessibilityRole="button"
           >
-            <Text style={styles.countryFlag}>{selectedCountryData?.flag}</Text>
-            <Text style={[styles.countryName, { color: colors.text, fontFamily: fonts.semiBold }]}>
+            <Text style={s.countryFlag}>{selectedCountryData?.flag}</Text>
+            <Text style={[s.label, s.rowText, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
               {t(`productSearch.countries.${selectedCountry}`)}
             </Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </MaterialPressable>
         </View>
 
         {/* 검색 사이트 목록 */}
-        <View style={[styles.section, { backgroundColor: colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-              {t('productSearch.searchSites')}
-            </Text>
-            <MaterialPressable
-              style={[styles.addButton, { backgroundColor: colors.primary }]}
-              onPress={() => setShowAddSiteModal(true)}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-            </MaterialPressable>
-          </View>
-
+        <View style={s.sectionHeaderRow}>
+          <Text accessibilityRole="header" style={[s.sectionHeaderText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+            {t('productSearch.searchSites')}
+          </Text>
+          <MaterialPressable
+            style={s.addButton}
+            onPress={() => setShowAddSiteModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('productSearch.addSearchSite')}
+          >
+            <Ionicons name="add" size={24} color={colors.primaryText} />
+          </MaterialPressable>
+        </View>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {searchSites.map((site, index) => (
             <View
               key={site.id}
               style={[
-                styles.siteItem,
-                index > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+                s.siteItem,
+                index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
               ]}
             >
-              <View style={styles.siteInfo}>
-                <Text style={[styles.siteName, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              <View style={s.rowText}>
+                <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
                   {site.name}
                 </Text>
-                <Text style={[styles.siteUrl, { color: colors.textTertiary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                <Text style={[s.siteUrl, { color: colors.textSecondary }]} numberOfLines={1}>
                   {site.url}
                 </Text>
-                <View style={styles.siteTags}>
-                  <View style={[styles.tag, { backgroundColor: colors.background }]}>
-                    <Text style={[styles.tagText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                <View style={s.siteTags}>
+                  <View style={[s.tag, { backgroundColor: colors.raised }]}>
+                    <Text style={[s.tagText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                       {site.openMode === 'inApp' ? t('productSearch.inAppBrowser') : t('productSearch.defaultBrowser')}
                     </Text>
                   </View>
-                  <View style={[styles.tag, { backgroundColor: colors.background }]}>
-                    <Text style={[styles.tagText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                  <View style={[s.tag, { backgroundColor: colors.raised }]}>
+                    <Text style={[s.tagText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                       {site.activationMode === 'all' ? t('productSearch.allCodes') : t('productSearch.productCodes')}
                     </Text>
                   </View>
                 </View>
               </View>
-              <View style={styles.siteActions}>
+              <View style={s.siteActions}>
                 {site.custom && (
                   <MaterialPressable
                     onPress={() => handleDeleteSite(site.id)}
-                    style={styles.deleteButton}
+                    style={s.iconButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('common.delete')}
                   >
                     <Ionicons name="trash-outline" size={20} color={colors.error} />
                   </MaterialPressable>
@@ -458,48 +475,52 @@ export default function ProductSearchSettingsScreen() {
                 <Switch
                   value={site.enabled}
                   onValueChange={() => handleSiteToggle(site.id)}
-                  trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                  thumbColor="#fff"
+                  {...switchColors}
                 />
               </View>
             </View>
           ))}
         </View>
-
-        <View style={styles.bottomSpace} />
       </ScrollView>
 
       {/* 국가 선택 모달 */}
       <Modal visible={showCountryPicker} animationType="slide" transparent onRequestClose={() => setShowCountryPicker(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface, paddingBottom: 20 + insets.bottom }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, paddingBottom: 20 + insets.bottom }]}>
+            <View style={s.modalHeader}>
+              <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                 {t('productSearch.selectCountry')}
               </Text>
-              <MaterialPressable onPress={() => setShowCountryPicker(false)}>
+              <MaterialPressable
+                onPress={() => setShowCountryPicker(false)}
+                style={s.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+              >
                 <Ionicons name="close" size={24} color={colors.text} />
               </MaterialPressable>
             </View>
-            <ScrollView style={styles.countryList}>
-              {COUNTRIES.map((country) => (
-                <MaterialPressable
-                  key={country.code}
-                  style={[
-                    styles.countryItem,
-                    selectedCountry === country.code && { backgroundColor: colors.primary + '20' },
-                  ]}
-                  onPress={() => handleCountrySelect(country.code)}
-                >
-                  <Text style={styles.countryItemFlag}>{country.flag}</Text>
-                  <Text style={[styles.countryItemName, { color: colors.text, fontFamily: fonts.regular }]}>
-                    {t(`productSearch.countries.${country.code}`)}
-                  </Text>
-                  {selectedCountry === country.code && (
-                    <Ionicons name="checkmark" size={24} color={colors.primary} />
-                  )}
-                </MaterialPressable>
-              ))}
+            <ScrollView style={[s.countryList, { borderColor: colors.border }]}>
+              {COUNTRIES.map((country, index) => {
+                const isSelected = selectedCountry === country.code;
+                return (
+                  <MaterialPressable
+                    key={country.code}
+                    style={[s.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
+                    onPress={() => handleCountrySelect(country.code)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected }}
+                  >
+                    <Text style={s.countryFlag}>{country.flag}</Text>
+                    <Text style={[s.label, s.rowText, { color: colors.text, fontFamily: fonts.medium }]}>
+                      {t(`productSearch.countries.${country.code}`)}
+                    </Text>
+                    <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
+                      {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
+                    </View>
+                  </MaterialPressable>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
@@ -507,47 +528,57 @@ export default function ProductSearchSettingsScreen() {
 
       {/* 사이트 추가 모달 */}
       <Modal visible={showAddSiteModal} animationType="slide" transparent onRequestClose={() => setShowAddSiteModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface, paddingBottom: 20 + insets.bottom }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { backgroundColor: colors.surface, paddingBottom: 20 + insets.bottom }]}>
+            <View style={s.modalHeader}>
+              <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                 {t('productSearch.addSearchSite')}
               </Text>
-              <MaterialPressable onPress={() => setShowAddSiteModal(false)}>
+              <MaterialPressable
+                onPress={() => setShowAddSiteModal(false)}
+                style={s.iconButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.close')}
+              >
                 <Ionicons name="close" size={24} color={colors.text} />
               </MaterialPressable>
             </View>
-            <View style={styles.addSiteForm}>
-              <Text style={[styles.inputLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
+            <View style={s.addSiteForm}>
+              <Text style={[s.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                 {t('productSearch.siteName')}
               </Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.inputBackground, borderColor: focusedInput === 'name' ? colors.primary : colors.border, color: colors.text, fontFamily: fonts.regular }]}
                 placeholder={t('productSearch.siteNamePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={newSiteName}
                 onChangeText={setNewSiteName}
+                onFocus={() => setFocusedInput('name')}
+                onBlur={() => setFocusedInput(null)}
               />
-              <Text style={[styles.inputLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              <Text style={[s.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                 {t('productSearch.searchUrl')}
               </Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.inputBackground, borderColor: focusedInput === 'url' ? colors.primary : colors.border, color: colors.text, fontFamily: MONO }]}
                 placeholder="https://example.com/search?q={code}"
                 placeholderTextColor={colors.textTertiary}
                 value={newSiteUrl}
                 onChangeText={setNewSiteUrl}
                 autoCapitalize="none"
                 autoCorrect={false}
+                onFocus={() => setFocusedInput('url')}
+                onBlur={() => setFocusedInput(null)}
               />
-              <Text style={[styles.inputHint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              <Text style={[s.inputHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('productSearch.urlHint')}
               </Text>
               <MaterialPressable
-                style={[styles.addSiteButton, { backgroundColor: colors.primary }]}
+                style={[s.primaryButton, { backgroundColor: colors.primary }]}
                 onPress={handleAddSite}
+                accessibilityRole="button"
               >
-                <Text style={[styles.addSiteButtonText, { fontFamily: fonts.semiBold }]}>
+                <Text style={[s.primaryButtonText, { fontFamily: fonts.semiBold }]}>
                   {t('productSearch.add')}
                 </Text>
               </MaterialPressable>
@@ -559,134 +590,138 @@ export default function ProductSearchSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  headerRight: {
-    width: 44,
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 20,
-  },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  scrollContent: {
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleContent: {
-    flex: 1,
-    marginRight: 16,
-  },
-  toggleTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  toggleDescription: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  countrySelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+  group: {
+    borderRadius: RADIUS.group,
     borderWidth: 1,
-    marginTop: 12,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  label: {
+    ...TYPE.body,
+  },
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 1, // 44px 버튼 때문에 머리글 위·아래 간격을 다른 섹션과 맞춘다
+    marginLeft: 4,
+    marginRight: -6,
+    marginBottom: -13,
+  },
+  sectionHeaderText: {
+    ...TYPE.sectionHeader,
+    flex: 1,
+  },
+  addButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   countryFlag: {
     fontSize: 24,
   },
-  countryName: {
-    flex: 1,
-    fontSize: 16,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...(Platform.OS === 'android' ? { overflow: 'hidden' } : {}),
-  },
   siteItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-  },
-  siteInfo: {
-    flex: 1,
-  },
-  siteName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    gap: 12,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 12,
+    paddingLeft: 16,
+    paddingRight: 12,
   },
   siteUrl: {
     fontSize: 12,
-    marginBottom: 8,
+    fontFamily: MONO,
   },
   siteTags: {
     flexDirection: 'row',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
   },
   tag: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
   },
   tagText: {
     fontSize: 11,
+    fontWeight: '600',
   },
   siteActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
   },
-  deleteButton: {
-    padding: 8,
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
+  iconButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalOverlay: {
     flex: 1,
@@ -694,71 +729,72 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: RADIUS.card,
+    borderTopRightRadius: RADIUS.card,
+    paddingTop: 12,
+    paddingHorizontal: SPACE.card,
     maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginRight: -10,
+    marginBottom: 8,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
+    flex: 1,
   },
   countryList: {
     maxHeight: 400,
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
   },
-  countryItem: {
-    flexDirection: 'row',
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    gap: 12,
-    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
   },
-  countryItemFlag: {
-    fontSize: 28,
-  },
-  countryItemName: {
-    flex: 1,
-    fontSize: 16,
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   addSiteForm: {
-    gap: 12,
+    gap: 8,
   },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginTop: 8,
+    marginTop: 4,
   },
   input: {
+    height: 48,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    borderRadius: RADIUS.control,
+    paddingHorizontal: 14,
     fontSize: 15,
   },
   inputHint: {
     fontSize: 12,
-    marginTop: -4,
+    lineHeight: 17,
   },
-  addSiteButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
+  primaryButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 12,
+    overflow: 'hidden',
   },
-  addSiteButtonText: {
+  primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  bottomSpace: {
-    height: 40,
   },
 });

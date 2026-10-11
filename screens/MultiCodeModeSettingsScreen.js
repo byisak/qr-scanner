@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Switch,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialPressable from '../components/MaterialPressable';
 
@@ -80,45 +80,54 @@ export default function MultiCodeModeSettingsScreen() {
     }
   };
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable
-          style={s.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            style={s.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('multiCodeMode.title')}
         </Text>
-        <View style={s.headerRight} />
+        <View style={s.headerSide} />
       </View>
 
-      <ScrollView style={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={s.content}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 여러 코드 인식 모드 활성화 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.row}>
-            <View style={s.rowLeft}>
-              <View style={[s.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-                <Ionicons name="scan" size={22} color={colors.primary} />
-              </View>
-              <View style={s.rowTextContainer}>
-                <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  {t('multiCodeMode.enable')}
-                </Text>
-                <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {t('multiCodeMode.enableDesc')}
-                </Text>
-              </View>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t('multiCodeMode.enable')}
+              </Text>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                {t('multiCodeMode.enableDesc')}
+              </Text>
             </View>
             <Switch
               value={multiCodeModeEnabled}
               onValueChange={handleMultiCodeModeToggle}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
@@ -127,45 +136,36 @@ export default function MultiCodeModeSettingsScreen() {
         {multiCodeModeEnabled && (
           <>
             {/* 표시 옵션 */}
-            <View style={[s.section, { backgroundColor: colors.surface }]}>
-              <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-                {t('multiCodeMode.displayOptions')}
-              </Text>
-
-              <View style={s.row}>
-                <View style={s.rowLeft}>
-                  <View style={[s.iconContainer, { backgroundColor: '#9b59b620' }]}>
-                    <Ionicons name="text" size={22} color="#9b59b6" />
-                  </View>
-                  <View style={s.rowTextContainer}>
-                    <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                      {t('multiCodeMode.showValues')}
-                    </Text>
-                    <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                      {t('multiCodeMode.showValuesDesc')}
-                    </Text>
-                  </View>
+            <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+              {t('multiCodeMode.displayOptions')}
+            </Text>
+            <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={[s.row, s.rowWithDesc]}>
+                <View style={s.rowText}>
+                  <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t('multiCodeMode.showValues')}
+                  </Text>
+                  <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('multiCodeMode.showValuesDesc')}
+                  </Text>
                 </View>
                 <Switch
                   value={showBarcodeValues}
                   onValueChange={handleShowBarcodeValuesToggle}
-                  trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                  thumbColor="#fff"
+                  {...switchColors}
                 />
               </View>
             </View>
 
             {/* 안내 메시지 */}
-            <View style={[s.infoBox, { backgroundColor: colors.primary + '10' }]}>
-              <Ionicons name="information-circle" size={20} color={colors.primary} />
+            <View style={[s.infoBox, { backgroundColor: colors.raised }]}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
               <Text style={[s.infoText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('multiCodeMode.infoMessage')}
               </Text>
             </View>
           </>
         )}
-
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -178,84 +178,77 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerRight: {
-    width: 40,
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
   },
-  section: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  scrollContent: {
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 16,
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
     flex: 1,
-    marginRight: 12,
+    minWidth: 0,
+    gap: 2,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  label: {
+    ...TYPE.body,
   },
-  rowTextContainer: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  rowDesc: {
-    fontSize: 13,
-    lineHeight: 18,
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 12,
     gap: 10,
+    padding: 12,
+    borderRadius: RADIUS.control,
   },
   infoText: {
     flex: 1,
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 18,
   },
 });

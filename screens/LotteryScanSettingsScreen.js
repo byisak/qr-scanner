@@ -8,7 +8,6 @@ import {
   ScrollView,
   Alert,
   Modal,
-  Platform,
   Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import LockIcon from '../components/LockIcon';
 import { requestNotificationPermission, scheduleLotteryNotification, cancelLotteryNotification } from '../utils/lotteryNotification';
 import { Picker } from '@react-native-picker/picker';
@@ -220,55 +220,66 @@ export default function LotteryScanSettingsScreen() {
     return `${period} ${displayHour}:${String(minute).padStart(2, '0')}`;
   };
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable
-          style={s.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            style={s.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('lotteryScan.title')}
         </Text>
-        <View style={s.headerRight} />
+        <View style={s.headerSide} />
       </View>
 
-      <ScrollView style={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={s.content}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 복권 인식 활성화 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.row}>
-            <View style={s.rowLeft}>
-              <View style={[s.iconContainer, { backgroundColor: '#f39c1220' }]}>
-                <Ionicons name="ticket" size={22} color="#f39c12" />
-              </View>
-              <View style={s.rowTextContainer}>
-                <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                  {t('lotteryScan.enable')}
-                </Text>
-                <Text style={[s.rowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {t('lotteryScan.enableDesc')}
-                </Text>
-              </View>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t('lotteryScan.enable')}
+              </Text>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                {t('lotteryScan.enableDesc')}
+              </Text>
             </View>
-            <View style={s.switchContainer}>
-              {isLotteryScanLocked && <LockIcon size={18} style={{ marginRight: 8 }} />}
+            <View style={s.rowRight}>
+              {isLotteryScanLocked && (
+                <LockIcon featureId="lotteryScan" size={12} badge style={[s.lockBadge, { backgroundColor: colors.errorSoft }]} />
+              )}
               <Switch
                 value={lotteryScanEnabled}
                 onValueChange={handleLotteryScanToggle}
-                trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                thumbColor="#fff"
+                {...switchColors}
               />
             </View>
           </View>
         </View>
 
         {/* 안내 메시지 */}
-        <View style={[s.infoBox, { backgroundColor: '#f39c1210' }]}>
-          <Ionicons name="information-circle" size={20} color="#f39c12" />
+        <View style={[s.infoBox, { backgroundColor: colors.raised }]}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
           <Text style={[s.infoText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
             {t('lotteryScan.infoMessage')}
           </Text>
@@ -276,124 +287,111 @@ export default function LotteryScanSettingsScreen() {
 
         {/* 지원 복권 목록 - 복권 인식이 켜져있을 때만 표시 */}
         {lotteryScanEnabled && (
-          <View style={[s.section, { backgroundColor: colors.surface, marginTop: 16 }]}>
-            <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+          <>
+            <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               {t('lotteryScan.supportedLotteries')}
             </Text>
-
-            {/* 대한민국 - 확장 가능한 항목 */}
-            <View>
+            <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {/* 대한민국 - 확장 가능한 항목 */}
               <MaterialPressable
-                style={s.lotteryItem}
+                style={[s.row, s.rowWithDesc]}
                 onPress={() => setKoreaExpanded(!koreaExpanded)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: koreaExpanded }}
               >
-                <View style={s.lotteryItemLeft}>
-                  <Text style={[s.countryName, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                <View style={s.rowText}>
+                  <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
                     {t('lotteryScan.countries.korea')}
                   </Text>
-                  <Text style={[s.lotteryName, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                  <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                     {t('lotteryScan.lotteryTypes.lotto645')}
                   </Text>
                 </View>
                 <Ionicons
                   name={koreaExpanded ? 'chevron-up' : 'chevron-down'}
-                  size={20}
+                  size={16}
                   color={colors.textTertiary}
                 />
               </MaterialPressable>
 
               {/* 확장된 설정 */}
               {koreaExpanded && (
-                <View style={[s.expandedContent, { borderTopColor: colors.borderLight }]}>
+                <>
+                  <View style={[s.separator, { backgroundColor: colors.borderLight }]} />
                   {/* 당첨 알림 */}
-                  <View style={s.subRow}>
-                    <View style={s.subRowLeft}>
-                      <View style={[s.subIconContainer, { backgroundColor: '#e74c3c20' }]}>
-                        <Ionicons name="notifications" size={18} color="#e74c3c" />
-                      </View>
-                      <View style={s.subRowTextContainer}>
-                        <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                          {t('lotteryScan.winningNotification')}
-                        </Text>
-                        <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                          {t('lotteryScan.winningNotificationDesc')}
-                        </Text>
-                      </View>
+                  <View style={[s.row, s.rowWithDesc]}>
+                    <View style={s.rowText}>
+                      <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                        {t('lotteryScan.winningNotification')}
+                      </Text>
+                      <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                        {t('lotteryScan.winningNotificationDesc')}
+                      </Text>
                     </View>
                     <Switch
                       value={winningNotificationEnabled}
                       onValueChange={handleWinningNotificationToggle}
-                      trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                      thumbColor="#fff"
+                      {...switchColors}
                     />
                   </View>
 
                   {/* 알림 시간 설정 - 알림이 켜져있을 때만 표시 */}
                   {winningNotificationEnabled && (
                     <>
+                      <View style={[s.separator, { backgroundColor: colors.borderLight }]} />
                       {/* 로또 6/45 알림 시간 */}
                       <MaterialPressable
-                        style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
+                        style={[s.row, s.rowWithDesc]}
                         onPress={openLottoTimePicker}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
                       >
-                        <View style={s.subRowLeft}>
-                          <View style={[s.subIconContainer, { backgroundColor: '#3498db20' }]}>
-                            <Ionicons name="time" size={18} color="#3498db" />
-                          </View>
-                          <View style={s.subRowTextContainer}>
-                            <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                              로또 6/45 알림
-                            </Text>
-                            <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                              매주 토요일 추첨 후 알림
-                            </Text>
-                          </View>
+                        <View style={s.rowText}>
+                          <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                            로또 6/45 알림
+                          </Text>
+                          <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                            매주 토요일 추첨 후 알림
+                          </Text>
                         </View>
-                        <View style={s.timeDisplay}>
-                          <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                        <View style={s.rowRight}>
+                          <Text style={[s.value, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                             {formatTime(lottoNotificationHour, lottoNotificationMinute)}
                           </Text>
-                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                         </View>
                       </MaterialPressable>
-
+                      <View style={[s.separator, { backgroundColor: colors.borderLight }]} />
                       {/* 연금복권720+ 알림 시간 */}
                       <MaterialPressable
-                        style={[s.subRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }]}
+                        style={[s.row, s.rowWithDesc]}
                         onPress={openPensionTimePicker}
                         activeOpacity={0.7}
+                        accessibilityRole="button"
                       >
-                        <View style={s.subRowLeft}>
-                          <View style={[s.subIconContainer, { backgroundColor: '#9b59b620' }]}>
-                            <Ionicons name="time" size={18} color="#9b59b6" />
-                          </View>
-                          <View style={s.subRowTextContainer}>
-                            <Text style={[s.subRowTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                              연금복권720+ 알림
-                            </Text>
-                            <Text style={[s.subRowDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                              매주 목요일 추첨 후 알림
-                            </Text>
-                          </View>
+                        <View style={s.rowText}>
+                          <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                            연금복권720+ 알림
+                          </Text>
+                          <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                            매주 목요일 추첨 후 알림
+                          </Text>
                         </View>
-                        <View style={s.timeDisplay}>
-                          <Text style={[s.timeText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                        <View style={s.rowRight}>
+                          <Text style={[s.value, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                             {formatTime(pensionNotificationHour, pensionNotificationMinute)}
                           </Text>
-                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                          <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
                         </View>
                       </MaterialPressable>
                     </>
                   )}
-                </View>
+                </>
               )}
             </View>
-          </View>
+          </>
         )}
-
-        <View style={{ height: 40 }} />
       </ScrollView>
 
       {/* 시간 선택 모달 */}
@@ -411,7 +409,7 @@ export default function LotteryScanSettingsScreen() {
             style={[s.modalContent, { backgroundColor: colors.surface }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
               {timePickerType === 'lotto' ? '로또 6/45' : '연금복권720+'} 알림 시간
             </Text>
             <Text style={[s.modalSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
@@ -422,7 +420,7 @@ export default function LotteryScanSettingsScreen() {
 
             <View style={s.pickerContainer}>
               <View style={s.pickerWrapper}>
-                <Text style={[s.pickerLabel, { color: colors.textSecondary }]}>시</Text>
+                <Text style={[s.pickerLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>시</Text>
                 <View style={[s.picker, { backgroundColor: colors.inputBackground }]}>
                   <Picker
                     selectedValue={tempHour}
@@ -440,7 +438,7 @@ export default function LotteryScanSettingsScreen() {
               <Text style={[s.pickerSeparator, { color: colors.text }]}>:</Text>
 
               <View style={s.pickerWrapper}>
-                <Text style={[s.pickerLabel, { color: colors.textSecondary }]}>분</Text>
+                <Text style={[s.pickerLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>분</Text>
                 <View style={[s.picker, { backgroundColor: colors.inputBackground }]}>
                   <Picker
                     selectedValue={tempMinute}
@@ -458,16 +456,18 @@ export default function LotteryScanSettingsScreen() {
 
             <View style={s.modalButtons}>
               <MaterialPressable
-                style={[s.modalButton, { backgroundColor: colors.inputBackground }]}
+                style={[s.modalButton, s.modalButtonSecondary, { backgroundColor: colors.raised, borderColor: colors.border }]}
                 onPress={() => setTimePickerVisible(false)}
+                accessibilityRole="button"
               >
-                <Text style={[s.modalButtonText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                <Text style={[s.modalButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                   취소
                 </Text>
               </MaterialPressable>
               <MaterialPressable
                 style={[s.modalButton, { backgroundColor: colors.primary }]}
                 onPress={handleSaveTime}
+                accessibilityRole="button"
               >
                 <Text style={[s.modalButtonText, { color: '#fff', fontFamily: fonts.semiBold }]}>
                   저장
@@ -488,152 +488,95 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerRight: {
-    width: 40,
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 16,
   },
-  section: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  scrollContent: {
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
     flex: 1,
-    marginRight: 12,
+    minWidth: 0,
+    gap: 2,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  label: {
+    ...TYPE.body,
   },
-  rowTextContainer: {
-    flex: 1,
-  },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  rowDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 12,
     gap: 10,
+    padding: 12,
+    borderRadius: RADIUS.control,
   },
   infoText: {
     flex: 1,
     fontSize: 13,
-    lineHeight: 20,
-  },
-  lotteryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  lotteryItemLeft: {
-    flex: 1,
-  },
-  countryName: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  lotteryName: {
-    fontSize: 13,
     lineHeight: 18,
   },
-  expandedContent: {
-    paddingTop: 12,
-    paddingBottom: 4,
-    borderTopWidth: 1,
-    marginTop: 8,
-  },
-  subRow: {
+  rowRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 6,
+    flexShrink: 0,
   },
-  subRowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 12,
+  value: {
+    fontSize: 13,
   },
-  subIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  subRowTextContainer: {
-    flex: 1,
-  },
-  subRowTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  subRowDesc: {
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  timeDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  timeText: {
-    fontSize: 15,
+  lockBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
   },
   modalOverlay: {
     flex: 1,
@@ -645,35 +588,36 @@ const s = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 340,
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: RADIUS.card,
+    padding: SPACE.card,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: 4,
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   pickerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   pickerWrapper: {
     alignItems: 'center',
   },
   pickerLabel: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '600',
     marginBottom: 8,
   },
   picker: {
-    borderRadius: 12,
+    borderRadius: RADIUS.control,
     overflow: 'hidden',
     height: 150,
   },
@@ -689,9 +633,14 @@ const s = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  modalButtonSecondary: {
+    borderWidth: 1,
   },
   modalButtonText: {
     fontSize: 16,

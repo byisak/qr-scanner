@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   Switch,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,6 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 
 // 압축률 옵션 (5단계)
@@ -79,90 +79,113 @@ export default function PhotoSaveSettingsScreen() {
     }
   };
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            style={s.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('photoSaveSettings.title')}
         </Text>
-        <View style={{ width: 40 }} />
+        <View style={s.headerSide} />
       </View>
 
-      <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
+      <ScrollView
+        style={s.content}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* 사진 저장 토글 */}
-        <View style={[s.toggleSection, { backgroundColor: colors.surface }]}>
-          <View style={s.toggleRow}>
-            <View style={s.toggleInfo}>
-              <Text style={[s.toggleLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
                 {t('photoSaveSettings.enablePhotoSave')}
               </Text>
-              <Text style={[s.toggleDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('photoSaveSettings.enablePhotoSaveDesc')}
               </Text>
             </View>
             <Switch
               value={photoSaveEnabled}
               onValueChange={handleToggleChange}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
 
         {/* 압축률 선택 (사진 저장 활성화 시에만 표시) */}
         {photoSaveEnabled && (
-          <View style={s.section}>
-            <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+          <>
+            <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               {t('photoSaveSettings.compressionLevel')}
             </Text>
-            <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            <Text style={[s.sectionInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
               {t('photoSaveSettings.compressionInfo')}
             </Text>
 
-            {QUALITY_OPTIONS.map((option) => {
-              const isSelected = selectedQuality === option.key;
+            <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {QUALITY_OPTIONS.map((option, index) => {
+                const isSelected = selectedQuality === option.key;
 
-              return (
-                <MaterialPressable
-                  key={option.key}
-                  style={[
-                    s.qualityItem,
-                    { backgroundColor: colors.surface, borderColor: isSelected ? colors.primary : colors.border },
-                    isSelected && { backgroundColor: isDark ? 'rgba(47, 111, 235, 0.2)' : '#f0f8ff' }
-                  ]}
-                  onPress={() => selectQuality(option.key)}
-                  activeOpacity={0.7}
-                >
-                  <View style={s.qualityInfo}>
-                    <View style={s.qualityHeader}>
-                      <Text style={[s.qualityLabel, { color: isSelected ? colors.primary : colors.text, fontFamily: fonts.semiBold }]}>
-                        {t(option.label)}
-                      </Text>
-                      <Text style={[s.qualitySize, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                        {option.size}
+                return (
+                  <MaterialPressable
+                    key={option.key}
+                    style={[
+                      s.row,
+                      s.rowWithDesc,
+                      index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
+                    ]}
+                    onPress={() => selectQuality(option.key)}
+                    activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected }}
+                  >
+                    <View style={s.rowText}>
+                      <View style={s.qualityHeader}>
+                        <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                          {t(option.label)}
+                        </Text>
+                        <Text style={[s.qualitySize, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                          {option.size}
+                        </Text>
+                      </View>
+                      <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                        {t(option.desc)}
                       </Text>
                     </View>
-                    <Text style={[s.qualityDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                      {t(option.desc)}
-                    </Text>
-                  </View>
-                  <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.borderLight }]}>
-                    {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
-                  </View>
-                </MaterialPressable>
-              );
-            })}
+                    <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
+                      {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
+                    </View>
+                  </MaterialPressable>
+                );
+              })}
+            </View>
 
-            <View style={[s.noteBox, { backgroundColor: isDark ? 'rgba(255, 204, 0, 0.15)' : '#fff9e6' }]}>
-              <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
-              <Text style={[s.noteText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            <View style={[s.infoBox, { backgroundColor: colors.raised }]}>
+              <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+              <Text style={[s.infoText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('photoSaveSettings.note')}
               </Text>
             </View>
-          </View>
+          </>
         )}
       </ScrollView>
     </View>
@@ -176,120 +199,103 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
   },
-  toggleSection: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
   },
-  toggleRow: {
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  toggleInfo: {
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
     flex: 1,
-    marginRight: 12,
+    minWidth: 0,
+    gap: 2,
   },
-  toggleLabel: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
+  label: {
+    ...TYPE.body,
   },
-  toggleDesc: {
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    borderRadius: RADIUS.control,
+  },
+  infoText: {
+    flex: 1,
     fontSize: 13,
     lineHeight: 18,
   },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  info: {
-    fontSize: 14,
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  qualityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
-  },
-  qualityInfo: {
-    flex: 1,
+  sectionInfo: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginHorizontal: 4,
   },
   qualityHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  qualityLabel: {
-    fontSize: 17,
-    fontWeight: '600',
+    alignItems: 'baseline',
+    gap: 8,
   },
   qualitySize: {
-    fontSize: 13,
-  },
-  qualityDesc: {
-    fontSize: 14,
+    fontSize: 12,
   },
   radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
   radioDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  noteBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  noteText: {
-    flex: 1,
-    fontSize: 13,
-    marginLeft: 8,
-    lineHeight: 18,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });

@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialPressable from '../components/MaterialPressable';
 
@@ -41,6 +42,7 @@ export default function ScanUrlSettingsScreen() {
   const [editingItem, setEditingItem] = useState(null);
   const [editingName, setEditingName] = useState('');
   const [editingUrl, setEditingUrl] = useState('');
+  const [focusedInput, setFocusedInput] = useState(null); // 입력칸 포커스 테두리용
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -295,62 +297,86 @@ export default function ScanUrlSettingsScreen() {
     }
   };
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* 헤더 */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable
-          onPress={() => router.back()}
-          style={styles.backButton}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={28} color={colors.primary} />
-        </MaterialPressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
-        <View style={styles.headerRight} />
+    <View style={[s.container, { backgroundColor: colors.background }]}>
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            style={s.backButton}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+          {t('settings.useScanUrl')}
+        </Text>
+        <View style={s.headerSide} />
       </View>
 
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView
+          style={s.content}
+          contentContainerStyle={[s.scrollContent, { paddingBottom: 24 + insets.bottom }]}
+        >
           {/* 토글 설정 */}
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
-            <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: colors.text }]}>{t('settings.useScanUrl')}</Text>
-                <Text style={[styles.desc, { color: colors.textTertiary }]}>{t('settings.useScanUrlDesc')}</Text>
+          <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[s.row, s.rowWithDesc]}>
+              <View style={s.rowText}>
+                <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>{t('settings.useScanUrl')}</Text>
+                <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
               </View>
               <Switch
                 value={enabled}
                 onValueChange={setEnabled}
-                trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                thumbColor="#fff"
+                {...switchColors}
                 accessibilityLabel={t('settings.useScanUrl')}
               />
             </View>
+          </View>
 
-            {enabled && (
-              <>
-                <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-
-                <Text style={[styles.urlInfo, { color: colors.textSecondary }]}>
+          {enabled && (
+            <>
+              {/* URL 추가 */}
+              <View style={[s.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[s.urlInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('settings.urlInfo')}
                 </Text>
 
                 {/* URL 이름 입력 */}
+                <Text style={[s.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                  {t('settings.urlName')}
+                </Text>
                 <TextInput
-                  style={[styles.input, styles.inputFullWidth, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text, marginTop: 15 }]}
+                  style={[s.input, { backgroundColor: colors.inputBackground, borderColor: focusedInput === 'name' ? colors.primary : colors.border, color: colors.text, fontFamily: fonts.regular }]}
                   value={inputName}
                   onChangeText={setInputName}
                   placeholder={t('settings.urlNamePlaceholder')}
                   placeholderTextColor={colors.textTertiary}
                   autoCapitalize="none"
                   accessibilityLabel={t('settings.urlName')}
+                  onFocus={() => setFocusedInput('name')}
+                  onBlur={() => setFocusedInput(null)}
                 />
 
                 {/* URL 입력 및 추가 버튼 */}
-                <View style={styles.inputRow}>
+                <Text style={[s.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                  {t('settings.urlAddress')}
+                </Text>
+                <View style={s.inputRow}>
                   <TextInput
-                    style={[styles.input, styles.inputFlex, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    style={[s.input, s.inputFlex, { backgroundColor: colors.inputBackground, borderColor: focusedInput === 'url' ? colors.primary : colors.border, color: colors.text, fontFamily: MONO }]}
                     value={inputUrl}
                     onChangeText={setInputUrl}
                     placeholder={t('settings.urlPlaceholder')}
@@ -358,50 +384,47 @@ export default function ScanUrlSettingsScreen() {
                     autoCapitalize="none"
                     keyboardType="url"
                     accessibilityLabel={t('settings.useScanUrl')}
+                    onFocus={() => setFocusedInput('url')}
+                    onBlur={() => setFocusedInput(null)}
                   />
                   <MaterialPressable
-                    style={[styles.addButton, { backgroundColor: colors.primary }]}
+                    style={[s.addButton, { backgroundColor: colors.primary }]}
                     onPress={handleAddUrl}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('productSearch.add')}
                   >
                     <Ionicons name="add" size={24} color="#fff" />
                   </MaterialPressable>
                 </View>
+              </View>
 
-                {/* URL 리스트 */}
-                {urlList.length > 0 && (
-                  <View style={styles.urlListContainer}>
-                    <Text style={[styles.urlListTitle, { color: colors.textSecondary }]}>
-                      {t('settings.urlListTitle')} ({urlList.length})
-                    </Text>
+              {/* URL 리스트 */}
+              {urlList.length > 0 && (
+                <>
+                <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                  {t('settings.urlListTitle')} ({urlList.length})
+                </Text>
+                <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                     {urlList.map((item, index) => (
                       <View
                         key={item.id}
                         style={[
-                          styles.urlItem,
-                          {
-                            backgroundColor: colors.inputBackground,
-                            borderColor: item.enabled ? colors.success : colors.border
-                          }
+                          s.urlItem,
+                          index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
                         ]}
                       >
                         {/* Row 1: Name + Toggle */}
-                        <View style={styles.urlItemRow}>
-                          <View style={styles.urlItemTextContainer}>
+                        <View style={s.urlItemRow}>
+                          <View style={s.rowText}>
                             <Text
-                              style={[
-                                styles.urlItemName,
-                                { color: item.enabled ? colors.text : colors.textSecondary }
-                              ]}
+                              style={[s.label, { color: item.enabled ? colors.text : colors.textSecondary, fontFamily: fonts.medium }]}
                               numberOfLines={1}
                             >
                               {item.name}
                             </Text>
                             <Text
-                              style={[
-                                styles.urlItemUrl,
-                                { color: item.enabled ? colors.textSecondary : colors.textTertiary }
-                              ]}
+                              style={[s.urlItemUrl, { color: item.enabled ? colors.textSecondary : colors.textTertiary }]}
                               numberOfLines={1}
                             >
                               {item.url}
@@ -410,52 +433,56 @@ export default function ScanUrlSettingsScreen() {
                           <Switch
                             value={item.enabled}
                             onValueChange={(value) => handleToggleUrl(item.id, value)}
-                            trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                            thumbColor="#fff"
-                            style={styles.urlItemSwitch}
+                            {...switchColors}
                           />
                         </View>
                         {/* Row 2: Edit + Delete buttons */}
-                        <View style={styles.urlItemButtonRow}>
+                        <View style={s.urlItemButtonRow}>
                           <MaterialPressable
                             onPress={() => handleEditUrl(item)}
-                            style={[styles.actionButton, { borderColor: colors.border }]}
+                            style={[s.actionButton, s.actionButtonSecondary, { backgroundColor: colors.raised, borderColor: colors.border }]}
                             activeOpacity={0.7}
+                            accessibilityRole="button"
                           >
-                            <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-                            <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+                            <Ionicons name="pencil-outline" size={16} color={colors.text} />
+                            <Text style={[s.actionButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                               {t('common.edit') || '수정'}
                             </Text>
                           </MaterialPressable>
                           <MaterialPressable
                             onPress={() => handleDeleteUrl(item.id)}
-                            style={[styles.actionButton, { borderColor: colors.border }]}
+                            style={[s.actionButton, { backgroundColor: colors.errorSoft }]}
                             activeOpacity={0.7}
+                            accessibilityRole="button"
                           >
                             <Ionicons name="trash-outline" size={16} color={colors.error} />
-                            <Text style={[styles.actionButtonText, { color: colors.error }]}>
+                            <Text style={[s.actionButtonText, { color: colors.error, fontFamily: fonts.semiBold }]}>
                               {t('common.delete') || '삭제'}
                             </Text>
                           </MaterialPressable>
                         </View>
                       </View>
                     ))}
-                    <Text style={[styles.urlListInfo, { color: colors.textTertiary }]}>
-                      {t('settings.urlToggleInfo')}
-                    </Text>
                   </View>
-                )}
-
-                <View style={[styles.exampleBox, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-                  <Text style={[styles.exampleTitle, { color: colors.textSecondary }]}>{t('settings.exampleTitle')}</Text>
-                  <Text style={[styles.exampleText, { color: colors.primary }]}>{t('settings.exampleUrl')}</Text>
-                  <Text style={[styles.exampleDesc, { color: colors.textTertiary }]}>
-                    {t('settings.exampleDesc')}
+                  <Text style={[s.urlListInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t('settings.urlToggleInfo')}
                   </Text>
+                </>
+              )}
+
+              {/* 예시 안내 */}
+              <View style={[s.exampleBox, { backgroundColor: colors.raised }]}>
+                <View style={s.exampleHeader}>
+                  <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+                  <Text style={[s.exampleTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('settings.exampleTitle')}</Text>
                 </View>
-              </>
-            )}
-          </View>
+                <Text style={[s.exampleText, { color: colors.primaryText }]}>{t('settings.exampleUrl')}</Text>
+                <Text style={[s.exampleDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                  {t('settings.exampleDesc')}
+                </Text>
+              </View>
+            </>
+          )}
         </ScrollView>
       </TouchableWithoutFeedback>
 
@@ -468,61 +495,67 @@ export default function ScanUrlSettingsScreen() {
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalKeyboardView}
+          style={s.modalKeyboardView}
         >
           <TouchableWithoutFeedback onPress={handleCancelEdit}>
-            <View style={styles.modalOverlay}>
+            <View style={s.modalOverlay}>
               <TouchableWithoutFeedback>
-                <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                <View style={[s.modalContent, { backgroundColor: colors.surface }]}>
+                  <Text style={[s.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                     {t('settings.editUrlTitle') || 'URL 수정'}
                   </Text>
-                  <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
+                  <Text style={[s.modalDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                     {t('settings.editUrlDesc') || '이름과 URL을 수정하세요'}
                   </Text>
 
                   {/* 이름 입력 */}
-                  <Text style={[styles.modalInputLabel, { color: colors.textSecondary }]}>
+                  <Text style={[s.modalInputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                     {t('settings.urlName') || '이름'}
                   </Text>
                   <TextInput
-                    style={[styles.modalInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    style={[s.modalInput, { backgroundColor: colors.inputBackground, borderColor: focusedInput === 'editName' ? colors.primary : colors.border, color: colors.text, fontFamily: fonts.regular }]}
                     value={editingName}
                     onChangeText={setEditingName}
                     placeholder={t('settings.urlNamePlaceholder')}
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="none"
                     autoFocus
+                    onFocus={() => setFocusedInput('editName')}
+                    onBlur={() => setFocusedInput(null)}
                   />
 
                   {/* URL 입력 */}
-                  <Text style={[styles.modalInputLabel, { color: colors.textSecondary }]}>
+                  <Text style={[s.modalInputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                     {t('settings.urlAddress') || 'URL 주소'}
                   </Text>
                   <TextInput
-                    style={[styles.modalInput, { backgroundColor: colors.inputBackground, borderColor: colors.border, color: colors.text }]}
+                    style={[s.modalInput, { backgroundColor: colors.inputBackground, borderColor: focusedInput === 'editUrl' ? colors.primary : colors.border, color: colors.text, fontFamily: MONO }]}
                     value={editingUrl}
                     onChangeText={setEditingUrl}
                     placeholder={t('settings.urlPlaceholder')}
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="none"
                     keyboardType="url"
+                    onFocus={() => setFocusedInput('editUrl')}
+                    onBlur={() => setFocusedInput(null)}
                   />
 
-                  <View style={styles.modalButtons}>
+                  <View style={s.modalButtons}>
                     <MaterialPressable
-                      style={[styles.modalButton, styles.modalCancelButton, { borderColor: colors.border }]}
+                      style={[s.modalButton, s.modalCancelButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
                       onPress={handleCancelEdit}
+                      accessibilityRole="button"
                     >
-                      <Text style={[styles.modalButtonText, { color: colors.textSecondary }]}>
+                      <Text style={[s.modalButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                         {t('common.cancel')}
                       </Text>
                     </MaterialPressable>
                     <MaterialPressable
-                      style={[styles.modalButton, styles.modalSaveButton, { backgroundColor: colors.primary }]}
+                      style={[s.modalButton, { backgroundColor: colors.primary }]}
                       onPress={handleSaveEdit}
+                      accessibilityRole="button"
                     >
-                      <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                      <Text style={[s.modalButtonText, { color: '#fff', fontFamily: fonts.semiBold }]}>
                         {t('common.save') || '저장'}
                       </Text>
                     </MaterialPressable>
@@ -537,169 +570,177 @@ export default function ScanUrlSettingsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  backButton: {
-    padding: 4,
-    ...(Platform.OS === 'android' ? { borderRadius: 16, overflow: 'hidden' } : {}),
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  headerRight: {
-    width: 36,
-  },
+const s = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  backButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  content: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+    gap: SPACE.gap,
+  },
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   label: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
+    ...TYPE.body,
   },
   desc: {
-    fontSize: 13,
-    marginTop: 2,
-    lineHeight: 18,
+    ...TYPE.caption,
+    lineHeight: 17,
   },
-  divider: {
-    height: 1,
-    marginVertical: 20,
+  // URL 추가 폼 카드
+  formCard: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    padding: 16,
   },
   urlInfo: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 6,
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 15,
-    gap: 10,
+    gap: 8,
   },
   input: {
-    padding: 16,
-    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.control,
     fontSize: 15,
     borderWidth: 1,
   },
   inputFlex: {
     flex: 1,
   },
-  inputFullWidth: {
-    width: '100%',
-  },
   addButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  urlListContainer: {
-    marginTop: 20,
-  },
-  urlListTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
+  // URL 목록
   urlItem: {
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 10,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   urlItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  urlItemTextContainer: {
-    flex: 1,
-    marginRight: 10,
-  },
-  urlItemName: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 4,
+    gap: 12,
   },
   urlItemUrl: {
     fontSize: 12,
-  },
-  urlItemSwitch: {
-    transform: [{ scaleX: 0.85 }, { scaleY: 0.85 }],
+    fontFamily: MONO,
   },
   urlItemButtonRow: {
     flexDirection: 'row',
     marginTop: 10,
-    paddingTop: 10,
-    gap: 10,
+    gap: 8,
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
+    minHeight: SIZE.touch,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
     gap: 6,
   },
+  actionButtonSecondary: {
+    borderWidth: 1,
+  },
   actionButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '600',
   },
   urlListInfo: {
     fontSize: 12,
-    marginTop: 4,
-    lineHeight: 18,
+    lineHeight: 17,
+    marginHorizontal: 4,
   },
+  // 예시 안내 상자
   exampleBox: {
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
+    padding: 12,
+    borderRadius: RADIUS.control,
+    gap: 6,
+  },
+  exampleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   exampleTitle: {
     fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontWeight: '600',
   },
   exampleText: {
     fontSize: 13,
-    fontFamily: 'monospace',
-    marginBottom: 8,
+    fontFamily: MONO,
   },
   exampleDesc: {
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   // 모달 스타일
   modalKeyboardView: {
@@ -715,49 +756,48 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 400,
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    borderRadius: RADIUS.card,
+    padding: SPACE.card,
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   modalDesc: {
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
     marginBottom: 16,
   },
   modalInputLabel: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 6,
   },
   modalInput: {
-    padding: 14,
-    borderRadius: 10,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.control,
     fontSize: 15,
     borderWidth: 1,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 4,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 10,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   modalCancelButton: {
     borderWidth: 1,
   },
-  modalSaveButton: {},
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
