@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { SIZE, TYPE } from '../constants/Design';
+import MaterialPressable from '../components/MaterialPressable';
 
 export default function WebViewScreen() {
   const params = useLocalSearchParams();
@@ -87,30 +89,28 @@ export default function WebViewScreen() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingBottom: insets.bottom }}>
       {/* 헤더: 떠 있는 닫기 버튼이 본문 하단을 가리던 것을 위로 올리고, 지금 보는 문서 제목을 보여준다 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
           onPress={() => router.back()}
           style={s.headerButton}
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="close" size={24} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {pageTitle}
         </Text>
-        <TouchableOpacity
+        <MaterialPressable
           onPress={openInBrowser}
           style={s.headerButton}
           accessibilityRole="button"
           accessibilityLabel={t('webView.open')}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="open-outline" size={22} color={colors.text} />
-        </TouchableOpacity>
+        </MaterialPressable>
       </View>
 
       <View style={{ flex: 1 }}>
@@ -170,20 +170,21 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
     paddingHorizontal: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 8,
   },
   headerButton: {
-    width: 44,
-    height: 44,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
+    ...TYPE.screenTitle,
     flex: 1,
     textAlign: 'center',
-    fontSize: 16,
     marginHorizontal: 4,
   },
   overlay: {

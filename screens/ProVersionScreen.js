@@ -12,6 +12,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialPressable from '../components/MaterialPressable';
@@ -36,6 +38,7 @@ export default function ProVersionScreen() {
   const { language, t, fonts } = useLanguage();
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const colors = isDark ? Colors.dark : Colors.light;
 
   const handlePurchase = () => {
     Alert.alert(
@@ -62,62 +65,70 @@ export default function ProVersionScreen() {
   };
 
   return (
-    <View style={s.container}>
-      {/* 배경 그라데이션 */}
-      <LinearGradient
-        colors={['#121212', '#000000']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={s.backgroundGradient}
-      />
-
-      {/* 닫기 버튼 */}
-      <MaterialPressable
-        style={[s.closeButton, { top: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="close" size={24} color="#a0a0a0" />
-      </MaterialPressable>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
+      {/* 하위 화면 헤더: 닫기 · (제목은 아래 큰 제목이 맡는다) */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          style={s.headerButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.close')}
+        >
+          <Ionicons name="close" size={24} color={colors.text} />
+        </MaterialPressable>
+        <View style={s.headerTitleSpacer} />
+        <View style={s.headerButton} />
+      </View>
 
       <ScrollView
         style={s.content}
-        contentContainerStyle={[s.scrollContent, { paddingTop: insets.top + (Platform.OS === 'ios' ? 23 : 30), paddingBottom: insets.bottom + 24 }]}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 헤더 섹션 */}
-        <View style={s.headerSection}>
-          {/* 다이아몬드 아이콘 with 배경 & glow */}
-          <View style={s.logoBox}>
-            <Ionicons name="diamond-outline" size={48} color="#2ecc71" />
-          </View>
-          <Text style={[s.title, { fontFamily: fonts.bold }]}>
+        {/* 히어로: 아이콘 타일(프로모션 그라데이션) + 큰 제목 + 혜택 요약 */}
+        <View style={s.hero}>
+          <LinearGradient
+            colors={['#667eea', '#764ba2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.heroIcon}
+          >
+            <Ionicons name="diamond-outline" size={28} color="#FFFFFF" />
+          </LinearGradient>
+          <Text accessibilityRole="header" style={[s.title, { color: colors.text, fontFamily: fonts.bold }]}>
             {t('proPurchase.title')}
           </Text>
 
           {/* 서브 기능 표시 */}
           <View style={s.subFeatures}>
             <View style={s.subFeatureItem}>
-              <Ionicons name="checkmark" size={16} color="#2ecc71" />
-              <Text style={[s.subFeatureText, { fontFamily: fonts.regular }]}>
+              <Ionicons name="checkmark" size={16} color={colors.success} />
+              <Text style={[s.subFeatureText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('proPurchase.noAds')}
               </Text>
             </View>
             <View style={s.subFeatureItem}>
-              <Ionicons name="checkmark" size={16} color="#2ecc71" />
-              <Text style={[s.subFeatureText, { fontFamily: fonts.regular }]}>
+              <Ionicons name="checkmark" size={16} color={colors.success} />
+              <Text style={[s.subFeatureText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('proPurchase.advancedFeatures')}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* 기능 목록 */}
-        <View style={s.featuresList}>
-          {PRO_FEATURES.map((feature) => (
-            <View key={feature.key} style={s.featureItem}>
-              <Ionicons name={feature.icon} size={24} color="#a0a0a0" style={s.featureIcon} />
-              <Text style={[s.featureText, { fontFamily: fonts.regular }]}>
+        {/* 기능 목록: 묶음 카드 하나 */}
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {PRO_FEATURES.map((feature, index) => (
+            <View
+              key={feature.key}
+              style={[
+                s.featureItem,
+                index < PRO_FEATURES.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+              ]}
+            >
+              <Ionicons name={feature.icon} size={20} color={colors.textSecondary} />
+              <Text style={[s.featureText, { color: colors.text, fontFamily: fonts.medium }]}>
                 {t(`proPurchase.features.${feature.key}`)}
               </Text>
             </View>
@@ -128,87 +139,89 @@ export default function ProVersionScreen() {
         <View style={s.actionArea}>
           {/* 구매 버튼 */}
           <MaterialPressable
-            style={s.purchaseButton}
+            style={[s.purchaseButton, { backgroundColor: colors.primary }]}
             onPress={handlePurchase}
             activeOpacity={0.85}
+            accessibilityRole="button"
           >
-            <LinearGradient
-              colors={['#2ecc71', '#27ae60']}
-              start={{ x: 0, y: 0.5 }}
-              end={{ x: 1, y: 0.5 }}
-              style={s.purchaseButtonGradient}
-            >
-              <Text style={[s.purchaseButtonText, { fontFamily: fonts.bold }]}>
-                {t('proPurchase.oneTimePurchase')} • ₩15,000
-              </Text>
-            </LinearGradient>
+            <Text style={[s.purchaseButtonText, { fontFamily: fonts.semiBold }]}>
+              {t('proPurchase.oneTimePurchase')} • ₩15,000
+            </Text>
           </MaterialPressable>
 
-          {/* 광고 보기 버튼 */}
-          <MaterialPressable
-            style={s.adButton}
-            onPress={handleWatchAd}
-            activeOpacity={0.85}
-          >
-            <View style={s.adContent}>
-              <Ionicons name="play-circle-outline" size={28} color="#fff" />
+          {/* 광고 보기: 이동 행 하나짜리 카드 */}
+          <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <MaterialPressable
+              style={s.adButton}
+              onPress={handleWatchAd}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <Ionicons name="play-circle-outline" size={20} color={colors.textSecondary} />
               <View style={s.adTextContainer}>
-                <Text style={[s.adTitle, { fontFamily: fonts.medium }]}>
+                <Text style={[s.adTitle, { color: colors.text, fontFamily: fonts.medium }]}>
                   {t('proPurchase.watchAd')}
                 </Text>
-                <Text style={[s.adDesc, { fontFamily: fonts.regular }]}>
+                <Text style={[s.adDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('proPurchase.freeUnlock')}
                 </Text>
               </View>
-            </View>
-            <View style={s.adRight}>
-              <View style={s.newBadge}>
-                <Text style={[s.newBadgeText, { fontFamily: fonts.bold }]}>
-                  {t('proPurchase.new')}
-                </Text>
+              <View style={s.adRight}>
+                <View style={[s.newBadge, { backgroundColor: colors.primarySoft }]}>
+                  <Text style={[s.newBadgeText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>
+                    {t('proPurchase.new')}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#a0a0a0" />
-            </View>
-          </MaterialPressable>
+            </MaterialPressable>
+          </View>
         </View>
 
         {/* 푸터 링크 */}
         <View style={s.footerArea}>
           {/* 구매 항목 복원 */}
           <MaterialPressable
-            style={s.restoreButton}
+            style={s.textLink}
             onPress={handleRestorePurchase}
             activeOpacity={0.7}
+            accessibilityRole="button"
           >
-            <Ionicons name="time-outline" size={14} color="#a0a0a0" />
-            <Text style={[s.restoreText, { fontFamily: fonts.regular }]}>
+            <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+            <Text style={[s.footerLink, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
               {t('proPurchase.restorePurchase')}
             </Text>
           </MaterialPressable>
 
           {/* 약관 및 개인정보 */}
           <View style={s.footerLinks}>
-            <MaterialPressable onPress={() => router.push({
-              pathname: '/webview',
-              params: { url: `https://scanview.app/legal/terms?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
-            })}>
-              <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
+            <MaterialPressable
+              style={s.textLink}
+              accessibilityRole="link"
+              onPress={() => router.push({
+                pathname: '/webview',
+                params: { url: `https://scanview.app/legal/terms?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+              })}
+            >
+              <Text style={[s.footerLink, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('proPurchase.terms')}
               </Text>
             </MaterialPressable>
-            <Text style={s.footerDot}>•</Text>
-            <MaterialPressable onPress={() => router.push({
-              pathname: '/webview',
-              params: { url: `https://scanview.app/legal/privacy?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
-            })}>
-              <Text style={[s.footerLink, { fontFamily: fonts.regular }]}>
+            <Text style={[s.footerDot, { color: colors.textTertiary }]}>•</Text>
+            <MaterialPressable
+              style={s.textLink}
+              accessibilityRole="link"
+              onPress={() => router.push({
+                pathname: '/webview',
+                params: { url: `https://scanview.app/legal/privacy?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
+              })}
+            >
+              <Text style={[s.footerLink, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('proPurchase.privacy')}
               </Text>
             </MaterialPressable>
           </View>
         </View>
-
-        <View style={{ height: 50 }} />
       </ScrollView>
     </View>
   );
@@ -217,61 +230,53 @@ export default function ProVersionScreen() {
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0d0d0d',
   },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
-  closeButton: {
-    position: 'absolute',
-    right: 20,
-    zIndex: 10,
-    padding: 4,
-    ...(Platform.OS === 'android' ? { borderRadius: 16, overflow: 'hidden' } : {}),
+  headerButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleSpacer: {
+    flex: 1,
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
   },
 
-  // 헤더 섹션
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 40,
+  // 히어로
+  hero: {
+    paddingHorizontal: 4,
+    marginBottom: 20,
   },
-  logoBox: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
+  heroIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: RADIUS.control,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(46, 204, 113, 0.3)',
-    // Glow effect
-    shadowColor: '#2ecc71',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
-    elevation: 10,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#2ecc71',
-    marginBottom: 12,
+    ...TYPE.tabTitle,
   },
   subFeatures: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 15,
+    flexWrap: 'wrap',
+    gap: 14,
+    marginTop: 8,
   },
   subFeatureItem: {
     flexDirection: 'row',
@@ -279,110 +284,94 @@ const s = StyleSheet.create({
     gap: 4,
   },
   subFeatureText: {
-    fontSize: 14,
-    color: '#a0a0a0',
+    fontSize: 15,
   },
 
-  // 기능 목록
-  featuresList: {
-    marginBottom: 40,
+  // 묶음 카드
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    opacity: 0.9,
-  },
-  featureIcon: {
-    width: 24,
-    marginRight: 16,
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   featureText: {
-    fontSize: 16,
-    color: '#ffffff',
+    ...TYPE.body,
     flex: 1,
   },
 
   // 액션 영역
   actionArea: {
-    gap: 12,
+    marginTop: 24,
+    gap: SPACE.gap,
   },
   purchaseButton: {
-    borderRadius: 20,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     overflow: 'hidden',
-    shadowColor: '#2ecc71',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  purchaseButtonGradient: {
-    paddingVertical: 18,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 16,
   },
   purchaseButtonText: {
-    color: '#000000',
-    fontSize: 18,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   adButton: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333333',
-  },
-  adContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   adTextContainer: {
+    flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   adTitle: {
-    fontSize: 14,
-    color: '#ffffff',
+    ...TYPE.body,
   },
   adDesc: {
-    fontSize: 11,
-    color: '#a0a0a0',
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   adRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   newBadge: {
-    backgroundColor: '#ff4757',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
   },
   newBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
   },
 
   // 푸터 영역
   footerArea: {
-    marginTop: 25,
+    marginTop: 16,
     alignItems: 'center',
   },
-  restoreButton: {
+  textLink: {
+    minHeight: SIZE.touch,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 15,
-  },
-  restoreText: {
-    fontSize: 12,
-    color: '#a0a0a0',
+    paddingHorizontal: 8,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
   },
   footerLinks: {
     flexDirection: 'row',
@@ -390,12 +379,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   footerLink: {
-    fontSize: 12,
-    color: '#a0a0a0',
-    marginHorizontal: 8,
+    fontSize: 13,
   },
   footerDot: {
-    fontSize: 12,
-    color: '#a0a0a0',
+    fontSize: 13,
   },
 });

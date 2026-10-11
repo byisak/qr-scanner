@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
+import MaterialPressable from '../components/MaterialPressable';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -80,6 +82,7 @@ export default function MapLocationPickerScreen() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   // 초기 위치 설정 (파라미터로 전달된 경우)
   useEffect(() => {
@@ -340,46 +343,47 @@ export default function MapLocationPickerScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
-        <TouchableOpacity
+      {/* 하위 화면 헤더: 뒤로 · 제목 · 빈 자리 (확인은 아래 시트의 주 버튼) */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
           onPress={() => router.back()}
-          style={styles.backButton}
+          style={styles.headerButton}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+        </MaterialPressable>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('generator.selectLocation') || '위치 선택'}
         </Text>
-        <TouchableOpacity
-          onPress={confirmLocation}
-          style={styles.confirmButton}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.confirmText, { color: colors.primary, fontFamily: fonts.semiBold }]}>
-            {t('common.confirm') || '확인'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerButton} />
       </View>
 
       {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
-        <View style={[styles.searchBar, { backgroundColor: colors.background, borderColor: colors.border }]}>
-          <Ionicons name="search" size={20} color={colors.textSecondary} />
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: searchFocused ? colors.primary : colors.border }]}>
+          <Ionicons name="search" size={18} color={colors.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.text, fontFamily: fonts.regular }]}
             placeholder={t('map.searchPlaceholder') || '주소 검색...'}
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={handleSearchChange}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
             returnKeyType="search"
             onSubmitEditing={() => searchAddress(searchQuery)}
           />
           {isSearching && <ActivityIndicator size="small" color={colors.primary} />}
           {searchQuery.length > 0 && !isSearching && (
-            <TouchableOpacity onPress={() => { setSearchQuery(''); setShowResults(false); }}>
-              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => { setSearchQuery(''); setShowResults(false); }}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
           )}
         </View>
@@ -393,14 +397,18 @@ export default function MapLocationPickerScreen() {
             {searchResults.map((result, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.searchResultItem, { borderBottomColor: colors.border }]}
+                style={[
+                  styles.searchResultItem,
+                  index < searchResults.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight },
+                ]}
                 onPress={() => selectSearchResult(result)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
               >
-                <Ionicons name="location" size={20} color={colors.primary} />
+                <Ionicons name="location-outline" size={20} color={colors.textSecondary} />
                 <View style={styles.searchResultText}>
                   {result.name && result.name !== result.displayAddress && (
-                    <Text style={[styles.searchResultName, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+                    <Text style={[styles.searchResultName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
                       {result.name}
                     </Text>
                   )}
@@ -439,15 +447,17 @@ export default function MapLocationPickerScreen() {
 
             {/* Current Location Button */}
             <TouchableOpacity
-              style={[styles.currentLocationButton, { backgroundColor: colors.surface }]}
+              style={[styles.currentLocationButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={getCurrentLocation}
               activeOpacity={0.8}
               disabled={isLoadingLocation}
+              accessibilityRole="button"
+              accessibilityLabel={t('map.useCurrentLocation') || '현재 위치 사용'}
             >
               {isLoadingLocation ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Ionicons name="locate" size={24} color={colors.primary} />
+                <Ionicons name="locate" size={22} color={colors.primaryText} />
               )}
             </TouchableOpacity>
 
@@ -458,8 +468,8 @@ export default function MapLocationPickerScreen() {
           </>
         ) : (
           /* Fallback when react-native-maps is not available */
-          <View style={[styles.mapFallback, { backgroundColor: colors.surface }]}>
-            <Ionicons name="map-outline" size={64} color={colors.textSecondary} />
+          <View style={[styles.mapFallback, { backgroundColor: colors.background }]}>
+            <Ionicons name="map-outline" size={56} color={colors.textTertiary} />
             <Text style={[styles.mapFallbackTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
               {t('map.requiresBuild') || 'Development Build 필요'}
             </Text>
@@ -467,58 +477,67 @@ export default function MapLocationPickerScreen() {
               {t('map.requiresBuildDesc') || '지도 기능을 사용하려면 Development Build가 필요합니다.\nExpo Go에서는 지원되지 않습니다.'}
             </Text>
             <TouchableOpacity
-              style={[styles.currentLocationButton, { backgroundColor: colors.primary, position: 'relative', marginTop: 20 }]}
+              style={[styles.fallbackLocateButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
               onPress={getCurrentLocation}
               activeOpacity={0.8}
               disabled={isLoadingLocation}
+              accessibilityRole="button"
             >
               {isLoadingLocation ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Ionicons name="locate" size={24} color="#fff" />
+                <Ionicons name="locate" size={20} color={colors.text} />
               )}
+              <Text style={[styles.mapFallbackHint, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                {t('map.useCurrentLocation') || '현재 위치 사용'}
+              </Text>
             </TouchableOpacity>
-            <Text style={[styles.mapFallbackHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('map.useCurrentLocation') || '현재 위치 사용'}
-            </Text>
           </View>
         )}
       </View>
 
-      {/* Coordinates Display */}
-      <View style={[styles.coordsContainer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + 16 }]}>
-        <View style={styles.coordsHeader}>
-          <Ionicons name="pin" size={20} color={colors.primary} />
-          <Text style={[styles.coordsTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-            {t('map.selectedLocation') || '선택된 위치'}
-          </Text>
-        </View>
+      {/* 하단 시트: 선택된 위치 + 확인 버튼 */}
+      <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border, paddingBottom: insets.bottom + 16 }]}>
+        <Text style={[styles.sheetTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          {t('map.selectedLocation') || '선택된 위치'}
+        </Text>
 
         {address ? (
-          <Text style={[styles.addressText, { color: colors.text, fontFamily: fonts.regular }]} numberOfLines={2}>
+          <Text style={[styles.addressText, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={2}>
             {address}
           </Text>
         ) : null}
 
-        <View style={styles.coordsRow}>
+        <View style={[styles.coordsRow, { backgroundColor: colors.raised }]}>
           <View style={styles.coordItem}>
-            <Text style={[styles.coordLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            <Text style={[styles.coordLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               {t('map.latitude') || '위도'}
             </Text>
-            <Text style={[styles.coordValue, { color: colors.text, fontFamily: fonts.medium }]}>
+            <Text style={[styles.coordValue, { color: colors.text }]} numberOfLines={1}>
               {markerPosition.latitude.toFixed(6)}
             </Text>
           </View>
           <View style={[styles.coordDivider, { backgroundColor: colors.border }]} />
           <View style={styles.coordItem}>
-            <Text style={[styles.coordLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            <Text style={[styles.coordLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               {t('map.longitude') || '경도'}
             </Text>
-            <Text style={[styles.coordValue, { color: colors.text, fontFamily: fonts.medium }]}>
+            <Text style={[styles.coordValue, { color: colors.text }]} numberOfLines={1}>
               {markerPosition.longitude.toFixed(6)}
             </Text>
           </View>
         </View>
+
+        <MaterialPressable
+          onPress={confirmLocation}
+          style={[styles.confirmButton, { backgroundColor: colors.primary }]}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.confirmText, { fontFamily: fonts.semiBold }]}>
+            {t('common.confirm') || '확인'}
+          </Text>
+        </MaterialPressable>
       </View>
     </View>
   );
@@ -531,82 +550,75 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
+  headerButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  confirmButton: {
-    padding: 8,
-    marginRight: -8,
-  },
-  confirmText: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
   },
   searchContainer: {
-    padding: 12,
+    paddingHorizontal: SPACE.screen,
+    paddingBottom: 12,
     zIndex: 10,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
     gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
     padding: 0,
+  },
+  clearButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    marginRight: -12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchResults: {
     position: 'absolute',
-    top: 60,
-    left: 12,
-    right: 12,
-    maxHeight: 200,
-    borderRadius: 12,
+    top: 54,
+    left: SPACE.screen,
+    right: SPACE.screen,
+    maxHeight: 240,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
   },
   searchResultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    gap: 10,
-    borderBottomWidth: 1,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 12,
   },
   searchResultText: {
     flex: 1,
+    gap: 2,
   },
   searchResultName: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
+    ...TYPE.body,
   },
   searchResultAddress: {
     fontSize: 13,
-    fontWeight: '400',
     lineHeight: 18,
-  },
-  searchResultCoords: {
-    fontSize: 12,
-    marginTop: 2,
   },
   mapContainer: {
     flex: 1,
@@ -617,18 +629,15 @@ const styles = StyleSheet.create({
   },
   currentLocationButton: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
+    right: SPACE.screen,
+    // 시트가 지도 아래를 둥근 모서리만큼 덮으므로 그만큼 올린다
+    bottom: 16 + RADIUS.card,
     width: 48,
     height: 48,
     borderRadius: 24,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
   },
   centerPinContainer: {
     position: 'absolute',
@@ -639,53 +648,72 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  coordsContainer: {
-    padding: 16,
-    borderTopWidth: 1,
-    gap: 12,
+  sheet: {
+    marginTop: -RADIUS.card,
+    borderTopLeftRadius: RADIUS.card,
+    borderTopRightRadius: RADIUS.card,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    paddingTop: SPACE.card,
+    paddingHorizontal: SPACE.card,
   },
-  coordsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  coordsTitle: {
-    fontSize: 16,
+  sheetTitle: {
+    fontSize: 17,
     fontWeight: '600',
   },
   addressText: {
     fontSize: 14,
     lineHeight: 20,
+    marginTop: 4,
   },
   coordsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderRadius: RADIUS.control,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 14,
   },
   coordItem: {
     flex: 1,
-    alignItems: 'center',
+    minWidth: 0,
+    gap: 2,
   },
   coordDivider: {
     width: 1,
-    height: 40,
+    alignSelf: 'stretch',
     marginHorizontal: 16,
   },
   coordLabel: {
     fontSize: 12,
-    marginBottom: 4,
+    fontWeight: '600',
   },
   coordValue: {
+    fontSize: 15,
+    fontFamily: MONO,
+  },
+  confirmButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  confirmText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   mapFallback: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    paddingBottom: 20 + RADIUS.card,
   },
   mapFallbackTitle: {
-    fontSize: 18,
+    fontSize: 17,
     marginTop: 16,
     textAlign: 'center',
   },
@@ -695,8 +723,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
+  fallbackLocateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: SIZE.button,
+    paddingHorizontal: 20,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    marginTop: 20,
+  },
   mapFallbackHint: {
-    fontSize: 12,
-    marginTop: 8,
+    fontSize: 15,
   },
 });

@@ -15,7 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
-import { LinearGradient } from 'expo-linear-gradient';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { LOCKED_FEATURES } from '../config/lockedFeatures';
 import MaterialPressable from '../components/MaterialPressable';
 
@@ -24,12 +24,12 @@ const FEATURE_CATEGORIES = {
   settings: {
     titleKey: 'proFeatures.settingsFeatures',
     features: [
-      { id: 'batchScan', icon: 'layers-outline', color: '#2F6FEB' },
-      { id: 'realtimeSync', icon: 'sync-outline', color: '#34C759' },
-      { id: 'scanUrlIntegration', icon: 'link-outline', color: '#FF9500' },
-      { id: 'productSearch', icon: 'search-outline', color: '#5856D6' },
-      { id: 'photoSave', icon: 'camera-outline', color: '#FF3B30' },
-      { id: 'lotteryScan', icon: 'ticket-outline', color: '#f39c12' },
+      { id: 'batchScan', icon: 'layers-outline' },
+      { id: 'realtimeSync', icon: 'sync-outline' },
+      { id: 'scanUrlIntegration', icon: 'link-outline' },
+      { id: 'productSearch', icon: 'search-outline' },
+      { id: 'photoSave', icon: 'camera-outline' },
+      { id: 'lotteryScan', icon: 'ticket-outline' },
     ],
   },
   generator: {
@@ -39,131 +39,131 @@ const FEATURE_CATEGORIES = {
   qrTypes: {
     titleKey: 'proFeatures.qrTypes',
     features: [
-      { id: 'qrTypeWebsite', icon: 'globe-outline', color: '#667eea', typeName: '웹사이트' },
-      { id: 'qrTypeContact', icon: 'person-outline', color: '#f5576c', typeName: '연락처' },
-      { id: 'qrTypeWifi', icon: 'wifi-outline', color: '#4facfe', typeName: 'WiFi' },
-      { id: 'qrTypeClipboard', icon: 'clipboard-outline', color: '#fa709a', typeName: '클립보드' },
-      { id: 'qrTypeEmail', icon: 'mail-outline', color: '#30cfd0', typeName: '이메일' },
-      { id: 'qrTypeSms', icon: 'chatbubble-outline', color: '#a8edea', typeName: 'SMS' },
-      { id: 'qrTypePhone', icon: 'call-outline', color: '#ff9a9e', typeName: '전화' },
-      { id: 'qrTypeEvent', icon: 'calendar-outline', color: '#fcb69f', typeName: '일정' },
-      { id: 'qrTypeLocation', icon: 'location-outline', color: '#ff6e7f', typeName: '위치' },
+      { id: 'qrTypeWebsite', icon: 'globe-outline', typeName: '웹사이트' },
+      { id: 'qrTypeContact', icon: 'person-outline', typeName: '연락처' },
+      { id: 'qrTypeWifi', icon: 'wifi-outline', typeName: 'WiFi' },
+      { id: 'qrTypeClipboard', icon: 'clipboard-outline', typeName: '클립보드' },
+      { id: 'qrTypeEmail', icon: 'mail-outline', typeName: '이메일' },
+      { id: 'qrTypeSms', icon: 'chatbubble-outline', typeName: 'SMS' },
+      { id: 'qrTypePhone', icon: 'call-outline', typeName: '전화' },
+      { id: 'qrTypeEvent', icon: 'calendar-outline', typeName: '일정' },
+      { id: 'qrTypeLocation', icon: 'location-outline', typeName: '위치' },
     ],
   },
   barcodeTypes: {
     titleKey: 'proFeatures.barcodeTypes',
     features: [
       // 1D Industrial/Logistics
-      { id: 'barcodeCode39', icon: 'barcode-outline', color: '#667eea', barcodeName: 'Code 39' },
-      { id: 'barcodeCode39ext', icon: 'barcode-outline', color: '#764ba2', barcodeName: 'Code 39 Ext' },
-      { id: 'barcodeCode93', icon: 'barcode-outline', color: '#5856D6', barcodeName: 'Code 93' },
-      { id: 'barcodeCode93ext', icon: 'barcode-outline', color: '#AF52DE', barcodeName: 'Code 93 Ext' },
-      { id: 'barcodeCode11', icon: 'barcode-outline', color: '#2F6FEB', barcodeName: 'Code 11' },
-      { id: 'barcodeIndustrial2of5', icon: 'barcode-outline', color: '#34C759', barcodeName: 'Industrial 2/5' },
-      { id: 'barcodeInterleaved2of5', icon: 'barcode-outline', color: '#30D158', barcodeName: 'Interleaved 2/5' },
-      { id: 'barcodeItf14', icon: 'barcode-outline', color: '#FF9500', barcodeName: 'ITF-14' },
-      { id: 'barcodeMatrix2of5', icon: 'barcode-outline', color: '#FF9F0A', barcodeName: 'Matrix 2/5' },
-      { id: 'barcodeCoop2of5', icon: 'barcode-outline', color: '#FFD60A', barcodeName: 'COOP 2/5' },
-      { id: 'barcodeIata2of5', icon: 'barcode-outline', color: '#BF5AF2', barcodeName: 'IATA 2/5' },
-      { id: 'barcodeDatalogic2of5', icon: 'barcode-outline', color: '#FF375F', barcodeName: 'Datalogic 2/5' },
+      { id: 'barcodeCode39', icon: 'barcode-outline', barcodeName: 'Code 39' },
+      { id: 'barcodeCode39ext', icon: 'barcode-outline', barcodeName: 'Code 39 Ext' },
+      { id: 'barcodeCode93', icon: 'barcode-outline', barcodeName: 'Code 93' },
+      { id: 'barcodeCode93ext', icon: 'barcode-outline', barcodeName: 'Code 93 Ext' },
+      { id: 'barcodeCode11', icon: 'barcode-outline', barcodeName: 'Code 11' },
+      { id: 'barcodeIndustrial2of5', icon: 'barcode-outline', barcodeName: 'Industrial 2/5' },
+      { id: 'barcodeInterleaved2of5', icon: 'barcode-outline', barcodeName: 'Interleaved 2/5' },
+      { id: 'barcodeItf14', icon: 'barcode-outline', barcodeName: 'ITF-14' },
+      { id: 'barcodeMatrix2of5', icon: 'barcode-outline', barcodeName: 'Matrix 2/5' },
+      { id: 'barcodeCoop2of5', icon: 'barcode-outline', barcodeName: 'COOP 2/5' },
+      { id: 'barcodeIata2of5', icon: 'barcode-outline', barcodeName: 'IATA 2/5' },
+      { id: 'barcodeDatalogic2of5', icon: 'barcode-outline', barcodeName: 'Datalogic 2/5' },
       // Retail
-      { id: 'barcodeEan13', icon: 'barcode-outline', color: '#FF3B30', barcodeName: 'EAN-13' },
-      { id: 'barcodeEan8', icon: 'barcode-outline', color: '#FF6B6B', barcodeName: 'EAN-8' },
-      { id: 'barcodeEan5', icon: 'barcode-outline', color: '#FF8C69', barcodeName: 'EAN-5' },
-      { id: 'barcodeEan2', icon: 'barcode-outline', color: '#FFA07A', barcodeName: 'EAN-2' },
-      { id: 'barcodeUpca', icon: 'barcode-outline', color: '#FF7F50', barcodeName: 'UPC-A' },
-      { id: 'barcodeUpce', icon: 'barcode-outline', color: '#FF6347', barcodeName: 'UPC-E' },
-      { id: 'barcodeIsbn', icon: 'barcode-outline', color: '#32CD32', barcodeName: 'ISBN' },
-      { id: 'barcodeIsmn', icon: 'barcode-outline', color: '#3CB371', barcodeName: 'ISMN' },
-      { id: 'barcodeIssn', icon: 'barcode-outline', color: '#2E8B57', barcodeName: 'ISSN' },
-      { id: 'barcodeEan13composite', icon: 'barcode-outline', color: '#228B22', barcodeName: 'EAN-13 Comp' },
-      { id: 'barcodeEan8composite', icon: 'barcode-outline', color: '#006400', barcodeName: 'EAN-8 Comp' },
-      { id: 'barcodeUpcacomposite', icon: 'barcode-outline', color: '#008B8B', barcodeName: 'UPC-A Comp' },
-      { id: 'barcodeUpcecomposite', icon: 'barcode-outline', color: '#20B2AA', barcodeName: 'UPC-E Comp' },
+      { id: 'barcodeEan13', icon: 'barcode-outline', barcodeName: 'EAN-13' },
+      { id: 'barcodeEan8', icon: 'barcode-outline', barcodeName: 'EAN-8' },
+      { id: 'barcodeEan5', icon: 'barcode-outline', barcodeName: 'EAN-5' },
+      { id: 'barcodeEan2', icon: 'barcode-outline', barcodeName: 'EAN-2' },
+      { id: 'barcodeUpca', icon: 'barcode-outline', barcodeName: 'UPC-A' },
+      { id: 'barcodeUpce', icon: 'barcode-outline', barcodeName: 'UPC-E' },
+      { id: 'barcodeIsbn', icon: 'barcode-outline', barcodeName: 'ISBN' },
+      { id: 'barcodeIsmn', icon: 'barcode-outline', barcodeName: 'ISMN' },
+      { id: 'barcodeIssn', icon: 'barcode-outline', barcodeName: 'ISSN' },
+      { id: 'barcodeEan13composite', icon: 'barcode-outline', barcodeName: 'EAN-13 Comp' },
+      { id: 'barcodeEan8composite', icon: 'barcode-outline', barcodeName: 'EAN-8 Comp' },
+      { id: 'barcodeUpcacomposite', icon: 'barcode-outline', barcodeName: 'UPC-A Comp' },
+      { id: 'barcodeUpcecomposite', icon: 'barcode-outline', barcodeName: 'UPC-E Comp' },
       // GS1/Logistics
-      { id: 'barcodeGs1128', icon: 'barcode-outline', color: '#4169E1', barcodeName: 'GS1-128' },
-      { id: 'barcodeGs1cc', icon: 'barcode-outline', color: '#6495ED', barcodeName: 'GS1 Composite' },
-      { id: 'barcodeGs1databar', icon: 'barcode-outline', color: '#87CEEB', barcodeName: 'GS1 DataBar' },
-      { id: 'barcodeGs1databarstacked', icon: 'barcode-outline', color: '#00CED1', barcodeName: 'GS1 DB Stack' },
-      { id: 'barcodeGs1databarstackedomni', icon: 'barcode-outline', color: '#40E0D0', barcodeName: 'GS1 DB Omni' },
-      { id: 'barcodeGs1databartruncated', icon: 'barcode-outline', color: '#48D1CC', barcodeName: 'GS1 DB Trunc' },
-      { id: 'barcodeGs1databarlimited', icon: 'barcode-outline', color: '#00FFFF', barcodeName: 'GS1 DB Limit' },
-      { id: 'barcodeGs1databarexpanded', icon: 'barcode-outline', color: '#00BFFF', barcodeName: 'GS1 DB Exp' },
-      { id: 'barcodeGs1databarexpandedstacked', icon: 'barcode-outline', color: '#1E90FF', barcodeName: 'GS1 DB Exp St' },
-      { id: 'barcodeGs1northamericancoupon', icon: 'barcode-outline', color: '#4682B4', barcodeName: 'GS1 Coupon' },
-      { id: 'barcodeGs1qrcode', icon: 'qr-code-outline', color: '#5F9EA0', barcodeName: 'GS1 QR' },
-      { id: 'barcodeGs1dotcode', icon: 'ellipsis-horizontal', color: '#708090', barcodeName: 'GS1 DotCode' },
-      { id: 'barcodeSscc18', icon: 'barcode-outline', color: '#778899', barcodeName: 'SSCC-18' },
-      { id: 'barcodeEan14', icon: 'barcode-outline', color: '#B0C4DE', barcodeName: 'EAN-14' },
+      { id: 'barcodeGs1128', icon: 'barcode-outline', barcodeName: 'GS1-128' },
+      { id: 'barcodeGs1cc', icon: 'barcode-outline', barcodeName: 'GS1 Composite' },
+      { id: 'barcodeGs1databar', icon: 'barcode-outline', barcodeName: 'GS1 DataBar' },
+      { id: 'barcodeGs1databarstacked', icon: 'barcode-outline', barcodeName: 'GS1 DB Stack' },
+      { id: 'barcodeGs1databarstackedomni', icon: 'barcode-outline', barcodeName: 'GS1 DB Omni' },
+      { id: 'barcodeGs1databartruncated', icon: 'barcode-outline', barcodeName: 'GS1 DB Trunc' },
+      { id: 'barcodeGs1databarlimited', icon: 'barcode-outline', barcodeName: 'GS1 DB Limit' },
+      { id: 'barcodeGs1databarexpanded', icon: 'barcode-outline', barcodeName: 'GS1 DB Exp' },
+      { id: 'barcodeGs1databarexpandedstacked', icon: 'barcode-outline', barcodeName: 'GS1 DB Exp St' },
+      { id: 'barcodeGs1northamericancoupon', icon: 'barcode-outline', barcodeName: 'GS1 Coupon' },
+      { id: 'barcodeGs1qrcode', icon: 'qr-code-outline', barcodeName: 'GS1 QR' },
+      { id: 'barcodeGs1dotcode', icon: 'ellipsis-horizontal', barcodeName: 'GS1 DotCode' },
+      { id: 'barcodeSscc18', icon: 'barcode-outline', barcodeName: 'SSCC-18' },
+      { id: 'barcodeEan14', icon: 'barcode-outline', barcodeName: 'EAN-14' },
       // Medical/Pharmaceutical
-      { id: 'barcodePharmacode', icon: 'medkit-outline', color: '#DC143C', barcodeName: 'Pharmacode' },
-      { id: 'barcodePharmacode2', icon: 'medkit-outline', color: '#B22222', barcodeName: 'Pharmacode 2' },
-      { id: 'barcodeCode32', icon: 'medkit-outline', color: '#CD5C5C', barcodeName: 'Code 32' },
-      { id: 'barcodePzn', icon: 'medkit-outline', color: '#F08080', barcodeName: 'PZN' },
-      { id: 'barcodeHibc39', icon: 'medkit-outline', color: '#E9967A', barcodeName: 'HIBC 39' },
-      { id: 'barcodeHibc128', icon: 'medkit-outline', color: '#FA8072', barcodeName: 'HIBC 128' },
-      { id: 'barcodeHibcdatamatrix', icon: 'grid-outline', color: '#FFA500', barcodeName: 'HIBC DM' },
-      { id: 'barcodeHibcpdf417', icon: 'list-outline', color: '#FF8C00', barcodeName: 'HIBC PDF417' },
-      { id: 'barcodeHibcqrcode', icon: 'qr-code-outline', color: '#FF7F00', barcodeName: 'HIBC QR' },
-      { id: 'barcodeHibcazteccode', icon: 'apps-outline', color: '#FF6600', barcodeName: 'HIBC Aztec' },
-      { id: 'barcodeHibccodablockf', icon: 'reorder-four-outline', color: '#FF4500', barcodeName: 'HIBC CodaBlk' },
-      { id: 'barcodeHibcmicropdf417', icon: 'list-outline', color: '#FF0000', barcodeName: 'HIBC MicroPDF' },
+      { id: 'barcodePharmacode', icon: 'medkit-outline', barcodeName: 'Pharmacode' },
+      { id: 'barcodePharmacode2', icon: 'medkit-outline', barcodeName: 'Pharmacode 2' },
+      { id: 'barcodeCode32', icon: 'medkit-outline', barcodeName: 'Code 32' },
+      { id: 'barcodePzn', icon: 'medkit-outline', barcodeName: 'PZN' },
+      { id: 'barcodeHibc39', icon: 'medkit-outline', barcodeName: 'HIBC 39' },
+      { id: 'barcodeHibc128', icon: 'medkit-outline', barcodeName: 'HIBC 128' },
+      { id: 'barcodeHibcdatamatrix', icon: 'grid-outline', barcodeName: 'HIBC DM' },
+      { id: 'barcodeHibcpdf417', icon: 'list-outline', barcodeName: 'HIBC PDF417' },
+      { id: 'barcodeHibcqrcode', icon: 'qr-code-outline', barcodeName: 'HIBC QR' },
+      { id: 'barcodeHibcazteccode', icon: 'apps-outline', barcodeName: 'HIBC Aztec' },
+      { id: 'barcodeHibccodablockf', icon: 'reorder-four-outline', barcodeName: 'HIBC CodaBlk' },
+      { id: 'barcodeHibcmicropdf417', icon: 'list-outline', barcodeName: 'HIBC MicroPDF' },
       // Library/Special
-      { id: 'barcodeCodabar', icon: 'barcode-outline', color: '#8B0000', barcodeName: 'Codabar' },
-      { id: 'barcodeBc412', icon: 'barcode-outline', color: '#A52A2A', barcodeName: 'BC412' },
-      { id: 'barcodeMsi', icon: 'barcode-outline', color: '#D2691E', barcodeName: 'MSI' },
-      { id: 'barcodePlessey', icon: 'barcode-outline', color: '#CD853F', barcodeName: 'Plessey' },
-      { id: 'barcodeTelepen', icon: 'barcode-outline', color: '#DEB887', barcodeName: 'Telepen' },
-      { id: 'barcodeTelepennumeric', icon: 'barcode-outline', color: '#F5DEB3', barcodeName: 'Telepen Num' },
-      { id: 'barcodeChannelcode', icon: 'barcode-outline', color: '#FFE4B5', barcodeName: 'Channel' },
-      { id: 'barcodePosicode', icon: 'barcode-outline', color: '#FFDAB9', barcodeName: 'PosiCode' },
+      { id: 'barcodeCodabar', icon: 'barcode-outline', barcodeName: 'Codabar' },
+      { id: 'barcodeBc412', icon: 'barcode-outline', barcodeName: 'BC412' },
+      { id: 'barcodeMsi', icon: 'barcode-outline', barcodeName: 'MSI' },
+      { id: 'barcodePlessey', icon: 'barcode-outline', barcodeName: 'Plessey' },
+      { id: 'barcodeTelepen', icon: 'barcode-outline', barcodeName: 'Telepen' },
+      { id: 'barcodeTelepennumeric', icon: 'barcode-outline', barcodeName: 'Telepen Num' },
+      { id: 'barcodeChannelcode', icon: 'barcode-outline', barcodeName: 'Channel' },
+      { id: 'barcodePosicode', icon: 'barcode-outline', barcodeName: 'PosiCode' },
       // Postal
-      { id: 'barcodePostnet', icon: 'mail-outline', color: '#9370DB', barcodeName: 'POSTNET' },
-      { id: 'barcodePlanet', icon: 'mail-outline', color: '#8A2BE2', barcodeName: 'PLANET' },
-      { id: 'barcodeUspsintellligentmail', icon: 'mail-outline', color: '#9932CC', barcodeName: 'USPS IM' },
-      { id: 'barcodeOnecode', icon: 'mail-outline', color: '#BA55D3', barcodeName: 'OneCode' },
-      { id: 'barcodeRoyalmail', icon: 'mail-outline', color: '#DA70D6', barcodeName: 'Royal Mail' },
-      { id: 'barcodeKix', icon: 'mail-outline', color: '#EE82EE', barcodeName: 'KIX' },
-      { id: 'barcodeJapanpost', icon: 'mail-outline', color: '#FF00FF', barcodeName: 'Japan Post' },
-      { id: 'barcodeAuspost', icon: 'mail-outline', color: '#FF69B4', barcodeName: 'Australia Post' },
-      { id: 'barcodeDeutschepost', icon: 'mail-outline', color: '#FF1493', barcodeName: 'Deutsche Post' },
-      { id: 'barcodeDeutschepostidentcode', icon: 'mail-outline', color: '#C71585', barcodeName: 'DP Identcode' },
-      { id: 'barcodeCepnet', icon: 'mail-outline', color: '#DB7093', barcodeName: 'CEPNet' },
-      { id: 'barcodeFlattermarken', icon: 'mail-outline', color: '#FFC0CB', barcodeName: 'Flattermarken' },
-      { id: 'barcodeLeitcode', icon: 'mail-outline', color: '#FFB6C1', barcodeName: 'Leitcode' },
-      { id: 'barcodeIdentcode', icon: 'mail-outline', color: '#FF69B4', barcodeName: 'Identcode' },
+      { id: 'barcodePostnet', icon: 'mail-outline', barcodeName: 'POSTNET' },
+      { id: 'barcodePlanet', icon: 'mail-outline', barcodeName: 'PLANET' },
+      { id: 'barcodeUspsintellligentmail', icon: 'mail-outline', barcodeName: 'USPS IM' },
+      { id: 'barcodeOnecode', icon: 'mail-outline', barcodeName: 'OneCode' },
+      { id: 'barcodeRoyalmail', icon: 'mail-outline', barcodeName: 'Royal Mail' },
+      { id: 'barcodeKix', icon: 'mail-outline', barcodeName: 'KIX' },
+      { id: 'barcodeJapanpost', icon: 'mail-outline', barcodeName: 'Japan Post' },
+      { id: 'barcodeAuspost', icon: 'mail-outline', barcodeName: 'Australia Post' },
+      { id: 'barcodeDeutschepost', icon: 'mail-outline', barcodeName: 'Deutsche Post' },
+      { id: 'barcodeDeutschepostidentcode', icon: 'mail-outline', barcodeName: 'DP Identcode' },
+      { id: 'barcodeCepnet', icon: 'mail-outline', barcodeName: 'CEPNet' },
+      { id: 'barcodeFlattermarken', icon: 'mail-outline', barcodeName: 'Flattermarken' },
+      { id: 'barcodeLeitcode', icon: 'mail-outline', barcodeName: 'Leitcode' },
+      { id: 'barcodeIdentcode', icon: 'mail-outline', barcodeName: 'Identcode' },
       // 2D Barcodes
-      { id: 'barcodeQrcode', icon: 'qr-code-outline', color: '#2F4F4F', barcodeName: 'QR Code' },
-      { id: 'barcodeMicroqrcode', icon: 'qr-code-outline', color: '#696969', barcodeName: 'Micro QR' },
-      { id: 'barcodeRectangularmicroqrcode', icon: 'qr-code-outline', color: '#808080', barcodeName: 'Rect Micro QR' },
-      { id: 'barcodeDatamatrix', icon: 'grid-outline', color: '#00C7BE', barcodeName: 'Data Matrix' },
-      { id: 'barcodeDatamatrixrectangular', icon: 'grid-outline', color: '#00B4AB', barcodeName: 'DM Rect' },
-      { id: 'barcodeDatamatrixrectangularextension', icon: 'grid-outline', color: '#00A198', barcodeName: 'DM Rect Ext' },
-      { id: 'barcodePdf417', icon: 'list-outline', color: '#191970', barcodeName: 'PDF417' },
-      { id: 'barcodePdf417compact', icon: 'list-outline', color: '#000080', barcodeName: 'PDF417 Compact' },
-      { id: 'barcodeMicropdf417', icon: 'list-outline', color: '#00008B', barcodeName: 'MicroPDF417' },
-      { id: 'barcodeAzteccode', icon: 'apps-outline', color: '#0000CD', barcodeName: 'Aztec Code' },
-      { id: 'barcodeAzteccodecompact', icon: 'apps-outline', color: '#0000FF', barcodeName: 'Aztec Compact' },
-      { id: 'barcodeAztecrune', icon: 'apps-outline', color: '#4169E1', barcodeName: 'Aztec Runes' },
-      { id: 'barcodeMaxicode', icon: 'hexagon-outline', color: '#6A5ACD', barcodeName: 'MaxiCode' },
-      { id: 'barcodeDotcode', icon: 'ellipsis-horizontal', color: '#7B68EE', barcodeName: 'DotCode' },
-      { id: 'barcodeHanxin', icon: 'qr-code-outline', color: '#9400D3', barcodeName: 'Han Xin' },
-      { id: 'barcodeCodeone', icon: 'grid-outline', color: '#8B008B', barcodeName: 'Code One' },
-      { id: 'barcodeUltracode', icon: 'qr-code-outline', color: '#800080', barcodeName: 'Ultracode' },
+      { id: 'barcodeQrcode', icon: 'qr-code-outline', barcodeName: 'QR Code' },
+      { id: 'barcodeMicroqrcode', icon: 'qr-code-outline', barcodeName: 'Micro QR' },
+      { id: 'barcodeRectangularmicroqrcode', icon: 'qr-code-outline', barcodeName: 'Rect Micro QR' },
+      { id: 'barcodeDatamatrix', icon: 'grid-outline', barcodeName: 'Data Matrix' },
+      { id: 'barcodeDatamatrixrectangular', icon: 'grid-outline', barcodeName: 'DM Rect' },
+      { id: 'barcodeDatamatrixrectangularextension', icon: 'grid-outline', barcodeName: 'DM Rect Ext' },
+      { id: 'barcodePdf417', icon: 'list-outline', barcodeName: 'PDF417' },
+      { id: 'barcodePdf417compact', icon: 'list-outline', barcodeName: 'PDF417 Compact' },
+      { id: 'barcodeMicropdf417', icon: 'list-outline', barcodeName: 'MicroPDF417' },
+      { id: 'barcodeAzteccode', icon: 'apps-outline', barcodeName: 'Aztec Code' },
+      { id: 'barcodeAzteccodecompact', icon: 'apps-outline', barcodeName: 'Aztec Compact' },
+      { id: 'barcodeAztecrune', icon: 'apps-outline', barcodeName: 'Aztec Runes' },
+      { id: 'barcodeMaxicode', icon: 'hexagon-outline', barcodeName: 'MaxiCode' },
+      { id: 'barcodeDotcode', icon: 'ellipsis-horizontal', barcodeName: 'DotCode' },
+      { id: 'barcodeHanxin', icon: 'qr-code-outline', barcodeName: 'Han Xin' },
+      { id: 'barcodeCodeone', icon: 'grid-outline', barcodeName: 'Code One' },
+      { id: 'barcodeUltracode', icon: 'qr-code-outline', barcodeName: 'Ultracode' },
       // Stacked
-      { id: 'barcodeCodablockf', icon: 'reorder-four-outline', color: '#556B2F', barcodeName: 'Codablock F' },
-      { id: 'barcodeCode16k', icon: 'reorder-four-outline', color: '#6B8E23', barcodeName: 'Code 16K' },
-      { id: 'barcodeCode49', icon: 'reorder-four-outline', color: '#808000', barcodeName: 'Code 49' },
+      { id: 'barcodeCodablockf', icon: 'reorder-four-outline', barcodeName: 'Codablock F' },
+      { id: 'barcodeCode16k', icon: 'reorder-four-outline', barcodeName: 'Code 16K' },
+      { id: 'barcodeCode49', icon: 'reorder-four-outline', barcodeName: 'Code 49' },
       // Automotive
-      { id: 'barcodeVin', icon: 'car-outline', color: '#8B4513', barcodeName: 'VIN' },
+      { id: 'barcodeVin', icon: 'car-outline', barcodeName: 'VIN' },
     ],
   },
   backup: {
     titleKey: 'proFeatures.backupFeatures',
     features: [
       // iCloud는 iOS에만 있다. Android에서 보여주면 광고를 보고 해제해도 쓸 곳이 없다
-      ...(Platform.OS === 'ios' ? [{ id: 'icloudBackup', icon: 'cloud-outline', color: '#2F6FEB' }] : []),
-      { id: 'googleDriveBackup', icon: 'logo-google', color: '#4285F4' },
+      ...(Platform.OS === 'ios' ? [{ id: 'icloudBackup', icon: 'cloud-outline' }] : []),
+      { id: 'googleDriveBackup', icon: 'logo-google' },
     ],
   },
 };
@@ -207,12 +207,15 @@ export default function ProFeaturesScreen() {
     showQrStyleUnlockAlert();
   };
 
-  // 진행률 뱃지 렌더링
+  // 잠금 상태 배지: 해제됨(초록) · 광고 시청 중(파랑, n/m) · 잠김(회색, 필요한 광고 수)
   const renderProgressBadge = (featureId, isUnlocked) => {
     if (isUnlocked) {
       return (
-        <View style={[s.checkBadge, { backgroundColor: colors.success }]}>
-          <Ionicons name="checkmark" size={12} color="#fff" />
+        <View style={[s.badge, { backgroundColor: colors.successSoft }]}>
+          <Ionicons name="checkmark" size={12} color={colors.success} />
+          <Text style={[s.badgeText, { color: colors.success, fontFamily: fonts.semiBold }]}>
+            {t('featureLock.unlocked')}
+          </Text>
         </View>
       );
     }
@@ -221,46 +224,56 @@ export default function ProFeaturesScreen() {
     const hasProgress = current > 0;
 
     return (
-      <View style={[
-        s.progressBadge,
-        { backgroundColor: hasProgress ? colors.primary : (isDark ? '#333' : '#E5E5EA') }
-      ]}>
-        <Text style={[
-          s.progressText,
-          { color: hasProgress ? '#fff' : colors.text, fontFamily: fonts.semiBold }
-        ]}>
+      <View style={[s.badge, { backgroundColor: hasProgress ? colors.primarySoft : colors.raised }]}>
+        <Ionicons
+          name={hasProgress ? 'play' : 'lock-closed'}
+          size={11}
+          color={hasProgress ? colors.primaryText : colors.textSecondary}
+        />
+        <Text style={[s.badgeText, { color: hasProgress ? colors.primaryText : colors.textSecondary, fontFamily: fonts.semiBold }]}>
           {hasProgress ? `${current}/${required}` : required}
         </Text>
       </View>
     );
   };
 
-  // 기능 아이템 렌더링
-  const renderFeatureItem = (feature, onPress) => {
-    const featureConfig = LOCKED_FEATURES[feature.id];
-    if (!featureConfig) return null;
-
+  // 기능 행 렌더링
+  const renderFeatureItem = (feature, onPress, isLast) => {
     const unlocked = !isLocked(feature.id);
 
     return (
       <MaterialPressable
         key={feature.id}
-        style={[
-          s.featureItem,
-          { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' },
-          unlocked && { borderColor: colors.success, borderWidth: 2 }
-        ]}
+        style={[s.row, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight }]}
         onPress={() => onPress(feature.id)}
         activeOpacity={0.7}
+        accessibilityRole="button"
       >
-        <View style={[s.featureIconContainer, { backgroundColor: `${feature.color}15` }]}>
-          <Ionicons name={feature.icon} size={24} color={feature.color} />
-        </View>
-        <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={2}>
+        <Ionicons name={feature.icon} size={20} color={colors.textSecondary} />
+        <Text style={[s.rowLabel, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
           {feature.barcodeName || feature.styleName || feature.typeName || t(`proFeatures.features.${feature.id}`) || feature.id}
         </Text>
         {renderProgressBadge(feature.id, unlocked)}
       </MaterialPressable>
+    );
+  };
+
+  // 섹션: 카드 밖 머리글(+설명) + 행을 묶은 카드 하나
+  const renderSection = (title, desc, features, onPress) => {
+    const items = features.filter((feature) => LOCKED_FEATURES[feature.id]);
+    if (items.length === 0) return null;
+    return (
+      <>
+        <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+          {title}
+        </Text>
+        {desc ? (
+          <Text style={[s.sectionDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{desc}</Text>
+        ) : null}
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {items.map((feature, index) => renderFeatureItem(feature, onPress, index === items.length - 1))}
+        </View>
+      </>
     );
   };
 
@@ -291,27 +304,49 @@ export default function ProFeaturesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
+      {/* 하위 화면 헤더: 뒤로 · (제목은 아래 큰 제목이 맡는다) */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          onPress={() => router.back()}
+          style={s.headerButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('proFeatures.title') || '기능 잠금 해제'}
-        </Text>
-        <View style={{ width: 40 }} />
+        <View style={s.headerTitleSpacer} />
+        <View style={s.headerButton} />
       </View>
 
-      <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
+      <ScrollView
+        style={s.content}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: insets.bottom + 32 }]}
+      >
+        {/* 히어로: 아이콘 타일 + 큰 제목 + 설명 */}
+        <View style={s.hero}>
+          <View style={[s.heroIcon, { backgroundColor: colors.primarySoft }]}>
+            <Ionicons name="lock-open-outline" size={28} color={colors.primaryText} />
+          </View>
+          <Text accessibilityRole="header" style={[s.heroTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('proFeatures.title') || '기능 잠금 해제'}
+          </Text>
+          <Text style={[s.heroSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            {t('proFeatures.description')}
+          </Text>
+        </View>
+
         {/* 전체 진행률 표시 */}
-        <View style={[s.progressCard, { backgroundColor: colors.surface }]}>
+        <View style={[s.progressCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.progressHeader}>
-            <Ionicons name="lock-open-outline" size={24} color={colors.primary} />
-            <Text style={[s.progressTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+            <Text style={[s.progressTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
               {t('proFeatures.unlockProgress') || '해제 진행률'}
             </Text>
+            <Text style={[s.progressCount, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              {progress.unlocked}
+              <Text style={{ color: colors.textTertiary }}> / {progress.total}</Text>
+            </Text>
           </View>
-          <View style={s.progressBarContainer}>
+          <View style={[s.progressBarContainer, { backgroundColor: colors.raised }]}>
             <View
               style={[
                 s.progressBar,
@@ -322,105 +357,72 @@ export default function ProFeaturesScreen() {
               ]}
             />
           </View>
-          <Text style={[s.progressText2, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-            {progress.unlocked} / {progress.total} {t('proFeatures.featuresUnlocked') || '기능 해제됨'}
-          </Text>
-          {/* 광고 로딩 상태 표시 */}
-          <View style={s.adStatusRow}>
-            <Ionicons
-              name={isAdLoaded ? 'checkmark-circle' : 'time-outline'}
-              size={16}
-              color={isAdLoaded ? colors.success : colors.textSecondary}
-            />
-            <Text style={[s.adStatusText, { color: isAdLoaded ? colors.success : colors.textSecondary, fontFamily: fonts.regular }]}>
-              {isAdLoaded
-                ? (t('proFeatures.adReady') || '광고 준비됨')
-                : isAdLoading
-                  ? (t('proFeatures.adLoading') || '광고 로딩 중...')
-                  : (t('proFeatures.adNotLoaded') || '광고 로딩 대기')}
+          <View style={s.progressFooter}>
+            <Text style={[s.progressText2, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+              {progress.unlocked} / {progress.total} {t('proFeatures.featuresUnlocked') || '기능 해제됨'}
             </Text>
+            {/* 광고 로딩 상태 표시 */}
+            <View style={s.adStatusRow}>
+              <Ionicons
+                name={isAdLoaded ? 'checkmark-circle' : 'time-outline'}
+                size={14}
+                color={isAdLoaded ? colors.success : colors.textSecondary}
+              />
+              <Text style={[s.adStatusText, { color: isAdLoaded ? colors.success : colors.textSecondary, fontFamily: fonts.medium }]}>
+                {isAdLoaded
+                  ? (t('proFeatures.adReady') || '광고 준비됨')
+                  : isAdLoading
+                    ? (t('proFeatures.adLoading') || '광고 로딩 중...')
+                    : (t('proFeatures.adNotLoaded') || '광고 로딩 대기')}
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* 설정 기능 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('proFeatures.settingsFeatures') || '설정 기능'}
-          </Text>
-          <View style={s.featureGrid}>
-            {FEATURE_CATEGORIES.settings.features.map((feature) =>
-              renderFeatureItem(feature, handleFeaturePress)
-            )}
-          </View>
-        </View>
+        {renderSection(
+          t('proFeatures.settingsFeatures') || '설정 기능',
+          null,
+          FEATURE_CATEGORIES.settings.features,
+          handleFeaturePress
+        )}
 
         {/* QR 타입 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.sectionHeader}>
-            <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-              {t('proFeatures.qrTypes') || 'QR 타입'}
-            </Text>
-            <Text style={[s.sectionSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('proFeatures.qrTypesDesc') || '텍스트 타입은 무료'}
-            </Text>
-          </View>
-          <View style={s.featureGrid}>
-            {FEATURE_CATEGORIES.qrTypes.features.map((feature) =>
-              renderFeatureItem(feature, handleFeaturePress)
-            )}
-          </View>
-        </View>
+        {renderSection(
+          t('proFeatures.qrTypes') || 'QR 타입',
+          t('proFeatures.qrTypesDesc') || '텍스트 타입은 무료',
+          FEATURE_CATEGORIES.qrTypes.features,
+          handleFeaturePress
+        )}
 
         {/* 바코드 타입 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.sectionHeader}>
-            <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-              {t('proFeatures.barcodeTypes') || '바코드 타입'}
-            </Text>
-            <Text style={[s.sectionSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('proFeatures.barcodeTypesDesc') || 'Code 128은 무료'}
-            </Text>
-          </View>
-          <View style={s.featureGrid}>
-            {FEATURE_CATEGORIES.barcodeTypes.features.map((feature) =>
-              renderFeatureItem(feature, handleFeaturePress)
-            )}
-          </View>
-        </View>
+        {renderSection(
+          t('proFeatures.barcodeTypes') || '바코드 타입',
+          t('proFeatures.barcodeTypesDesc') || 'Code 128은 무료',
+          FEATURE_CATEGORIES.barcodeTypes.features,
+          handleFeaturePress
+        )}
 
         {/* 백업/내보내기 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('proFeatures.backupFeatures') || '백업/내보내기'}
-          </Text>
-          <View style={s.featureGrid}>
-            {FEATURE_CATEGORIES.backup.features.map((feature) =>
-              renderFeatureItem(feature, handleFeaturePress)
-            )}
-          </View>
-        </View>
+        {renderSection(
+          t('proFeatures.backupFeatures') || '백업/내보내기',
+          null,
+          FEATURE_CATEGORIES.backup.features,
+          handleFeaturePress
+        )}
 
         {/* 광고 제거 버튼 - TODO: 추후 프로버전 출시 시 주석 해제 */}
         {/* <MaterialPressable
-          style={s.removeAdsButton}
+          style={[s.removeAdsButton, { backgroundColor: colors.primary }]}
           onPress={handleRemoveAds}
           activeOpacity={0.8}
+          accessibilityRole="button"
         >
-          <LinearGradient
-            colors={['#667eea', '#764ba2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.removeAdsGradient}
-          >
-            <Ionicons name="sparkles" size={20} color="#fff" />
-            <Text style={[s.removeAdsText, { fontFamily: fonts.bold }]}>
-              {t('proFeatures.removeAds') || '광고 제거하기'}
-            </Text>
-          </LinearGradient>
+          <Ionicons name="sparkles" size={18} color="#fff" />
+          <Text style={[s.removeAdsText, { fontFamily: fonts.semiBold }]}>
+            {t('proFeatures.removeAds') || '광고 제거하기'}
+          </Text>
         </MaterialPressable> */}
-
-        {/* 하단 여백 */}
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -433,233 +435,159 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
-  backButton: {
-    padding: 8,
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
+  headerButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+  headerTitleSpacer: {
+    flex: 1,
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
+  },
+  // 히어로
+  hero: {
+    paddingHorizontal: 4,
+    marginBottom: 20,
+  },
+  heroIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: RADIUS.control,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  heroTitle: {
+    ...TYPE.tabTitle,
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 6,
   },
   // 진행률 카드
   progressCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    padding: SPACE.card,
+    marginBottom: 10,
   },
   progressHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
   },
   progressTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  progressCount: {
+    fontSize: 15,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
   progressBarContainer: {
     height: 8,
-    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 4,
     overflow: 'hidden',
-    marginBottom: 12,
   },
   progressBar: {
     height: '100%',
     borderRadius: 4,
   },
+  progressFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 12,
+  },
   progressText2: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 8,
+    fontSize: 13,
+    flexShrink: 1,
   },
   adStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 8,
+    gap: 4,
+    flexShrink: 0,
   },
   adStatusText: {
     fontSize: 13,
   },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
-  },
+  // 섹션
   sectionHeader: {
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-  },
-  featureGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  featureItem: {
-    width: '31%',
-    marginHorizontal: '1.16%',
-    marginBottom: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  featureIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
     marginBottom: 8,
   },
-  featureName: {
-    fontSize: 11,
-    textAlign: 'center',
-    lineHeight: 14,
+  sectionDesc: {
+    ...TYPE.caption,
+    marginTop: -4,
+    marginHorizontal: 4,
+    marginBottom: 8,
   },
-  adCountBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  adCountText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  progressBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  themeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  themeItem: {
-    width: '31%',
-    marginHorizontal: '1.16%',
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  themePreviewContainer: {
-    width: '100%',
-    position: 'relative',
-  },
-  themePreview: {
-    width: '100%',
-    aspectRatio: 1.2,
-    borderRadius: 12,
-  },
-  themeAdBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  themeName: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  barcodeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
-  },
-  barcodeItem: {
-    width: '23%',
-    marginHorizontal: '1%',
-    marginBottom: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    borderRadius: 12,
-    alignItems: 'center',
-    position: 'relative',
-  },
-  barcodeName: {
-    fontSize: 11,
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 14,
-  },
-  checkBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  removeAdsButton: {
-    marginTop: 10,
-    borderRadius: 12,
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  removeAdsGradient: {
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  rowLabel: {
+    ...TYPE.body,
+    flex: 1,
+    minWidth: 0,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
+    flexShrink: 0,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
+  },
+  // 광고 제거 버튼 (주석 처리된 버튼용)
+  removeAdsButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
     gap: 8,
+    marginTop: 24,
   },
   removeAdsText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });
