@@ -1337,7 +1337,7 @@ function ScannerScreen() {
   }, [confirmToastData, showToast]);
 
   // 히스토리에 사진 추가 (백그라운드에서 사진 캡처 완료 후 호출)
-  const updateHistoryWithPhoto = useCallback(async (code, photoUri) => {
+  const updateHistoryWithPhoto = useCallback(async (code, photoUri, attempt = 0) => {
     if (!photoUri) return;
 
     try {
@@ -1368,6 +1368,9 @@ function ScannerScreen() {
           triggerSync();
           console.log('[updateHistoryWithPhoto] Photo added to history:', photoUri);
         }
+      } else if (attempt < 5) {
+        // 사진이 기록 저장(saveHistory)보다 먼저 끝나면 항목이 아직 없다 → 조금 뒤 다시 붙인다
+        setTimeout(() => updateHistoryWithPhoto(code, photoUri, attempt + 1), 400);
       }
     } catch (e) {
       console.error('Update history with photo error:', e);
@@ -2540,9 +2543,12 @@ function ScannerScreen() {
           let photoTimedOut = false;
           if (photoPromise) {
             const waitStartTime = Date.now();
+            // 결과 화면으로 넘어가면 바로 카메라를 끈다(setIsActive(false)). 촬영 중에 끄면 사진이 취소돼 저장되지 않았다
+            // → 카메라를 떠나는 경우엔 사진이 끝날 때까지(최대 2초) 기다린다. 카메라가 계속 켜져 있는 모드는 예전처럼 0.3초만
+            const willLeaveCamera = !batchScanEnabled && !multiCodeModeEnabledRef.current && resultWindowAutoOpenRef.current;
             const timeoutPromise = new Promise(resolve => setTimeout(() => {
               resolve({ timedOut: true });
-            }, 300));
+            }, willLeaveCamera ? 2000 : 300));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             const waitEndTime = Date.now();
 
@@ -2784,6 +2790,37 @@ function ScannerScreen() {
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
+
+  // 스캔 화면 아래 모드 알약: 한 개 / 여러 개(여러 코드 인식) / 연속(연속 스캔).
+  // 설정 화면의 두 모드 스위치와 같은 키를 같은 방식으로 쓴다(서로 배타, 켜면 URL 연동·실시간 전송·복권 인식은 꺼짐)
+  const currentScanMode = multiCodeModeEnabled ? 'multi' : batchScanEnabled ? 'continuous' : 'single';
+  const setScanMode = useCallback(async (mode) => {
+    if (mode === currentScanMode) return;
+    if (hapticEnabledRef.current) haptics.selection?.();
+    const multi = mode === 'multi';
+    const continuous = mode === 'continuous';
+    setMultiCodeModeEnabled(multi);
+    setBatchScanEnabled(continuous);
+    setScanResultMode(continuous ? 'toast' : 'popup');
+    if (mode !== 'single') {
+      setScanUrlEnabled(false);
+      setRealtimeSyncEnabled(false);
+      setLotteryScanEnabled(false);
+    }
+    try {
+      await AsyncStorage.multiSet([
+        ['multiCodeModeEnabled', String(multi)],
+        ['continuousScanEnabled', String(continuous)],
+        ['batchScanEnabled', String(continuous)],
+        ['scanResultMode', continuous ? 'toast' : 'popup'],
+        ...(mode !== 'single' ? [['realtimeSyncEnabled', 'false'], ['lotteryScanEnabled', 'false']] : []),
+      ]);
+      if (mode !== 'single') await SecureStore.setItemAsync('scanLinkEnabled', 'false');
+    } catch (error) {
+      console.error('Save scan mode error:', error);
+      feedback.error(t('settings.saveFailed'));
+    }
+  }, [currentScanMode, feedback, t]);
 
   // NFC: 읽은 값을 바코드와 같은 처리 과정으로 넘긴다 (type 'nfc')
   const handleBarCodeScannedRef = useRef(null);
@@ -3141,8 +3178,8 @@ function ScannerScreen() {
           onPress={() => setGroupModalVisible(true)}
           activeOpacity={0.8}
         >
-          <BlurView intensity={40} tint="light" style={styles.groupBadgeBlur}>
-            <Ionicons name="folder" size={16} color={SCAN_THEME.white} />
+          <BlurView intensity={40} tint="dark" style={styles.groupBadgeBlur}>
+            <Ionicons name="folder-outline" size={17} color={SCAN_THEME.white} />
             <Text style={[styles.groupBadgeText, { color: SCAN_THEME.white }]}>
               {currentGroupId === 'default' ? t('groupEdit.defaultGroup') :
                currentGroupId === 'lottery-lotto' ? t('lotteryScan.lotteryTypes.lotto645') :
@@ -3287,7 +3324,7 @@ function ScannerScreen() {
       >
         <BlurView
           intensity={40}
-          tint="light"
+          tint="dark"
           style={[styles.torchButton, torchOn && styles.torchButtonActive]}
         >
           <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={20} color={torchOn ? '#111' : SCAN_THEME.white} />
@@ -3305,10 +3342,10 @@ function ScannerScreen() {
       >
         <BlurView
           intensity={40}
-          tint="light"
+          tint="dark"
           style={styles.imagePickerButton}
         >
-          <Ionicons name="images" size={20} color={SCAN_THEME.white} />
+          <Ionicons name="images-outline" size={20} color={SCAN_THEME.white} />
         </BlurView>
       </TouchableOpacity>
 
@@ -3321,10 +3358,40 @@ function ScannerScreen() {
           accessibilityRole="button"
           style={[styles.imagePickerButtonContainer, { top: topOffset + 56 }]}
         >
-          <BlurView intensity={40} tint="light" style={styles.imagePickerButton}>
+          <BlurView intensity={40} tint="dark" style={styles.imagePickerButton}>
             <MaterialCommunityIcons name="nfc" size={20} color={SCAN_THEME.white} />
           </BlurView>
         </TouchableOpacity>
+      )}
+
+      {/* 조준 안내 + 모드 알약 (아래 카드·버튼이 떠 있으면 숨긴다) */}
+      {isActive && !lastScannedCode && !pendingMultiScanData && !(batchScanEnabled && batchScannedItems.length > 0)
+        && !(realtimeSyncEnabled && !activeSessionId) && !(scanConfirmMode === 'manual' && pendingScan) && (
+        <View style={[styles.modeArea, { bottom: tabBarOverlap + 20 }]} pointerEvents="box-none">
+          <Text style={styles.aimHint} maxFontSizeMultiplier={1.3}>{t('scanner.aimHint')}</Text>
+          <View style={styles.modePill} accessibilityRole="radiogroup">
+            {[
+              { id: 'single', label: t('scanner.modeSingle') },
+              { id: 'multi', label: t('scanner.modeMulti') },
+              { id: 'continuous', label: t('scanner.modeContinuous') },
+            ].map((m) => {
+              const on = currentScanMode === m.id;
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  onPress={() => setScanMode(m.id)}
+                  activeOpacity={0.8}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  hitSlop={{ top: 4, bottom: 4 }}
+                  style={[styles.modeOption, on && styles.modeOptionOn]}
+                >
+                  <Text style={[styles.modeOptionText, on && styles.modeOptionTextOn]} maxFontSizeMultiplier={1.3}>{m.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
       )}
 
       {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
@@ -3802,17 +3869,14 @@ const styles = StyleSheet.create({
   },
   groupBadge: {
     position: 'absolute',
-    // top은 인라인 스타일로 동적 설정
+    // top은 인라인 스타일로 동적 설정. 왼쪽 위(오른쪽은 사진·플래시 버튼)
+    left: 16,
+    maxWidth: '55%',
     overflow: 'hidden',
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: SCAN_THEME.glassBorder,
-    backgroundColor: SCAN_THEME.glassLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: SCAN_THEME.glassDark,
   },
   groupBadgeBlur: {
     flexDirection: 'row',
@@ -4004,7 +4068,7 @@ const styles = StyleSheet.create({
   torchButtonContainer: {
     position: 'absolute',
     // top은 인라인 스타일로 동적 설정
-    left: 20,
+    right: 16,
   },
   torchButton: {
     width: 44,
@@ -4013,17 +4077,59 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: SCAN_THEME.glassLight,
+    backgroundColor: SCAN_THEME.glassDark,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: SCAN_THEME.glassBorder,
   },
   torchButtonActive: {
     backgroundColor: 'rgba(255,255,255,0.92)',
   },
+  modeArea: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    gap: 14,
+  },
+  aimHint: {
+    color: SCAN_TEXT.primary,
+    fontSize: 14,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  modePill: {
+    flexDirection: 'row',
+    gap: 4,
+    padding: 4,
+    borderRadius: 22,
+    backgroundColor: SCAN_THEME.glassDark,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: SCAN_THEME.glassBorder,
+  },
+  modeOption: {
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    justifyContent: 'center',
+  },
+  modeOptionOn: {
+    backgroundColor: '#F2F4F7',
+  },
+  modeOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: SCAN_TEXT.secondary,
+  },
+  modeOptionTextOn: {
+    fontWeight: '600',
+    color: '#0B0D10',
+  },
   imagePickerButtonContainer: {
     position: 'absolute',
-    // top은 인라인 스타일로 동적 설정
-    right: 20,
+    // top은 인라인 스타일로 동적 설정. 플래시(오른쪽 끝) 왼쪽
+    right: 16 + 44 + 8,
   },
   imagePickerButton: {
     width: 44,
@@ -4032,7 +4138,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: SCAN_THEME.glassLight,
+    backgroundColor: SCAN_THEME.glassDark,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: SCAN_THEME.glassBorder,
   },
