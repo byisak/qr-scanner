@@ -39,6 +39,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import LockIcon, { HOT_PINK, LIGHT_PINK } from '../components/LockIcon';
 import { FREE_BARCODE_TYPES, FREE_QR_TYPES } from '../config/lockedFeatures';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -72,6 +73,8 @@ const DEFAULT_BARCODE_BCIDS = [
 const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'postal', 'stacked', 'automotive', 'other'];
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// QR 유형 3열 격자: 화면 좌우 여백과 칸 사이 간격을 뺀 너비를 3등분 (내림해서 줄바꿈 방지)
+const TYPE_GRID_ITEM_WIDTH = Math.floor((SCREEN_WIDTH - SPACE.screen * 2 - SPACE.gap * 2) / 3);
 
 const QR_TYPES = [
   { id: 'text', icon: 'text-outline', gradient: ['#43e97b', '#38f9d7'] },
@@ -1440,7 +1443,7 @@ export default function GeneratorScreen() {
               {t('generator.fields.urlLabel')}
             </Text>
             <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
               placeholder={t('generator.fields.urlPlaceholder')}
               placeholderTextColor={colors.textTertiary}
               value={data.url}
@@ -1459,7 +1462,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.nameLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.namePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.name}
@@ -1472,7 +1475,7 @@ export default function GeneratorScreen() {
                   {t('generator.fields.phoneLabel')}
                 </Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                   placeholder={t('generator.fields.phonePlaceholder')}
                   placeholderTextColor={colors.textTertiary}
                   value={data.phone}
@@ -1485,7 +1488,7 @@ export default function GeneratorScreen() {
                   {t('generator.fields.emailLabel')}
                 </Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                   placeholder={t('generator.fields.emailPlaceholder')}
                   placeholderTextColor={colors.textTertiary}
                   value={data.email}
@@ -1501,7 +1504,7 @@ export default function GeneratorScreen() {
                   {t('generator.fields.companyLabel')}
                 </Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                   placeholder={t('generator.fields.companyPlaceholder')}
                   placeholderTextColor={colors.textTertiary}
                   value={data.company}
@@ -1513,7 +1516,7 @@ export default function GeneratorScreen() {
                   {t('generator.fields.titleLabel')}
                 </Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                   placeholder={t('generator.fields.titlePlaceholder')}
                   placeholderTextColor={colors.textTertiary}
                   value={data.title}
@@ -1526,7 +1529,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.addressLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.addressPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.address}
@@ -1544,7 +1547,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.ssidLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.ssidPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.ssid}
@@ -1556,7 +1559,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.passwordLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.passwordPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.password}
@@ -1574,9 +1577,9 @@ export default function GeneratorScreen() {
                     key={sec}
                     style={[
                       s.securityButton,
-                      { 
-                        backgroundColor: data.security === sec ? colors.primary : colors.surface,
-                        borderColor: data.security === sec ? colors.primary : colors.border 
+                      {
+                        backgroundColor: data.security === sec ? colors.primarySoft : colors.background,
+                        borderColor: data.security === sec ? colors.primary : colors.border,
                       },
                     ]}
                     onPress={() => updateFormData('security', sec)}
@@ -1585,7 +1588,7 @@ export default function GeneratorScreen() {
                     accessibilityLabel={t(`generator.securityTypes.${sec}`)}
                     accessibilityState={{ selected: data.security === sec }}
                   >
-                    <Text style={[s.securityText, { color: data.security === sec ? '#fff' : colors.text }]}>
+                    <Text style={[s.securityText, { color: data.security === sec ? colors.primaryText : colors.textSecondary }]}>
                       {t(`generator.securityTypes.${sec}`)}
                     </Text>
                   </MaterialPressable>
@@ -1603,7 +1606,7 @@ export default function GeneratorScreen() {
               {t('generator.fields.textLabel')}
             </Text>
             <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
               placeholder={t('generator.fields.textPlaceholder')}
               placeholderTextColor={colors.textTertiary}
               value={data.text}
@@ -1620,7 +1623,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.recipientLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.recipientPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.recipient}
@@ -1634,7 +1637,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.subjectLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.subjectPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.subject}
@@ -1646,7 +1649,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.messageLabel')}
               </Text>
               <TextInput
-                style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.textArea, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.messagePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.message}
@@ -1667,7 +1670,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.phoneLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.phonePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.phone}
@@ -1680,7 +1683,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.messageLabel')}
               </Text>
               <TextInput
-                style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.textArea, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.messagePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.message}
@@ -1700,7 +1703,7 @@ export default function GeneratorScreen() {
               {t('generator.fields.phoneLabel')}
             </Text>
             <TextInput
-              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+              style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
               placeholder={t('generator.fields.phonePlaceholder')}
               placeholderTextColor={colors.textTertiary}
               value={data.phone}
@@ -1718,7 +1721,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.eventTitleLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.eventTitlePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.title}
@@ -1730,7 +1733,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.eventLocationLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.eventLocationPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.location}
@@ -1743,7 +1746,7 @@ export default function GeneratorScreen() {
                   {t('generator.fields.startDateLabel')}
                 </Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                   placeholder={t('generator.fields.startDate')}
                   placeholderTextColor={colors.textTertiary}
                   value={data.startDate}
@@ -1755,7 +1758,7 @@ export default function GeneratorScreen() {
                   {t('generator.fields.endDateLabel')}
                 </Text>
                 <TextInput
-                  style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                   placeholder={t('generator.fields.endDate')}
                   placeholderTextColor={colors.textTertiary}
                   value={data.endDate}
@@ -1768,7 +1771,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.descriptionLabel')}
               </Text>
               <TextInput
-                style={[s.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.textArea, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.descriptionPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.description}
@@ -1814,7 +1817,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.latitudeLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.latitudePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.latitude}
@@ -1827,7 +1830,7 @@ export default function GeneratorScreen() {
                 {t('generator.fields.longitudeLabel')}
               </Text>
               <TextInput
-                style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                 placeholder={t('generator.fields.longitudePlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={data.longitude}
@@ -1843,15 +1846,51 @@ export default function GeneratorScreen() {
     }
   };
 
+  // 미리보기 카드 아래 저장(주) · 공유(보조) 버튼 — QR/바코드 공통
+  const actionButtons = (
+    <View style={s.buttonRow}>
+      <MaterialPressable
+        style={[s.actionButton, { backgroundColor: colors.primary }]}
+        onPress={handleSaveImage}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={t('generator.save')}
+      >
+        <Ionicons name="download-outline" size={18} color="#fff" />
+        <Text style={[s.actionButtonText, { color: '#fff', fontWeight: '600' }]} numberOfLines={1}>
+          {t('generator.save')}
+        </Text>
+      </MaterialPressable>
+
+      <MaterialPressable
+        style={[s.actionButton, s.actionButtonSecondary, { backgroundColor: colors.raised, borderColor: colors.border }]}
+        onPress={handleShare}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={t('generator.share')}
+      >
+        <Ionicons name="share-outline" size={18} color={colors.text} />
+        <Text style={[s.actionButtonText, { color: colors.text }]} numberOfLines={1}>
+          {t('generator.share')}
+        </Text>
+      </MaterialPressable>
+    </View>
+  );
+
+  // 미리보기 아래 코드 값 한 줄 (사람이 읽는 값만. WiFi 비밀번호·연락처/일정 원문은 보이지 않게)
+  const showQrValueLine = ['website', 'text', 'clipboard', 'phone', 'email', 'location'].includes(selectedType);
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* 상단 그라데이션 */}
       <LinearGradient
-        colors={
-          isDark
-            ? ['rgba(0,0,0,1)', 'rgba(0,0,0,0.95)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']
-            : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
-        }
+        colors={[
+          colors.background,
+          colors.background + 'F2',
+          colors.background + 'B3',
+          colors.background + '4D',
+          colors.background + '00',
+        ]}
         locations={[0, 0.3, 0.6, 0.85, 1]}
         style={[s.statusBarGradient, { height: statusBarHeight }]}
       />
@@ -1875,11 +1914,11 @@ export default function GeneratorScreen() {
         </View>
 
         {/* 세그먼트 탭: QR 코드 / 바코드 */}
-        <View style={[s.segmentContainer, { backgroundColor: colors.surface }, IS_ANDROID && { backgroundColor: 'transparent', borderColor: colors.border }]}>
+        <View style={[s.segmentContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <MaterialPressable
             style={[
               s.segmentButton,
-              codeMode === 'qr' && { backgroundColor: IS_ANDROID ? colors.primary + '26' : colors.primary },
+              codeMode === 'qr' && { backgroundColor: colors.text },
             ]}
             onPress={() => handleCodeModeChange('qr')}
             activeOpacity={0.8}
@@ -1889,12 +1928,12 @@ export default function GeneratorScreen() {
           >
             <Ionicons
               name="qr-code-outline"
-              size={20}
-              color={codeMode === 'qr' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text}
+              size={18}
+              color={codeMode === 'qr' ? colors.background : colors.textSecondary}
             />
             <Text style={[
               s.segmentText,
-              { color: codeMode === 'qr' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text }
+              { color: codeMode === 'qr' ? colors.background : colors.textSecondary, fontWeight: codeMode === 'qr' ? '600' : '500' }
             ]}>
               {t('generator.qrCode') || 'QR 코드'}
             </Text>
@@ -1902,7 +1941,7 @@ export default function GeneratorScreen() {
           <MaterialPressable
             style={[
               s.segmentButton,
-              codeMode === 'barcode' && { backgroundColor: IS_ANDROID ? colors.primary + '26' : colors.primary },
+              codeMode === 'barcode' && { backgroundColor: colors.text },
             ]}
             onPress={() => {
               if (isLocked('barcodeTab')) {
@@ -1918,19 +1957,19 @@ export default function GeneratorScreen() {
           >
             <Ionicons
               name="barcode-outline"
-              size={20}
-              color={codeMode === 'barcode' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text}
+              size={18}
+              color={codeMode === 'barcode' ? colors.background : colors.textSecondary}
             />
             <Text style={[
               s.segmentText,
-              { color: codeMode === 'barcode' ? (IS_ANDROID ? colors.primary : '#fff') : colors.text }
+              { color: codeMode === 'barcode' ? colors.background : colors.textSecondary, fontWeight: codeMode === 'barcode' ? '600' : '500' }
             ]}>
               {t('generator.barcode') || '바코드'}
             </Text>
             <LockIcon
               featureId="barcodeTab"
               size={14}
-              color={codeMode === 'barcode' ? (IS_ANDROID ? colors.primary : '#fff') : colors.textTertiary}
+              color={codeMode === 'barcode' ? colors.background : colors.textTertiary}
               style={{ marginLeft: 4 }}
             />
           </MaterialPressable>
@@ -1939,63 +1978,58 @@ export default function GeneratorScreen() {
         {/* QR 코드 모드 */}
         {codeMode === 'qr' && (
           <>
-            {/* Type Selector */}
-            <View style={[s.typeSelectorSection, { backgroundColor: colors.surface }]}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.typesContainerInSection}
-                style={s.typesScrollInSection}
-              >
+            {/* Type Selector: 3열 격자 (선택 = 연한 파랑 바탕 + 파랑 테두리) */}
+            <View style={s.typeGrid}>
               {orderedQrTypes.map((type) => {
                 const isTypeLocked = isQrTypeLocked(type.id);
                 const qrFeatureId = getQrTypeFeatureId(type.id);
                 const hasQrProgress = qrFeatureId ? getAdProgress(qrFeatureId).current > 0 : false;
                 const qrLockColor = hasQrProgress ? LIGHT_PINK : HOT_PINK;
+                const isTypeSelected = selectedType === type.id;
                 return (
                   <MaterialPressable
                     key={type.id}
                     style={[
-                      s.typeButton,
+                      s.typeGridButton,
                       {
-                        backgroundColor: selectedType === type.id ? colors.primary : colors.surface,
-                        borderColor: selectedType === type.id ? colors.primary : colors.border,
+                        backgroundColor: isTypeSelected ? colors.primarySoft : colors.surface,
+                        borderColor: isTypeSelected ? colors.primary : colors.border,
                       },
                     ]}
                     onPress={() => handleTypeSelect(type.id)}
                     activeOpacity={0.7}
                     accessibilityRole="button"
                     accessibilityLabel={t(`generator.types.${type.id}`)}
-                    accessibilityState={{ selected: selectedType === type.id }}
+                    accessibilityState={{ selected: isTypeSelected }}
                   >
-                    <View style={[
-                      s.typeIconContainer,
-                      { backgroundColor: selectedType === type.id ? 'rgba(255,255,255,0.2)' : colors.background }
-                    ]}>
-                      <Ionicons
-                        name={type.icon}
-                        size={22}
-                        color={selectedType === type.id ? '#fff' : colors.text}
-                      />
-                      {isTypeLocked && (
-                        <View style={s.typeLockIcon}>
-                          <Ionicons name="lock-closed" size={12} color={qrLockColor} />
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[
-                      s.typeText,
-                      { color: selectedType === type.id ? '#fff' : colors.text }
-                    ]}>
+                    <Ionicons
+                      name={type.icon}
+                      size={16}
+                      color={isTypeSelected ? colors.primaryText : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        s.typeGridText,
+                        { color: isTypeSelected ? colors.primaryText : colors.textSecondary, fontWeight: isTypeSelected ? '600' : '500' },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.8}
+                    >
                       {t(`generator.types.${type.id}`)}
                     </Text>
+                    {isTypeLocked && (
+                      <View style={s.typeLockIcon}>
+                        <Ionicons name="lock-closed" size={11} color={qrLockColor} />
+                      </View>
+                    )}
                   </MaterialPressable>
                 );
               })}
               {/* 순서 변경 버튼 */}
               <MaterialPressable
                 style={[
-                  s.typeButton,
+                  s.typeGridButton,
                   { backgroundColor: colors.surface, borderColor: colors.border }
                 ]}
                 onPress={() => setQrTypeReorderVisible(true)}
@@ -2003,14 +2037,16 @@ export default function GeneratorScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('generator.reorder') || '순서'}
               >
-                <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
-                  <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
-                </View>
-                <Text style={[s.typeText, { color: colors.textSecondary }]}>
+                <Ionicons name="swap-vertical" size={16} color={colors.textSecondary} />
+                <Text
+                  style={[s.typeGridText, { color: colors.textSecondary, fontWeight: '500' }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
                   {t('generator.reorder') || '순서'}
                 </Text>
               </MaterialPressable>
-              </ScrollView>
             </View>
 
             {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
@@ -2022,12 +2058,12 @@ export default function GeneratorScreen() {
             />
 
             {/* Form Section */}
-            <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+            <View style={[s.formSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={s.formHeader}>
                 <Ionicons
                   name="create-outline"
-                  size={20}
-                  color={colors.primary}
+                  size={18}
+                  color={colors.textSecondary}
                 />
                 <Text style={[s.formTitle, { color: colors.text }]}>
                   {t('generator.formTitle')}
@@ -2044,12 +2080,11 @@ export default function GeneratorScreen() {
         {codeMode === 'barcode' && (
           <>
             {/* 바코드 포맷 선택 */}
-            <View style={[s.typeSelectorSection, { backgroundColor: colors.surface }]}>
+            <View style={s.typeSelectorSection}>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={s.typesContainerInSection}
-                style={s.typesScrollInSection}
               >
               {displayedBarcodeTypes.map((format) => {
                 const isSelected = selectedBarcodeFormat === format.bcid;
@@ -2058,9 +2093,8 @@ export default function GeneratorScreen() {
                     key={format.bcid}
                     style={[
                       s.typeButton,
-                      s.typeButtonNoIcon,
                       {
-                        backgroundColor: isSelected ? colors.primary : colors.surface,
+                        backgroundColor: isSelected ? colors.primarySoft : colors.surface,
                         borderColor: isSelected ? colors.primary : colors.border,
                       },
                     ]}
@@ -2072,13 +2106,13 @@ export default function GeneratorScreen() {
                   >
                     <Text style={[
                       s.typeTextMain,
-                      { color: isSelected ? '#fff' : colors.text, fontFamily: fonts.semiBold }
+                      { color: isSelected ? colors.primaryText : colors.text, fontFamily: fonts.semiBold }
                     ]}>
                       {format.name}
                     </Text>
                     <Text style={[
                       s.typeDesc,
-                      { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textTertiary, fontFamily: fonts.regular }
+                      { color: isSelected ? colors.primaryText : colors.textTertiary, fontFamily: fonts.regular }
                     ]} numberOfLines={1}>
                       {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
                     </Text>
@@ -2090,7 +2124,7 @@ export default function GeneratorScreen() {
               <MaterialPressable
                 style={[
                   s.typeButton,
-                  s.addBarcodeButton,
+                  s.typeButtonInline,
                   {
                     backgroundColor: colors.surface,
                     borderColor: colors.border,
@@ -2102,17 +2136,12 @@ export default function GeneratorScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('generator.addBarcode') || '더보기'}
               >
-                <View style={[
-                  s.typeIconContainer,
-                  { backgroundColor: colors.background }
-                ]}>
-                  <Ionicons
-                    name="add"
-                    size={28}
-                    color={colors.primary}
-                  />
-                </View>
-                <Text style={[s.typeText, { color: colors.primary }]}>
+                <Ionicons
+                  name="add"
+                  size={20}
+                  color={colors.primaryText}
+                />
+                <Text style={[s.typeText, { color: colors.primaryText }]}>
                   {t('generator.addBarcode') || '더보기'}
                 </Text>
               </MaterialPressable>
@@ -2121,6 +2150,7 @@ export default function GeneratorScreen() {
               <MaterialPressable
                 style={[
                   s.typeButton,
+                  s.typeButtonInline,
                   { backgroundColor: colors.surface, borderColor: colors.border }
                 ]}
                 onPress={() => setBarcodeReorderVisible(true)}
@@ -2128,9 +2158,7 @@ export default function GeneratorScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t('generator.reorder') || '순서'}
               >
-                <View style={[s.typeIconContainer, { backgroundColor: colors.background }]}>
-                  <Ionicons name="swap-vertical" size={22} color={colors.textSecondary} />
-                </View>
+                <Ionicons name="swap-vertical" size={18} color={colors.textSecondary} />
                 <Text style={[s.typeText, { color: colors.textSecondary }]}>
                   {t('generator.reorder') || '순서'}
                 </Text>
@@ -2147,12 +2175,12 @@ export default function GeneratorScreen() {
             />
 
             {/* 바코드 입력 폼 */}
-            <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+            <View style={[s.formSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={s.formHeader}>
                 <Ionicons
                   name="barcode-outline"
-                  size={20}
-                  color={colors.primary}
+                  size={18}
+                  color={colors.textSecondary}
                 />
                 <Text style={[s.formTitle, { color: colors.text }]}>
                   {selectedBarcodeInfo.name} - {t('generator.barcodeInput') || '바코드 값 입력'}
@@ -2165,7 +2193,7 @@ export default function GeneratorScreen() {
                     style={[
                       s.input,
                       {
-                        backgroundColor: colors.surface,
+                        backgroundColor: colors.background,
                         borderColor: barcodeError ? colors.error : colors.border,
                         color: colors.text
                       }
@@ -2179,9 +2207,9 @@ export default function GeneratorScreen() {
                     maxLength={selectedBarcodeInfo.fixedLength ? selectedBarcodeInfo.fixedLength + 1 : undefined}
                   />
                   {barcodeError && (
-                    <View style={s.errorContainer}>
-                      <Ionicons name="alert-circle" size={14} color="#dc2626" />
-                      <Text style={s.errorTextRed}>
+                    <View style={[s.errorContainer, { backgroundColor: colors.errorSoft }]}>
+                      <Ionicons name="alert-circle" size={14} color={colors.error} />
+                      <Text style={[s.errorTextRed, { color: colors.error }]}>
                         {barcodeError}
                       </Text>
                     </View>
@@ -2199,7 +2227,7 @@ export default function GeneratorScreen() {
             </View>
 
             {/* 바코드 스타일 설정 */}
-            <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+            <View style={[s.formSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <MaterialPressable
                 style={s.formHeaderCollapsible}
                 onPress={() => setBarcodeSettingsExpanded(!barcodeSettingsExpanded)}
@@ -2211,8 +2239,8 @@ export default function GeneratorScreen() {
                 <View style={s.formHeaderLeft}>
                   <Ionicons
                     name="options-outline"
-                    size={20}
-                    color={colors.primary}
+                    size={18}
+                    color={colors.textSecondary}
                   />
                   <Text style={[s.formTitle, { color: colors.text }]}>
                     {t('generator.barcodeSettings') || '바코드 설정'}
@@ -2237,7 +2265,7 @@ export default function GeneratorScreen() {
                       key={tab.id}
                       style={[
                         s.settingsTab,
-                        barcodeSettingsTab === tab.id && { backgroundColor: colors.primary },
+                        barcodeSettingsTab === tab.id && { backgroundColor: colors.text },
                       ]}
                       onPress={() => setBarcodeSettingsTab(tab.id)}
                       accessibilityRole="tab"
@@ -2247,11 +2275,11 @@ export default function GeneratorScreen() {
                       <Ionicons
                         name={tab.icon}
                         size={16}
-                        color={barcodeSettingsTab === tab.id ? '#fff' : colors.textSecondary}
+                        color={barcodeSettingsTab === tab.id ? colors.background : colors.textSecondary}
                       />
                       <Text style={[
                         s.settingsTabText,
-                        { color: barcodeSettingsTab === tab.id ? '#fff' : colors.textSecondary }
+                        { color: barcodeSettingsTab === tab.id ? colors.background : colors.textSecondary }
                       ]}>
                         {tab.label}
                       </Text>
@@ -2267,12 +2295,12 @@ export default function GeneratorScreen() {
                       <View style={s.settingItemVertical}>
                         <View style={s.settingLabelRowSpaced}>
                           <View style={s.settingLabelRow}>
-                            <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                            <Ionicons name="resize-outline" size={18} color={colors.textSecondary} />
                             <Text style={[s.settingLabel, { color: colors.text }]}>
                               {t('generator.barcodeWidth') || '너비'}
                             </Text>
                           </View>
-                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.scale}x</Text>
+                          <Text style={[s.sliderValue, { color: colors.primaryText }]}>{barcodeSettings.scale}x</Text>
                         </View>
                         <Slider
                           style={s.slider}
@@ -2292,12 +2320,12 @@ export default function GeneratorScreen() {
                       <View style={s.settingItemVertical}>
                         <View style={s.settingLabelRowSpaced}>
                           <View style={s.settingLabelRow}>
-                            <Ionicons name="swap-vertical-outline" size={18} color={colors.primary} />
+                            <Ionicons name="swap-vertical-outline" size={18} color={colors.textSecondary} />
                             <Text style={[s.settingLabel, { color: colors.text }]}>
                               {t('generator.barcodeHeight') || '높이'}
                             </Text>
                           </View>
-                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.height}</Text>
+                          <Text style={[s.sliderValue, { color: colors.primaryText }]}>{barcodeSettings.height}</Text>
                         </View>
                         <Slider
                           style={s.slider}
@@ -2316,7 +2344,7 @@ export default function GeneratorScreen() {
 
                       <View style={s.settingItem}>
                         <View style={s.settingLabelRow}>
-                          <Ionicons name="refresh-outline" size={18} color={colors.primary} />
+                          <Ionicons name="refresh-outline" size={18} color={colors.textSecondary} />
                           <Text style={[s.settingLabel, { color: colors.text }]}>
                             {t('generator.barcodeRotate') || '회전'}
                           </Text>
@@ -2332,14 +2360,14 @@ export default function GeneratorScreen() {
                               key={`rotate-${item.value}`}
                               style={[
                                 s.barcodeOptionBtn,
-                                barcodeSettings.rotate === item.value && { backgroundColor: colors.primary },
+                                barcodeSettings.rotate === item.value && { backgroundColor: colors.text },
                               ]}
                               onPress={() => setBarcodeSettings((prev) => ({ ...prev, rotate: item.value }))}
                               accessibilityRole="button"
                               accessibilityLabel={`${t('generator.barcodeRotate') || '회전'} ${item.label}`}
                               accessibilityState={{ selected: barcodeSettings.rotate === item.value }}
                             >
-                              <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? '#fff' : colors.text }]}>
+                              <Text style={[s.barcodeOptionText, { color: barcodeSettings.rotate === item.value ? colors.background : colors.text }]}>
                                 {item.label}
                               </Text>
                             </MaterialPressable>
@@ -2354,7 +2382,7 @@ export default function GeneratorScreen() {
                     <>
                       <View style={s.settingItem}>
                         <View style={s.settingLabelRow}>
-                          <Ionicons name="text-outline" size={18} color={colors.primary} />
+                          <Ionicons name="text-outline" size={18} color={colors.textSecondary} />
                           <Text style={[s.settingLabel, { color: colors.text }]}>
                             {t('generator.barcodeShowText') || '숫자 표시'}
                           </Text>
@@ -2363,26 +2391,26 @@ export default function GeneratorScreen() {
                           <MaterialPressable
                             style={[
                               s.toggleButton,
-                              barcodeSettings.showText && { backgroundColor: colors.primary },
+                              barcodeSettings.showText && { backgroundColor: colors.text },
                             ]}
                             onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: true }))}
                             accessibilityRole="button"
                             accessibilityLabel={`${t('generator.barcodeShowText') || '숫자 표시'} ON`}
                             accessibilityState={{ selected: !!barcodeSettings.showText }}
                           >
-                            <Text style={[s.toggleText, { color: barcodeSettings.showText ? '#fff' : colors.text }]}>ON</Text>
+                            <Text style={[s.toggleText, { color: barcodeSettings.showText ? colors.background : colors.text }]}>ON</Text>
                           </MaterialPressable>
                           <MaterialPressable
                             style={[
                               s.toggleButton,
-                              !barcodeSettings.showText && { backgroundColor: colors.primary },
+                              !barcodeSettings.showText && { backgroundColor: colors.text },
                             ]}
                             onPress={() => setBarcodeSettings((prev) => ({ ...prev, showText: false }))}
                             accessibilityRole="button"
                             accessibilityLabel={`${t('generator.barcodeShowText') || '숫자 표시'} OFF`}
                             accessibilityState={{ selected: !barcodeSettings.showText }}
                           >
-                            <Text style={[s.toggleText, { color: !barcodeSettings.showText ? '#fff' : colors.text }]}>OFF</Text>
+                            <Text style={[s.toggleText, { color: !barcodeSettings.showText ? colors.background : colors.text }]}>OFF</Text>
                           </MaterialPressable>
                         </View>
                       </View>
@@ -2392,12 +2420,12 @@ export default function GeneratorScreen() {
                       <View style={s.settingItemVertical}>
                         <View style={s.settingLabelRowSpaced}>
                           <View style={s.settingLabelRow}>
-                            <Ionicons name="text" size={18} color={colors.primary} />
+                            <Ionicons name="text" size={18} color={colors.textSecondary} />
                             <Text style={[s.settingLabel, { color: colors.text }]}>
                               {t('generator.barcodeFontSize') || '글자 크기'}
                             </Text>
                           </View>
-                          <Text style={[s.sliderValue, { color: colors.primary }]}>{barcodeSettings.fontSize}</Text>
+                          <Text style={[s.sliderValue, { color: colors.primaryText }]}>{barcodeSettings.fontSize}</Text>
                         </View>
                         <Slider
                           style={s.slider}
@@ -2418,7 +2446,7 @@ export default function GeneratorScreen() {
                           <View style={[s.settingDivider, { backgroundColor: colors.border }]} />
                           <View style={s.settingItemVertical}>
                           <View style={s.settingLabelRow}>
-                            <Ionicons name="create-outline" size={18} color={colors.primary} />
+                            <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
                             <Text style={[s.settingLabel, { color: colors.text }]}>
                               {t('generator.barcodeCustomText') || '표시 텍스트'}
                             </Text>
@@ -2449,12 +2477,12 @@ export default function GeneratorScreen() {
                     <View style={s.settingItemVertical}>
                       <View style={s.settingLabelRowSpaced}>
                         <View style={s.settingLabelRow}>
-                          <Ionicons name="image-outline" size={18} color={colors.primary} />
+                          <Ionicons name="image-outline" size={18} color={colors.textSecondary} />
                           <Text style={[s.settingLabel, { color: colors.text }]}>
                             {t('generator.saveQuality') || '저장 품질'}
                           </Text>
                         </View>
-                        <Text style={[s.sliderValue, { color: colors.primary }]}>
+                        <Text style={[s.sliderValue, { color: colors.primaryText }]}>
                           {HIGH_RES_LEVELS[highResLevel].label}
                         </Text>
                       </View>
@@ -2465,7 +2493,7 @@ export default function GeneratorScreen() {
                             key={`quality-${item.level}`}
                             style={[
                               s.qualityLevelBtn,
-                              highResLevel === item.level && { backgroundColor: colors.primary },
+                              highResLevel === item.level && { backgroundColor: colors.text },
                             ]}
                             onPress={() => setHighResLevel(item.level)}
                             accessibilityRole="button"
@@ -2474,7 +2502,7 @@ export default function GeneratorScreen() {
                           >
                             <Text style={[
                               s.qualityLevelText,
-                              { color: highResLevel === item.level ? '#fff' : colors.text }
+                              { color: highResLevel === item.level ? colors.background : colors.text }
                             ]}>
                               {item.level === 0 ? (t('generator.qualityLevels.fast') || '빠름') : item.level}
                             </Text>
@@ -2515,7 +2543,7 @@ export default function GeneratorScreen() {
 
         {/* QR 스타일 설정 - QR 모드일 때만 */}
         {codeMode === 'qr' && (
-          <View style={[s.formSection, { backgroundColor: colors.surface }]}>
+          <View style={[s.formSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <MaterialPressable
               style={s.formHeaderCollapsible}
               onPress={() => setQrSettingsExpanded(!qrSettingsExpanded)}
@@ -2527,8 +2555,8 @@ export default function GeneratorScreen() {
               <View style={s.formHeaderLeft}>
                 <Ionicons
                   name="color-palette-outline"
-                  size={20}
-                  color={colors.primary}
+                  size={18}
+                  color={colors.textSecondary}
                 />
                 <Text style={[s.formTitle, { color: colors.text }]}>
                   {t('generator.qrStyle.title') || 'QR 스타일'}
@@ -2562,7 +2590,7 @@ export default function GeneratorScreen() {
                       key={tab.id}
                       style={[
                         s.qrSettingsTab,
-                        qrSettingsTab === tab.id && { backgroundColor: colors.primary },
+                        qrSettingsTab === tab.id && { backgroundColor: colors.text },
                       ]}
                       onPress={() => setQrSettingsTab(tab.id)}
                       accessibilityRole="tab"
@@ -2572,11 +2600,11 @@ export default function GeneratorScreen() {
                     <Ionicons
                       name={tab.icon}
                       size={16}
-                      color={qrSettingsTab === tab.id ? '#fff' : colors.textSecondary}
+                      color={qrSettingsTab === tab.id ? colors.background : colors.textSecondary}
                     />
                     <Text style={[
                       s.settingsTabText,
-                      { color: qrSettingsTab === tab.id ? '#fff' : colors.textSecondary }
+                      { color: qrSettingsTab === tab.id ? colors.background : colors.textSecondary }
                     ]}>
                       {tab.label}
                     </Text>
@@ -2699,7 +2727,7 @@ export default function GeneratorScreen() {
                         style={[
                           s.qrOptionButton,
                           {
-                            backgroundColor: qrStyle.dotType === type ? colors.primary : colors.inputBackground,
+                            backgroundColor: qrStyle.dotType === type ? colors.primarySoft : colors.inputBackground,
                             borderColor: qrStyle.dotType === type ? colors.primary : colors.border,
                           },
                         ]}
@@ -2709,7 +2737,7 @@ export default function GeneratorScreen() {
                         accessibilityLabel={`${t('generator.qrStyle.dotType') || '도트 타입'} ${type}`}
                         accessibilityState={{ selected: qrStyle.dotType === type }}
                       >
-                        <Text style={[s.qrOptionText, { color: qrStyle.dotType === type ? '#fff' : colors.text }]}>
+                        <Text style={[s.qrOptionText, { color: qrStyle.dotType === type ? colors.primaryText : colors.text }]}>
                           {type}
                         </Text>
                       </MaterialPressable>
@@ -2725,6 +2753,7 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.dotColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('dotColor')}
                       activeOpacity={0.7}
+                      hitSlop={4}
                       accessibilityRole="button"
                       accessibilityLabel={`${t('generator.qrStyle.dotColor') || '도트 색상'} - ${t('generator.a11y.customColor')}`}
                     >
@@ -2743,6 +2772,7 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, dotColor: presetColor, dotGradient: null }))}
                         activeOpacity={0.7}
+                        hitSlop={4}
                         accessibilityRole="button"
                         accessibilityLabel={`${t('generator.qrStyle.dotColor') || '도트 색상'} ${presetColor}`}
                         accessibilityState={{ selected: qrStyle.dotColor === presetColor }}
@@ -2765,7 +2795,7 @@ export default function GeneratorScreen() {
                         style={[
                           s.qrOptionButton,
                           {
-                            backgroundColor: qrStyle.cornerSquareType === type ? colors.primary : colors.inputBackground,
+                            backgroundColor: qrStyle.cornerSquareType === type ? colors.primarySoft : colors.inputBackground,
                             borderColor: qrStyle.cornerSquareType === type ? colors.primary : colors.border,
                           },
                         ]}
@@ -2775,7 +2805,7 @@ export default function GeneratorScreen() {
                         accessibilityLabel={`${t('generator.qrStyle.cornerSquareType') || '코너 스퀘어 타입'} ${type}`}
                         accessibilityState={{ selected: qrStyle.cornerSquareType === type }}
                       >
-                        <Text style={[s.qrOptionText, { color: qrStyle.cornerSquareType === type ? '#fff' : colors.text }]}>
+                        <Text style={[s.qrOptionText, { color: qrStyle.cornerSquareType === type ? colors.primaryText : colors.text }]}>
                           {type}
                         </Text>
                       </MaterialPressable>
@@ -2791,6 +2821,7 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerSquareColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('cornerSquareColor')}
                       activeOpacity={0.7}
+                      hitSlop={4}
                       accessibilityRole="button"
                       accessibilityLabel={`${t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'} - ${t('generator.a11y.customColor')}`}
                     >
@@ -2809,6 +2840,7 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareColor: presetColor }))}
                         activeOpacity={0.7}
+                        hitSlop={4}
                         accessibilityRole="button"
                         accessibilityLabel={`${t('generator.qrStyle.cornerSquareColor') || '코너 스퀘어 색상'} ${presetColor}`}
                         accessibilityState={{ selected: qrStyle.cornerSquareColor === presetColor }}
@@ -2826,7 +2858,7 @@ export default function GeneratorScreen() {
                         style={[
                           s.qrOptionButton,
                           {
-                            backgroundColor: qrStyle.cornerDotType === type ? colors.primary : colors.inputBackground,
+                            backgroundColor: qrStyle.cornerDotType === type ? colors.primarySoft : colors.inputBackground,
                             borderColor: qrStyle.cornerDotType === type ? colors.primary : colors.border,
                           },
                         ]}
@@ -2836,7 +2868,7 @@ export default function GeneratorScreen() {
                         accessibilityLabel={`${t('generator.qrStyle.cornerDotType') || '코너 도트 타입'} ${type}`}
                         accessibilityState={{ selected: qrStyle.cornerDotType === type }}
                       >
-                        <Text style={[s.qrOptionText, { color: qrStyle.cornerDotType === type ? '#fff' : colors.text }]}>
+                        <Text style={[s.qrOptionText, { color: qrStyle.cornerDotType === type ? colors.primaryText : colors.text }]}>
                           {type}
                         </Text>
                       </MaterialPressable>
@@ -2852,6 +2884,7 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.cornerDotColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('cornerDotColor')}
                       activeOpacity={0.7}
+                      hitSlop={4}
                       accessibilityRole="button"
                       accessibilityLabel={`${t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'} - ${t('generator.a11y.customColor')}`}
                     >
@@ -2870,6 +2903,7 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerDotColor: presetColor }))}
                         activeOpacity={0.7}
+                        hitSlop={4}
                         accessibilityRole="button"
                         accessibilityLabel={`${t('generator.qrStyle.cornerDotColor') || '코너 도트 색상'} ${presetColor}`}
                         accessibilityState={{ selected: qrStyle.cornerDotColor === presetColor }}
@@ -2891,6 +2925,7 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: qrStyle.backgroundColor || '#ffffff', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('backgroundColor')}
                       activeOpacity={0.7}
+                      hitSlop={4}
                       accessibilityRole="button"
                       accessibilityLabel={`${t('generator.qrStyle.backgroundColor') || '배경 색상'} - ${t('generator.a11y.customColor')}`}
                     >
@@ -2909,6 +2944,7 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setQrStyle(prev => ({ ...prev, backgroundColor: presetColor }))}
                         activeOpacity={0.7}
+                        hitSlop={4}
                         accessibilityRole="button"
                         accessibilityLabel={`${t('generator.qrStyle.backgroundColor') || '배경 색상'} ${presetColor}`}
                         accessibilityState={{ selected: qrStyle.backgroundColor === presetColor }}
@@ -2942,6 +2978,7 @@ export default function GeneratorScreen() {
                       ]}
                       onPress={() => setFrameTextColor(null)}
                       activeOpacity={0.7}
+                      hitSlop={4}
                       accessibilityRole="button"
                       accessibilityLabel={`${t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'} ${t('generator.a11y.autoColor')}`}
                       accessibilityState={{ selected: frameTextColor === null }}
@@ -2953,6 +2990,7 @@ export default function GeneratorScreen() {
                       style={[s.colorPickerButton, { backgroundColor: frameTextColor || '#000000', borderColor: colors.border }]}
                       onPress={() => setActiveColorPicker('frameTextColor')}
                       activeOpacity={0.7}
+                      hitSlop={4}
                       accessibilityRole="button"
                       accessibilityLabel={`${t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'} - ${t('generator.a11y.customColor')}`}
                     >
@@ -2972,6 +3010,7 @@ export default function GeneratorScreen() {
                         ]}
                         onPress={() => setFrameTextColor(presetColor)}
                         activeOpacity={0.7}
+                        hitSlop={4}
                         accessibilityRole="button"
                         accessibilityLabel={`${t('generator.qrStyle.frameTextColor') || '프레임 글자 색상'} ${presetColor}`}
                         accessibilityState={{ selected: frameTextColor === presetColor }}
@@ -2994,7 +3033,7 @@ export default function GeneratorScreen() {
                         style={[
                           s.qrOptionButton,
                           {
-                            backgroundColor: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.inputBackground,
+                            backgroundColor: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primarySoft : colors.inputBackground,
                             borderColor: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primary : colors.border,
                             flex: 1,
                           },
@@ -3005,10 +3044,10 @@ export default function GeneratorScreen() {
                         accessibilityLabel={`${t('generator.qrStyle.errorCorrection') || '오류 수정'} ${level}`}
                         accessibilityState={{ selected: (qrStyle.errorCorrectionLevel || 'M') === level }}
                       >
-                        <Text style={[s.qrOptionText, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? '#fff' : colors.text }]}>
+                        <Text style={[s.qrOptionText, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primaryText : colors.text }]}>
                           {level}
                         </Text>
-                        <Text style={[s.qrOptionSubtext, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
+                        <Text style={[s.qrOptionSubtext, { color: (qrStyle.errorCorrectionLevel || 'M') === level ? colors.primaryText : colors.textTertiary }]}>
                           {level === 'L' ? '7%' : level === 'M' ? '15%' : level === 'Q' ? '25%' : '30%'}
                         </Text>
                       </MaterialPressable>
@@ -3026,7 +3065,7 @@ export default function GeneratorScreen() {
                         style={[
                           s.qrOptionButton,
                           {
-                            backgroundColor: qrResLevel === item.level ? colors.primary : colors.inputBackground,
+                            backgroundColor: qrResLevel === item.level ? colors.primarySoft : colors.inputBackground,
                             borderColor: qrResLevel === item.level ? colors.primary : colors.border,
                             flex: 1,
                           },
@@ -3037,10 +3076,10 @@ export default function GeneratorScreen() {
                         accessibilityLabel={`${t('generator.saveQuality') || '저장 품질'} ${item.label}`}
                         accessibilityState={{ selected: qrResLevel === item.level }}
                       >
-                        <Text style={[s.qrOptionText, { color: qrResLevel === item.level ? '#fff' : colors.text }]}>
+                        <Text style={[s.qrOptionText, { color: qrResLevel === item.level ? colors.primaryText : colors.text }]}>
                           {item.label}
                         </Text>
-                        <Text style={[s.qrOptionSubtext, { color: qrResLevel === item.level ? 'rgba(255,255,255,0.7)' : colors.textTertiary }]}>
+                        <Text style={[s.qrOptionSubtext, { color: qrResLevel === item.level ? colors.primaryText : colors.textTertiary }]}>
                           {item.time}
                         </Text>
                       </MaterialPressable>
@@ -3058,21 +3097,12 @@ export default function GeneratorScreen() {
 
         {/* QR Code Preview - QR 모드일 때만 */}
         {codeMode === 'qr' && (
-          <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
-            <View style={s.qrHeader}>
-              <View style={s.qrHeaderLeft}>
-                <Ionicons
-                  name="qr-code-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Text style={[s.qrTitle, { color: colors.text }]}>
-                  {t('generator.qrPreview')}
-                </Text>
-              </View>
-            </View>
+          <View style={[s.qrSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.qrTitle, { color: colors.textSecondary }]}>
+              {t('generator.qrPreview')}
+            </Text>
 
-            <View style={[s.qrContainer, { borderColor: colors.border }]}>
+            <View style={s.qrContainer}>
               {hasData ? (
                 <>
                   <FlatList
@@ -3188,6 +3218,13 @@ export default function GeneratorScreen() {
               )}
             </View>
 
+            {hasData && showQrValueLine && (
+              <Text style={[s.valueLine, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="middle">
+                {qrData}
+              </Text>
+            )}
+            {hasData && actionButtons}
+
             {/* 저장용 전체 크기 QR 코드 (hidden) */}
             {useStyledQR && qrData && (qrStyle.width || qrStyle.height) && (
               <View style={{ position: 'absolute', left: -9999, opacity: 0 }}>
@@ -3204,21 +3241,12 @@ export default function GeneratorScreen() {
 
         {/* Barcode Preview - 바코드 모드일 때만 */}
         {codeMode === 'barcode' && (
-          <View style={[s.qrSection, { backgroundColor: colors.surface }]}>
-            <View style={s.qrHeader}>
-              <View style={s.qrHeaderLeft}>
-                <Ionicons
-                  name="barcode-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Text style={[s.qrTitle, { color: colors.text }]}>
-                  {t('generator.barcodePreview') || '바코드 미리보기'}
-                </Text>
-              </View>
-            </View>
+          <View style={[s.qrSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.qrTitle, { color: colors.textSecondary }]}>
+              {t('generator.barcodePreview') || '바코드 미리보기'}
+            </Text>
 
-            <View style={[s.qrContainer, s.barcodePreviewContainer, { borderColor: colors.border }]}>
+            <View style={[s.qrContainer, s.barcodePreviewContainer]}>
               {hasBarcodeData ? (
                 <Animated.View
                   ref={barcodeRef}
@@ -3269,39 +3297,7 @@ export default function GeneratorScreen() {
                 </View>
               )}
             </View>
-          </View>
-        )}
-
-        {/* Action Buttons */}
-        {((codeMode === 'qr' && hasData) || (codeMode === 'barcode' && hasBarcodeData)) && (
-          <View style={s.actionsContainer}>
-            <View style={s.buttonRow}>
-              <MaterialPressable
-                style={[s.actionButton, s.primaryButton, { backgroundColor: colors.primary, flex: 1 }]}
-                onPress={handleSaveImage}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={t('generator.save')}
-              >
-                <View style={s.buttonIconContainer}>
-                  <Ionicons name="download-outline" size={22} color="#fff" />
-                </View>
-                <View style={s.buttonContent}>
-                  <Text style={s.buttonTitle}>{t('generator.save')}</Text>
-                  <Text style={s.buttonSubtitle}>{t('generator.saveSubtitle')}</Text>
-                </View>
-              </MaterialPressable>
-
-              <MaterialPressable
-                style={[s.shareIconButton, { backgroundColor: colors.primary }]}
-                onPress={handleShare}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={t('generator.share')}
-              >
-                <Ionicons name="share-outline" size={24} color="#fff" />
-              </MaterialPressable>
-            </View>
+            {hasBarcodeData && actionButtons}
           </View>
         )}
       </ScrollView>
@@ -3320,7 +3316,7 @@ export default function GeneratorScreen() {
               style={[
                 s.progressIconContainer,
                 {
-                  backgroundColor: colors.primary + '15',
+                  backgroundColor: colors.primarySoft,
                   transform: [{
                     rotate: spinAnim.interpolate({
                       inputRange: [0, 1],
@@ -3330,7 +3326,7 @@ export default function GeneratorScreen() {
                 },
               ]}
             >
-              <Ionicons name={saveProgress.type === 'barcode' ? 'barcode-outline' : 'qr-code-outline'} size={40} color={colors.primary} />
+              <Ionicons name={saveProgress.type === 'barcode' ? 'barcode-outline' : 'qr-code-outline'} size={40} color={colors.primaryText} />
             </Animated.View>
             <Text style={[s.progressTitle, { color: colors.text }]}>
               {saveProgress.type === 'barcode' ? t('generator.savingBarcode') : t('generator.savingQRCode')}
@@ -3390,7 +3386,7 @@ export default function GeneratorScreen() {
                       accessibilityHint={t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
                       style={[
                         s.reorderItem,
-                        { backgroundColor: isActive ? colors.primary + '20' : colors.background },
+                        { backgroundColor: isActive ? colors.primarySoft : colors.background },
                         isActive && { shadowOpacity: 0.3, elevation: 8 }
                       ]}
                     >
@@ -3403,8 +3399,8 @@ export default function GeneratorScreen() {
                       >
                         <Ionicons name="menu" size={22} color={colors.textTertiary} />
                       </TouchableOpacity>
-                      <View style={[s.reorderItemIcon, { backgroundColor: colors.primary + '15' }]}>
-                        <Ionicons name={item.icon} size={20} color={colors.primary} />
+                      <View style={[s.reorderItemIcon, { backgroundColor: colors.primarySoft }]}>
+                        <Ionicons name={item.icon} size={20} color={colors.primaryText} />
                       </View>
                       <Text style={[s.reorderItemText, { color: colors.text }]}>
                         {t(`generator.types.${item.id}`)}
@@ -3469,7 +3465,7 @@ export default function GeneratorScreen() {
                         accessibilityHint={t('generator.reorderTypesDesc') || '드래그하여 순서를 변경하세요'}
                         style={[
                           s.reorderItem,
-                          { backgroundColor: isActive ? colors.primary + '20' : colors.background },
+                          { backgroundColor: isActive ? colors.primarySoft : colors.background },
                           isActive && { shadowOpacity: 0.3, elevation: 8 }
                         ]}
                       >
@@ -3627,7 +3623,7 @@ export default function GeneratorScreen() {
                                 s.modalBarcodeItem,
                                 {
                                   backgroundColor: isSelected ? colors.primary : colors.background,
-                                  borderColor: isSelected ? colors.primary : isChecked ? '#22c55e' : colors.border,
+                                  borderColor: isSelected ? colors.primary : isChecked ? colors.success : colors.border,
                                 },
                               ]}
                               onPress={() => {
@@ -3665,7 +3661,7 @@ export default function GeneratorScreen() {
                                   <Ionicons
                                     name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
                                     size={20}
-                                    color={isChecked ? '#22c55e' : colors.textTertiary}
+                                    color={isChecked ? colors.success : colors.textTertiary}
                                   />
                                 </MaterialPressable>
                               )}
@@ -3780,48 +3776,41 @@ const s = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 50,
-    paddingBottom: 16,
+    paddingBottom: SPACE.section,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-    marginBottom: 6,
+    ...TYPE.tabTitle,
   },
   subtitle: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
   },
-  // 세그먼트 탭 스타일
+  // 세그먼트 탭: 표면 + 1px 테두리, 선택 칸은 글자색으로 채움
   segmentContainer: {
     flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 12,
+    marginHorizontal: SPACE.screen,
+    marginBottom: SPACE.section,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
     padding: 4,
     gap: 4,
-    ...(IS_ANDROID && { borderRadius: 20, borderWidth: 1, padding: 0, gap: 0, overflow: 'hidden' }),
   },
   segmentButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    gap: 8,
-    ...(IS_ANDROID && { height: 40, paddingVertical: 0, borderRadius: 0 }),
+    height: 40,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.control - 4,
+    gap: 6,
+    overflow: 'hidden',
   },
   segmentText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
   },
   // 바코드 관련 스타일
-  typeDesc: {
-    fontSize: 11,
-    marginTop: 2,
-  },
   barcodeContainer: {
     minHeight: 160,
   },
@@ -3861,16 +3850,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     marginTop: 6,
     gap: 6,
-    backgroundColor: '#fef2f2',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#fecaca',
+    borderRadius: RADIUS.badge,
   },
   errorTextRed: {
     fontSize: 13,
-    color: '#dc2626',
     fontWeight: '500',
     flex: 1,
   },
@@ -3880,7 +3865,7 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   settingGroup: {
-    borderRadius: 14,
+    borderRadius: RADIUS.control,
     padding: 16,
   },
   settingItem: {
@@ -3923,14 +3908,17 @@ const s = StyleSheet.create({
   },
   qualityLevelContainer: {
     flexDirection: 'row',
-    borderRadius: 10,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
+    padding: 3,
+    gap: 2,
     overflow: 'hidden',
     marginTop: 8,
   },
   qualityLevelBtn: {
     flex: 1,
-    paddingVertical: 10,
+    minHeight: 40,
+    borderRadius: RADIUS.control - 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3943,7 +3931,7 @@ const s = StyleSheet.create({
     justifyContent: 'space-around',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: RADIUS.badge,
     marginTop: 8,
   },
   qualityInfoItem: {
@@ -3956,8 +3944,9 @@ const s = StyleSheet.create({
   },
   settingsTabContainer: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: RADIUS.control,
     padding: 4,
+    gap: 4,
     marginBottom: 12,
   },
   settingsTab: {
@@ -3966,8 +3955,9 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    borderRadius: 8,
+    height: 40,
+    borderRadius: RADIUS.control - 4,
+    overflow: 'hidden',
   },
   settingsTabText: {
     fontSize: 13,
@@ -3989,7 +3979,7 @@ const s = StyleSheet.create({
   },
   barcodeOptionControl: {
     flexDirection: 'row',
-    borderRadius: 10,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
     padding: 3,
     gap: 2,
@@ -4002,12 +3992,12 @@ const s = StyleSheet.create({
     gap: 2,
   },
   barcodeOptionBtn: {
-    paddingVertical: 8,
+    minHeight: 40,
     paddingHorizontal: 12,
-    borderRadius: 8,
+    borderRadius: RADIUS.control - 3,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 40,
+    minWidth: 44,
   },
   barcodeOptionBtnCompact: {
     paddingVertical: 7,
@@ -4023,15 +4013,15 @@ const s = StyleSheet.create({
   },
   toggleControl: {
     flexDirection: 'row',
-    borderRadius: 10,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
     padding: 3,
     gap: 2,
   },
   toggleButton: {
-    paddingVertical: 8,
+    minHeight: 40,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: RADIUS.control - 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4041,10 +4031,11 @@ const s = StyleSheet.create({
   },
   customTextInput: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
+    borderRadius: RADIUS.control,
+    height: SIZE.input,
+    paddingHorizontal: 12,
+    paddingVertical: 0,
+    fontSize: 15,
     marginTop: 10,
   },
   typesScroll: {
@@ -4054,11 +4045,12 @@ const s = StyleSheet.create({
   reorderItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     marginHorizontal: 16,
     marginVertical: 4,
-    borderRadius: 12,
+    borderRadius: RADIUS.control,
   },
   reorderItemIcon: {
     width: 36,
@@ -4082,41 +4074,52 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     gap: 10,
   },
+  // 바코드 포맷 가로 목록의 칩 (이름 + 짧은 설명)
   typeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 2,
+    minHeight: SIZE.rowWithDesc - 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    minWidth: 100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    ...(IS_ANDROID && { borderRadius: 12, elevation: 1, overflow: 'hidden' }),
+    gap: 2,
+    minWidth: 88,
+    overflow: 'hidden',
   },
-  typeIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  // 바코드 목록의 더보기·순서 버튼: 아이콘 + 글자 한 줄
+  typeButtonInline: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  // QR 유형 3열 격자
+  typeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACE.gap,
+    marginHorizontal: SPACE.screen,
+    marginBottom: SPACE.section,
+  },
+  typeGridButton: {
+    width: TYPE_GRID_ITEM_WIDTH,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    overflow: 'hidden',
+  },
+  typeGridText: {
+    fontSize: 14,
+    flexShrink: 1,
   },
   typeLockIcon: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    top: 4,
+    right: 4,
   },
   barcodeLockIcon: {
     position: 'absolute',
@@ -4139,70 +4142,45 @@ const s = StyleSheet.create({
     zIndex: 1,
   },
   typeText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: -0.2,
   },
   typeDesc: {
-    fontSize: 10,
-    marginTop: 2,
-    letterSpacing: -0.2,
-  },
-  typeButtonNoIcon: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    minWidth: 80,
-    gap: 4,
+    fontSize: 11,
   },
   typeTextMain: {
     fontSize: 14,
     fontWeight: '600',
-    letterSpacing: -0.3,
     textAlign: 'center',
   },
   typeSelectorSection: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    paddingVertical: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    ...(IS_ANDROID && { borderRadius: 12, elevation: 1 }),
-  },
-  typesScrollInSection: {
-    maxHeight: 110,
+    marginBottom: SPACE.section,
   },
   typesContainerInSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    gap: 10,
+    paddingHorizontal: SPACE.screen,
+    gap: SPACE.gap,
   },
+  // 카드: 표면 + 1px 테두리, 그림자 없음
   formSection: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    ...(IS_ANDROID && { borderRadius: 12, elevation: 1, overflow: 'hidden' }),
+    marginHorizontal: SPACE.screen,
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    marginBottom: SPACE.section,
+    overflow: 'hidden',
   },
   formHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   formHeaderCollapsible: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
+    minHeight: SIZE.touch,
   },
   formHeaderLeft: {
     flexDirection: 'row',
@@ -4210,86 +4188,68 @@ const s = StyleSheet.create({
     gap: 8,
   },
   formTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
-    letterSpacing: -0.3,
   },
   formContainer: {
-    gap: 16,
+    gap: 12,
   },
   fieldContainer: {
     gap: 8,
   },
   fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    marginLeft: 4,
+    ...TYPE.sectionHeader,
   },
   fieldRow: {
     flexDirection: 'row',
     gap: 12,
   },
   input: {
-    borderWidth: 1.5,
-    borderRadius: 14,
-    padding: 16,
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    height: SIZE.input,
+    paddingHorizontal: 12,
+    paddingVertical: 0,
     fontSize: 15,
-    fontWeight: '500',
   },
   textArea: {
-    borderWidth: 1.5,
-    borderRadius: 14,
-    padding: 16,
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 12,
     fontSize: 15,
-    fontWeight: '500',
-    minHeight: 120,
+    minHeight: 112,
   },
   securityContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: SPACE.gap,
   },
   securityButton: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 2,
+    height: SIZE.input,
+    paddingHorizontal: 8,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   securityText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: -0.2,
   },
+  // 미리보기 카드 (가로 여백 16 + 안쪽 20 + qrContainer 12 = 양쪽 48 → 캐러셀 칸 너비 SCREEN_WIDTH - 96)
   qrSection: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-    ...(IS_ANDROID && { borderRadius: 12, elevation: 1 }),
-  },
-  qrHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  qrHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    marginHorizontal: SPACE.screen,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    padding: SPACE.card,
+    marginBottom: SPACE.section,
   },
   qrTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: -0.3,
+    ...TYPE.sectionHeader,
+    marginBottom: 8,
   },
   styleButton: {
     flexDirection: 'row',
@@ -4326,8 +4286,8 @@ const s = StyleSheet.create({
     gap: 8,
   },
   qrSettingsTabWrapper: {
-    borderRadius: 12,
-    padding: 8,
+    borderRadius: RADIUS.control,
+    padding: 4,
     marginBottom: 12,
     borderWidth: 1,
   },
@@ -4336,10 +4296,10 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 8,
+    height: 40,
     paddingHorizontal: 12,
-    borderRadius: 8,
-    ...(IS_ANDROID && { height: 32, paddingVertical: 0, borderRadius: 8, overflow: 'hidden' }),
+    borderRadius: RADIUS.control - 4,
+    overflow: 'hidden',
   },
   qrSettingHint: {
     fontSize: 12,
@@ -4352,7 +4312,7 @@ const s = StyleSheet.create({
   },
   qrStyleItem: {
     width: '30%',
-    borderRadius: 12,
+    borderRadius: RADIUS.control,
     padding: 10,
     alignItems: 'center',
     position: 'relative',
@@ -4360,7 +4320,7 @@ const s = StyleSheet.create({
   qrStylePreview: {
     width: 70,
     height: 70,
-    borderRadius: 8,
+    borderRadius: RADIUS.badge,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
@@ -4375,11 +4335,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
+    minHeight: SIZE.button,
+    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: RADIUS.control,
     marginBottom: 16,
-    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, overflow: 'hidden' }),
+    overflow: 'hidden',
   },
   savePresetButtonText: {
     color: '#fff',
@@ -4484,8 +4445,7 @@ const s = StyleSheet.create({
     gap: 8,
   },
   qrOptionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    ...TYPE.sectionHeader,
     marginBottom: 4,
   },
   qrOptionSubtitle: {
@@ -4498,15 +4458,17 @@ const s = StyleSheet.create({
     gap: 8,
   },
   qrOptionButton: {
+    minHeight: SIZE.touch,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 6,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
     alignItems: 'center',
-    ...(IS_ANDROID && { minHeight: 32, justifyContent: 'center', borderRadius: 8, overflow: 'hidden' }),
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   qrOptionText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '500',
   },
   qrOptionSubtext: {
@@ -4556,7 +4518,8 @@ const s = StyleSheet.create({
   },
   qrContainer: {
     borderRadius: 16,
-    padding: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 300,
@@ -4633,15 +4596,13 @@ const s = StyleSheet.create({
   emptyIconContainer: {
     width: 96,
     height: 96,
-    borderRadius: 24,
+    borderRadius: RADIUS.card,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: -0.3,
+    ...TYPE.screenTitle,
   },
   emptyText: {
     fontSize: 14,
@@ -4649,83 +4610,48 @@ const s = StyleSheet.create({
     lineHeight: 20,
     maxWidth: 240,
   },
-  actionsContainer: {
-    paddingHorizontal: 20,
-    gap: 12,
+  // 미리보기 아래 코드 값 (고정폭)
+  valueLine: {
+    fontFamily: MONO,
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 12,
   },
   buttonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: SPACE.gap,
+    marginTop: 4,
   },
   actionButton: {
+    flex: 1,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 18,
-    borderRadius: 16,
-    gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, elevation: 1, overflow: 'hidden' }),
-  },
-  shareIconButton: {
-    width: 64,
-    borderRadius: 16,
-    alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'stretch',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, elevation: 1, overflow: 'hidden' }),
+    gap: 6,
+    paddingHorizontal: 12,
+    overflow: 'hidden',
   },
-  primaryButton: {
-    // Primary button specific styles
+  actionButtonSecondary: {
+    borderWidth: 1,
   },
-  secondaryButton: {
-    borderWidth: 2,
-  },
-  buttonIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  buttonContent: {
-    flex: 1,
-    gap: 2,
-  },
-  buttonTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-    letterSpacing: -0.3,
-  },
-  buttonSubtitle: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.8)',
+  actionButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
   },
   mapPickerButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderRadius: 14,
+    height: SIZE.button,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.control,
     gap: 10,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    ...(IS_ANDROID && { borderRadius: 20, minHeight: 40, elevation: 1, overflow: 'hidden' }),
+    marginBottom: 4,
+    overflow: 'hidden',
   },
   mapPickerButtonText: {
     color: '#fff',
@@ -4734,10 +4660,6 @@ const s = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     letterSpacing: -0.2,
-  },
-  // 바코드 추가 버튼
-  addBarcodeButton: {
-    borderWidth: 2,
   },
   // 바코드 타입 선택 모달 스타일
   modalOverlay: {
@@ -4768,7 +4690,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   progressModalContent: {
-    borderRadius: 20,
+    borderRadius: RADIUS.group,
     padding: 30,
     alignItems: 'center',
     minWidth: 180,
@@ -4813,9 +4735,9 @@ const s = StyleSheet.create({
     marginTop: 2,
   },
   modalCloseButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
     alignItems: 'center',
     justifyContent: 'center',
     ...(IS_ANDROID && { overflow: 'hidden' }),
@@ -4828,10 +4750,11 @@ const s = StyleSheet.create({
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    minHeight: SIZE.input,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 10,
   },
   searchInput: {
@@ -4911,8 +4834,8 @@ const s = StyleSheet.create({
   modalBarcodeItem: {
     width: (SCREEN_WIDTH - 64) / 2,
     padding: 16,
-    borderRadius: 16,
-    borderWidth: 2,
+    borderRadius: RADIUS.control,
+    borderWidth: 1.5,
     alignItems: 'center',
     position: 'relative',
   },
