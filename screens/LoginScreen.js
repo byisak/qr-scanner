@@ -1,4 +1,4 @@
-// screens/LoginScreen.js - 세련된 로그인 화면 (실시간 전송용)
+// screens/LoginScreen.js - 로그인 화면 (실시간 전송용). 2026-10 리디자인: 소셜 로그인 먼저, 그다음 이메일 폼
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -12,23 +12,20 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Animated,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SIZE, TYPE } from '../constants/Design';
 import {
   useGoogleLogin,
   useAppleLogin,
 } from '../hooks/useSocialLogin';
-
-const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -49,145 +46,15 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
 
-  // 애니메이션
+  // 진입 애니메이션 (살짝 올라오며 나타남)
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const iconFloat = useRef(new Animated.Value(0)).current;
-
-  // 장식 원 애니메이션
-  const circle1Anim = useRef(new Animated.Value(0)).current;
-  const circle2Anim = useRef(new Animated.Value(0)).current;
-  const circle3Anim = useRef(new Animated.Value(0)).current;
-  const circle1Scale = useRef(new Animated.Value(1)).current;
-  const circle2Scale = useRef(new Animated.Value(1)).current;
-  const circle3Scale = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(16)).current;
 
   useEffect(() => {
-    // 진입 애니메이션
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
     ]).start();
-
-    // 아이콘 부유 애니메이션
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(iconFloat, {
-          toValue: -8,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(iconFloat, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // 장식 원 1 - 느린 상하 움직임
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle1Anim, {
-          toValue: 20,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle1Anim, {
-          toValue: 0,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // 장식 원 1 - 스케일 펄스
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle1Scale, {
-          toValue: 1.1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle1Scale, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // 장식 원 2 - 대각선 움직임
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle2Anim, {
-          toValue: 15,
-          duration: 5000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle2Anim, {
-          toValue: 0,
-          duration: 5000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // 장식 원 2 - 스케일 펄스
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle2Scale, {
-          toValue: 0.9,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle2Scale, {
-          toValue: 1,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // 장식 원 3 - 좌우 움직임
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle3Anim, {
-          toValue: -12,
-          duration: 3500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle3Anim, {
-          toValue: 0,
-          duration: 3500,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // 장식 원 3 - 스케일 펄스
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle3Scale, {
-          toValue: 1.15,
-          duration: 2500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle3Scale, {
-          toValue: 1,
-          duration: 2500,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
   }, []);
 
   const validateEmail = (email) => {
@@ -314,67 +181,33 @@ export default function LoginScreen() {
 
   const isFormValid = email && password;
 
+  const inputStyle = (name) => [
+    styles.input,
+    {
+      backgroundColor: colors.surface,
+      borderColor: focusedInput === name ? colors.primary : colors.border,
+      color: colors.text,
+      fontFamily: fonts.regular,
+    },
+  ];
+  const emailLoading = isLoading && !googleLogin.isLoading && !appleLogin.isLoading;
+
   return (
-    <View style={styles.container}>
-      {/* 배경 그라데이션 */}
-      <LinearGradient
-        colors={isDark ? ['#1a1a2e', '#16213e', '#0f3460'] : ['#667eea', '#764ba2', '#f093fb']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
-      {/* 배경 장식 원 - 애니메이션 적용 */}
-      <Animated.View
-        style={[
-          styles.decorCircle,
-          styles.decorCircle1,
-          {
-            transform: [
-              { translateY: circle1Anim },
-              { scale: circle1Scale },
-            ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.decorCircle,
-          styles.decorCircle2,
-          {
-            transform: [
-              { translateX: circle2Anim },
-              { translateY: circle2Anim },
-              { scale: circle2Scale },
-            ],
-          },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.decorCircle,
-          styles.decorCircle3,
-          {
-            transform: [
-              { translateX: circle3Anim },
-              { scale: circle3Scale },
-            ],
-          },
-        ]}
-      />
-
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.keyboardView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          {/* 헤더 */}
+          {/* 헤더: 닫기 */}
           <View style={styles.header}>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
             >
-              <Ionicons name="close" size={24} color="#fff" />
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
@@ -385,208 +218,175 @@ export default function LoginScreen() {
             showsVerticalScrollIndicator={false}
           >
             <Animated.View
-              style={[
-                styles.content,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                },
-              ]}
+              style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
             >
-              {/* 로고 섹션 */}
-              <View style={styles.logoSection}>
-                <Animated.View
-                  style={[
-                    styles.iconWrapper,
-                    { transform: [{ translateY: iconFloat }] },
-                  ]}
-                >
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="cloud-upload" size={40} color="#fff" />
-                  </View>
-                </Animated.View>
-                <Text style={[styles.title, { fontFamily: fonts.bold }]}>
+              {/* 제목 */}
+              <View style={styles.titleSection}>
+                <View style={[styles.iconTile, { backgroundColor: colors.primarySoft }]}>
+                  <Ionicons name="cloud-upload-outline" size={24} color={colors.primaryText} />
+                </View>
+                <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
                   {t('auth.realtimeSyncLogin') || '실시간 전송'}
                 </Text>
-                <Text style={[styles.subtitle, { fontFamily: fonts.regular }]}>
+                <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('auth.loginSubtitle') || '로그인하여 실시간 동기화를 시작하세요'}
                 </Text>
               </View>
 
-              {/* 카드 섹션 */}
-              <View style={[styles.card, isDark && styles.cardDark]}>
-                {/* 이메일 입력 */}
-                <View style={styles.inputGroup}>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedInput === 'email' && styles.inputFocused,
-                      isDark && styles.inputWrapperDark,
-                    ]}
+              {/* 소셜 로그인 먼저: 탭 한 번 */}
+              <View style={styles.socialSection}>
+                <TouchableOpacity
+                  style={[styles.socialButton, { backgroundColor: colors.raised, borderColor: colors.border }, isLoading && styles.buttonDisabled]}
+                  onPress={handleGoogleLogin}
+                  activeOpacity={0.8}
+                  disabled={isLoading}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('auth.loginWithGoogle') || 'Google로 로그인'}
+                >
+                  {isLoading && googleLogin.isLoading ? (
+                    <ActivityIndicator color={colors.text} />
+                  ) : (
+                    <>
+                      <Ionicons name="logo-google" size={20} color={colors.text} />
+                      <Text style={[styles.socialButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                        {t('auth.loginWithGoogle') || 'Google로 로그인'}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* 애플 (iOS만) */}
+                {Platform.OS === 'ios' && appleLogin.isAvailable && (
+                  <TouchableOpacity
+                    style={[styles.socialButton, { backgroundColor: colors.text, borderColor: colors.text }, isLoading && styles.buttonDisabled]}
+                    onPress={handleAppleLogin}
+                    activeOpacity={0.8}
+                    disabled={isLoading}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('auth.loginWithApple') || 'Apple로 로그인'}
                   >
-                    <Ionicons
-                      name="mail-outline"
-                      size={20}
-                      color={focusedInput === 'email' ? '#667eea' : '#999'}
-                      style={styles.inputIcon}
-                    />
-                    <TextInput
-                      style={[styles.input, { fontFamily: fonts.regular }, isDark && styles.inputDark]}
-                      placeholder={t('auth.emailPlaceholder') || '이메일 주소'}
-                      placeholderTextColor="#999"
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      onFocus={() => setFocusedInput('email')}
-                      onBlur={() => setFocusedInput(null)}
-                    />
-                  </View>
+                    {isLoading && appleLogin.isLoading ? (
+                      <ActivityIndicator color={colors.background} />
+                    ) : (
+                      <>
+                        <Ionicons name="logo-apple" size={20} color={colors.background} />
+                        <Text style={[styles.socialButtonText, { color: colors.background, fontFamily: fonts.semiBold }]}>
+                          {t('auth.loginWithApple') || 'Apple로 로그인'}
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* 구분선 */}
+              <View style={styles.separator}>
+                <View style={[styles.separatorLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.separatorText, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
+                  {t('auth.orContinueWith') || '또는'}
+                </Text>
+                <View style={[styles.separatorLine, { backgroundColor: colors.border }]} />
+              </View>
+
+              {/* 이메일 폼 */}
+              <View style={styles.form}>
+                <View style={styles.field}>
+                  <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                    {t('auth.email') || '이메일'}
+                  </Text>
+                  <TextInput
+                    style={inputStyle('email')}
+                    placeholder={t('auth.emailPlaceholder') || '이메일 주소'}
+                    placeholderTextColor={colors.textTertiary}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    onFocus={() => setFocusedInput('email')}
+                    onBlur={() => setFocusedInput(null)}
+                    accessibilityLabel={t('auth.email') || '이메일'}
+                  />
                 </View>
 
-                {/* 비밀번호 입력 */}
-                <View style={styles.inputGroup}>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedInput === 'password' && styles.inputFocused,
-                      isDark && styles.inputWrapperDark,
-                    ]}
-                  >
-                    <Ionicons
-                      name="lock-closed-outline"
-                      size={20}
-                      color={focusedInput === 'password' ? '#667eea' : '#999'}
-                      style={styles.inputIcon}
-                    />
+                <View style={styles.field}>
+                  <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                    {t('auth.password') || '비밀번호'}
+                  </Text>
+                  <View>
                     <TextInput
-                      style={[styles.input, { fontFamily: fonts.regular }, isDark && styles.inputDark]}
+                      style={[inputStyle('password'), styles.passwordInput]}
                       placeholder={t('auth.passwordPlaceholder') || '비밀번호'}
-                      placeholderTextColor="#999"
+                      placeholderTextColor={colors.textTertiary}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
+                      autoComplete="password"
+                      textContentType="password"
                       onFocus={() => setFocusedInput('password')}
                       onBlur={() => setFocusedInput(null)}
+                      accessibilityLabel={t('auth.password') || '비밀번호'}
                     />
                     <TouchableOpacity
                       style={styles.passwordToggle}
                       onPress={() => setShowPassword(!showPassword)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('auth.password') || '비밀번호'}
+                      accessibilityState={{ checked: showPassword }}
                     >
                       <Ionicons
                         name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                         size={20}
-                        color="#999"
+                        color={colors.textSecondary}
                       />
                     </TouchableOpacity>
                   </View>
                 </View>
 
+                {/* 로그인: 입력이 갖춰지기 전엔 눌러도 안 되는 회색 */}
+                <TouchableOpacity
+                  style={[styles.loginButton, { backgroundColor: isFormValid ? colors.primary : colors.raised }]}
+                  onPress={handleEmailLogin}
+                  disabled={isLoading || !isFormValid}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: isLoading || !isFormValid }}
+                >
+                  {emailLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={[styles.loginButtonText, { color: isFormValid ? '#fff' : colors.textTertiary, fontFamily: fonts.semiBold }]}>
+                      {t('auth.login') || '로그인'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
                 {/* 링크 */}
                 <View style={styles.linksRow}>
-                  <TouchableOpacity onPress={handleSignup}>
-                    <Text style={[styles.linkText, { fontFamily: fonts.medium }]}>
+                  <TouchableOpacity style={styles.linkButton} onPress={handleSignup} accessibilityRole="button">
+                    <Text style={[styles.linkText, { color: colors.text, fontFamily: fonts.medium }]}>
                       {t('auth.signup') || '회원가입'}
                     </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleFindAccount}>
-                    <Text style={[styles.linkText, { fontFamily: fonts.medium }]}>
+                  <TouchableOpacity style={styles.linkButton} onPress={handleFindAccount} accessibilityRole="button">
+                    <Text style={[styles.linkText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
                       {t('auth.findAccount') || '계정 찾기'}
                     </Text>
                   </TouchableOpacity>
                 </View>
-
-                {/* 로그인 버튼 */}
-                <TouchableOpacity
-                  style={[styles.loginButton, !isFormValid && styles.loginButtonDisabled]}
-                  onPress={handleEmailLogin}
-                  disabled={isLoading || !isFormValid}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={isFormValid ? ['#667eea', '#764ba2'] : ['#ccc', '#aaa']}
-                    style={styles.loginButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    {isLoading && !googleLogin.isLoading && !appleLogin.isLoading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <>
-                        <Text style={[styles.loginButtonText, { fontFamily: fonts.semiBold }]}>
-                          {t('auth.login') || '로그인'}
-                        </Text>
-                        <Ionicons name="arrow-forward" size={20} color="#fff" style={styles.buttonArrow} />
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
-
-                {/* 구분선 */}
-                <View style={styles.separator}>
-                  <View style={[styles.separatorLine, isDark && styles.separatorLineDark]} />
-                  <Text style={[styles.separatorText, { fontFamily: fonts.medium }]}>
-                    {t('auth.orContinueWith') || 'SNS 계정으로 계속'}
-                  </Text>
-                  <View style={[styles.separatorLine, isDark && styles.separatorLineDark]} />
-                </View>
-
-                {/* 소셜 로그인 */}
-                <View style={styles.socialSection}>
-                  {/* 구글 */}
-                  <TouchableOpacity
-                    style={[styles.socialButton, styles.googleButton, isLoading && styles.buttonDisabled]}
-                    onPress={handleGoogleLogin}
-                    activeOpacity={0.8}
-                    disabled={isLoading}
-                  >
-                    {isLoading && googleLogin.isLoading ? (
-                      <ActivityIndicator color="#4285F4" />
-                    ) : (
-                      <>
-                        <View style={styles.googleIconWrapper}>
-                          <Text style={styles.googleIcon}>G</Text>
-                        </View>
-                        <Text style={[styles.socialButtonText, { fontFamily: fonts.semiBold }]}>
-                          Google
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-
-                  {/* 애플 (iOS만) */}
-                  {Platform.OS === 'ios' && appleLogin.isAvailable && (
-                    <TouchableOpacity
-                      style={[styles.socialButton, styles.appleButton, isLoading && styles.buttonDisabled]}
-                      onPress={handleAppleLogin}
-                      activeOpacity={0.8}
-                      disabled={isLoading}
-                    >
-                      {isLoading && appleLogin.isLoading ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <>
-                          <Ionicons name="logo-apple" size={20} color="#fff" />
-                          <Text style={[styles.socialButtonText, styles.appleText, { fontFamily: fonts.semiBold }]}>
-                            Apple
-                          </Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              {/* 하단 정보 */}
-              <View style={styles.footer}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="rgba(255,255,255,0.7)" />
-                <Text style={[styles.footerText, { fontFamily: fonts.regular }]}>
-                  {t('auth.secureConnection') || '안전한 암호화 연결'}
-                </Text>
               </View>
             </Animated.View>
+
+            {/* 하단 정보 */}
+            <View style={styles.footer}>
+              <Ionicons name="shield-checkmark-outline" size={14} color={colors.textTertiary} />
+              <Text style={[styles.footerText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                {t('auth.secureConnection') || '안전한 암호화 연결'}
+              </Text>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -598,32 +398,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  decorCircle: {
-    position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  decorCircle1: {
-    width: 200,
-    height: 200,
-    top: -50,
-    right: -50,
-  },
-  decorCircle2: {
-    width: 150,
-    height: 150,
-    bottom: 100,
-    left: -75,
-  },
-  decorCircle3: {
-    width: 100,
-    height: 100,
-    top: '40%',
-    right: -30,
-  },
   safeArea: {
     flex: 1,
   },
@@ -631,212 +405,138 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 16 : 0,
-    paddingBottom: 10,
+    paddingHorizontal: 8,
+    paddingTop: 4,
   },
   closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
     flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
   },
   content: {
-    flex: 1,
+    gap: 28,
   },
-  logoSection: {
+  titleSection: {
+    gap: 10,
+  },
+  iconTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 32,
-  },
-  iconWrapper: {
-    marginBottom: 16,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...TYPE.tabTitle,
   },
   subtitle: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
     lineHeight: 22,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+  socialSection: {
+    gap: 8,
   },
-  cardDark: {
-    backgroundColor: '#1e1e2e',
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  inputWrapper: {
+  socialButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f5f7',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  inputWrapperDark: {
-    backgroundColor: '#2a2a3e',
-  },
-  inputFocused: {
-    borderColor: '#667eea',
-    backgroundColor: '#fff',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: 52,
-    fontSize: 16,
-    color: '#333',
-  },
-  inputDark: {
-    color: '#fff',
-  },
-  passwordToggle: {
-    padding: 8,
-  },
-  linksRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  linkText: {
-    fontSize: 14,
-    color: '#667eea',
-  },
-  loginButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 24,
-  },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginButtonGradient: {
-    flexDirection: 'row',
-    height: 54,
     justifyContent: 'center',
-    alignItems: 'center',
+    gap: 10,
   },
-  loginButtonText: {
-    fontSize: 17,
+  socialButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
   },
-  buttonArrow: {
-    marginLeft: 8,
+  buttonDisabled: {
+    opacity: 0.6,
   },
   separator: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    gap: 12,
   },
   separatorLine: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#e5e5e5',
-  },
-  separatorLineDark: {
-    backgroundColor: '#3a3a4e',
+    height: StyleSheet.hairlineWidth,
   },
   separatorText: {
-    paddingHorizontal: 16,
     fontSize: 13,
-    color: '#999',
   },
-  socialSection: {
-    flexDirection: 'row',
+  form: {
     gap: 12,
   },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-    borderRadius: 14,
-    gap: 8,
+  field: {
+    gap: 6,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  googleButton: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
-  },
-  googleIconWrapper: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#4285F4',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  googleIcon: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  socialButtonText: {
-    fontSize: 15,
+  label: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#333',
   },
-  appleButton: {
-    backgroundColor: '#000',
+  input: {
+    height: 48,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontSize: 15,
   },
-  appleText: {
-    color: '#fff',
+  passwordInput: {
+    paddingRight: 52,
+  },
+  passwordToggle: {
+    position: 'absolute',
+    right: 2,
+    top: 2,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  loginButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  linksRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  linkButton: {
+    height: SIZE.touch,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  linkText: {
+    fontSize: 14,
   },
   footer: {
+    marginTop: 'auto',
+    paddingTop: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
     gap: 6,
   },
   footerText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
   },
 });

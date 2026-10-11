@@ -19,6 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RegisterScreen() {
@@ -42,6 +43,7 @@ export default function RegisterScreen() {
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isEmailChecked, setIsEmailChecked] = useState(false);
   const [isEmailAvailable, setIsEmailAvailable] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -164,28 +166,30 @@ export default function RegisterScreen() {
     }
   };
 
-  const renderCheckbox = (checked, onPress) => (
-    <TouchableOpacity
+  const renderCheckbox = (checked) => (
+    <View
       style={[
         styles.checkbox,
-        {
-          backgroundColor: checked ? '#E67E22' : 'transparent',
-          borderColor: checked ? '#E67E22' : colors.borderLight,
-        },
+        checked
+          ? { backgroundColor: colors.primary, borderColor: colors.primary }
+          : { backgroundColor: 'transparent', borderColor: isDark ? '#4A5260' : colors.textTertiary },
       ]}
-      onPress={onPress}
     >
-      {checked && <Ionicons name="checkmark" size={16} color="#fff" />}
-    </TouchableOpacity>
+      {checked && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+    </View>
   );
 
-  const renderValidationIcon = (isValid) => (
+  // 유효성 아이콘: 충족 = 체크(성공색), 오류 = X(오류색), 아직 = 체크(옅은 글자색)
+  const renderValidationIcon = (isValid, isError = false) => (
     <Ionicons
-      name={isValid ? 'checkmark-circle' : 'ellipse-outline'}
-      size={16}
-      color={isValid ? '#27AE60' : colors.textTertiary}
+      name={isError ? 'close' : 'checkmark'}
+      size={14}
+      color={isValid ? colors.success : isError ? colors.error : colors.textTertiary}
     />
   );
+
+  const fieldBorder = (name) => (focusedInput === name ? colors.primary : colors.border);
+  const canCheckEmail = validateEmail(email) && !isCheckingEmail;
 
   return (
     <KeyboardAvoidingView
@@ -197,14 +201,16 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 28 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* 타이틀 */}
@@ -214,11 +220,11 @@ export default function RegisterScreen() {
 
         {/* 이메일 입력 */}
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
             {t('auth.email')}
           </Text>
           <View style={styles.emailInputRow}>
-            <View style={[styles.inputWrapper, styles.emailInput, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+            <View style={[styles.inputWrapper, styles.emailInput, { backgroundColor: colors.surface, borderColor: fieldBorder('email') }]}>
               <TextInput
                 style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
                 placeholder={t('auth.emailPlaceholder')}
@@ -228,27 +234,25 @@ export default function RegisterScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
               />
             </View>
             <TouchableOpacity
-              style={[
-                styles.checkButton,
-                {
-                  backgroundColor: validateEmail(email) && !isCheckingEmail ? '#E67E22' : colors.borderLight,
-                },
-              ]}
+              style={[styles.checkButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
               onPress={handleCheckEmail}
               disabled={isCheckingEmail || !validateEmail(email)}
               activeOpacity={0.8}
+              accessibilityRole="button"
             >
               {isCheckingEmail ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={colors.textSecondary} size="small" />
               ) : (
                 <Text
                   style={[
                     styles.checkButtonText,
                     {
-                      color: validateEmail(email) ? '#fff' : colors.textTertiary,
+                      color: canCheckEmail ? colors.primaryText : colors.textTertiary,
                       fontFamily: fonts.semiBold,
                     },
                   ]}
@@ -262,13 +266,13 @@ export default function RegisterScreen() {
           {isEmailChecked && (
             <View style={styles.validationRow}>
               <View style={styles.validationItem}>
-                {renderValidationIcon(isEmailAvailable)}
+                {renderValidationIcon(isEmailAvailable, !isEmailAvailable)}
                 <Text
                   style={[
                     styles.validationText,
                     {
-                      color: isEmailAvailable ? '#27AE60' : '#E74C3C',
-                      fontFamily: fonts.regular,
+                      color: isEmailAvailable ? colors.success : colors.error,
+                      fontFamily: fonts.medium,
                     },
                   ]}
                 >
@@ -281,10 +285,10 @@ export default function RegisterScreen() {
 
         {/* 비밀번호 입력 */}
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
             {t('auth.password')}
           </Text>
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: fieldBorder('password') }]}>
             <TextInput
               style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
               placeholder={t('auth.passwordPlaceholder')}
@@ -293,15 +297,18 @@ export default function RegisterScreen() {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
+              onFocus={() => setFocusedInput('password')}
+              onBlur={() => setFocusedInput(null)}
             />
             <TouchableOpacity
               style={styles.passwordToggle}
               onPress={() => setShowPassword(!showPassword)}
+              accessibilityRole="button"
             >
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={22}
-                color={colors.textTertiary}
+                size={20}
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           </View>
@@ -313,8 +320,8 @@ export default function RegisterScreen() {
                 style={[
                   styles.validationText,
                   {
-                    color: isPasswordLongEnough ? '#27AE60' : colors.textTertiary,
-                    fontFamily: fonts.regular,
+                    color: isPasswordLongEnough ? colors.success : colors.textTertiary,
+                    fontFamily: fonts.medium,
                   },
                 ]}
               >
@@ -327,8 +334,8 @@ export default function RegisterScreen() {
                 style={[
                   styles.validationText,
                   {
-                    color: hasAlphaAndNum ? '#27AE60' : colors.textTertiary,
-                    fontFamily: fonts.regular,
+                    color: hasAlphaAndNum ? colors.success : colors.textTertiary,
+                    fontFamily: fonts.medium,
                   },
                 ]}
               >
@@ -340,10 +347,10 @@ export default function RegisterScreen() {
 
         {/* 비밀번호 확인 */}
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
             {t('auth.passwordConfirm')}
           </Text>
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: fieldBorder('passwordConfirm') }]}>
             <TextInput
               style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
               placeholder={t('auth.passwordConfirmPlaceholder')}
@@ -352,28 +359,31 @@ export default function RegisterScreen() {
               onChangeText={setPasswordConfirm}
               secureTextEntry={!showPasswordConfirm}
               autoCapitalize="none"
+              onFocus={() => setFocusedInput('passwordConfirm')}
+              onBlur={() => setFocusedInput(null)}
             />
             <TouchableOpacity
               style={styles.passwordToggle}
               onPress={() => setShowPasswordConfirm(!showPasswordConfirm)}
+              accessibilityRole="button"
             >
               <Ionicons
                 name={showPasswordConfirm ? 'eye-off-outline' : 'eye-outline'}
-                size={22}
-                color={colors.textTertiary}
+                size={20}
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           </View>
           {passwordConfirm.length > 0 && (
             <View style={styles.validationRow}>
               <View style={styles.validationItem}>
-                {renderValidationIcon(passwordsMatch)}
+                {renderValidationIcon(!!passwordsMatch, !passwordsMatch)}
                 <Text
                   style={[
                     styles.validationText,
                     {
-                      color: passwordsMatch ? '#27AE60' : '#E74C3C',
-                      fontFamily: fonts.regular,
+                      color: passwordsMatch ? colors.success : colors.error,
+                      fontFamily: fonts.medium,
                     },
                   ]}
                 >
@@ -386,10 +396,10 @@ export default function RegisterScreen() {
 
         {/* 닉네임 입력 */}
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
             {t('auth.nickname')}
           </Text>
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: fieldBorder('nickname') }]}>
             <TextInput
               style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
               placeholder={t('auth.nicknamePlaceholder')}
@@ -397,6 +407,8 @@ export default function RegisterScreen() {
               value={nickname}
               onChangeText={setNickname}
               autoCapitalize="none"
+              onFocus={() => setFocusedInput('nickname')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
         </View>
@@ -407,9 +419,11 @@ export default function RegisterScreen() {
             style={styles.agreementRow}
             onPress={() => setAgreeTerms(!agreeTerms)}
             activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreeTerms }}
           >
-            {renderCheckbox(agreeTerms, () => setAgreeTerms(!agreeTerms))}
-            <Text style={[styles.agreementText, { color: colors.text, fontFamily: fonts.regular }]}>
+            {renderCheckbox(agreeTerms)}
+            <Text style={[styles.agreementText, { color: colors.text, fontFamily: fonts.medium }]}>
               {t('auth.agreeTerms')}
             </Text>
           </TouchableOpacity>
@@ -418,9 +432,11 @@ export default function RegisterScreen() {
             style={styles.agreementRow}
             onPress={() => setAgreePrivacy(!agreePrivacy)}
             activeOpacity={0.7}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreePrivacy }}
           >
-            {renderCheckbox(agreePrivacy, () => setAgreePrivacy(!agreePrivacy))}
-            <Text style={[styles.agreementText, { color: colors.text, fontFamily: fonts.regular }]}>
+            {renderCheckbox(agreePrivacy)}
+            <Text style={[styles.agreementText, { color: colors.text, fontFamily: fonts.medium }]}>
               {t('auth.agreePrivacy')}
             </Text>
           </TouchableOpacity>
@@ -430,20 +446,20 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={[
             styles.registerButton,
-            { backgroundColor: isFormValid ? '#E67E22' : colors.borderLight },
+            { backgroundColor: isFormValid ? colors.primary : colors.raised },
           ]}
           onPress={handleRegister}
           disabled={isLoading || !isFormValid}
           activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text
               style={[
                 styles.registerButtonText,
                 {
-                  color: isFormValid ? '#fff' : colors.textTertiary,
+                  color: isFormValid ? '#FFFFFF' : colors.textTertiary,
                   fontFamily: fonts.semiBold,
                 },
               ]}
@@ -463,11 +479,11 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 8,
-    paddingBottom: 10,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -475,40 +491,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 32,
+    ...TYPE.tabTitle,
+    marginBottom: 28,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 8,
+    ...TYPE.sectionHeader,
+    marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 48,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: RADIUS.control,
+    paddingLeft: 14,
+    paddingRight: 2,
   },
   emailInputRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACE.gap,
   },
   emailInput: {
     flex: 1,
+    paddingRight: 14,
   },
   checkButton: {
-    height: 52,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 80,
@@ -519,16 +537,22 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 52,
-    fontSize: 16,
+    height: '100%',
+    fontSize: 15,
+    paddingVertical: 0,
   },
   passwordToggle: {
-    padding: 8,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   validationRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: 8,
-    gap: 16,
+    gap: 14,
   },
   validationItem: {
     flexDirection: 'row',
@@ -539,18 +563,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   agreementSection: {
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: 4,
+    marginBottom: 20,
   },
   agreementRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    minHeight: SIZE.touch,
+    paddingVertical: 4,
   },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 7,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
@@ -561,13 +586,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   registerButton: {
-    height: 52,
-    borderRadius: 12,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     justifyContent: 'center',
     alignItems: 'center',
   },
   registerButtonText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
   },
 });

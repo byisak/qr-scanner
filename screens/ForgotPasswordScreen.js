@@ -1,5 +1,5 @@
 // screens/ForgotPasswordScreen.js - 비밀번호 재설정 화면
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,15 +11,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
-  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SIZE, TYPE } from '../constants/Design';
 import config from '../config/config';
 
 export default function ForgotPasswordScreen() {
@@ -32,110 +31,6 @@ export default function ForgotPasswordScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
-
-  // 애니메이션
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const iconFloat = useRef(new Animated.Value(0)).current;
-
-  // 장식 원 애니메이션
-  const circle1Anim = useRef(new Animated.Value(0)).current;
-  const circle2Anim = useRef(new Animated.Value(0)).current;
-  const circle1Scale = useRef(new Animated.Value(1)).current;
-  const circle2Scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    // 진입 애니메이션
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // 아이콘 부유 애니메이션
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(iconFloat, {
-          toValue: -8,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(iconFloat, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // 장식 원 애니메이션
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle1Anim, {
-          toValue: 15,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle1Anim, {
-          toValue: 0,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle1Scale, {
-          toValue: 1.1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle1Scale, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle2Anim, {
-          toValue: -10,
-          duration: 5000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle2Anim, {
-          toValue: 0,
-          duration: 5000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(circle2Scale, {
-          toValue: 0.9,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle2Scale, {
-          toValue: 1,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -187,214 +82,162 @@ export default function ForgotPasswordScreen() {
   // 전송 완료 화면
   if (isSent) {
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={isDark ? ['#1a1a2e', '#16213e', '#0f3460'] : ['#667eea', '#764ba2', '#f093fb']}
-          style={styles.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={handleBackToLogin}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.close')}
+          >
+            <Ionicons name="close" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
 
-        <Animated.View style={[styles.decorCircle, styles.decorCircle1, { transform: [{ translateY: circle1Anim }, { scale: circle1Scale }] }]} />
-        <Animated.View style={[styles.decorCircle, styles.decorCircle2, { transform: [{ translateX: circle2Anim }, { scale: circle2Scale }] }]} />
-
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.closeButton} onPress={handleBackToLogin}>
-              <Ionicons name="close" size={24} color="#fff" />
-            </TouchableOpacity>
+        <View style={styles.successContainer}>
+          <View style={[styles.iconTile, { backgroundColor: colors.successSoft }]}>
+            <Ionicons name="mail-open" size={24} color={colors.success} />
           </View>
 
-          <View style={styles.successContainer}>
-            <Animated.View style={[styles.iconWrapper, { transform: [{ translateY: iconFloat }] }]}>
-              <View style={[styles.iconContainer, styles.successIcon]}>
-                <Ionicons name="mail-open" size={40} color="#fff" />
-              </View>
-            </Animated.View>
+          <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('auth.resetEmailSent') || '이메일을 확인하세요'}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            {t('auth.resetEmailSentDesc') || `${email}로 비밀번호 재설정 링크를 보냈습니다. 이메일을 확인해주세요.`}
+          </Text>
 
-            <Text style={[styles.successTitle, { fontFamily: fonts.bold }]}>
-              {t('auth.resetEmailSent') || '이메일을 확인하세요'}
+          <View style={[styles.tipRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="information-circle" size={18} color={colors.textSecondary} />
+            <Text style={[styles.tipText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('auth.checkSpamFolder') || '이메일이 보이지 않으면 스팸 폴더를 확인해주세요.'}
             </Text>
-            <Text style={[styles.successSubtitle, { fontFamily: fonts.regular }]}>
-              {t('auth.resetEmailSentDesc') || `${email}로 비밀번호 재설정 링크를 보냈습니다. 이메일을 확인해주세요.`}
-            </Text>
-
-            <View style={styles.successCard}>
-              <View style={styles.tipRow}>
-                <Ionicons name="information-circle" size={20} color="#667eea" />
-                <Text style={[styles.tipText, { color: '#333', fontFamily: fonts.regular }]}>
-                  {t('auth.checkSpamFolder') || '이메일이 보이지 않으면 스팸 폴더를 확인해주세요.'}
-                </Text>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleBackToLogin}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.backButtonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Ionicons name="arrow-back" size={20} color="#fff" style={styles.buttonIcon} />
-                <Text style={[styles.backButtonText, { fontFamily: fonts.semiBold }]}>
-                  {t('auth.backToLogin') || '로그인으로 돌아가기'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
           </View>
-        </SafeAreaView>
-      </View>
+
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: colors.primary }]}
+            onPress={handleBackToLogin}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.primaryButtonText, { color: '#FFFFFF', fontFamily: fonts.semiBold }]}>
+              {t('auth.backToLogin') || '로그인으로 돌아가기'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
+  const canSubmit = !!email;
+
   return (
-    <View style={styles.container}>
-      {/* 배경 그라데이션 */}
-      <LinearGradient
-        colors={isDark ? ['#1a1a2e', '#16213e', '#0f3460'] : ['#667eea', '#764ba2', '#f093fb']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
 
-      {/* 배경 장식 원 */}
-      <Animated.View style={[styles.decorCircle, styles.decorCircle1, { transform: [{ translateY: circle1Anim }, { scale: circle1Scale }] }]} />
-      <Animated.View style={[styles.decorCircle, styles.decorCircle2, { transform: [{ translateX: circle2Anim }, { scale: circle2Scale }] }]} />
-
-      <SafeAreaView style={styles.safeArea}>
-        <KeyboardAvoidingView
-          style={styles.keyboardView}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* 헤더 */}
-          <View style={styles.header}>
-            <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={24} color="#fff" />
-            </TouchableOpacity>
+          {/* 제목 */}
+          <View style={styles.titleBlock}>
+            <View style={[styles.iconTile, { backgroundColor: colors.primarySoft }]}>
+              <Ionicons name="key" size={24} color={colors.primaryText} />
+            </View>
+            <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
+              {t('auth.forgotPasswordTitle') || '비밀번호 찾기'}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('auth.forgotPasswordSubtitle') || '가입한 이메일을 입력하면\n비밀번호 재설정 링크를 보내드립니다'}
+            </Text>
           </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <Animated.View
+          {/* 이메일 입력 */}
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+              {t('auth.email') || '이메일'}
+            </Text>
+            <View
               style={[
-                styles.content,
+                styles.inputWrapper,
                 {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
+                  backgroundColor: colors.surface,
+                  borderColor: focusedInput === 'email' ? colors.primary : colors.border,
                 },
               ]}
             >
-              {/* 로고 섹션 */}
-              <View style={styles.logoSection}>
-                <Animated.View
-                  style={[styles.iconWrapper, { transform: [{ translateY: iconFloat }] }]}
-                >
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="key" size={40} color="#fff" />
-                  </View>
-                </Animated.View>
-                <Text style={[styles.title, { fontFamily: fonts.bold }]}>
-                  {t('auth.forgotPasswordTitle') || '비밀번호 찾기'}
-                </Text>
-                <Text style={[styles.subtitle, { fontFamily: fonts.regular }]}>
-                  {t('auth.forgotPasswordSubtitle') || '가입한 이메일을 입력하면\n비밀번호 재설정 링크를 보내드립니다'}
-                </Text>
-              </View>
+              <TextInput
+                style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
+                placeholder={t('auth.emailPlaceholder') || '가입한 이메일 주소'}
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
+              />
+            </View>
+          </View>
 
-              {/* 카드 섹션 */}
-              <View style={[styles.card, isDark && styles.cardDark]}>
-                {/* 이메일 입력 */}
-                <View style={styles.inputGroup}>
-                  <Text style={[styles.inputLabel, { color: colors.text, fontFamily: fonts.medium }]}>
-                    {t('auth.email') || '이메일'}
-                  </Text>
-                  <View
-                    style={[
-                      styles.inputWrapper,
-                      focusedInput === 'email' && styles.inputFocused,
-                      isDark && styles.inputWrapperDark,
-                    ]}
-                  >
-                    <Ionicons
-                      name="mail-outline"
-                      size={20}
-                      color={focusedInput === 'email' ? '#667eea' : '#999'}
-                      style={styles.inputIcon}
-                    />
-                    <TextInput
-                      style={[styles.input, { fontFamily: fonts.regular }, isDark && styles.inputDark]}
-                      placeholder={t('auth.emailPlaceholder') || '가입한 이메일 주소'}
-                      placeholderTextColor="#999"
-                      value={email}
-                      onChangeText={setEmail}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      onFocus={() => setFocusedInput('email')}
-                      onBlur={() => setFocusedInput(null)}
-                    />
-                  </View>
-                </View>
+          {/* 재설정 버튼 */}
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: canSubmit ? colors.primary : colors.raised }]}
+            onPress={handleResetPassword}
+            disabled={isLoading || !email}
+            activeOpacity={0.8}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text
+                style={[
+                  styles.primaryButtonText,
+                  { color: canSubmit ? '#FFFFFF' : colors.textTertiary, fontFamily: fonts.semiBold },
+                ]}
+              >
+                {t('auth.sendResetLink') || '재설정 링크 보내기'}
+              </Text>
+            )}
+          </TouchableOpacity>
 
-                {/* 재설정 버튼 */}
-                <TouchableOpacity
-                  style={[styles.resetButton, !email && styles.resetButtonDisabled]}
-                  onPress={handleResetPassword}
-                  disabled={isLoading || !email}
-                  activeOpacity={0.8}
-                >
-                  <LinearGradient
-                    colors={email ? ['#667eea', '#764ba2'] : ['#ccc', '#aaa']}
-                    style={styles.resetButtonGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    {isLoading ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <>
-                        <Text style={[styles.resetButtonText, { fontFamily: fonts.semiBold }]}>
-                          {t('auth.sendResetLink') || '재설정 링크 보내기'}
-                        </Text>
-                        <Ionicons name="send" size={18} color="#fff" style={styles.buttonIcon} />
-                      </>
-                    )}
-                  </LinearGradient>
-                </TouchableOpacity>
+          {/* 로그인으로 돌아가기 */}
+          <TouchableOpacity
+            style={styles.loginLink}
+            onPress={handleBackToLogin}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.loginLinkText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+              {t('auth.backToLogin') || '로그인으로 돌아가기'}
+            </Text>
+          </TouchableOpacity>
 
-                {/* 로그인으로 돌아가기 */}
-                <TouchableOpacity
-                  style={styles.loginLink}
-                  onPress={handleBackToLogin}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="arrow-back" size={16} color="#667eea" />
-                  <Text style={[styles.loginLinkText, { fontFamily: fonts.medium }]}>
-                    {t('auth.backToLogin') || '로그인으로 돌아가기'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* 하단 정보 */}
-              <View style={styles.footer}>
-                <Ionicons name="shield-checkmark-outline" size={16} color="rgba(255,255,255,0.7)" />
-                <Text style={[styles.footerText, { fontFamily: fonts.regular }]}>
-                  {t('auth.secureConnection') || '안전한 암호화 연결'}
-                </Text>
-              </View>
-            </Animated.View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </View>
+          {/* 하단 정보 */}
+          <View style={styles.footer}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={colors.textTertiary} />
+            <Text style={[styles.footerText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              {t('auth.secureConnection') || '안전한 암호화 연결'}
+            </Text>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -402,42 +245,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  decorCircle: {
-    position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  decorCircle1: {
-    width: 180,
-    height: 180,
-    top: -40,
-    right: -40,
-  },
-  decorCircle2: {
-    width: 120,
-    height: 120,
-    bottom: 150,
-    left: -60,
-  },
-  safeArea: {
-    flex: 1,
-  },
   keyboardView: {
     flex: 1,
   },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 16 : 0,
-    paddingBottom: 10,
+    paddingHorizontal: 8,
+    paddingTop: Platform.OS === 'android' ? 12 : 0,
   },
   closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -445,194 +263,100 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
     flexGrow: 1,
   },
-  content: {
-    flex: 1,
+  titleBlock: {
+    marginBottom: 28,
   },
-  logoSection: {
-    alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 32,
-  },
-  iconWrapper: {
-    marginBottom: 16,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  iconTile: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 18,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 12,
-    textShadowColor: 'rgba(0,0,0,0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    ...TYPE.tabTitle,
   },
   subtitle: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  cardDark: {
-    backgroundColor: '#1e1e2e',
+    lineHeight: 22,
+    marginTop: 10,
   },
   inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f7',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  inputWrapperDark: {
-    backgroundColor: '#2a2a3e',
-  },
-  inputFocused: {
-    borderColor: '#667eea',
-    backgroundColor: '#fff',
-  },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
-    flex: 1,
-    height: 52,
-    fontSize: 16,
-    color: '#333',
-  },
-  inputDark: {
-    color: '#fff',
-  },
-  resetButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
     marginBottom: 16,
   },
-  resetButtonDisabled: {
-    opacity: 0.7,
+  inputLabel: {
+    ...TYPE.sectionHeader,
+    marginBottom: 6,
   },
-  resetButtonGradient: {
-    flexDirection: 'row',
-    height: 54,
+  inputWrapper: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  input: {
+    height: '100%',
+    fontSize: 15,
+    paddingVertical: 0,
+  },
+  primaryButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  resetButtonText: {
-    fontSize: 17,
+  primaryButtonText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
-  },
-  buttonIcon: {
-    marginLeft: 8,
   },
   loginLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    minHeight: SIZE.touch,
+    alignSelf: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 6,
+    paddingHorizontal: 4,
+    marginTop: 8,
   },
   loginLinkText: {
     fontSize: 14,
-    color: '#667eea',
+    fontWeight: '500',
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: 'auto',
+    paddingTop: 24,
     gap: 6,
   },
   footerText: {
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
   },
   // 전송 완료 화면
   successContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  successIcon: {
-    backgroundColor: 'rgba(102, 126, 234, 0.3)',
-  },
-  successTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  successSubtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  successCard: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 16,
-    padding: 16,
-    width: '100%',
-    marginBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   tipRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: 8,
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    padding: 14,
+    marginTop: 24,
+    marginBottom: 24,
   },
   tipText: {
     flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  backButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    width: '100%',
-  },
-  backButtonGradient: {
-    flexDirection: 'row',
-    height: 54,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#fff',
+    fontSize: 13,
+    lineHeight: 19,
   },
 });

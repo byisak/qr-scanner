@@ -19,6 +19,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function EmailLoginScreen() {
@@ -34,6 +35,7 @@ export default function EmailLoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,6 +92,8 @@ export default function EmailLoginScreen() {
     router.push('/forgot-password');
   };
 
+  const canSubmit = !!(email && password);
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -100,27 +104,42 @@ export default function EmailLoginScreen() {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 28 + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
       >
         {/* 타이틀 */}
-        <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
-          {t('auth.loginTitle')}
-        </Text>
+        <View style={styles.titleBlock}>
+          <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
+            {t('auth.loginTitle')}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            {t('auth.loginSubtitle')}
+          </Text>
+        </View>
 
         {/* 이메일 입력 */}
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
             {t('auth.email')}
           </Text>
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View
+            style={[
+              styles.inputWrapper,
+              {
+                backgroundColor: colors.surface,
+                borderColor: focusedInput === 'email' ? colors.primary : colors.border,
+              },
+            ]}
+          >
             <TextInput
               style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
               placeholder={t('auth.emailPlaceholder')}
@@ -130,16 +149,26 @@ export default function EmailLoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              onFocus={() => setFocusedInput('email')}
+              onBlur={() => setFocusedInput(null)}
             />
           </View>
         </View>
 
         {/* 비밀번호 입력 */}
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+          <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
             {t('auth.password')}
           </Text>
-          <View style={[styles.inputWrapper, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}>
+          <View
+            style={[
+              styles.inputWrapper,
+              {
+                backgroundColor: colors.surface,
+                borderColor: focusedInput === 'password' ? colors.primary : colors.border,
+              },
+            ]}
+          >
             <TextInput
               style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
               placeholder={t('auth.passwordPlaceholder')}
@@ -148,53 +177,41 @@ export default function EmailLoginScreen() {
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
+              onFocus={() => setFocusedInput('password')}
+              onBlur={() => setFocusedInput(null)}
             />
             <TouchableOpacity
               style={styles.passwordToggle}
               onPress={() => setShowPassword(!showPassword)}
+              accessibilityRole="button"
             >
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={22}
-                color={colors.textTertiary}
+                size={20}
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           </View>
-        </View>
-
-        {/* 회원가입 / 계정찾기 링크 */}
-        <View style={styles.linksRow}>
-          <TouchableOpacity onPress={handleSignup}>
-            <Text style={[styles.linkText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-              {t('auth.signup')}
-            </Text>
-          </TouchableOpacity>
-          <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-          <TouchableOpacity onPress={handleFindAccount}>
-            <Text style={[styles.linkText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-              {t('auth.findAccount')}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* 로그인 버튼 */}
         <TouchableOpacity
           style={[
             styles.loginButton,
-            { backgroundColor: email && password ? '#E67E22' : colors.borderLight },
+            { backgroundColor: canSubmit ? colors.primary : colors.raised },
           ]}
           onPress={handleLogin}
           disabled={isLoading || !email || !password}
           activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#FFFFFF" />
           ) : (
             <Text
               style={[
                 styles.loginButtonText,
                 {
-                  color: email && password ? '#fff' : colors.textTertiary,
+                  color: canSubmit ? '#FFFFFF' : colors.textTertiary,
                   fontFamily: fonts.semiBold,
                 },
               ]}
@@ -203,6 +220,20 @@ export default function EmailLoginScreen() {
             </Text>
           )}
         </TouchableOpacity>
+
+        {/* 회원가입 / 계정찾기 링크 */}
+        <View style={styles.linksRow}>
+          <TouchableOpacity style={styles.linkButton} onPress={handleSignup} accessibilityRole="button">
+            <Text style={[styles.linkText, { color: colors.text, fontFamily: fonts.medium }]}>
+              {t('auth.signup')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.linkButton} onPress={handleFindAccount} accessibilityRole="button">
+            <Text style={[styles.linkText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
+              {t('auth.findAccount')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -214,11 +245,11 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 8,
-    paddingBottom: 10,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -226,60 +257,73 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  titleBlock: {
+    marginBottom: 28,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 32,
+    ...TYPE.tabTitle,
+  },
+  subtitle: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 10,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   label: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 8,
+    ...TYPE.sectionHeader,
+    marginBottom: 6,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: 48,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderRadius: RADIUS.control,
+    paddingLeft: 14,
+    paddingRight: 2,
   },
   input: {
     flex: 1,
-    height: 52,
-    fontSize: 16,
+    height: '100%',
+    fontSize: 15,
+    paddingVertical: 0,
   },
   passwordToggle: {
-    padding: 8,
-  },
-  linksRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 32,
-  },
-  linkText: {
-    fontSize: 14,
-    paddingHorizontal: 12,
-  },
-  divider: {
-    width: 1,
-    height: 14,
-  },
-  loginButton: {
-    height: 52,
+    width: SIZE.touch,
+    height: SIZE.touch,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loginButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 4,
+  },
   loginButtonText: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
+  },
+  linksRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  linkButton: {
+    minHeight: SIZE.touch,
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  linkText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
