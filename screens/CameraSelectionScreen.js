@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,6 +14,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 
 // 사용 가능한 카메라 타입 목록
@@ -65,67 +65,67 @@ export default function CameraSelectionScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('cameraSelection.title')}</Text>
-        <View style={{ width: 40 }} />
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            onPress={() => router.back()}
+            style={s.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+          {t('cameraSelection.title')}
+        </Text>
+        <View style={s.headerSide} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={s.section}>
-          <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-            {t('cameraSelection.description')}
-          </Text>
+        <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+          {t('cameraSelection.description')}
+        </Text>
 
-          {CAMERA_TYPES.map((camera) => {
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {CAMERA_TYPES.map((camera, index) => {
             const isSelected = selectedCamera === camera.key;
+            const isLast = index === CAMERA_TYPES.length - 1;
 
             return (
               <MaterialPressable
                 key={camera.key}
-                style={[
-                  s.cameraItem,
-                  { backgroundColor: colors.surface, borderColor: isSelected ? colors.primary : colors.border },
-                  isSelected && { backgroundColor: isDark ? 'rgba(47, 111, 235, 0.2)' : '#f0f8ff' }
-                ]}
+                style={[s.row, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight }]}
                 onPress={() => selectCamera(camera.key)}
                 activeOpacity={0.7}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected }}
               >
-                <View style={[s.cameraIcon, { backgroundColor: colors.inputBackground }]}>
-                  <Ionicons
-                    name={camera.icon}
-                    size={32}
-                    color={isSelected ? colors.primary : colors.textSecondary}
-                  />
+                <View style={[s.rowIcon, { backgroundColor: colors.raised }]}>
+                  <Ionicons name={camera.icon} size={20} color={colors.textSecondary} />
                 </View>
-                <View style={s.cameraInfo}>
-                  <View style={s.cameraHeader}>
-                    <Text style={[s.cameraName, { color: isSelected ? colors.primary : colors.text, fontFamily: fonts.semiBold }]}>
-                      {t(`cameraSelection.${camera.nameKey}`)}
-                    </Text>
-                    {isSelected && (
-                      <View style={[s.selectedBadge, { backgroundColor: colors.success }]}>
-                        <Text style={[s.selectedBadgeText, { fontFamily: fonts.semiBold }]}>{t('cameraSelection.selected')}</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[s.cameraDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t(`cameraSelection.${camera.descKey}`)}</Text>
+                <View style={s.rowText}>
+                  <Text style={[s.rowLabel, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t(`cameraSelection.${camera.nameKey}`)}
+                  </Text>
+                  <Text style={[s.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                    {t(`cameraSelection.${camera.descKey}`)}
+                  </Text>
                 </View>
-                <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.borderLight }]}>
+                <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
                   {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
                 </View>
               </MaterialPressable>
             );
           })}
+        </View>
 
-          <View style={[s.noteBox, { backgroundColor: isDark ? 'rgba(255, 204, 0, 0.15)' : '#fff9e6' }]}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
-            <Text style={[s.noteText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('cameraSelection.note')}
-            </Text>
-          </View>
+        <View style={s.note}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} style={s.noteIcon} />
+          <Text style={[s.noteText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            {t('cameraSelection.note')}
+          </Text>
         </View>
       </ScrollView>
     </View>
@@ -139,104 +139,97 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
   },
   info: {
     fontSize: 14,
-    marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 21,
+    marginHorizontal: 4,
+    marginBottom: 14,
   },
-  cameraItem: {
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 14,
   },
-  cameraIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
-  cameraInfo: {
+  rowText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  cameraHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  rowLabel: {
+    ...TYPE.body,
   },
-  cameraName: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  selectedBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-  },
-  selectedBadgeText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  cameraDesc: {
-    fontSize: 14,
+  rowDesc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
   radioDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
-  noteBox: {
+  note: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 8,
+    gap: 8,
+    marginTop: SPACE.section,
+    marginHorizontal: 4,
+  },
+  noteIcon: {
+    marginTop: 2,
   },
   noteText: {
     flex: 1,
     fontSize: 13,
-    marginLeft: 8,
-    lineHeight: 18,
+    lineHeight: 19,
   },
 });

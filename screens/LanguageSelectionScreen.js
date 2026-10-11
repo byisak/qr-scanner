@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +13,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 
 export default function LanguageSelectionScreen() {
@@ -29,55 +29,48 @@ export default function LanguageSelectionScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text }]}>{t('languageSelection.title')}</Text>
-        <View style={{ width: 40 }} />
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            onPress={() => router.back()}
+            style={s.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+          {t('languageSelection.title')}
+        </Text>
+        <View style={s.headerSide} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={s.section}>
-          <Text style={[s.info, { color: colors.textSecondary }]}>
-            {t('languageSelection.description')}
-          </Text>
+        <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+          {t('languageSelection.description')}
+        </Text>
 
-          {languages.map((lang) => {
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {languages.map((lang, index) => {
             const isSelected = language === lang.code;
+            const isLast = index === languages.length - 1;
 
             return (
               <MaterialPressable
                 key={lang.code}
-                style={[
-                  s.languageItem,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                  isSelected && { borderColor: colors.primary, backgroundColor: isDark ? '#0A1929' : '#f0f8ff' }
-                ]}
+                style={[s.row, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight }]}
                 onPress={() => selectLanguage(lang.code)}
                 activeOpacity={0.7}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected }}
               >
-                <View style={[s.languageIcon, { backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5' }]}>
-                  <Ionicons
-                    name="language"
-                    size={32}
-                    color={isSelected ? colors.primary : colors.textSecondary}
-                  />
-                </View>
-                <View style={s.languageInfo}>
-                  <View style={s.languageHeader}>
-                    <Text style={[s.languageName, { color: isSelected ? colors.primary : colors.text }]}>
-                      {lang.name}
-                    </Text>
-                    {isSelected && (
-                      <View style={s.selectedBadge}>
-                        <Text style={s.selectedBadgeText}>
-                          {t('languageSelection.selected')}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[s.languageDesc, { color: colors.textSecondary }]}>{lang.nativeName}</Text>
+                <View style={s.rowText}>
+                  <Text style={[s.rowLabel, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {lang.name}
+                  </Text>
+                  <Text style={[s.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{lang.nativeName}</Text>
                 </View>
                 <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
                   {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
@@ -98,92 +91,75 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
   },
   info: {
     fontSize: 14,
-    marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 21,
+    marginHorizontal: 4,
+    marginBottom: 14,
   },
-  languageItem: {
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 14,
   },
-  languageIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  languageInfo: {
+  rowText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  languageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  rowLabel: {
+    ...TYPE.body,
   },
-  languageName: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  selectedBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: '#34C759',
-    borderRadius: 10,
-  },
-  selectedBadgeText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  languageDesc: {
-    fontSize: 14,
+  rowDesc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
   radioDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });

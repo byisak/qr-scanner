@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 
 const scanResultModes = [
@@ -59,55 +59,51 @@ export default function ScanResultModeSelectionScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>{t('scanResultMode.title')}</Text>
-        <View style={{ width: 40 }} />
+      {/* 하위 화면 헤더: 뒤로 · 제목 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            onPress={() => router.back()}
+            style={s.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+          {t('scanResultMode.title')}
+        </Text>
+        <View style={s.headerSide} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
-        <View style={s.section}>
-          <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-            {t('scanResultMode.description')}
-          </Text>
+        <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+          {t('scanResultMode.description')}
+        </Text>
 
-          {scanResultModes.map((mode) => {
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {scanResultModes.map((mode, index) => {
             const isSelected = selectedMode === mode.id;
+            const isLast = index === scanResultModes.length - 1;
 
             return (
               <MaterialPressable
                 key={mode.id}
-                style={[
-                  s.modeItem,
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                  isSelected && { borderColor: colors.primary, backgroundColor: isDark ? '#0A1929' : '#f0f8ff' }
-                ]}
+                style={[s.row, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight }]}
                 onPress={() => selectMode(mode.id)}
                 activeOpacity={0.7}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected }}
               >
-                <View style={[s.modeIcon, { backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5' }]}>
-                  <Ionicons
-                    name={mode.icon}
-                    size={32}
-                    color={isSelected ? colors.primary : colors.textSecondary}
-                  />
+                <View style={[s.rowIcon, { backgroundColor: colors.raised }]}>
+                  <Ionicons name={mode.icon} size={20} color={colors.textSecondary} />
                 </View>
-                <View style={s.modeInfo}>
-                  <View style={s.modeHeader}>
-                    <Text style={[s.modeName, { color: isSelected ? colors.primary : colors.text, fontFamily: fonts.semiBold }]}>
-                      {t(`scanResultMode.${mode.id}`)}
-                    </Text>
-                    {isSelected && (
-                      <View style={s.selectedBadge}>
-                        <Text style={[s.selectedBadgeText, { fontFamily: fonts.semiBold }]}>
-                          {t('scanResultMode.selected')}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[s.modeDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                <View style={s.rowText}>
+                  <Text style={[s.rowLabel, { color: colors.text, fontFamily: fonts.medium }]}>
+                    {t(`scanResultMode.${mode.id}`)}
+                  </Text>
+                  <Text style={[s.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                     {t(`scanResultMode.${mode.id}Desc`)}
                   </Text>
                 </View>
@@ -117,14 +113,14 @@ export default function ScanResultModeSelectionScreen() {
               </MaterialPressable>
             );
           })}
+        </View>
 
-          {/* 토스트 모드 추가 설명 */}
-          <View style={[s.tipBox, { backgroundColor: isDark ? '#1c1c1e' : '#f8f8f8' }]}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
-            <Text style={[s.tipText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('scanResultMode.toastTip')}
-            </Text>
-          </View>
+        {/* 토스트 모드 추가 설명 */}
+        <View style={s.note}>
+          <Ionicons name="information-circle-outline" size={16} color={colors.textTertiary} style={s.noteIcon} />
+          <Text style={[s.noteText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+            {t('scanResultMode.toastTip')}
+          </Text>
         </View>
       </ScrollView>
     </View>
@@ -138,106 +134,97 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
-  },
-  section: {
-    marginBottom: 24,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
   },
   info: {
     fontSize: 14,
-    marginBottom: 16,
-    lineHeight: 20,
+    lineHeight: 21,
+    marginHorizontal: 4,
+    marginBottom: 14,
   },
-  modeItem: {
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 2,
-    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 14,
   },
-  modeIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  rowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
   },
-  modeInfo: {
+  rowText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  modeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
+  rowLabel: {
+    ...TYPE.body,
   },
-  modeName: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  selectedBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: '#34C759',
-    borderRadius: 10,
-  },
-  selectedBadgeText: {
-    fontSize: 11,
-    color: '#fff',
-    fontWeight: '600',
-  },
-  modeDesc: {
-    fontSize: 14,
-    lineHeight: 18,
+  rowDesc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
   radioDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
-  tipBox: {
+  note: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 12,
-    borderRadius: 10,
-    marginTop: 8,
-    gap: 10,
+    gap: 8,
+    marginTop: SPACE.section,
+    marginHorizontal: 4,
   },
-  tipText: {
+  noteIcon: {
+    marginTop: 2,
+  },
+  noteText: {
     flex: 1,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
   },
 });

@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,6 +14,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 
 // ✅ 지원되는 바코드 타입 목록
@@ -106,56 +106,76 @@ export default function BarcodeSelectionScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text }]}>인식할 바코드 선택</Text>
-        <View style={{ width: 40 }} />
+      {/* 하위 화면 헤더: 뒤로 · 제목 · 전체 선택/해제 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <View style={s.headerSide}>
+          <MaterialPressable
+            onPress={() => router.back()}
+            style={s.backButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </MaterialPressable>
+        </View>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+          인식할 바코드 선택
+        </Text>
+        <View style={[s.headerSide, s.headerSideRight]}>
+          <MaterialPressable onPress={toggleAll} style={s.headerAction} accessibilityRole="button">
+            <Text style={[s.headerActionText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>
+              {allSelected ? '전체 해제' : '전체 선택'}
+            </Text>
+          </MaterialPressable>
+        </View>
       </View>
 
-      <ScrollView style={s.content} contentContainerStyle={s.scrollContent}>
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.sectionHeader}>
-            <Text style={[s.info, { color: colors.textSecondary }]}>
-              선택한 바코드 타입만 인식됩니다 ({selectedBarcodes.length}개 선택)
-            </Text>
-            <MaterialPressable onPress={toggleAll} style={[s.toggleAllBtn, { backgroundColor: colors.primary }]}>
-              <Text style={s.toggleAllText}>{allSelected ? '전체 해제' : '전체 선택'}</Text>
-            </MaterialPressable>
-          </View>
+      <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
+        <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+          선택한 바코드 타입만 인식됩니다{' '}
+          <Text style={[s.infoCount, { color: colors.text, fontFamily: fonts.semiBold }]}>
+            ({selectedBarcodes.length}개 선택)
+          </Text>
+        </Text>
 
-          {BARCODE_TYPES.map((barcode) => {
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {BARCODE_TYPES.map((barcode, index) => {
             const isSelected = selectedBarcodes.includes(barcode.key);
             const isQROnly = barcode.key === 'qr' && selectedBarcodes.length === 1;
+            const isLast = index === BARCODE_TYPES.length - 1;
 
             return (
               <MaterialPressable
                 key={barcode.key}
-                style={[
-                  s.barcodeItem,
-                  { backgroundColor: colors.inputBackground, borderColor: isSelected ? colors.primary : 'transparent' },
-                  isSelected && { backgroundColor: isDark ? 'rgba(47, 111, 235, 0.2)' : '#E3F2FD' }
-                ]}
+                style={[s.row, !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderLight }]}
                 onPress={() => toggleBarcode(barcode.key)}
                 disabled={isQROnly}
                 activeOpacity={0.7}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isSelected, disabled: isQROnly }}
               >
-                <View style={s.barcodeInfo}>
-                  <View style={s.barcodeHeader}>
-                    <Text style={[s.barcodeName, { color: isSelected ? colors.primary : colors.text }]}>
+                <View
+                  style={[
+                    s.checkbox,
+                    isSelected
+                      ? { backgroundColor: colors.primary }
+                      : { borderWidth: 2, borderColor: isDark ? '#4A5260' : colors.textTertiary },
+                  ]}
+                >
+                  {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                </View>
+                <View style={s.rowText}>
+                  <View style={s.rowLabelLine}>
+                    <Text style={[s.rowLabel, { color: colors.text, fontFamily: fonts.medium }]}>
                       {barcode.name}
                     </Text>
                     {barcode.key === 'qr' && (
-                      <View style={[s.defaultBadge, { backgroundColor: colors.success }]}>
-                        <Text style={s.defaultBadgeText}>기본</Text>
+                      <View style={[s.defaultBadge, { backgroundColor: colors.successSoft }]}>
+                        <Text style={[s.defaultBadgeText, { color: colors.success, fontFamily: fonts.semiBold }]}>기본</Text>
                       </View>
                     )}
                   </View>
-                  <Text style={[s.barcodeDesc, { color: colors.textSecondary }]}>{barcode.desc}</Text>
-                </View>
-                <View style={[s.checkbox, { borderColor: isSelected ? colors.primary : colors.borderLight, backgroundColor: isSelected ? colors.primary : colors.surface }]}>
-                  {isSelected && <Ionicons name="checkmark" size={18} color="#fff" />}
+                  <Text style={[s.rowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{barcode.desc}</Text>
                 </View>
               </MaterialPressable>
             );
@@ -173,102 +193,101 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  headerSide: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  headerSideRight: {
+    alignItems: 'flex-end',
   },
   backButton: {
-    padding: 8,
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TYPE.screenTitle,
+    flexShrink: 1,
+    textAlign: 'center',
+  },
+  headerAction: {
+    minHeight: SIZE.touch,
+    paddingHorizontal: 12,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerActionText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 4,
   },
   info: {
-    fontSize: 13,
-    flex: 1,
-    marginRight: 10,
+    fontSize: 14,
+    lineHeight: 21,
+    marginHorizontal: 4,
+    marginBottom: 14,
   },
-  toggleAllBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  toggleAllText: {
-    color: '#fff',
-    fontSize: 12,
+  infoCount: {
     fontWeight: '600',
   },
-  barcodeItem: {
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 2,
-    ...(Platform.OS === 'android' ? { minHeight: 56 } : {}),
-  },
-  barcodeInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  barcodeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  barcodeName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  defaultBadge: {
-    marginLeft: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  defaultBadgeText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  barcodeDesc: {
-    fontSize: 13,
-    marginTop: 2,
+    gap: 14,
   },
   checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 7,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  rowLabelLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  rowLabel: {
+    ...TYPE.body,
+  },
+  rowDesc: {
+    ...TYPE.caption,
+    lineHeight: 17,
+  },
+  defaultBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: RADIUS.badge,
+  },
+  defaultBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
