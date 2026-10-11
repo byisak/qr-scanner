@@ -15,6 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAppLock } from '../contexts/AppLockContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialPressable from '../components/MaterialPressable';
 
@@ -88,17 +89,25 @@ export default function SecuritySettingsScreen() {
     return t('security.biometric') || '생체인증';
   };
 
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[styles.header, { borderBottomColor: colors.borderLight, paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
+      {/* 하위 화면 헤더 */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
         <MaterialPressable
           style={styles.backButton}
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.primary} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('security.title') || '인증/보안'}
         </Text>
         <View style={styles.headerRight} />
@@ -106,91 +115,93 @@ export default function SecuritySettingsScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* 앱 잠금이 비활성화된 경우 */}
         {!appLockEnabled ? (
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <MaterialPressable
-              style={styles.menuItem}
+              style={[styles.row, styles.rowWithDesc]}
               onPress={handleEnableAppLock}
               activeOpacity={0.7}
+              accessibilityRole="button"
             >
-              <View style={[styles.menuIconWrapper, { backgroundColor: '#3498DB15' }]}>
-                <Ionicons name="lock-closed-outline" size={20} color="#3498DB" />
-              </View>
-              <View style={styles.menuTextContainer}>
-                <Text style={[styles.menuText, { color: colors.text, fontFamily: fonts.medium }]}>
+              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
+              <View style={styles.rowText}>
+                <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
                   {t('security.enableAppLock') || '앱 잠금 설정'}
                 </Text>
-                <Text style={[styles.menuDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+                <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('security.enableAppLockDesc') || 'PIN 또는 생체인증으로 앱을 보호합니다'}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
             </MaterialPressable>
           </View>
         ) : (
-          <>
+          <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             {/* PIN 비밀번호 변경 */}
-            <View style={[styles.section, { backgroundColor: colors.surface }]}>
-              <MaterialPressable
-                style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: colors.borderLight }]}
-                onPress={handleChangePinPress}
-                activeOpacity={0.7}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.menuLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                    {t('security.changePin') || 'PIN 비밀번호 변경'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-              </MaterialPressable>
-
-              {/* Face ID 사용 */}
-              <View style={[styles.menuItem, { borderBottomWidth: 1, borderBottomColor: colors.borderLight }]}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.menuLabel, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                    {t('security.useBiometric') || `${getBiometricLabel()} 사용`}
-                  </Text>
-                  <Text style={[styles.menuDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    {t('security.useBiometricDesc') || `${getBiometricLabel()}를 사용하여 본인 확인.`}
-                  </Text>
-                </View>
-                <Switch
-                  value={biometricEnabled}
-                  onValueChange={handleBiometricToggle}
-                  trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                  thumbColor="#fff"
-                  disabled={!biometricAvailable}
-                />
+            <MaterialPressable
+              style={styles.row}
+              onPress={handleChangePinPress}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <View style={styles.rowText}>
+                <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                  {t('security.changePin') || 'PIN 비밀번호 변경'}
+                </Text>
               </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </MaterialPressable>
 
-              {/* 앱 잠금 해제 */}
-              <MaterialPressable
-                style={styles.menuItem}
-                onPress={handleDisableAppLock}
-                activeOpacity={0.7}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.menuLabel, { color: '#E74C3C', fontFamily: fonts.semiBold }]}>
-                    {t('security.disableAppLock') || '앱 잠금 해제'}
-                  </Text>
-                  <Text style={[styles.menuDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    {t('security.disableAppLockDesc') || '앱 잠금을 비활성화합니다'}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
-              </MaterialPressable>
+            <View style={[styles.separator, { backgroundColor: colors.borderLight }]} />
+
+            {/* Face ID 사용 */}
+            <View style={[styles.row, styles.rowWithDesc]}>
+              <View style={styles.rowText}>
+                <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                  {t('security.useBiometric') || `${getBiometricLabel()} 사용`}
+                </Text>
+                <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                  {t('security.useBiometricDesc') || `${getBiometricLabel()}를 사용하여 본인 확인.`}
+                </Text>
+              </View>
+              <Switch
+                value={biometricEnabled}
+                onValueChange={handleBiometricToggle}
+                {...switchColors}
+                disabled={!biometricAvailable}
+              />
             </View>
-          </>
+
+            <View style={[styles.separator, { backgroundColor: colors.borderLight }]} />
+
+            {/* 앱 잠금 해제 */}
+            <MaterialPressable
+              style={[styles.row, styles.rowWithDesc]}
+              onPress={handleDisableAppLock}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+            >
+              <View style={styles.rowText}>
+                <Text style={[styles.label, { color: colors.error, fontFamily: fonts.medium }]}>
+                  {t('security.disableAppLock') || '앱 잠금 해제'}
+                </Text>
+                <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                  {t('security.disableAppLockDesc') || '앱 잠금을 비활성화합니다'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+            </MaterialPressable>
+          </View>
         )}
 
         {/* 설명 */}
-        <View style={styles.infoContainer}>
-          <Ionicons name="information-circle-outline" size={18} color={colors.textTertiary} />
-          <Text style={[styles.infoText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+        <View style={[styles.infoBox, { backgroundColor: colors.raised }]}>
+          <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+          <Text style={[styles.infoText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
             {t('security.infoText') || '앱 잠금을 설정하면 앱 실행 시 PIN 비밀번호 또는 생체인증으로 본인 확인을 진행합니다.'}
           </Text>
         </View>
@@ -208,70 +219,70 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
+    paddingBottom: 8,
   },
   backButton: {
-    width: 44,
-    height: 44,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 22, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   headerRight: {
-    width: 44,
+    width: SIZE.touch,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 40,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 8,
+    gap: SPACE.section,
   },
-  section: {
-    borderRadius: 16,
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
     overflow: 'hidden',
-    marginBottom: 20,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
   },
-  menuItem: {
+  separator: {
+    height: 1,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    paddingVertical: 14,
   },
-  menuIconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
   },
-  menuTextContainer: {
+  rowText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
-  menuText: {
-    fontSize: 16,
+  label: {
+    ...TYPE.body,
   },
-  menuLabel: {
-    fontSize: 16,
-    marginBottom: 4,
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
-  menuDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  infoContainer: {
+  infoBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 8,
     gap: 8,
+    padding: 12,
+    borderRadius: RADIUS.control,
   },
   infoText: {
     flex: 1,

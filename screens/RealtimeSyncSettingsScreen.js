@@ -6,13 +6,11 @@ import {
   StyleSheet,
   Switch,
   ScrollView,
-  TouchableOpacity,
   Alert,
   Modal,
   TextInput,
   TouchableWithoutFeedback,
   Keyboard,
-  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +24,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
+import MaterialPressable from '../components/MaterialPressable';
 import websocketClient from '../utils/websocket';
 import config from '../config/config';
 
@@ -111,6 +111,7 @@ export default function RealtimeSyncSettingsScreen() {
   const [newSessionIsPublic, setNewSessionIsPublic] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [focusedInput, setFocusedInput] = useState(null); // 입력칸 포커스 테두리 표시용
 
   // 활성/삭제된 세션 필터링
   const activeSessions = useMemo(() =>
@@ -1015,158 +1016,155 @@ export default function RealtimeSyncSettingsScreen() {
     return `${config.serverUrl}/session/${sessionId}`;
   }, []);
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
+  // 입력칸 테두리: 포커스되면 강조색
+  const inputBorder = (field) => ({ borderColor: focusedInput === field ? colors.primary : colors.border });
+  const inputFocusProps = (field) => ({
+    onFocus: () => setFocusedInput(field),
+    onBlur: () => setFocusedInput(null),
+  });
+
   // 활성 세션 아이템 렌더링
-  const renderActiveSessionItem = (session) => (
+  const renderActiveSessionItem = (session, index) => (
     <View
       key={session.id}
-      style={[
-        styles.sessionItem,
-        {
-          backgroundColor: colors.inputBackground,
-          borderColor: colors.border
-        }
-      ]}
+      style={[styles.sessionItem, index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight }]}
     >
-      <View style={styles.sessionItemContent}>
-        <View style={styles.sessionItemHeader}>
-          <Ionicons
-            name="link"
-            size={18}
-            color={colors.primary}
-          />
-          <Text style={[styles.sessionUrl, { color: colors.primary, flex: 1 }]} numberOfLines={1}>
-            {getSessionUrl(session.id)}
-          </Text>
-        </View>
-        <View style={styles.sessionStatusRow}>
-          <Text style={[styles.sessionGroupName, { color: colors.textSecondary }]}>
-            {session.name || session.id}
-          </Text>
-          <View style={styles.sessionBadges}>
-            {session.hasPassword && (
-              <View style={[styles.badge, { backgroundColor: colors.success + '20' }]}>
-                <Ionicons name="lock-closed" size={12} color={colors.success} />
-                <Text style={[styles.badgeText, { color: colors.success }]}>
-                  {t('settings.passwordProtected') || '비밀번호'}
-                </Text>
-              </View>
-            )}
-            <View style={[
-              styles.badge,
-              {
-                backgroundColor: session.isPublic !== false ? colors.primary + '20' : colors.error + '15',
-                borderWidth: session.isPublic !== false ? 0 : 1,
-                borderColor: session.isPublic !== false ? 'transparent' : colors.error,
-              }
-            ]}>
-              <Ionicons
-                name={session.isPublic !== false ? "globe-outline" : "lock-closed-outline"}
-                size={12}
-                color={session.isPublic !== false ? colors.primary : colors.error}
-              />
-              <Text style={[styles.badgeText, { color: session.isPublic !== false ? colors.primary : colors.error }]}>
-                {session.isPublic !== false ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
+      <View style={styles.sessionItemHeader}>
+        <Ionicons name="link" size={16} color={colors.primaryText} />
+        <Text style={[styles.sessionUrl, { color: colors.primaryText }]} numberOfLines={1}>
+          {getSessionUrl(session.id)}
+        </Text>
+      </View>
+      <View style={styles.sessionStatusRow}>
+        <Text style={[styles.sessionGroupName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
+          {session.name || session.id}
+        </Text>
+        <View style={styles.sessionBadges}>
+          {session.hasPassword && (
+            <View style={[styles.badge, { backgroundColor: colors.successSoft }]}>
+              <Ionicons name="lock-closed" size={11} color={colors.success} />
+              <Text style={[styles.badgeText, { color: colors.success, fontFamily: fonts.semiBold }]}>
+                {t('settings.passwordProtected') || '비밀번호'}
               </Text>
             </View>
+          )}
+          <View style={[styles.badge, { backgroundColor: session.isPublic !== false ? colors.primarySoft : colors.errorSoft }]}>
+            <Ionicons
+              name={session.isPublic !== false ? "globe-outline" : "lock-closed-outline"}
+              size={11}
+              color={session.isPublic !== false ? colors.primaryText : colors.error}
+            />
+            <Text style={[styles.badgeText, { color: session.isPublic !== false ? colors.primaryText : colors.error, fontFamily: fonts.semiBold }]}>
+              {session.isPublic !== false ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
+            </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.sessionItemActions}>
-        <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: colors.primary }]}
+        <MaterialPressable
+          style={[styles.iconButton, styles.iconButtonSecondary, { backgroundColor: colors.raised, borderColor: colors.border }]}
           onPress={() => handleOpenSecurityModal(session.id)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.edit')}
         >
-          <Ionicons name="create-outline" size={18} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: colors.primary }]}
+          <Ionicons name="create-outline" size={18} color={colors.text} />
+        </MaterialPressable>
+        <MaterialPressable
+          style={[styles.iconButton, styles.iconButtonSecondary, { backgroundColor: colors.raised, borderColor: colors.border }]}
           onPress={() => handleCopyUrl(getSessionUrl(session.id))}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.copy')}
         >
-          <Ionicons name="copy-outline" size={18} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.iconButton, { backgroundColor: colors.error }]}
+          <Ionicons name="copy-outline" size={18} color={colors.text} />
+        </MaterialPressable>
+        <MaterialPressable
+          style={[styles.iconButton, { backgroundColor: colors.errorSoft }]}
           onPress={() => handleSoftDelete(session.id)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.delete')}
         >
-          <Ionicons name="trash-outline" size={18} color="#fff" />
-        </TouchableOpacity>
+          <Ionicons name="trash-outline" size={18} color={colors.error} />
+        </MaterialPressable>
       </View>
     </View>
   );
 
   // 삭제된 세션 아이템 렌더링
-  const renderDeletedSessionItem = (session) => {
+  const renderDeletedSessionItem = (session, index) => {
     const daysRemaining = getDaysRemaining(session.deletedAt);
 
     return (
       <View
         key={session.id}
-        style={[
-          styles.sessionItem,
-          {
-            backgroundColor: colors.inputBackground,
-            borderColor: colors.border,
-            opacity: 0.8,
-          }
-        ]}
+        style={[styles.sessionItem, index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight }]}
       >
-        <View style={styles.sessionItemContent}>
-          <View style={styles.sessionItemHeader}>
-            <Ionicons
-              name="trash"
-              size={18}
-              color={colors.textTertiary}
-            />
-            <Text style={[styles.sessionUrl, { color: colors.textTertiary, flex: 1 }]} numberOfLines={1}>
-              {getSessionUrl(session.id)}
-            </Text>
-          </View>
-          <View style={styles.deletedInfoRow}>
-            <Text style={[styles.sessionGroupName, { color: colors.textTertiary }]}>
-              {session.name || session.id}
-            </Text>
-            <Text style={[styles.daysRemaining, { color: colors.warning }]}>
+        <View style={styles.sessionItemHeader}>
+          <Ionicons name="trash-outline" size={16} color={colors.textTertiary} />
+          <Text style={[styles.sessionUrl, { color: colors.textTertiary }]} numberOfLines={1}>
+            {getSessionUrl(session.id)}
+          </Text>
+        </View>
+        <View style={styles.sessionStatusRow}>
+          <Text style={[styles.sessionGroupName, { color: colors.textSecondary, fontFamily: fonts.medium }]} numberOfLines={1}>
+            {session.name || session.id}
+          </Text>
+          <View style={[styles.badge, { backgroundColor: colors.warningSoft }]}>
+            <Text style={[styles.badgeText, { color: colors.warning, fontFamily: fonts.semiBold }]}>
               {t('settings.daysRemaining', { days: daysRemaining })}
             </Text>
           </View>
         </View>
 
         <View style={styles.sessionItemActions}>
-          <TouchableOpacity
-            style={[styles.iconButton, { backgroundColor: colors.success }]}
+          <MaterialPressable
+            style={[styles.iconButton, { backgroundColor: colors.successSoft }]}
             onPress={() => handleRestore(session.id)}
             activeOpacity={0.7}
+            accessibilityRole="button"
           >
-            <Ionicons name="refresh-outline" size={18} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.iconButton, { backgroundColor: colors.error }]}
+            <Ionicons name="refresh-outline" size={18} color={colors.success} />
+          </MaterialPressable>
+          <MaterialPressable
+            style={[styles.iconButton, { backgroundColor: colors.errorSoft }]}
             onPress={() => handlePermanentDelete(session.id)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.permanentDelete')}
           >
-            <Ionicons name="close-circle-outline" size={18} color="#fff" />
-          </TouchableOpacity>
+            <Ionicons name="close-circle-outline" size={18} color={colors.error} />
+          </MaterialPressable>
         </View>
       </View>
     );
   };
 
+  const createDisabled = isCreating || (!newSessionIsPublic && !newSessionPassword);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* 헤더 */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <TouchableOpacity
+      {/* 하위 화면 헤더 */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
           onPress={() => router.back()}
           style={styles.backButton}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
         >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.realtimeSync')}</Text>
+        </MaterialPressable>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{t('settings.realtimeSync')}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -1176,23 +1174,23 @@ export default function RealtimeSyncSettingsScreen() {
         </View>
       ) : (
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}>
           {/* 동기화 중 인디케이터 */}
           {isSyncing && (
-            <View style={[styles.syncingBanner, { backgroundColor: colors.primary + '20' }]}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={[styles.syncingText, { color: colors.primary }]}>
+            <View style={[styles.syncingBanner, { backgroundColor: colors.raised }]}>
+              <ActivityIndicator size="small" color={colors.textSecondary} />
+              <Text style={[styles.syncingText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('settings.syncing') || '서버와 동기화 중...'}
               </Text>
             </View>
           )}
 
           {/* 토글 설정 */}
-          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.label, { color: colors.text }]}>{t('settings.enableRealtimeSync')}</Text>
-                <Text style={[styles.desc, { color: colors.textTertiary }]}>{t('settings.realtimeSyncDesc')}</Text>
+              <View style={styles.rowText}>
+                <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>{t('settings.enableRealtimeSync')}</Text>
+                <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('settings.realtimeSyncDesc')}</Text>
               </View>
               <Switch
                 value={realtimeSyncEnabled}
@@ -1205,101 +1203,107 @@ export default function RealtimeSyncSettingsScreen() {
                   }
                   setRealtimeSyncEnabled(value);
                 }}
-                trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                thumbColor="#fff"
+                {...switchColors}
                 accessibilityLabel={t('settings.enableRealtimeSync')}
               />
             </View>
-
-            {realtimeSyncEnabled && (
-              <>
-                <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
-
-                {/* 주소 생성 버튼 */}
-                <TouchableOpacity
-                  style={[styles.generateButton, { backgroundColor: colors.success }]}
-                  onPress={handleOpenCreateModal}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="add-circle-outline" size={20} color="#fff" />
-                  <Text style={styles.generateButtonText}>{t('settings.generateSessionUrl')}</Text>
-                </TouchableOpacity>
-
-                {/* 탭 컨트롤 */}
-                <View style={[styles.tabContainer, { backgroundColor: colors.inputBackground }]}>
-                  <TouchableOpacity
-                    style={[
-                      styles.tab,
-                      activeTab === 'active' && { backgroundColor: colors.surface },
-                    ]}
-                    onPress={() => setActiveTab('active')}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[
-                      styles.tabText,
-                      { color: activeTab === 'active' ? colors.primary : colors.textTertiary }
-                    ]}>
-                      {t('settings.activeTab')} ({activeSessions.length})
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.tab,
-                      activeTab === 'deleted' && { backgroundColor: colors.surface },
-                    ]}
-                    onPress={handleDeletedTabClick}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[
-                      styles.tabText,
-                      { color: activeTab === 'deleted' ? colors.error : colors.textTertiary }
-                    ]}>
-                      {t('settings.deletedTab')} ({deletedSessions.length})
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* 세션 목록 */}
-                {activeTab === 'active' ? (
-                  // 활성 세션 목록
-                  activeSessions.length > 0 ? (
-                    <View style={styles.sessionListContainer}>
-                      <Text style={[styles.sessionListTitle, { color: colors.text }]}>{t('settings.generatedUrls')}</Text>
-                      {activeSessions.map(renderActiveSessionItem)}
-                      <Text style={[styles.sessionInfo, { color: colors.textTertiary }]}>
-                        {t('settings.sessionInfoNew')}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.emptyContainer}>
-                      <Ionicons name="link-outline" size={48} color={colors.textTertiary} />
-                      <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
-                        {t('settings.noActiveSessions')}
-                      </Text>
-                    </View>
-                  )
-                ) : (
-                  // 삭제된 세션 목록
-                  deletedSessions.length > 0 ? (
-                    <View style={styles.sessionListContainer}>
-                      <Text style={[styles.sessionListTitle, { color: colors.text }]}>{t('settings.deletedSessions')}</Text>
-                      {deletedSessions.map(renderDeletedSessionItem)}
-                      <Text style={[styles.sessionInfo, { color: colors.textTertiary }]}>
-                        {t('settings.deletedSessionsInfo')}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.emptyContainer}>
-                      <Ionicons name="trash-outline" size={48} color={colors.textTertiary} />
-                      <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
-                        {t('settings.noDeletedSessions')}
-                      </Text>
-                    </View>
-                  )
-                )}
-              </>
-            )}
           </View>
+
+          {realtimeSyncEnabled && (
+            <>
+              {/* 주소 생성 버튼 */}
+              <MaterialPressable
+                style={[styles.generateButton, { backgroundColor: colors.primary }]}
+                onPress={handleOpenCreateModal}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+              >
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Text style={[styles.generateButtonText, { fontFamily: fonts.semiBold }]}>{t('settings.generateSessionUrl')}</Text>
+              </MaterialPressable>
+
+              {/* 탭 컨트롤 */}
+              <View style={[styles.tabContainer, { backgroundColor: colors.raised }]}>
+                <MaterialPressable
+                  style={[
+                    styles.tab,
+                    activeTab === 'active' && { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => setActiveTab('active')}
+                  activeOpacity={0.7}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: activeTab === 'active' }}
+                >
+                  <Text style={[
+                    styles.tabText,
+                    { color: activeTab === 'active' ? '#FFFFFF' : colors.text, fontFamily: fonts.semiBold }
+                  ]}>
+                    {t('settings.activeTab')} ({activeSessions.length})
+                  </Text>
+                </MaterialPressable>
+                <MaterialPressable
+                  style={[
+                    styles.tab,
+                    activeTab === 'deleted' && { backgroundColor: colors.primary },
+                  ]}
+                  onPress={handleDeletedTabClick}
+                  activeOpacity={0.7}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: activeTab === 'deleted' }}
+                >
+                  <Text style={[
+                    styles.tabText,
+                    { color: activeTab === 'deleted' ? '#FFFFFF' : colors.text, fontFamily: fonts.semiBold }
+                  ]}>
+                    {t('settings.deletedTab')} ({deletedSessions.length})
+                  </Text>
+                </MaterialPressable>
+              </View>
+
+              {/* 세션 목록 */}
+              {activeTab === 'active' ? (
+                // 활성 세션 목록
+                activeSessions.length > 0 ? (
+                  <>
+                    <Text accessibilityRole="header" style={[styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('settings.generatedUrls')}</Text>
+                    <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {activeSessions.map(renderActiveSessionItem)}
+                    </View>
+                    <Text style={[styles.sessionInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      {t('settings.sessionInfoNew')}
+                    </Text>
+                  </>
+                ) : (
+                  <View style={[styles.group, styles.emptyContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <Ionicons name="link-outline" size={40} color={colors.textTertiary} />
+                    <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      {t('settings.noActiveSessions')}
+                    </Text>
+                  </View>
+                )
+              ) : (
+                // 삭제된 세션 목록
+                deletedSessions.length > 0 ? (
+                  <>
+                    <Text accessibilityRole="header" style={[styles.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('settings.deletedSessions')}</Text>
+                    <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      {deletedSessions.map(renderDeletedSessionItem)}
+                    </View>
+                    <Text style={[styles.sessionInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      {t('settings.deletedSessionsInfo')}
+                    </Text>
+                  </>
+                ) : (
+                  <View style={[styles.group, styles.emptyContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <Ionicons name="trash-outline" size={40} color={colors.textTertiary} />
+                    <Text style={[styles.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      {t('settings.noDeletedSessions')}
+                    </Text>
+                  </View>
+                )
+              )}
+            </>
+          )}
 
           {/* 구독 플랜 안내 - 임시 주석 처리
           <View style={[styles.section, { backgroundColor: colors.surface, marginTop: 16 }]}>
@@ -1407,14 +1411,14 @@ export default function RealtimeSyncSettingsScreen() {
                   </View>
                 </View>
                 <View style={styles.planTableCell}>
-                  <TouchableOpacity
+                  <MaterialPressable
                     style={[styles.priceTag, { backgroundColor: colors.primary }]}
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.priceText, { color: '#fff', fontFamily: fonts.bold }]}>
                       {t('settings.upgradeToPro')}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 </View>
               </View>
             </View>
@@ -1434,107 +1438,104 @@ export default function RealtimeSyncSettingsScreen() {
         <TouchableWithoutFeedback onPress={() => setPasswordModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                 <View style={styles.modalHeader}>
-                  <Ionicons name="create-outline" size={24} color={colors.primary} />
-                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  <Ionicons name="create-outline" size={20} color={colors.primaryText} />
+                  <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                     {t('settings.editSession') || '세션 설정'}
                   </Text>
                 </View>
 
-                <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
+                <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('settings.editSessionDesc') || '세션의 이름과 보안 설정을 관리합니다.'}
                 </Text>
 
                 {/* 세션 이름 입력 */}
                 <View style={styles.sessionNameSection}>
-                  <Text style={[styles.inputLabel, { color: colors.text }]}>
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                     {t('settings.sessionName') || '세션 이름'}
                   </Text>
-                  <View style={[styles.sessionNameInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-                    <Ionicons name="text-outline" size={18} color={colors.textTertiary} style={{ marginLeft: 12 }} />
+                  <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground }, inputBorder('editName')]}>
                     <TextInput
-                      style={[styles.sessionNameInputField, { color: colors.text }]}
+                      style={[styles.inputField, { color: colors.text, fontFamily: fonts.regular }]}
                       value={selectedSessionName}
                       onChangeText={setSelectedSessionName}
                       placeholder={t('settings.sessionNamePlaceholder') || '세션 이름 입력'}
                       placeholderTextColor={colors.textTertiary}
                       maxLength={50}
+                      {...inputFocusProps('editName')}
                     />
                   </View>
                 </View>
 
                 {/* 공개/비공개 토글 */}
-                <View style={[styles.securityOptionRow, { borderBottomColor: colors.border }]}>
-                  <View style={styles.securityOptionInfo}>
-                    <Ionicons
-                      name={selectedIsPublic ? "globe-outline" : "lock-closed-outline"}
-                      size={20}
-                      color={selectedIsPublic ? colors.primary : colors.warning}
-                    />
-                    <View style={styles.securityOptionText}>
-                      <Text style={[styles.securityOptionTitle, { color: colors.text }]}>
-                        {selectedIsPublic ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
-                      </Text>
-                      <Text style={[styles.securityOptionDesc, { color: colors.textSecondary }]}>
-                        {selectedIsPublic
-                          ? (t('settings.publicDesc') || '누구나 링크로 접근 가능')
-                          : (t('settings.privateDesc') || '링크로 접근 불가')}
-                      </Text>
-                    </View>
+                <View style={[styles.optionRow, { borderTopColor: colors.borderLight }]}>
+                  <Ionicons
+                    name={selectedIsPublic ? "globe-outline" : "lock-closed-outline"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                  <View style={styles.rowText}>
+                    <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                      {selectedIsPublic ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
+                    </Text>
+                    <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      {selectedIsPublic
+                        ? (t('settings.publicDesc') || '누구나 링크로 접근 가능')
+                        : (t('settings.privateDesc') || '링크로 접근 불가')}
+                    </Text>
                   </View>
                   <Switch
                     value={selectedIsPublic}
                     onValueChange={setSelectedIsPublic}
-                    trackColor={{ false: colors.warning + '60', true: colors.primary + '60' }}
-                    thumbColor={selectedIsPublic ? colors.primary : colors.warning}
+                    {...switchColors}
                   />
                 </View>
 
                 {/* 비밀번호 설정 */}
-                <View style={styles.securityOptionRow}>
-                  <View style={styles.securityOptionInfo}>
-                    <Ionicons
-                      name={passwordInput.trim() ? "key" : "key-outline"}
-                      size={20}
-                      color={passwordInput.trim() ? colors.success : colors.textTertiary}
-                    />
-                    <View style={styles.securityOptionText}>
-                      <Text style={[styles.securityOptionTitle, { color: colors.text }]}>
-                        {t('settings.password') || '비밀번호'}
-                      </Text>
-                      <Text style={[styles.securityOptionDesc, { color: colors.textSecondary }]}>
-                        {t('settings.passwordDescShort') || '접근 시 비밀번호 필요'}
-                      </Text>
-                    </View>
+                <View style={[styles.optionRow, { borderTopColor: colors.borderLight }]}>
+                  <Ionicons
+                    name={passwordInput.trim() ? "key" : "key-outline"}
+                    size={20}
+                    color={passwordInput.trim() ? colors.success : colors.textSecondary}
+                  />
+                  <View style={styles.rowText}>
+                    <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                      {t('settings.password') || '비밀번호'}
+                    </Text>
+                    <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      {t('settings.passwordDescShort') || '접근 시 비밀번호 필요'}
+                    </Text>
                   </View>
                 </View>
 
-                <View style={[styles.passwordInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                <View style={[styles.inputContainer, styles.passwordInputSpacing, { backgroundColor: colors.inputBackground }, inputBorder('editPassword')]}>
                   <TextInput
-                    style={[styles.passwordInputField, { color: colors.text }]}
+                    style={[styles.inputField, { color: colors.text, fontFamily: fonts.regular }]}
                     value={passwordInput}
                     onChangeText={setPasswordInput}
                     placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (비워두면 해제)'}
                     placeholderTextColor={colors.textTertiary}
                     secureTextEntry={!showPassword}
+                    {...inputFocusProps('editPassword')}
                   />
-                  <TouchableOpacity
+                  <MaterialPressable
                     style={styles.eyeButton}
                     onPress={() => setShowPassword(!showPassword)}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
                   >
                     <Ionicons
-                      name={showPassword ? 'eye-off' : 'eye'}
-                      size={22}
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
                       color={colors.textSecondary}
                     />
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 </View>
 
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.inputBackground }]}
+                  <MaterialPressable
+                    style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
                     onPress={() => {
                       setPasswordModalVisible(false);
                       setSelectedSessionName('');
@@ -1543,21 +1544,23 @@ export default function RealtimeSyncSettingsScreen() {
                       setShowPassword(false);
                     }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
                   >
-                    <Text style={[styles.modalButtonText, { color: colors.text }]}>
+                    <Text style={[styles.modalButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                       {t('common.cancel')}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
 
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.primary }]}
+                  <MaterialPressable
+                    style={[styles.modalButton, { backgroundColor: colors.primary }]}
                     onPress={handleSaveSecuritySettings}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
                   >
-                    <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                    <Text style={[styles.modalButtonText, { color: '#FFFFFF', fontFamily: fonts.semiBold }]}>
                       {t('common.save')}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 </View>
               </View>
             </TouchableWithoutFeedback>
@@ -1575,100 +1578,99 @@ export default function RealtimeSyncSettingsScreen() {
         <TouchableWithoutFeedback onPress={() => setCreateModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
-              <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+              <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
                 <View style={styles.modalHeader}>
-                  <Ionicons name="add-circle" size={24} color={colors.success} />
-                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  <Ionicons name="add-circle-outline" size={20} color={colors.primaryText} />
+                  <Text style={[styles.modalTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
                     {t('settings.createSession') || '새 세션 생성'}
                   </Text>
                 </View>
 
-                <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
+                <Text style={[styles.modalDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                   {t('settings.createSessionDescription') || '세션의 이름, 공개 여부와 비밀번호를 설정하세요.'}
                 </Text>
 
                 {/* 세션 이름 입력 */}
                 <View style={styles.sessionNameSection}>
-                  <Text style={[styles.inputLabel, { color: colors.text }]}>
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                     {t('settings.sessionName') || '세션 이름'}
                   </Text>
-                  <View style={[styles.sessionNameInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
-                    <Ionicons name="text-outline" size={18} color={colors.textTertiary} style={{ marginLeft: 12 }} />
+                  <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground }, inputBorder('newName')]}>
                     <TextInput
-                      style={[styles.sessionNameInputField, { color: colors.text }]}
+                      style={[styles.inputField, { color: colors.text, fontFamily: fonts.regular }]}
                       value={newSessionName}
                       onChangeText={setNewSessionName}
                       placeholder={t('settings.sessionNamePlaceholder') || '세션 이름 입력 (선택사항)'}
                       placeholderTextColor={colors.textTertiary}
                       maxLength={50}
+                      {...inputFocusProps('newName')}
                     />
                   </View>
-                  <Text style={[styles.inputHint, { color: colors.textTertiary }]}>
+                  <Text style={[styles.inputHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                     {t('settings.sessionNameHint') || '비워두면 자동으로 이름이 생성됩니다.'}
                   </Text>
                 </View>
 
                 {/* 공개여부 설정 */}
-                <View style={[styles.settingRow, { borderBottomColor: colors.borderLight }]}>
-                  <View style={styles.settingInfo}>
-                    <Ionicons
-                      name={newSessionIsPublic ? "globe-outline" : "lock-closed-outline"}
-                      size={20}
-                      color={newSessionIsPublic ? colors.primary : colors.warning}
-                    />
-                    <View style={styles.settingTextContainer}>
-                      <Text style={[styles.settingLabel, { color: colors.text }]}>
-                        {t('settings.publicSession') || '공개 세션'}
-                      </Text>
-                      <Text style={[styles.settingDesc, { color: colors.textTertiary }]}>
-                        {newSessionIsPublic
-                          ? (t('settings.publicSessionDesc') || '누구나 세션에 참여할 수 있습니다')
-                          : (t('settings.privateSessionDesc') || '비밀번호가 필요합니다')}
-                      </Text>
-                    </View>
+                <View style={[styles.optionRow, styles.optionRowSpaced, { borderTopColor: colors.borderLight, borderBottomColor: colors.borderLight }]}>
+                  <Ionicons
+                    name={newSessionIsPublic ? "globe-outline" : "lock-closed-outline"}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                  <View style={styles.rowText}>
+                    <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                      {t('settings.publicSession') || '공개 세션'}
+                    </Text>
+                    <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                      {newSessionIsPublic
+                        ? (t('settings.publicSessionDesc') || '누구나 세션에 참여할 수 있습니다')
+                        : (t('settings.privateSessionDesc') || '비밀번호가 필요합니다')}
+                    </Text>
                   </View>
                   <Switch
                     value={newSessionIsPublic}
                     onValueChange={setNewSessionIsPublic}
-                    trackColor={{ true: colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-                    thumbColor="#fff"
+                    {...switchColors}
                   />
                 </View>
 
                 {/* 비밀번호 설정 */}
                 <View style={styles.passwordSection}>
-                  <Text style={[styles.inputLabel, { color: colors.text }]}>
+                  <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
                     {t('settings.sessionPassword') || '세션 비밀번호'} {!newSessionIsPublic && <Text style={{ color: colors.error }}>*</Text>}
                   </Text>
-                  <View style={[styles.passwordInputContainer, { backgroundColor: colors.inputBackground, borderColor: colors.border }]}>
+                  <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground }, inputBorder('newPassword')]}>
                     <TextInput
-                      style={[styles.passwordInputField, { color: colors.text }]}
+                      style={[styles.inputField, { color: colors.text, fontFamily: fonts.regular }]}
                       value={newSessionPassword}
                       onChangeText={setNewSessionPassword}
                       placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (선택사항)'}
                       placeholderTextColor={colors.textTertiary}
                       secureTextEntry={!showNewPassword}
+                      {...inputFocusProps('newPassword')}
                     />
-                    <TouchableOpacity
+                    <MaterialPressable
                       style={styles.eyeButton}
                       onPress={() => setShowNewPassword(!showNewPassword)}
                       activeOpacity={0.7}
+                      accessibilityRole="button"
                     >
                       <Ionicons
-                        name={showNewPassword ? 'eye-off' : 'eye'}
-                        size={22}
+                        name={showNewPassword ? 'eye-off-outline' : 'eye-outline'}
+                        size={20}
                         color={colors.textSecondary}
                       />
-                    </TouchableOpacity>
+                    </MaterialPressable>
                   </View>
-                  <Text style={[styles.inputHint, { color: colors.textTertiary }]}>
+                  <Text style={[styles.inputHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                     {t('settings.passwordHint') || '비밀번호를 설정하면 세션 접근 시 입력이 필요합니다.'}
                   </Text>
                 </View>
 
                 <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.inputBackground }]}
+                  <MaterialPressable
+                    style={[styles.modalButton, styles.cancelButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
                     onPress={() => {
                       setCreateModalVisible(false);
                       setNewSessionName('');
@@ -1678,26 +1680,29 @@ export default function RealtimeSyncSettingsScreen() {
                     }}
                     activeOpacity={0.7}
                     disabled={isCreating}
+                    accessibilityRole="button"
                   >
-                    <Text style={[styles.modalButtonText, { color: colors.text }]}>
+                    <Text style={[styles.modalButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
                       {t('common.cancel')}
                     </Text>
-                  </TouchableOpacity>
+                  </MaterialPressable>
 
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.saveButton, { backgroundColor: colors.success }]}
+                  <MaterialPressable
+                    style={[styles.modalButton, { backgroundColor: createDisabled ? colors.raised : colors.primary }]}
                     onPress={handleGenerateSessionUrl}
                     activeOpacity={0.7}
-                    disabled={isCreating || (!newSessionIsPublic && !newSessionPassword)}
+                    disabled={createDisabled}
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: createDisabled, busy: isCreating }}
                   >
                     {isCreating ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={colors.textTertiary} />
                     ) : (
-                      <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                      <Text style={[styles.modalButtonText, { color: createDisabled ? colors.textTertiary : '#FFFFFF', fontFamily: fonts.semiBold }]}>
                         {t('settings.createButton') || '생성'}
                       </Text>
                     )}
-                  </TouchableOpacity>
+                  </MaterialPressable>
                 </View>
               </View>
             </TouchableWithoutFeedback>
@@ -1713,22 +1718,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   headerRight: {
-    width: 40,
+    width: SIZE.touch,
   },
   loadingContainer: {
     flex: 1,
@@ -1738,117 +1746,110 @@ const styles = StyleSheet.create({
   syncingBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     padding: 12,
-    marginBottom: 16,
-    borderRadius: 10,
+    borderRadius: RADIUS.control,
     gap: 8,
   },
   syncingText: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    lineHeight: 18,
   },
   container: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 8,
+    gap: SPACE.gap,
   },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   label: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
+    ...TYPE.body,
   },
   desc: {
-    fontSize: 13,
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  divider: {
-    height: 1,
-    marginVertical: 20,
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   generateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 14,
-    borderRadius: 12,
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    overflow: 'hidden',
     gap: 8,
+    marginTop: 8,
   },
   generateButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',
-    marginTop: 20,
-    borderRadius: 10,
+    borderRadius: RADIUS.control,
     padding: 4,
+    gap: 4,
+    marginTop: 4,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
+    minHeight: SIZE.touch,
+    borderRadius: 10,
+    overflow: 'hidden',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
   },
-  sessionListContainer: {
-    marginTop: 16,
-  },
-  sessionListTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
   sessionItem: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 10,
-  },
-  sessionItemContent: {
-    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 8,
   },
   sessionItemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 6,
+    gap: 8,
   },
   sessionUrl: {
+    flex: 1,
     fontSize: 13,
-    fontFamily: 'monospace',
-    lineHeight: 20,
+    fontFamily: MONO,
+    lineHeight: 18,
   },
   sessionGroupName: {
-    fontSize: 12,
-    marginTop: 4,
+    flex: 1,
+    fontSize: 14,
   },
   sessionStatusRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 4,
+    gap: 8,
   },
   sessionBadges: {
     flexDirection: 'row',
@@ -1858,46 +1859,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
     gap: 4,
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: '500',
-  },
-  deletedInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  daysRemaining: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   sessionItemActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 10,
+    marginTop: 4,
   },
   iconButton: {
-    flexDirection: 'row',
+    flex: 1,
+    height: SIZE.touch,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 10,
-    borderRadius: 8,
-    flex: 1,
+  },
+  iconButtonSecondary: {
+    borderWidth: 1,
   },
   sessionInfo: {
-    fontSize: 12,
-    marginTop: 12,
-    lineHeight: 18,
+    ...TYPE.caption,
+    lineHeight: 17,
+    marginHorizontal: 4,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 36,
+    paddingHorizontal: 16,
+    marginTop: 6,
   },
   emptyText: {
     fontSize: 14,
@@ -1914,121 +1910,79 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 400,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 5,
+    borderRadius: RADIUS.card,
+    padding: SPACE.card,
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 8,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '600',
   },
   modalDescription: {
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
-  securityOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    marginBottom: 8,
-  },
-  securityOptionInfo: {
+  optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flex: 1,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 10,
+    borderTopWidth: 1,
   },
-  securityOptionText: {
-    flex: 1,
+  optionRowSpaced: {
+    borderBottomWidth: 1,
+    marginBottom: 16,
   },
-  securityOptionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  securityOptionDesc: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  passwordInput: {
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    marginBottom: 24,
-  },
-  passwordInputContainer: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
+    height: 48,
+    borderRadius: RADIUS.control,
     borderWidth: 1,
-    marginBottom: 24,
+    paddingLeft: 14,
   },
-  passwordInputField: {
+  passwordInputSpacing: {
+    marginBottom: 20,
+  },
+  inputField: {
     flex: 1,
-    padding: 16,
-    fontSize: 16,
+    height: '100%',
+    fontSize: 15,
+    paddingRight: 14,
   },
   eyeButton: {
-    padding: 12,
-    paddingRight: 16,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   modalButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButton: {
     borderWidth: 1,
   },
-  saveButton: {},
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  settingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    marginBottom: 16,
-  },
-  settingInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-  },
-  settingTextContainer: {
-    flex: 1,
-  },
-  settingLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  settingDesc: {
-    fontSize: 13,
-    lineHeight: 18,
   },
   passwordSection: {
     marginBottom: 20,
@@ -2036,24 +1990,13 @@ const styles = StyleSheet.create({
   sessionNameSection: {
     marginBottom: 16,
   },
-  sessionNameInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  sessionNameInputField: {
-    flex: 1,
-    padding: 14,
-    fontSize: 16,
-  },
   inputLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
   },
   inputHint: {
-    fontSize: 12,
+    ...TYPE.caption,
     marginTop: 8,
     lineHeight: 16,
   },

@@ -8,7 +8,6 @@ import {
   ScrollView,
   Switch,
   Alert,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -18,6 +17,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { LOCKED_FEATURES } from '../config/lockedFeatures';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 
 // 기능 카테고리별 그룹화
@@ -127,145 +127,157 @@ export default function DeveloperOptionsScreen() {
     );
   };
 
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   const renderFeatureGroup = (groupKey, group) => (
-    <View key={groupKey} style={[s.section, { backgroundColor: colors.surface }]}>
-      <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+    <View key={groupKey} style={s.featureGroup}>
+      <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
         {t(group.titleKey)}
       </Text>
-      {group.features.map((featureId, index) => (
-        <View
-          key={featureId}
-          style={[
-            s.featureItem,
-            index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight },
-          ]}
-        >
-          <View style={s.featureInfo}>
-            <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]}>
-              {t(FEATURE_NAME_KEYS[featureId])}
-            </Text>
-            <Text style={[s.featureId, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-              {featureId}
-            </Text>
+      <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {group.features.map((featureId, index) => (
+          <View
+            key={featureId}
+            style={[
+              s.row,
+              s.rowWithDesc,
+              index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight },
+            ]}
+          >
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t(FEATURE_NAME_KEYS[featureId])}
+              </Text>
+              <Text style={[s.featureId, { color: colors.textSecondary }]}>
+                {featureId}
+              </Text>
+            </View>
+            <Switch
+              value={devModeEnabled || isFeatureUnlocked(featureId)}
+              onValueChange={(value) => handleToggleFeature(featureId, value)}
+              disabled={devModeEnabled}
+              {...switchColors}
+            />
           </View>
-          <Switch
-            value={devModeEnabled || isFeatureUnlocked(featureId)}
-            onValueChange={(value) => handleToggleFeature(featureId, value)}
-            disabled={devModeEnabled}
-            trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-            thumbColor="#fff"
-          />
-        </View>
-      ))}
+        ))}
+      </View>
     </View>
   );
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+      {/* 하위 화면 헤더 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          onPress={() => router.back()}
+          style={s.backButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('settings.developerOptions')}
         </Text>
         <View style={s.placeholder} />
       </View>
 
-      <ScrollView style={s.scrollView} contentContainerStyle={s.content}>
+      <ScrollView style={s.scrollView} contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 40 }]}>
         {/* 경고 배너 */}
-        <View style={[s.warningBanner, { backgroundColor: '#FFF3E0' }]}>
-          <Ionicons name="warning" size={20} color="#FF9500" />
-          <Text style={[s.warningText, { fontFamily: fonts.medium }]}>
+        <View style={[s.warningBanner, { backgroundColor: colors.warningSoft }]}>
+          <Ionicons name="warning-outline" size={20} color={colors.warning} />
+          <Text style={[s.warningText, { color: colors.warning, fontFamily: fonts.medium }]}>
             {t('developerOptions.warning')}
           </Text>
         </View>
 
         {/* 개발 모드 마스터 토글 */}
-        <View style={[s.section, { backgroundColor: colors.surface, borderWidth: 2, borderColor: '#FF9500' }]}>
-          <View style={s.masterToggle}>
-            <View style={s.masterToggleInfo}>
-              <View style={s.masterToggleHeader}>
-                <Ionicons name="code-slash" size={24} color="#FF9500" />
-                <Text style={[s.masterToggleTitle, { color: colors.text, fontFamily: fonts.bold }]}>
-                  {t('settings.devMode')}
-                </Text>
-              </View>
-              <Text style={[s.masterToggleDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <Ionicons name="code-slash" size={20} color={colors.warning} />
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                {t('settings.devMode')}
+              </Text>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('developerOptions.devModeDesc')}
               </Text>
             </View>
             <Switch
               value={devModeEnabled}
               onValueChange={toggleDevMode}
-              trackColor={{ true: '#FF9500', false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
 
         {/* 스캔 디버그 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-            {t('developerOptions.scanDebug')}
-          </Text>
-          <View style={s.debugRow}>
-            <View style={s.featureInfo}>
-              <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]}>
+        <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+          {t('developerOptions.scanDebug')}
+        </Text>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
                 {t('developerOptions.scanRegionDebug')}
               </Text>
-              <Text style={[s.featureId, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('developerOptions.scanRegionDebugDesc')}
               </Text>
             </View>
             <Switch
               value={scanRegionDebug}
               onValueChange={toggleScanRegionDebug}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
-          <View style={s.debugRow}>
-            <View style={s.featureInfo}>
-              <Text style={[s.featureName, { color: colors.text, fontFamily: fonts.medium }]}>
+          <View style={[s.separator, { backgroundColor: colors.borderLight }]} />
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
                 {t('developerOptions.scanTimingDebug')}
               </Text>
-              <Text style={[s.featureId, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('developerOptions.scanTimingDebugDesc')}
               </Text>
             </View>
             <Switch
               value={scanTimingDebug}
               onValueChange={toggleScanTimingDebug}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
 
         {/* 빠른 액션 버튼들 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
-            {t('developerOptions.quickActions')}
-          </Text>
-
+        <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+          {t('developerOptions.quickActions')}
+        </Text>
+        <View style={s.actions}>
           <MaterialPressable
-            style={[s.actionButton, { borderColor: colors.success }]}
+            style={[s.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
             onPress={handleUnlockAll}
             disabled={devModeEnabled}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: devModeEnabled }}
           >
-            <Ionicons name="lock-open-outline" size={20} color={colors.success} />
-            <Text style={[s.actionButtonText, { color: colors.success, fontFamily: fonts.semiBold }]}>
+            <Ionicons name="lock-open-outline" size={18} color={devModeEnabled ? colors.textTertiary : colors.text} />
+            <Text style={[s.actionButtonText, { color: devModeEnabled ? colors.textTertiary : colors.text, fontFamily: fonts.semiBold }]}>
               {t('developerOptions.unlockAll')}
             </Text>
           </MaterialPressable>
 
           <MaterialPressable
-            style={[s.actionButton, { borderColor: colors.error, marginTop: 10 }]}
+            style={[s.destructiveButton, { backgroundColor: colors.errorSoft }]}
             onPress={handleResetAll}
+            accessibilityRole="button"
           >
-            <Ionicons name="refresh-outline" size={20} color={colors.error} />
+            <Ionicons name="refresh-outline" size={18} color={colors.error} />
             <Text style={[s.actionButtonText, { color: colors.error, fontFamily: fonts.semiBold }]}>
               {t('settings.resetLocks')}
             </Text>
@@ -273,16 +285,13 @@ export default function DeveloperOptionsScreen() {
         </View>
 
         {/* 개별 기능 토글 */}
-        <Text style={[s.groupHeader, { color: colors.textSecondary, fontFamily: fonts.bold }]}>
+        <Text accessibilityRole="header" style={[s.groupHeader, { color: colors.text, fontFamily: fonts.semiBold }]}>
           {t('developerOptions.individualFeatures')}
         </Text>
 
         {Object.entries(FEATURE_GROUPS).map(([groupKey, group]) =>
           renderFeatureGroup(groupKey, group)
         )}
-
-        {/* 하단 여백 */}
-        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
@@ -296,122 +305,118 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   backButton: {
-    padding: 4,
-    ...(Platform.OS === 'android' ? { borderRadius: 16, overflow: 'hidden' } : {}),
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   placeholder: {
-    width: 36,
+    width: SIZE.touch,
   },
   scrollView: {
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 8,
+    gap: SPACE.gap,
   },
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 12,
-    marginBottom: 20,
+    borderRadius: RADIUS.control,
     gap: 10,
   },
   warningText: {
     flex: 1,
     fontSize: 13,
-    color: '#E65100',
     lineHeight: 18,
   },
-  debugRow: {
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  featureGroup: {
+    gap: SPACE.gap,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  separator: {
+    height: 1,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  section: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-    ...(Platform.OS === 'android' ? { borderRadius: 12, elevation: 1 } : {}),
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-  },
-  masterToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  masterToggleInfo: {
+  rowText: {
     flex: 1,
-    marginRight: 16,
+    minWidth: 0,
+    gap: 2,
   },
-  masterToggleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 6,
+  label: {
+    ...TYPE.body,
   },
-  masterToggleTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
   },
-  masterToggleDesc: {
-    fontSize: 13,
-    lineHeight: 18,
+  featureId: {
+    fontSize: 12,
+    fontFamily: MONO,
   },
-  actionButton: {
+  actions: {
+    gap: SPACE.gap,
+  },
+  secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    borderWidth: 1.5,
     gap: 8,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  destructiveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: SIZE.button,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
   },
   actionButtonText: {
     fontSize: 15,
     fontWeight: '600',
   },
   groupHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  featureInfo: {
-    flex: 1,
-  },
-  featureName: {
-    fontSize: 15,
-    marginBottom: 2,
-  },
-  featureId: {
-    fontSize: 12,
+    ...TYPE.screenTitle,
+    marginTop: 20,
+    marginHorizontal: 4,
   },
 });

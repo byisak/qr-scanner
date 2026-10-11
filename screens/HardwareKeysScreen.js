@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { isHardwareKeysAvailable } from '../modules/hardware-keys';
 import { KEY_ACTIONS, loadHardwareKeySettings, saveKeyMap, saveScanConfirmMode } from '../utils/hardwareKeys';
@@ -80,29 +81,40 @@ export default function HardwareKeysScreen() {
 
   const keysSupported = Platform.OS === 'android' && isHardwareKeysAvailable;
 
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.backButton}>
+      {/* 하위 화면 헤더 */}
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          onPress={() => router.back()}
+          style={s.backButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('hardwareKeys.title')}</Text>
-        <View style={{ width: 40 }} />
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{t('hardwareKeys.title')}</Text>
+        <View style={s.headerSpacer} />
       </View>
 
       <ScrollView style={s.content} contentContainerStyle={[s.scrollContent, { paddingBottom: 16 + insets.bottom }]}>
         {/* 수동 확정 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('hardwareKeys.manualConfirm')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('hardwareKeys.manualConfirmDesc')}</Text>
+        <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[s.row, s.rowWithDesc]}>
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>{t('hardwareKeys.manualConfirm')}</Text>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('hardwareKeys.manualConfirmDesc')}</Text>
             </View>
             <Switch
               value={manualConfirm}
               onValueChange={toggleManualConfirm}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
             />
           </View>
         </View>
@@ -111,51 +123,59 @@ export default function HardwareKeysScreen() {
         <Text style={[s.info, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
           {keysSupported ? t('hardwareKeys.description') : t('hardwareKeys.iosNote')}
         </Text>
-        {keysSupported && KEYS.map((key) => {
-          const current = keyMap[key.id] || 'none';
-          const expanded = expandedKey === key.id;
-          return (
-            <View key={key.id} style={[s.section, { backgroundColor: colors.surface }]}>
-              <MaterialPressable style={s.row} onPress={() => setExpandedKey(expanded ? null : key.id)} activeOpacity={0.7}>
-                <View style={[s.keyIcon, { backgroundColor: isDark ? '#2c2c2e' : '#f5f5f5' }]}>
-                  <Ionicons name={key.icon} size={22} color={colors.primary} />
+        {keysSupported && (
+          <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {KEYS.map((key, index) => {
+              const current = keyMap[key.id] || 'none';
+              const expanded = expandedKey === key.id;
+              return (
+                <View key={key.id} style={index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight }}>
+                  <MaterialPressable
+                    style={[s.row, s.rowWithDesc]}
+                    onPress={() => setExpandedKey(expanded ? null : key.id)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded }}
+                  >
+                    <Ionicons name={key.icon} size={20} color={colors.textSecondary} />
+                    <View style={s.rowText}>
+                      <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>{t(`hardwareKeys.${key.id}`)}</Text>
+                      <Text style={[s.desc, { color: current === 'none' ? colors.textSecondary : colors.primaryText, fontFamily: fonts.regular }]}>
+                        {t(`hardwareKeys.actions.${current}`)}
+                      </Text>
+                    </View>
+                    <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+                  </MaterialPressable>
+                  {expanded && (
+                    <View style={[s.options, { borderTopColor: colors.borderLight }]}>
+                      {KEY_ACTIONS.map((action) => {
+                        const selected = current === action;
+                        return (
+                          <MaterialPressable
+                            key={action}
+                            style={s.option}
+                            onPress={() => assign(key.id, action)}
+                            activeOpacity={0.7}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected }}
+                          >
+                            <Ionicons name={ACTION_ICONS[action]} size={20} color={selected ? colors.primaryText : colors.textSecondary} />
+                            <Text style={[s.optionText, { color: colors.text, fontFamily: selected ? fonts.semiBold : fonts.regular }]}>
+                              {t(`hardwareKeys.actions.${action}`)}
+                            </Text>
+                            <View style={[s.radio, { borderColor: selected ? colors.primary : colors.textTertiary }]}>
+                              {selected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
+                            </View>
+                          </MaterialPressable>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t(`hardwareKeys.${key.id}`)}</Text>
-                  <Text style={[s.desc, { color: current === 'none' ? colors.textTertiary : colors.primary, fontFamily: fonts.regular }]}>
-                    {t(`hardwareKeys.actions.${current}`)}
-                  </Text>
-                </View>
-                <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={22} color={colors.textTertiary} />
-              </MaterialPressable>
-              {expanded && (
-                <View style={[s.options, { borderTopColor: colors.borderLight }]}>
-                  {KEY_ACTIONS.map((action) => {
-                    const selected = current === action;
-                    return (
-                      <MaterialPressable
-                        key={action}
-                        style={s.option}
-                        onPress={() => assign(key.id, action)}
-                        activeOpacity={0.7}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected }}
-                      >
-                        <Ionicons name={ACTION_ICONS[action]} size={20} color={selected ? colors.primary : colors.textSecondary} />
-                        <Text style={[s.optionText, { color: selected ? colors.primary : colors.text, fontFamily: selected ? fonts.semiBold : fonts.regular }]}>
-                          {t(`hardwareKeys.actions.${action}`)}
-                        </Text>
-                        <View style={[s.radio, { borderColor: selected ? colors.primary : colors.textTertiary }]}>
-                          {selected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
-                        </View>
-                      </MaterialPressable>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-          );
-        })}
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -169,57 +189,67 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    ...(Platform.OS === 'android' ? { borderRadius: 20, overflow: 'hidden' } : {}),
   },
   headerTitle: {
-    fontSize: 18,
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
+  },
+  headerSpacer: {
+    width: SIZE.touch,
   },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 8,
   },
   info: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 12,
-    marginTop: 4,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 14,
+    marginBottom: 8,
+    marginHorizontal: 4,
   },
-  section: {
-    borderRadius: 12,
-    marginBottom: 12,
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
     overflow: 'hidden',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    minHeight: 56,
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
-  keyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   label: {
-    fontSize: 16,
+    ...TYPE.body,
   },
   desc: {
-    fontSize: 13,
-    marginTop: 2,
+    ...TYPE.caption,
+    lineHeight: 17,
   },
   options: {
     borderTopWidth: 1,
@@ -228,7 +258,7 @@ const s = StyleSheet.create({
   option: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     gap: 12,
     minHeight: 48,
@@ -246,8 +276,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   radioDot: {
-    width: 11,
-    height: 11,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });

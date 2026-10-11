@@ -4,10 +4,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  Switch,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,6 +12,8 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
+import MaterialPressable from '../components/MaterialPressable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function RealtimeSyncExplanationScreen() {
@@ -59,19 +58,20 @@ export default function RealtimeSyncExplanationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* 헤더 */}
-      <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? 60 : insets.top + 10 }]}>
-        <TouchableOpacity
-          style={styles.backButton}
+      {/* 하위 화면 헤더 */}
+      <View style={[styles.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable
+          style={styles.iconButton}
           onPress={() => router.back()}
-          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
         >
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.bold }]}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
+        </MaterialPressable>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
           {t('settings.enableRealtimeSync')}
         </Text>
-        <View style={styles.backButton} />
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -79,9 +79,9 @@ export default function RealtimeSyncExplanationScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 메인 아이콘 */}
-        <View style={[styles.iconContainer, { backgroundColor: colors.primary + '15' }]}>
-          <Ionicons name="sync-circle" size={80} color={colors.primary} />
+        {/* 대표 아이콘 */}
+        <View style={[styles.heroIcon, { backgroundColor: colors.primarySoft }]}>
+          <Ionicons name="sync" size={26} color={colors.primaryText} />
         </View>
 
         {/* 제목 */}
@@ -94,18 +94,18 @@ export default function RealtimeSyncExplanationScreen() {
           {t('realtimeSyncExplanation.description')}
         </Text>
 
-        {/* 기능 목록 */}
-        <View style={styles.featuresContainer}>
+        {/* 기능 목록: 묶음 카드 하나 */}
+        <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {features.map((feature, index) => (
             <View
               key={index}
-              style={[styles.featureItem, { backgroundColor: colors.surface }]}
+              style={[styles.featureItem, index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight }]}
             >
-              <View style={[styles.featureIconContainer, { backgroundColor: colors.primary + '15' }]}>
-                <Ionicons name={feature.icon} size={24} color={colors.primary} />
+              <View style={[styles.featureIcon, { backgroundColor: colors.primarySoft }]}>
+                <Ionicons name={feature.icon} size={18} color={colors.primaryText} />
               </View>
-              <View style={styles.featureTextContainer}>
-                <Text style={[styles.featureTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+              <View style={styles.featureText}>
+                <Text style={[styles.featureTitle, { color: colors.text, fontFamily: fonts.medium }]}>
                   {feature.title}
                 </Text>
                 <Text style={[styles.featureDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
@@ -117,28 +117,19 @@ export default function RealtimeSyncExplanationScreen() {
         </View>
       </ScrollView>
 
-      {/* 하단 사용해보기 토글 */}
-      <View style={[styles.bottomContainer, {
-        backgroundColor: colors.surface,
-        paddingBottom: insets.bottom + 16,
-        borderTopColor: colors.borderLight,
-      }]}>
-        <View style={styles.toggleContainer}>
-          <View style={styles.toggleTextContainer}>
-            <Text style={[styles.toggleTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-              {t('realtimeSyncExplanation.tryIt')}
-            </Text>
-            <Text style={[styles.toggleDescription, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('realtimeSyncExplanation.tryItDesc')}
-            </Text>
-          </View>
-          <Switch
-            value={enableToggle}
-            onValueChange={handleToggle}
-            trackColor={{ true: colors.primary, false: isDark ? '#39393d' : '#E5E5EA' }}
-            thumbColor="#fff"
-          />
-        </View>
+      {/* 하단 사용해보기 버튼 */}
+      <View style={[styles.bottomContainer, { backgroundColor: colors.background, paddingBottom: insets.bottom + 16 }]}>
+        <MaterialPressable
+          style={[styles.primaryButton, { backgroundColor: enableToggle ? colors.raised : colors.primary }]}
+          onPress={() => handleToggle(true)}
+          disabled={enableToggle}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: enableToggle }}
+        >
+          <Text style={[styles.primaryButtonText, { color: enableToggle ? colors.textTertiary : '#FFFFFF', fontFamily: fonts.semiBold }]}>
+            {t('realtimeSyncExplanation.tryIt')}
+          </Text>
+        </MaterialPressable>
       </View>
     </View>
   );
@@ -153,97 +144,98 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
-  backButton: {
-    width: 44,
-    height: 44,
+  iconButton: {
+    width: SIZE.touch,
+    height: SIZE.touch,
+    borderRadius: SIZE.touch / 2,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    ...TYPE.screenTitle,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
+  },
+  headerSpacer: {
+    width: SIZE.touch,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: SPACE.screen,
+    paddingTop: 12,
     paddingBottom: 24,
   },
-  iconContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+  heroIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
-    marginTop: 20,
-    marginBottom: 24,
+    marginHorizontal: 4,
+    marginBottom: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 12,
+    ...TYPE.tabTitle,
+    marginHorizontal: 4,
+    marginBottom: 8,
   },
   description: {
     fontSize: 15,
     lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 32,
+    marginHorizontal: 4,
+    marginBottom: 24,
   },
-  featuresContainer: {
-    gap: 12,
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: 16,
-    borderRadius: 16,
-    gap: 14,
+    gap: 12,
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  featureIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  featureIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  featureTextContainer: {
+  featureText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    ...TYPE.body,
   },
   featureDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  bottomContainer: {
-    paddingTop: 16,
-    paddingHorizontal: 24,
-    borderTopWidth: 1,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleTextContainer: {
-    flex: 1,
-    marginRight: 16,
-  },
-  toggleTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  toggleDescription: {
     fontSize: 13,
     lineHeight: 18,
+  },
+  bottomContainer: {
+    paddingTop: 12,
+    paddingHorizontal: SPACE.screen,
+  },
+  primaryButton: {
+    height: SIZE.primaryButton,
+    borderRadius: RADIUS.button,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  primaryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
