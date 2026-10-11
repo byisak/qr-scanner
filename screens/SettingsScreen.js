@@ -27,6 +27,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { languages } from '../locales';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import LockIcon from '../components/LockIcon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -426,15 +427,27 @@ export default function SettingsScreen() {
             ? { icon: 'link-outline', labelKey: 'settings.useScanUrl' }
             : { icon: 'scan-outline', labelKey: 'settings.normalScanMode' };
 
+
+  // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
+  const switchColors = {
+    trackColor: { true: colors.primary, false: isDark ? '#343A44' : colors.border },
+    thumbColor: '#fff',
+    ios_backgroundColor: isDark ? '#343A44' : colors.border,
+  };
+  // 상단 그라데이션은 화면 바탕색에서 투명으로
+  const bgRgb = [1, 3, 5].map(i => parseInt(colors.background.slice(i, i + 2), 16)).join(',');
+  const rowProps = { colors, fonts };
+  const statusProps = (enabled) => ({
+    value: enabled ? t('settings.statusOn') : t('settings.statusOff'),
+    valueColor: enabled ? colors.success : colors.textSecondary,
+  });
+  const profileInitial = (user?.name || '').trim().charAt(0).toUpperCase();
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* 상단 그라데이션 */}
       <LinearGradient
-        colors={
-          isDark
-            ? ['rgba(0,0,0,1)', 'rgba(0,0,0,0.95)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']
-            : ['rgba(249,249,249,1)', 'rgba(249,249,249,0.95)', 'rgba(249,249,249,0.7)', 'rgba(249,249,249,0.3)', 'rgba(249,249,249,0)']
-        }
+        colors={[`rgba(${bgRgb},1)`, `rgba(${bgRgb},0.95)`, `rgba(${bgRgb},0.7)`, `rgba(${bgRgb},0.3)`, `rgba(${bgRgb},0)`]}
         locations={[0, 0.3, 0.6, 0.85, 1]}
         style={[s.statusBarGradient, { height: statusBarHeight }]}
       />
@@ -450,92 +463,92 @@ export default function SettingsScreen() {
         {isLoggedIn ? (
           // 로그인된 상태 - 프로필 표시
           <MaterialPressable accessibilityRole="button"
-            style={[s.profileSection, { backgroundColor: colors.surface }]}
+            style={[s.accountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => router.push('/profile-settings')}
             activeOpacity={0.7}
           >
-            <View style={s.profileInfo}>
+            <View style={[s.avatar, { backgroundColor: colors.primarySoft }]}>
+              {profileInitial ? (
+                <Text style={[s.avatarInitial, { color: colors.primaryText, fontFamily: fonts.bold }]}>{profileInitial}</Text>
+              ) : (
+                <Ionicons name="person" size={22} color={colors.primaryText} />
+              )}
+            </View>
+            <View style={s.accountText}>
               <View style={s.profileNameRow}>
-                <Text style={[s.profileName, { color: colors.text, fontFamily: fonts.bold }]}>
+                <Text style={[s.accountTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
                   {user?.name || 'User'}
                 </Text>
                 <Text style={[s.profileNameSuffix, { color: colors.text, fontFamily: fonts.regular }]}>
                   {' '}{language === 'ko' ? '님' : ''}
                 </Text>
               </View>
-              <Text style={[s.profileEmail, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {user?.email || ''}
-              </Text>
+              {!!user?.email && (
+                <Text style={[s.accountSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                  {user.email}
+                </Text>
+              )}
             </View>
-            <MaterialPressable accessibilityRole="button"
-              style={s.settingsIconButton}
-              onPress={() => router.push('/profile-settings')}
-            >
-              <Ionicons name="settings-outline" size={24} color={colors.textTertiary} />
-            </MaterialPressable>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </MaterialPressable>
         ) : (
           // 로그인 안된 상태 - 로그인 유도
           <MaterialPressable accessibilityRole="button"
-            style={[s.loginSection, { backgroundColor: colors.surface }]}
+            style={[s.accountCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => router.push('/login')}
             activeOpacity={0.7}
           >
-            <View style={s.loginContent}>
-              <Text style={[s.loginTitle, { color: '#E67E22', fontFamily: fonts.bold }]}>
+            <View style={[s.avatar, { backgroundColor: colors.primarySoft }]}>
+              <Ionicons name="person" size={22} color={colors.primaryText} />
+            </View>
+            <View style={s.accountText}>
+              <Text style={[s.accountTitle, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>
                 {t('auth.loginSignup')}
               </Text>
-              <Text style={[s.loginDesc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+              <Text style={[s.accountSubtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                 {t('auth.loginPrompt')}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={24} color="#E67E22" />
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </MaterialPressable>
         )}
 
         {/* 배너 광고 - AD_ENABLED일 때만 표시 */}
         {AD_ENABLED && (
-          <View style={[s.adSection, { backgroundColor: colors.surface }]}>
+          <View style={[s.adSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <AdBanner />
           </View>
         )}
 
-        {/* Pro 버전 - TODO: 추후 프로버전 출시 시 주석 해제 */}
-        {/* <MaterialPressable accessibilityRole="button"
-          style={[s.proSection, { backgroundColor: colors.surface }]}
-          onPress={() => router.push('/pro-version')}
-          activeOpacity={0.7}
-        >
-          <LinearGradient
-            colors={['#667eea', '#764ba2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.proBanner}
-          >
-            <View style={s.proBannerContent}>
-              <Ionicons name="diamond" size={24} color="#fff" />
-              <View style={s.proBannerText}>
-                <Text style={[s.proTitle, { fontFamily: fonts.bold }]}>{t('proVersion.title')}</Text>
-                <Text style={[s.proDesc, { fontFamily: fonts.regular }]}>{t('proVersion.description')}</Text>
+        {/* Pro 버전 - TODO: 추후 프로버전 출시 시 주석 해제
+        <View style={s.proSection}>
+          <MaterialPressable accessibilityRole="button" onPress={() => router.push('/pro-version')} activeOpacity={0.7}>
+            <LinearGradient colors={['#667eea', '#764ba2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.proBanner}>
+              <View style={s.proBannerContent}>
+                <Ionicons name="diamond" size={24} color="#fff" />
+                <View style={s.proBannerText}>
+                  <Text style={[s.proTitle, { fontFamily: fonts.semiBold }]}>{t('proVersion.title')}</Text>
+                  <Text style={[s.proDesc, { fontFamily: fonts.regular }]}>{t('proVersion.description')}</Text>
+                </View>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#fff" />
-          </LinearGradient>
-          <MaterialPressable accessibilityRole="button"
-            style={s.watchAdButton}
-            onPress={() => router.push('/pro-features')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="play-circle-outline" size={20} color={colors.primary} />
-            <Text style={[s.watchAdText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
-            <Text style={[s.watchAdSubText, { color: colors.textTertiary, fontFamily: fonts.regular }]}> - {t('proVersion.freeUnlock')}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#fff" />
+            </LinearGradient>
           </MaterialPressable>
-        </MaterialPressable> */}
+          <SettingRow {...rowProps}
+            icon="play-circle-outline"
+            label={t('proVersion.watchAd')}
+            desc={t('proVersion.freeUnlock')}
+            onPress={() => router.push('/pro-features')}
+          >
+            <NavRight {...rowProps} />
+          </SettingRow>
+        </View>
+        */}
 
         {/* 광고보기 - 기능 잠금 해제 (AD_ENABLED일 때만 표시) */}
         {AD_ENABLED && (
           <MaterialPressable accessibilityRole="button"
-            style={[s.proSection, { backgroundColor: colors.surface }]}
+            style={s.proSection}
             onPress={() => router.push('/pro-features')}
             activeOpacity={0.7}
           >
@@ -548,61 +561,55 @@ export default function SettingsScreen() {
               <View style={s.proBannerContent}>
                 <Ionicons name="play-circle" size={24} color="#fff" />
                 <View style={s.proBannerText}>
-                  <Text style={[s.proTitle, { fontFamily: fonts.bold }]}>{t('proVersion.watchAd')}</Text>
+                  <Text style={[s.proTitle, { fontFamily: fonts.semiBold }]}>{t('proVersion.watchAd')}</Text>
                   <Text style={[s.proDesc, { fontFamily: fonts.regular }]}>{t('proVersion.freeUnlock')}</Text>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="#fff" />
+              <Ionicons name="chevron-forward" size={16} color="#fff" />
             </LinearGradient>
           </MaterialPressable>
         )}
 
         {/* 고급 스캔 기능 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.advancedScanFeatures')}</Text>
-
+        <SectionHeader {...rowProps} title={t('settings.advancedScanFeatures')} />
+        <Group colors={colors}>
           {/* 아래 모드들은 하나를 켜면 나머지가 꺼진다. 각각 독립 스위치처럼 보여 헷갈렸으므로 관계를 드러낸다 */}
-          <View style={[s.scanModeSummary, { backgroundColor: colors.inputBackground }]}>
-            <Ionicons name={activeScanMode.icon} size={20} color={colors.primary} />
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={[s.scanModeSummaryTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                {t('settings.currentScanMode', { mode: t(activeScanMode.labelKey) })}
-              </Text>
-              <Text style={[s.scanModeSummaryDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                {t('settings.scanModeExclusiveHint')}
-              </Text>
+          <View style={s.infoBoxWrap}>
+            <View style={[s.infoBox, { backgroundColor: colors.raised }]}>
+              <Ionicons name={activeScanMode.icon} size={20} color={colors.textSecondary} />
+              <View style={s.infoBoxText}>
+                <Text style={[s.infoBoxTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>
+                  {t('settings.currentScanMode', { mode: t(activeScanMode.labelKey) })}
+                </Text>
+                <Text style={[s.infoBoxDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                  {t('settings.scanModeExclusiveHint')}
+                </Text>
+              </View>
             </View>
           </View>
 
           {/* 자동 규칙 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+          <SettingRow {...rowProps}
+            label={t('scanRules.title')}
+            desc={t('settings.scanRulesDesc')}
             onPress={() => router.push('/scan-rules')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRules.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.scanRulesDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 재고 실사 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('stocktake.title')}
+            desc={t('settings.stocktakeDesc')}
             onPress={() => router.push('/stocktakes')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktake.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.stocktakeDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 연속 스캔 모드 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+          <SettingRow {...rowProps}
+            label={t('continuousScan.title') || t('settings.batchScanMode')}
+            desc={t('continuousScan.description') || t('settings.batchScanModeDesc')}
             onPress={() => {
               if (isLocked('batchScan')) {
                 showUnlockAlert('batchScan', () => router.push('/continuous-scan-settings'));
@@ -610,88 +617,61 @@ export default function SettingsScreen() {
                 router.push('/continuous-scan-settings');
               }
             }}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('continuousScan.title') || t('settings.batchScanMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('continuousScan.description') || t('settings.batchScanModeDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <LockIcon featureId="batchScan" size={12} badge />
-              <Text style={[s.statusText, { color: continuousScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {continuousScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
+            <NavRight {...rowProps} lockFeature="batchScan" {...statusProps(continuousScanEnabled)} />
+          </SettingRow>
 
           {/* 여러 코드 인식 모드 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.multiCodeMode')}
+            desc={t('settings.multiCodeModeDesc')}
             onPress={() => router.push('/multi-code-mode-settings')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.multiCodeMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.multiCodeModeDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: multiCodeModeEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {multiCodeModeEnabled ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
+            <NavRight {...rowProps} {...statusProps(multiCodeModeEnabled)} />
+          </SettingRow>
 
-          {/* 스캔 연동 URL */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
-            onPress={() => {
-              if (isLocked('scanUrlIntegration')) {
-                showUnlockAlert('scanUrlIntegration', () => router.push('/scan-url-settings'));
-              } else {
-                router.push('/scan-url-settings');
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.useScanUrl')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.useScanUrlDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <LockIcon featureId="scanUrlIntegration" size={12} badge />
-              <Text style={[s.statusText, { color: on ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {on ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
+          {/* 스캔 연동 URL (+ 활성화 시 URL 목록) */}
+          <View>
+            <SettingRow {...rowProps}
+              label={t('settings.useScanUrl')}
+              desc={t('settings.useScanUrlDesc')}
+              onPress={() => {
+                if (isLocked('scanUrlIntegration')) {
+                  showUnlockAlert('scanUrlIntegration', () => router.push('/scan-url-settings'));
+                } else {
+                  router.push('/scan-url-settings');
+                }
+              }}
+            >
+              <NavRight {...rowProps} lockFeature="scanUrlIntegration" {...statusProps(on)} />
+            </SettingRow>
 
-          {/* 스캔 연동 URL 목록 - 활성화 시에만 표시 */}
-          {on && scanUrlList.length > 0 && (
-            <View style={[s.urlListContainer, { borderTopColor: colors.borderLight }]}>
-              {scanUrlList.map((item, index) => (
-                <View key={item.id} style={[s.urlListItem, index > 0 && { borderTopWidth: 1, borderTopColor: colors.borderLight }]}>
-                  <View style={s.urlListItemLeft}>
-                    <View style={[s.urlStatusDot, { backgroundColor: item.enabled ? colors.success : colors.textTertiary }]} />
-                    <View style={s.urlListItemText}>
-                      <Text style={[s.urlListItemName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      <Text style={[s.urlListItemUrl, { color: colors.textTertiary, fontFamily: fonts.regular }]} numberOfLines={1}>
-                        {item.url}
-                      </Text>
+            {/* 스캔 연동 URL 목록 - 활성화 시에만 표시 */}
+            {on && scanUrlList.length > 0 && (
+              <View style={s.urlListWrap}>
+                <View style={[s.urlListContainer, { backgroundColor: colors.raised }]}>
+                  {scanUrlList.map((item, index) => (
+                    <View key={item.id} style={[s.urlListItem, index > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                      <View style={[s.urlStatusDot, { backgroundColor: item.enabled ? colors.success : colors.textTertiary }]} />
+                      <View style={s.urlListItemText}>
+                        <Text style={[s.urlListItemName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text style={[s.urlListItemUrl, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                          {item.url}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          )}
+              </View>
+            )}
+          </View>
 
           {/* 실시간 서버전송 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.enableRealtimeSync')}
+            desc={t('settings.realtimeSyncDesc')}
             onPress={() => {
               if (isLocked('realtimeSync')) {
                 showUnlockAlert('realtimeSync', () => {
@@ -703,24 +683,14 @@ export default function SettingsScreen() {
                 router.push(realtimeSyncExplained ? '/realtime-sync-settings' : '/realtime-sync-explanation');
               }
             }}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.enableRealtimeSync')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.realtimeSyncDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <LockIcon featureId="realtimeSync" size={12} badge />
-              <Text style={[s.statusText, { color: realtimeSyncEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {realtimeSyncEnabled ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
+            <NavRight {...rowProps} lockFeature="realtimeSync" {...statusProps(realtimeSyncEnabled)} />
+          </SettingRow>
 
           {/* 복권 인식 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.lotteryScan')}
+            desc={t('settings.lotteryScanDesc')}
             onPress={() => {
               if (isLocked('lotteryScan')) {
                 showUnlockAlert('lotteryScan', () => router.push('/lottery-scan-settings'));
@@ -728,135 +698,113 @@ export default function SettingsScreen() {
                 router.push('/lottery-scan-settings');
               }
             }}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.lotteryScan')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.lotteryScanDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <LockIcon featureId="lotteryScan" size={12} badge />
-              <Text style={[s.statusText, { color: lotteryScanEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {lotteryScanEnabled ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
-        </View>
+            <NavRight {...rowProps} lockFeature="lotteryScan" {...statusProps(lotteryScanEnabled)} />
+          </SettingRow>
+        </Group>
 
         {/* 알림 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.scanFeedback')}</Text>
+        <SectionHeader {...rowProps} title={t('settings.scanFeedback')} />
+        <Group colors={colors}>
+          {/* 햅틱 피드백 (+ 켜져 있을 때 세기·패턴) */}
+          <View>
+            <SettingRow {...rowProps}
+              label={t('settings.hapticFeedback')}
+              desc={t('settings.hapticDesc')}
+            >
+              <Switch
+                value={hapticEnabled}
+                onValueChange={setHapticEnabled}
+                {...switchColors}
+                accessibilityLabel={t('settings.hapticFeedback')}
+              />
+            </SettingRow>
 
-          {/* 햅틱 피드백 */}
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.hapticFeedback')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.hapticDesc')}</Text>
-            </View>
-            <Switch
-              value={hapticEnabled}
-              onValueChange={setHapticEnabled}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
-              accessibilityLabel={t('settings.hapticFeedback')}
-            />
+            {/* 진동 세기 · 패턴 (진동이 켜져 있을 때만) */}
+            {hapticEnabled && (
+              <View style={s.hapticOptions}>
+                <Text style={[s.hapticOptionLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('settings.hapticIntensity')}</Text>
+                <View style={[s.segment, { backgroundColor: colors.raised }]}>
+                  {HAPTIC_INTENSITIES.map(level => {
+                    const selected = hapticIntensity === level;
+                    return (
+                      <MaterialPressable
+                        key={level}
+                        style={[s.segmentItem, selected && { backgroundColor: colors.primary }]}
+                        onPress={() => changeHaptic({ intensity: level })}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text style={[s.segmentText, { color: selected ? '#fff' : colors.text, fontFamily: fonts.semiBold }]}>
+                          {t(`settings.hapticIntensities.${level}`)}
+                        </Text>
+                      </MaterialPressable>
+                    );
+                  })}
+                </View>
+                <Text style={[s.hapticOptionLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold, marginTop: 14 }]}>{t('settings.hapticPattern')}</Text>
+                <View style={[s.segment, { backgroundColor: colors.raised }]}>
+                  {HAPTIC_PATTERNS.map(pattern => {
+                    const selected = hapticPattern === pattern;
+                    return (
+                      <MaterialPressable
+                        key={pattern}
+                        style={[s.segmentItem, selected && { backgroundColor: colors.primary }]}
+                        onPress={() => changeHaptic({ pattern })}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                      >
+                        <Text style={[s.segmentText, { color: selected ? '#fff' : colors.text, fontFamily: fonts.semiBold }]}>
+                          {t(`settings.hapticPatterns.${pattern}`)}
+                        </Text>
+                      </MaterialPressable>
+                    );
+                  })}
+                </View>
+                <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular, marginTop: 8 }]}>{t('settings.hapticPatternDesc')}</Text>
+              </View>
+            )}
           </View>
 
-          {/* 진동 세기 · 패턴 (진동이 켜져 있을 때만) */}
-          {hapticEnabled && (
-            <View style={s.hapticOptions}>
-              <Text style={[s.hapticOptionLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{t('settings.hapticIntensity')}</Text>
-              <View style={[s.segment, { backgroundColor: colors.inputBackground }]}>
-                {HAPTIC_INTENSITIES.map(level => {
-                  const selected = hapticIntensity === level;
-                  return (
-                    <MaterialPressable
-                      key={level}
-                      style={[s.segmentItem, selected && { backgroundColor: colors.primary }]}
-                      onPress={() => changeHaptic({ intensity: level })}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                    >
-                      <Text style={[s.segmentText, { color: selected ? '#fff' : colors.text, fontFamily: fonts.semiBold }]}>
-                        {t(`settings.hapticIntensities.${level}`)}
-                      </Text>
-                    </MaterialPressable>
-                  );
-                })}
-              </View>
-              <Text style={[s.hapticOptionLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold, marginTop: 14 }]}>{t('settings.hapticPattern')}</Text>
-              <View style={[s.segment, { backgroundColor: colors.inputBackground }]}>
-                {HAPTIC_PATTERNS.map(pattern => {
-                  const selected = hapticPattern === pattern;
-                  return (
-                    <MaterialPressable
-                      key={pattern}
-                      style={[s.segmentItem, selected && { backgroundColor: colors.primary }]}
-                      onPress={() => changeHaptic({ pattern })}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                    >
-                      <Text style={[s.segmentText, { color: selected ? '#fff' : colors.text, fontFamily: fonts.semiBold }]}>
-                        {t(`settings.hapticPatterns.${pattern}`)}
-                      </Text>
-                    </MaterialPressable>
-                  );
-                })}
-              </View>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular, marginTop: 8 }]}>{t('settings.hapticPatternDesc')}</Text>
-            </View>
-          )}
-
           {/* 스캔 소리 */}
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.scanSound')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.scanSoundDesc')}</Text>
-            </View>
+          <SettingRow {...rowProps}
+            label={t('settings.scanSound')}
+            desc={t('settings.scanSoundDesc')}
+          >
             <Switch
               value={scanSoundEnabled}
               onValueChange={setScanSoundEnabled}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
               accessibilityLabel={t('settings.scanSound')}
             />
-          </View>
-        </View>
+          </SettingRow>
+        </Group>
 
         {/* 스캔 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.scan')}</Text>
-
+        <SectionHeader {...rowProps} title={t('settings.scan')} />
+        <Group colors={colors}>
           {/* 바코드 선택 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+          <SettingRow {...rowProps}
+            label={t('settings.selectBarcodes')}
+            desc={`${selectedBarcodesCount}${t('settings.selectedCount')}`}
             onPress={() => router.push('/barcode-selection')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.selectBarcodes')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{selectedBarcodesCount}{t('settings.selectedCount')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 카메라 선택 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.cameraSelection')}
+            desc={t('settings.cameraSelectionDesc')}
             onPress={() => router.push('/camera-selection')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.cameraSelection')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.cameraSelectionDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 사진 저장 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.photoSave')}
+            desc={photoSaveEnabled ? getQualityFullLabel(photoQuality) : t('settings.photoSaveDesc')}
             onPress={() => {
               if (isLocked('photoSave')) {
                 showUnlockAlert('photoSave', () => router.push('/photo-save-settings'));
@@ -864,91 +812,53 @@ export default function SettingsScreen() {
                 router.push('/photo-save-settings');
               }
             }}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.photoSave')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {photoSaveEnabled ? getQualityFullLabel(photoQuality) : t('settings.photoSaveDesc')}
-              </Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <LockIcon featureId="photoSave" size={12} badge />
-              <Text style={[s.statusText, { color: photoSaveEnabled ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {photoSaveEnabled ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
+            <NavRight {...rowProps} lockFeature="photoSave" {...statusProps(photoSaveEnabled)} />
+          </SettingRow>
 
           {/* URL 열기 방식 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('urlOpenMode.title')}
             onPress={() => router.push('/url-open-mode-selection')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('urlOpenMode.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t(`urlOpenMode.${urlOpenMode}`)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} value={t(`urlOpenMode.${urlOpenMode}`)} />
+          </SettingRow>
 
           {/* 하드웨어 키 · 수동 확정 */}
-          <MaterialPressable
-            style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}
+          <SettingRow {...rowProps}
+            label={t('hardwareKeys.title')}
+            desc={(() => {
+              if (hardwareKeySettings.scanConfirmMode !== 'manual') return t('scanConfirm.autoStatus');
+              const key = Platform.OS === 'android' ? confirmKeyOf(hardwareKeySettings.keyMap) : null;
+              return key ? t('scanConfirm.manualStatus', { key: t(`hardwareKeys.${key}`) }) : t('scanConfirm.manualStatusButton');
+            })()}
             onPress={() => router.push('/hardware-keys')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('hardwareKeys.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {(() => {
-                  if (hardwareKeySettings.scanConfirmMode !== 'manual') return t('scanConfirm.autoStatus');
-                  const key = Platform.OS === 'android' ? confirmKeyOf(hardwareKeySettings.keyMap) : null;
-                  return key ? t('scanConfirm.manualStatus', { key: t(`hardwareKeys.${key}`) }) : t('scanConfirm.manualStatusButton');
-                })()}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 스캔 영역 제한 */}
-          <MaterialPressable
-            style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}
+          <SettingRow {...rowProps}
+            label={t('scanRegion.title')}
             onPress={() => router.push('/scan-region-selection')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('scanRegion.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t(`scanRegion.${scanRegionMode}`)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} value={t(`scanRegion.${scanRegionMode}`)} />
+          </SettingRow>
 
           {/* 라벨 카테고리 (구분자로 나뉜 코드를 필드로) */}
-          <MaterialPressable
-            style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}
+          <SettingRow {...rowProps}
+            label={t('settings.labelCategories')}
+            desc={t('settings.labelCategoriesDesc')}
             onPress={() => router.push('/label-categories')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.labelCategories')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.labelCategoriesDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 수량 누적 */}
-          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('quantity.mode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('quantity.modeDesc')}</Text>
-            </View>
+          <SettingRow {...rowProps}
+            label={t('quantity.mode')}
+            desc={t('quantity.modeDesc')}
+          >
             <Switch
               value={quantityMode}
               onValueChange={async (value) => {
@@ -959,18 +869,16 @@ export default function SettingsScreen() {
                   setQuantityMode(!value);
                 }
               }}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
               accessibilityLabel={t('quantity.mode')}
             />
-          </View>
+          </SettingRow>
 
           {/* NFC 태그 읽기 */}
-          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('nfc.setting')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{Platform.OS === 'ios' ? t('nfc.settingDescIos') : t('nfc.settingDesc')}</Text>
-            </View>
+          <SettingRow {...rowProps}
+            label={t('nfc.setting')}
+            desc={Platform.OS === 'ios' ? t('nfc.settingDescIos') : t('nfc.settingDesc')}
+          >
             <Switch
               value={nfcReadEnabled}
               onValueChange={async (value) => {
@@ -981,18 +889,16 @@ export default function SettingsScreen() {
                   setNfcReadEnabled(!value);
                 }
               }}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
               accessibilityLabel={t('nfc.setting')}
             />
-          </View>
+          </SettingRow>
 
           {/* 인식된 코드 값 표시 (일반 스캔) */}
-          <View style={[s.row, { borderTopWidth: 1, borderTopColor: colors.borderLight, marginTop: 10, paddingTop: 10 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.singleCodeShowValue')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.singleCodeShowValueDesc')}</Text>
-            </View>
+          <SettingRow {...rowProps}
+            label={t('settings.singleCodeShowValue')}
+            desc={t('settings.singleCodeShowValueDesc')}
+          >
             <Switch
               value={singleCodeShowValue}
               onValueChange={async (value) => {
@@ -1004,38 +910,27 @@ export default function SettingsScreen() {
                   setSingleCodeShowValue(!value);
                 }
               }}
-              trackColor={{ true: Platform.OS === 'android' ? colors.primary + '99' : colors.success, false: isDark ? '#39393d' : '#E5E5EA' }}
-              thumbColor="#fff"
+              {...switchColors}
               accessibilityLabel={t('settings.singleCodeShowValue')}
             />
-          </View>
+          </SettingRow>
 
           {/* 결과창 자동 열림 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.resultWindowAutoOpen')}
+            desc={t('settings.resultWindowAutoOpenDesc')}
             onPress={() => router.push('/result-window-settings')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.resultWindowAutoOpen')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.resultWindowAutoOpenDesc')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <Text style={[s.statusText, { color: resultWindowAutoOpen ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {resultWindowAutoOpen ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
-
-        </View>
+            <NavRight {...rowProps} {...statusProps(resultWindowAutoOpen)} />
+          </SettingRow>
+        </Group>
 
         {/* 제품 검색 - 임시 비활성화
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.productSearchSection')}</Text>
-
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+        <SectionHeader {...rowProps} title={t('settings.productSearchSection')} />
+        <Group colors={colors}>
+          <SettingRow {...rowProps}
+            label={t('productSearch.title')}
+            desc={t('productSearch.description')}
             onPress={() => {
               if (isLocked('productSearch')) {
                 showUnlockAlert('productSearch', () => router.push('/product-search-settings'));
@@ -1043,258 +938,170 @@ export default function SettingsScreen() {
                 router.push('/product-search-settings');
               }
             }}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('productSearch.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('productSearch.description')}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <LockIcon featureId="productSearch" size={12} badge />
-              <Text style={[s.statusText, { color: productAutoSearch ? colors.success : colors.textTertiary, fontFamily: fonts.medium }]}>
-                {productAutoSearch ? t('settings.statusOn') : t('settings.statusOff')}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
-        </View>
+            <NavRight {...rowProps} lockFeature="productSearch" {...statusProps(productAutoSearch)} />
+          </SettingRow>
+        </Group>
         */}
 
         {/* 데이터 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.data')}</Text>
-
+        <SectionHeader {...rowProps} title={t('settings.data')} />
+        <Group colors={colors}>
           {/* 기록 내보내기 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+          <SettingRow {...rowProps}
+            label={t('settings.exportHistory')}
+            desc={t('settings.exportHistoryDesc')}
             onPress={() => router.push('/export-history')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.exportHistory')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.exportHistoryDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 백업 내보내기 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('backupExport.title')}
+            desc={t('backupExport.description')}
             onPress={() => router.push('/backup-export')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('backupExport.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('backupExport.description')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 백업 가져오기 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('backupImport.title')}
+            desc={t('backupImport.description')}
             onPress={() => router.push('/backup-import')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('backupImport.title')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('backupImport.description')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
-        </View>
+            <NavRight {...rowProps} />
+          </SettingRow>
+        </Group>
 
         {/* 일반 섹션 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.general')}</Text>
-
+        <SectionHeader {...rowProps} title={t('settings.general')} />
+        <Group colors={colors}>
           {/* 언어 선택 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+          <SettingRow {...rowProps}
+            label={t('settings.languageSelection')}
             onPress={() => router.push('/language-selection')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.languageSelection')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {languages.find(lang => lang.code === language)?.name || '한국어'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} value={languages.find(lang => lang.code === language)?.name || '한국어'} />
+          </SettingRow>
 
           {/* 화면 모드 선택 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.displayMode')}
             onPress={() => router.push('/display-mode-selection')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.displayMode')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t(`displayModeSelection.${themeMode}`)}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} value={t(`displayModeSelection.${themeMode}`)} />
+          </SettingRow>
 
           {/* 인증/보안 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('security.title') || '인증/보안'}
+            desc={t('security.settingsDesc') || '앱 잠금, 생체인증 설정'}
             onPress={() => router.push('/security-settings')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('security.title') || '인증/보안'}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t('security.settingsDesc') || '앱 잠금, 생체인증 설정'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
-        </View>
+            <NavRight {...rowProps} />
+          </SettingRow>
+        </Group>
 
         {/* 앱 정보 및 지원 */}
-        <View style={[s.section, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textSecondary, fontFamily: fonts.bold }]}>{t('settings.appInfo')}</Text>
-
+        <SectionHeader {...rowProps} title={t('settings.appInfo')} />
+        <Group colors={colors}>
           {/* 개선제안하기 - 임시 주석처리
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+          <SettingRow {...rowProps}
+            label={t('settings.suggestImprovement')}
+            desc={t('settings.suggestImprovementDesc')}
             onPress={() => Alert.alert(t('settings.suggestImprovement'), '준비 중입니다')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.suggestImprovement')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.suggestImprovementDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
           */}
 
           {/* 1:1 문의하기 - 임시 주석처리
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.oneOnOneInquiry')}
+            desc={t('settings.oneOnOneInquiryDesc')}
             onPress={() => Alert.alert(t('settings.oneOnOneInquiry'), '준비 중입니다')}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.oneOnOneInquiry')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.oneOnOneInquiryDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
           */}
 
           {/* 서비스 이용약관 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopWidth: 0 }]}
+          <SettingRow {...rowProps}
+            label={t('settings.termsOfService')}
+            desc={t('settings.termsOfServiceDesc')}
             onPress={() => router.push({
               pathname: '/webview',
               params: { url: `https://scanview.app/legal/terms?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
             })}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.termsOfService')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.termsOfServiceDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 개인정보 처리방침 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.privacyPolicy')}
+            desc={t('settings.privacyPolicyDesc')}
             onPress={() => router.push({
               pathname: '/webview',
               params: { url: `https://scanview.app/legal/privacy?lang=${language}&theme=${isDark ? 'dark' : 'light'}` }
             })}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.privacyPolicy')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.privacyPolicyDesc')}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-          </MaterialPressable>
+            <NavRight {...rowProps} />
+          </SettingRow>
 
           {/* 사용 분석 동의 */}
-          <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                {t('settings.analyticsConsent') || '사용 분석 동의'}
-              </Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t('settings.analyticsConsentDesc') || '앱 개선을 위한 익명 사용 데이터 수집'}
-              </Text>
-            </View>
+          <SettingRow {...rowProps}
+            label={t('settings.analyticsConsent') || '사용 분석 동의'}
+            desc={t('settings.analyticsConsentDesc') || '앱 개선을 위한 익명 사용 데이터 수집'}
+          >
             <Switch
               value={analyticsEnabled}
               onValueChange={handleAnalyticsToggle}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#fff"
+              {...switchColors}
               accessibilityLabel={t('settings.analyticsConsent')}
             />
-          </View>
+          </SettingRow>
 
           {/* 버전정보 */}
-          <View style={[s.menuItem, { borderTopColor: colors.borderLight }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.versionInfo')}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.currentVersion')}</Text>
-            </View>
-            <Text style={[s.versionText, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>1.1.2</Text>
-          </View>
+          <SettingRow {...rowProps}
+            label={t('settings.versionInfo')}
+            desc={t('settings.currentVersion')}
+          >
+            <Text style={[s.value, { color: colors.textSecondary, fontFamily: fonts.medium }]}>1.1.2</Text>
+          </SettingRow>
 
           {/* 캐시 삭제 */}
-          <MaterialPressable accessibilityRole="button"
-            style={[s.menuItem, { borderTopColor: colors.borderLight }]}
+          <SettingRow {...rowProps}
+            label={t('settings.clearCache') || '캐시 삭제'}
+            desc={t('settings.clearCacheDesc') || '저장된 스캔 사진을 삭제합니다'}
             onPress={handleClearCache}
-            activeOpacity={0.7}
           >
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('settings.clearCache') || '캐시 삭제'}</Text>
-              <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('settings.clearCacheDesc') || '저장된 스캔 사진을 삭제합니다'}</Text>
-            </View>
-            <View style={s.menuItemRight}>
-              <Text style={[s.cacheSize, { color: colors.primary, fontFamily: fonts.semiBold }]}>
-                {isCalculatingCache ? '...' : formatCacheSize(cacheSize)}
-              </Text>
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </MaterialPressable>
-        </View>
+            <NavRight {...rowProps} value={isCalculatingCache ? '...' : formatCacheSize(cacheSize)} />
+          </SettingRow>
+        </Group>
 
         {/* 개발자 옵션: 스토어 빌드에는 안 보인다 (기능 잠금 해제가 들어 있어서).
             로컬 테스트 빌드만 EXPO_PUBLIC_DEV_OPTIONS=1 로 빌드하면 보인다 — 번들 시점에 값이 박힌다 */}
         {SHOW_DEV_OPTIONS && (
-        <MaterialPressable accessibilityRole="button"
-          style={[s.section, { backgroundColor: colors.surface, borderWidth: 1, borderColor: '#FF9500' }]}
-          onPress={() => router.push('/developer-options')}
-          activeOpacity={0.7}
-        >
-          <View style={s.devOptionHeader}>
-            <View style={s.devOptionLeft}>
-              <Ionicons name="code-slash" size={24} color="#FF9500" />
-              <View style={s.devOptionText}>
-                <Text style={[s.sectionTitle, { color: '#FF9500', fontFamily: fonts.bold, marginBottom: 0 }]}>
-                  {t('settings.developerOptions')}
-                </Text>
-                <Text style={[s.desc, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                  {t('settings.devModeDesc')}
-                </Text>
+        <Group colors={colors} style={s.devGroup}>
+          <SettingRow {...rowProps}
+            icon="code-slash"
+            iconColor={colors.warning}
+            labelColor={colors.warning}
+            label={t('settings.developerOptions')}
+            desc={t('settings.devModeDesc')}
+            onPress={() => router.push('/developer-options')}
+          >
+            {devModeEnabled && (
+              <View style={[s.softBadge, { backgroundColor: colors.warningSoft }]}>
+                <Text style={[s.softBadgeText, { color: colors.warning, fontFamily: fonts.semiBold }]}>{t('settings.statusOn')}</Text>
               </View>
-            </View>
-            <View style={s.devOptionRight}>
-              {devModeEnabled && (
-                <View style={[s.devModeBadge, { backgroundColor: '#FF9500' }]}>
-                  <Text style={[s.devModeBadgeText, { fontFamily: fonts.semiBold }]}>{t('settings.statusOn')}</Text>
-                </View>
-              )}
-              <Ionicons name="chevron-forward" size={24} color={colors.textTertiary} />
-            </View>
-          </View>
-        </MaterialPressable>
+            )}
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </SettingRow>
+        </Group>
         )}
         </ScrollView>
       </TouchableWithoutFeedback>
@@ -1302,47 +1109,72 @@ export default function SettingsScreen() {
   );
 }
 
+// 섹션 머리글: 카드 밖, 보조 글자색
+function SectionHeader({ title, colors, fonts }) {
+  return (
+    <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+      {title}
+    </Text>
+  );
+}
+
+// 묶음 카드: 행 사이에 얇은 구분선
+function Group({ colors, style, children }) {
+  const items = React.Children.toArray(children);
+  return (
+    <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }, style]}>
+      {items.map((child, i) => (
+        <React.Fragment key={child.key ?? i}>
+          {i > 0 && <View style={[s.separator, { backgroundColor: colors.borderLight }]} />}
+          {child}
+        </React.Fragment>
+      ))}
+    </View>
+  );
+}
+
+// 목록 행: 왼쪽 라벨(+설명), 오른쪽 값·스위치·화살표. onPress가 있으면 누를 수 있는 행
+function SettingRow({ colors, fonts, label, desc, onPress, icon, iconColor, labelColor, children }) {
+  const hasRight = React.Children.toArray(children).length > 0;
+  const content = (
+    <>
+      {icon ? <Ionicons name={icon} size={20} color={iconColor || colors.textSecondary} /> : null}
+      <View style={s.rowText}>
+        <Text style={[s.label, { color: labelColor || colors.text, fontFamily: fonts.medium }]}>{label}</Text>
+        {!!desc && <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{desc}</Text>}
+      </View>
+      {hasRight ? <View style={s.rowRight}>{children}</View> : null}
+    </>
+  );
+  const rowStyle = [s.row, desc ? s.rowWithDesc : null];
+  if (onPress) {
+    return (
+      <MaterialPressable accessibilityRole="button" style={rowStyle} onPress={onPress} activeOpacity={0.7}>
+        {content}
+      </MaterialPressable>
+    );
+  }
+  return <View style={rowStyle}>{content}</View>;
+}
+
+// 이동 행 오른쪽: (잠금 배지) 값 글자 + 화살표
+function NavRight({ colors, fonts, value, valueColor, lockFeature }) {
+  return (
+    <>
+      {lockFeature ? (
+        <LockIcon featureId={lockFeature} size={12} badge style={[s.softBadge, s.lockBadge, { backgroundColor: colors.errorSoft }]} />
+      ) : null}
+      {value ? (
+        <Text style={[s.value, { color: valueColor || colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+          {value}
+        </Text>
+      ) : null}
+      <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+    </>
+  );
+}
+
 const s = StyleSheet.create({
-  hapticOptions: {
-    marginBottom: 16,
-  },
-  hapticOptionLabel: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  segment: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
-    gap: 4,
-  },
-  segmentItem: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  segmentText: {
-    fontSize: 14,
-  },
-  scanModeSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 12,
-  },
-  scanModeSummaryTitle: {
-    fontSize: 15,
-  },
-  scanModeSummaryDesc: {
-    fontSize: 12,
-    marginTop: 2,
-    lineHeight: 17,
-  },
   c: {
     flex: 1,
   },
@@ -1355,243 +1187,189 @@ const s = StyleSheet.create({
     zIndex: 100,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACE.screen,
     paddingBottom: 120, // 실제 값은 탭바 높이 기준으로 인라인에서 덮어쓴다
+    gap: SPACE.gap,
   },
   header: {
     paddingTop: 50,
-    paddingBottom: 16,
+    paddingBottom: 4,
+    paddingHorizontal: 4,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 6,
+    ...TYPE.tabTitle,
   },
-  section: {
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionNoTitle: {
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 15,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginBottom: 15,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 56, // Material 목록 행 높이
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    borderTopWidth: 1,
-    marginTop: 10,
-  },
-  menuItemRight: {
+  // 계정 카드
+  accountCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  statusText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  cacheSize: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  label: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  desc: {
-    fontSize: 13,
-    marginTop: 2,
-    lineHeight: 18,
-  },
-  versionText: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  // 로그인 섹션 스타일
-  loginSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  loginContent: {
-    flex: 1,
-  },
-  loginTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  loginDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  // 프로필 섹션 스타일
-  profileSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  profileLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  profileAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    gap: 12,
+    minHeight: 72,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
     overflow: 'hidden',
   },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  profileInfo: {
-    marginLeft: 14,
+  avatarInitial: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  accountText: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   profileNameRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
-  profileName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  accountTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   profileNameSuffix: {
-    fontSize: 16,
-  },
-  profileEmail: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  settingsIconButton: {
-    padding: 8,
-  },
-  // 광고 섹션 스타일
-  adSection: {
-    borderRadius: 16,
-    marginBottom: 20,
-    padding: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 70,
-  },
-  // Pro 버전 섹션 스타일
-  proSection: {
-    borderRadius: 16,
-    marginBottom: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  proBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  proBannerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  proBannerText: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  proTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  proDesc: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.85)',
-    marginTop: 2,
-  },
-  watchAdButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-  },
-  watchAdTextContainer: {
-    alignItems: 'flex-start',
-  },
-  watchAdText: {
     fontSize: 15,
+  },
+  accountSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  // 섹션 · 묶음 카드
+  sectionHeader: {
+    ...TYPE.sectionHeader,
+    marginTop: 14,
+    marginHorizontal: 4,
+  },
+  group: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  separator: {
+    height: 1,
+  },
+  devGroup: {
+    marginTop: 14,
+  },
+  // 목록 행
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: SIZE.row,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  rowWithDesc: {
+    minHeight: SIZE.rowWithDesc,
+  },
+  rowText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+    maxWidth: '50%',
+  },
+  label: {
+    ...TYPE.body,
+  },
+  desc: {
+    ...TYPE.caption,
+    lineHeight: 17,
+  },
+  value: {
+    fontSize: 13,
+    flexShrink: 1,
+  },
+  softBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.badge,
+  },
+  softBadgeText: {
+    fontSize: 12,
     fontWeight: '600',
   },
-  watchAdSubText: {
-    fontSize: 12,
-    marginTop: 1,
+  lockBadge: {
+    marginLeft: 0,
+    paddingHorizontal: 6,
   },
-  // URL 목록 스타일
+  // 안내 상자 (스캔 모드 상호 배타 안내)
+  infoBoxWrap: {
+    padding: 12,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: RADIUS.control,
+  },
+  infoBoxText: {
+    flex: 1,
+    gap: 2,
+  },
+  infoBoxTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  infoBoxDesc: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  // 진동 세기 · 패턴
+  hapticOptions: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  hapticOptionLabel: {
+    ...TYPE.sectionHeader,
+    marginBottom: 8,
+  },
+  segment: {
+    flexDirection: 'row',
+    borderRadius: RADIUS.control,
+    padding: 4,
+    gap: 4,
+  },
+  segmentItem: {
+    flex: 1,
+    minHeight: SIZE.touch,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  segmentText: {
+    fontSize: 14,
+  },
+  // URL 목록
+  urlListWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
   urlListContainer: {
-    borderTopWidth: 1,
-    marginTop: 8,
-    paddingTop: 8,
-    marginLeft: 4,
+    borderRadius: RADIUS.control,
+    paddingHorizontal: 12,
   },
   urlListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingVertical: 10,
-    paddingHorizontal: 4,
-  },
-  urlListItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
   },
   urlStatusDot: {
     width: 8,
@@ -1609,34 +1387,45 @@ const s = StyleSheet.create({
   urlListItemUrl: {
     fontSize: 12,
   },
-  // 개발자 옵션 스타일
-  devOptionHeader: {
+  // 광고
+  adSection: {
+    borderRadius: RADIUS.group,
+    borderWidth: 1,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 70,
+    overflow: 'hidden',
+  },
+  proSection: {
+    borderRadius: RADIUS.group,
+    overflow: 'hidden',
+  },
+  proBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: SIZE.rowWithDesc,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  devOptionLeft: {
+  proBannerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 12,
   },
-  devOptionText: {
+  proBannerText: {
+    marginLeft: 12,
     flex: 1,
   },
-  devOptionRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  devModeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  devModeBadgeText: {
-    color: '#fff',
-    fontSize: 12,
+  proTitle: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#fff',
+  },
+  proDesc: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 2,
   },
 });
