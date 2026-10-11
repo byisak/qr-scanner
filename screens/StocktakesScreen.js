@@ -1,6 +1,6 @@
 // screens/StocktakesScreen.js - 재고 실사 목록 (진행 중 / 끝난 실사)
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { loadStocktakes, summarizeStocktake, ACTIVE_STOCKTAKE_KEY } from '../utils/stocktake';
 
@@ -34,56 +35,66 @@ export default function StocktakesScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.iconButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable onPress={() => router.back()} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('common.back')}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
-        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktake.title')}</Text>
-        <MaterialPressable onPress={() => router.push('/stocktake-new')} style={s.iconButton} accessibilityLabel={t('stocktake.new')}>
-          <Ionicons name="add" size={26} color={colors.primary} />
+        <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{t('stocktake.title')}</Text>
+        <MaterialPressable onPress={() => router.push('/stocktake-new')} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('stocktake.new')}>
+          <Ionicons name="add" size={26} color={colors.primaryText} />
         </MaterialPressable>
       </View>
 
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: 24 + insets.bottom }]}>
         {list.length === 0 ? (
-          <View style={[s.empty, { backgroundColor: colors.surface }]}>
+          <View style={s.empty}>
             <Ionicons name="clipboard-outline" size={40} color={colors.textTertiary} />
             <Text style={[s.emptyTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktake.emptyTitle')}</Text>
             <Text style={[s.emptyDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('stocktake.emptyDesc')}</Text>
             <MaterialPressable style={[s.primaryButton, { backgroundColor: colors.primary }]} onPress={() => router.push('/stocktake-new')} accessibilityRole="button">
-              <Ionicons name="add" size={20} color="#fff" />
+              <Ionicons name="add" size={20} color="#FFFFFF" />
               <Text style={[s.primaryButtonText, { fontFamily: fonts.semiBold }]}>{t('stocktake.new')}</Text>
             </MaterialPressable>
           </View>
-        ) : list.map((st) => {
-          const sum = summarizeStocktake(st);
-          const isActive = st.id === activeId && !st.finishedAt;
-          return (
-            <MaterialPressable
-              key={st.id}
-              style={[s.card, { backgroundColor: colors.surface, borderColor: isActive ? colors.primary : 'transparent' }]}
-              onPress={() => router.push({ pathname: '/stocktake-detail', params: { id: st.id } })}
-              accessibilityRole="button"
-            >
-              <View style={s.cardTop}>
-                <Text style={[s.cardTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{st.name}</Text>
-                <View style={[s.chip, { backgroundColor: isActive ? colors.primary + '20' : st.finishedAt ? colors.success + '20' : colors.inputBackground }]}>
-                  <Text style={[s.chipText, { color: isActive ? colors.primary : st.finishedAt ? colors.success : colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                    {isActive ? t('stocktake.active') : st.finishedAt ? t('stocktake.finished') : t('stocktake.paused')}
+        ) : (
+          <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {list.map((st, index) => {
+              const sum = summarizeStocktake(st);
+              const isActive = st.id === activeId && !st.finishedAt;
+              const tone = isActive
+                ? { bg: colors.successSoft, fg: colors.success }
+                : st.finishedAt
+                  ? { bg: colors.primarySoft, fg: colors.primaryText }
+                  : { bg: colors.raised, fg: colors.textSecondary };
+              return (
+                <MaterialPressable
+                  key={st.id}
+                  style={[s.row, index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight }]}
+                  onPress={() => router.push({ pathname: '/stocktake-detail', params: { id: st.id } })}
+                  accessibilityRole="button"
+                >
+                  <View style={s.rowTop}>
+                    <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{st.name}</Text>
+                    <View style={[s.badge, { backgroundColor: tone.bg }]}>
+                      {isActive && <View style={[s.badgeDot, { backgroundColor: tone.fg }]} />}
+                      <Text style={[s.badgeText, { color: tone.fg, fontFamily: fonts.semiBold }]}>
+                        {isActive ? t('stocktake.active') : st.finishedAt ? t('stocktake.finished') : t('stocktake.paused')}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={[s.rowMeta, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                    {formatDate(st.createdAt)} · {t('stocktake.progress', { done: sum.complete + sum.over, total: sum.total })}
+                    {sum.missing ? ` · ${t('stocktake.status.missing')} ${sum.missing}` : ''}
+                    {sum.extra ? ` · ${t('stocktake.status.extra')} ${sum.extra}` : ''}
                   </Text>
-                </View>
-              </View>
-              <View style={[s.bar, { backgroundColor: colors.inputBackground }]}>
-                <View style={[s.barFill, { width: `${Math.round(sum.progress * 100)}%`, backgroundColor: colors.primary }]} />
-              </View>
-              <Text style={[s.cardMeta, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                {formatDate(st.createdAt)} · {t('stocktake.progress', { done: sum.complete + sum.over, total: sum.total })}
-                {sum.missing ? ` · ${t('stocktake.status.missing')} ${sum.missing}` : ''}
-                {sum.extra ? ` · ${t('stocktake.status.extra')} ${sum.extra}` : ''}
-              </Text>
-            </MaterialPressable>
-          );
-        })}
+                  <View style={[s.bar, { backgroundColor: colors.border }]}>
+                    <View style={[s.barFill, { width: `${Math.round(sum.progress * 100)}%`, backgroundColor: colors.success }]} />
+                  </View>
+                </MaterialPressable>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -91,21 +102,23 @@ export default function StocktakesScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
-  iconButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, overflow: 'hidden' },
-  headerTitle: { fontSize: 18 },
-  content: { padding: 16 },
-  empty: { borderRadius: 12, padding: 24, alignItems: 'center' },
-  emptyTitle: { fontSize: 16, marginTop: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingBottom: 8 },
+  iconButton: { width: SIZE.touch, height: SIZE.touch, justifyContent: 'center', alignItems: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
+  headerTitle: { ...TYPE.screenTitle, flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  content: { paddingHorizontal: SPACE.screen, paddingTop: 4 },
+  empty: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 72 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', marginTop: 12 },
   emptyDesc: { fontSize: 14, marginTop: 6, textAlign: 'center', lineHeight: 20 },
-  primaryButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 18, minHeight: 44, borderRadius: 22, marginTop: 16, overflow: 'hidden' },
-  primaryButtonText: { color: '#fff', fontSize: 15 },
-  card: { borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1.5, overflow: 'hidden' },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardTitle: { flex: 1, fontSize: 16 },
-  chip: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  chipText: { fontSize: 12 },
-  bar: { height: 6, borderRadius: 3, marginTop: 12, overflow: 'hidden' },
-  barFill: { height: 6, borderRadius: 3 },
-  cardMeta: { fontSize: 13, marginTop: 8 },
+  primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24, height: SIZE.primaryButton, borderRadius: RADIUS.button, marginTop: 20, overflow: 'hidden' },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  group: { borderRadius: RADIUS.group, borderWidth: 1, overflow: 'hidden' },
+  row: { minHeight: SIZE.rowWithDesc, justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rowTitle: { ...TYPE.body, flex: 1 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 22, paddingHorizontal: 8, borderRadius: 6 },
+  badgeDot: { width: 6, height: 6, borderRadius: 3 },
+  badgeText: { fontSize: 11, fontWeight: '600' },
+  rowMeta: { fontSize: 13 },
+  bar: { height: 4, borderRadius: 2, marginTop: 4, overflow: 'hidden' },
+  barFill: { height: 4, borderRadius: 2 },
 });

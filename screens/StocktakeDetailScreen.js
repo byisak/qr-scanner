@@ -1,6 +1,6 @@
 // screens/StocktakeDetailScreen.js - 재고 실사 진행: 진행률, 상태별 목록(누락·부족·완료·초과·목록 외), 수량 고치기, 보고서
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -11,6 +11,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
+import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import {
   loadStocktakes, upsertStocktake, deleteStocktake, setActiveStocktake, summarizeStocktake,
@@ -18,7 +19,6 @@ import {
 } from '../utils/stocktake';
 
 const FILTERS = ['todo', 'missing', 'partial', 'complete', 'over', 'extra', 'all'];
-const STATUS_COLOR = { missing: '#FF3B30', partial: '#FF9500', complete: '#34C759', over: '#AF52DE', extra: '#8E8E93' };
 
 export default function StocktakeDetailScreen() {
   const router = useRouter();
@@ -111,40 +111,91 @@ export default function StocktakeDetailScreen() {
     return sum[f];
   };
 
-  const renderRow = ({ item }) => (
-    <View style={[s.row, { backgroundColor: colors.surface }]}>
-      <View style={[s.dot, { backgroundColor: STATUS_COLOR[item.status] }]} />
-      <View style={{ flex: 1 }}>
-        <Text style={[s.code, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1} ellipsizeMode="middle">{item.code}</Text>
-        <Text style={[s.meta, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
-          {item.name ? `${item.name} · ` : ''}{t(`stocktake.status.${item.status}`)}
-        </Text>
+  // 상태 배지: 연한 바탕 + 진한 글자
+  const TONE = {
+    missing: { bg: colors.raised, fg: colors.textSecondary },
+    partial: { bg: colors.warningSoft, fg: colors.warning },
+    over: { bg: colors.warningSoft, fg: colors.warning },
+    complete: { bg: colors.successSoft, fg: colors.success },
+    extra: { bg: colors.errorSoft, fg: colors.error },
+  };
+
+  const done = sum.complete + sum.over;
+  const percent = Math.round(sum.progress * 100);
+  const share = (n) => (sum.total ? `${(n / sum.total) * 100}%` : '0%');
+  const statusPill = stocktake.finishedAt
+    ? { label: t('stocktake.finished'), bg: colors.primarySoft, fg: colors.primaryText, dot: false }
+    : isActive
+      ? { label: t('stocktake.active'), bg: colors.successSoft, fg: colors.success, dot: true }
+      : { label: t('stocktake.paused'), bg: colors.raised, fg: colors.textSecondary, dot: false };
+  const stats = [
+    { key: 'complete', count: sum.complete, color: colors.success },
+    { key: 'partial', count: sum.partial, color: colors.warning },
+    { key: 'missing', count: sum.missing, color: colors.text },
+    { key: 'extra', count: sum.extra, color: colors.error },
+  ];
+
+  const renderRow = ({ item, index }) => {
+    const first = index === 0;
+    const last = index === rows.length - 1;
+    const tone = TONE[item.status];
+    return (
+      <View
+        style={[
+          s.row,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderTopWidth: first ? 1 : 0,
+            borderBottomWidth: last ? 1 : StyleSheet.hairlineWidth,
+            borderBottomColor: last ? colors.border : colors.borderLight,
+          },
+          first && s.rowFirst,
+          last && s.rowLast,
+        ]}
+      >
+        <View style={s.rowText}>
+          {item.name ? (
+            <>
+              <Text style={[s.itemName, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{item.name}</Text>
+              <Text style={[s.itemCode, { color: colors.textSecondary }]} numberOfLines={1} ellipsizeMode="middle">{item.code}</Text>
+            </>
+          ) : (
+            <Text style={[s.itemName, { color: colors.text, fontFamily: MONO }]} numberOfLines={1} ellipsizeMode="middle">{item.code}</Text>
+          )}
+        </View>
+        <View style={s.rowRight}>
+          <View style={[s.badge, { backgroundColor: tone.bg }]}>
+            <Text style={[s.badgeText, { color: tone.fg, fontFamily: fonts.semiBold }]}>{t(`stocktake.status.${item.status}`)}</Text>
+          </View>
+          <Text style={[s.qty, { color: colors.text }]}>
+            {item.scanned}{item.expected !== undefined ? <Text style={{ color: colors.textSecondary }}>/{item.expected}</Text> : null}
+          </Text>
+        </View>
+        {!stocktake.finishedAt && (
+          <View style={[s.stepper, { backgroundColor: colors.raised }]}>
+            <MaterialPressable style={s.stepButton} onPress={() => persist(setStocktakeCount(stocktake, item.code, item.scanned - 1))} accessibilityLabel={t('quantity.decrease')}>
+              <Ionicons name="remove" size={18} color={colors.text} />
+            </MaterialPressable>
+            <View style={[s.stepDivider, { backgroundColor: colors.border }]} />
+            <MaterialPressable style={s.stepButton} onPress={() => persist(setStocktakeCount(stocktake, item.code, item.scanned + 1))} accessibilityLabel={t('quantity.increase')}>
+              <Ionicons name="add" size={18} color={colors.text} />
+            </MaterialPressable>
+          </View>
+        )}
       </View>
-      {!stocktake.finishedAt && (
-        <MaterialPressable style={[s.qtyButton, { borderColor: colors.border }]} onPress={() => persist(setStocktakeCount(stocktake, item.code, item.scanned - 1))} accessibilityLabel={t('quantity.decrease')}>
-          <Ionicons name="remove" size={18} color={colors.text} />
-        </MaterialPressable>
-      )}
-      <Text style={[s.qty, { color: colors.text, fontFamily: fonts.bold }]}>
-        {item.scanned}{item.expected !== undefined ? <Text style={{ color: colors.textTertiary, fontFamily: fonts.regular }}>/{item.expected}</Text> : null}
-      </Text>
-      {!stocktake.finishedAt && (
-        <MaterialPressable style={[s.qtyButton, { borderColor: colors.border }]} onPress={() => persist(setStocktakeCount(stocktake, item.code, item.scanned + 1))} accessibilityLabel={t('quantity.increase')}>
-          <Ionicons name="add" size={18} color={colors.text} />
-        </MaterialPressable>
-      )}
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { backgroundColor: colors.surface, borderBottomColor: colors.border, paddingTop: insets.top + (Platform.OS === 'ios' ? 13 : 12) }]}>
-        <MaterialPressable onPress={() => router.back()} style={s.iconButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+      <View style={[s.header, { paddingTop: insets.top + 4 }]}>
+        <MaterialPressable onPress={() => router.back()} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('common.back')}>
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>{stocktake.name}</Text>
-        <MaterialPressable onPress={exportReport} style={s.iconButton} accessibilityLabel={t('stocktake.report')}>
-          <Ionicons name="share-outline" size={22} color={colors.primary} />
+        <MaterialPressable onPress={exportReport} style={s.iconButton} accessibilityRole="button" accessibilityLabel={t('stocktake.report')}>
+          <Ionicons name="share-outline" size={22} color={colors.textSecondary} />
         </MaterialPressable>
       </View>
 
@@ -155,63 +206,90 @@ export default function StocktakeDetailScreen() {
         contentContainerStyle={[s.content, { paddingBottom: 24 + insets.bottom }]}
         ListHeaderComponent={
           <View>
-            <View style={[s.summary, { backgroundColor: colors.surface }]}>
-              <Text style={[s.bigNumber, { color: colors.text, fontFamily: fonts.bold }]}>
-                {Math.round(sum.progress * 100)}%
-              </Text>
-              <Text style={[s.meta, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                {t('stocktake.progress', { done: sum.complete + sum.over, total: sum.total })} · {t('stocktake.qtyProgress', { scanned: sum.scannedQty, expected: sum.expectedQty })}
-              </Text>
-              <View style={[s.bar, { backgroundColor: colors.inputBackground }]}>
-                <View style={[s.barFill, { width: `${Math.round(sum.progress * 100)}%`, backgroundColor: colors.primary }]} />
-              </View>
-              {!stocktake.finishedAt ? (
-                <View style={s.actions}>
-                  <MaterialPressable style={[s.actionButton, { backgroundColor: isActive ? colors.inputBackground : colors.primary }]} onPress={toggleActive} accessibilityRole="button">
-                    <Ionicons name={isActive ? 'pause' : 'play'} size={16} color={isActive ? colors.text : '#fff'} />
-                    <Text style={[s.actionText, { color: isActive ? colors.text : '#fff', fontFamily: fonts.semiBold }]}>
-                      {isActive ? t('stocktake.pause') : t('stocktake.resume')}
-                    </Text>
-                  </MaterialPressable>
-                  <MaterialPressable style={[s.actionButton, { backgroundColor: colors.inputBackground }]} onPress={finish} accessibilityRole="button">
-                    <Ionicons name="checkmark-done" size={16} color={colors.text} />
-                    <Text style={[s.actionText, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktake.finish')}</Text>
-                  </MaterialPressable>
+            <View style={[s.summary, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={s.summaryTop}>
+                <View style={[s.pill, { backgroundColor: statusPill.bg }]}>
+                  {statusPill.dot && <View style={[s.pillDot, { backgroundColor: statusPill.fg }]} />}
+                  <Text style={[s.pillText, { color: statusPill.fg, fontFamily: fonts.semiBold }]}>{statusPill.label}</Text>
                 </View>
-              ) : (
-                <Text style={[s.meta, { color: colors.success, fontFamily: fonts.semiBold, marginTop: 10 }]}>{t('stocktake.finished')}</Text>
+                <Text style={[s.qtyProgress, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                  {t('stocktake.qtyProgress', { scanned: sum.scannedQty, expected: sum.expectedQty })} · {percent}%
+                </Text>
+              </View>
+
+              <View style={s.countRow} accessible accessibilityLabel={t('stocktake.progress', { done, total: sum.total })}>
+                <Text style={[s.bigNumber, { color: colors.text, fontFamily: fonts.bold }]}>{done}</Text>
+                <Text style={[s.bigTotal, { color: colors.textSecondary, fontFamily: fonts.regular }]}>/ {sum.total}</Text>
+              </View>
+
+              <View style={[s.bar, { backgroundColor: colors.border }]}>
+                <View style={{ width: share(done), backgroundColor: colors.success }} />
+                <View style={{ width: share(sum.partial), backgroundColor: colors.warning }} />
+              </View>
+
+              <View style={s.stats}>
+                {stats.map(st => (
+                  <View key={st.key} style={s.stat}>
+                    <Text style={[s.statCount, { color: st.color, fontFamily: fonts.bold }]}>{st.count}</Text>
+                    <Text style={[s.statLabel, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>{t(`stocktake.status.${st.key}`)}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {!stocktake.finishedAt && (
+                <>
+                  {!isActive && (
+                    <MaterialPressable style={[s.primaryButton, { backgroundColor: colors.primary }]} onPress={toggleActive} accessibilityRole="button">
+                      <Ionicons name="play" size={18} color="#FFFFFF" />
+                      <Text style={[s.primaryButtonText, { fontFamily: fonts.semiBold }]}>{t('stocktake.resume')}</Text>
+                    </MaterialPressable>
+                  )}
+                  <View style={s.actions}>
+                    {isActive && (
+                      <MaterialPressable style={[s.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]} onPress={toggleActive} accessibilityRole="button">
+                        <Ionicons name="pause" size={16} color={colors.text} />
+                        <Text style={[s.secondaryButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktake.pause')}</Text>
+                      </MaterialPressable>
+                    )}
+                    <MaterialPressable style={[s.secondaryButton, { backgroundColor: colors.raised, borderColor: colors.border }]} onPress={finish} accessibilityRole="button">
+                      <Ionicons name="checkmark-done" size={16} color={colors.text} />
+                      <Text style={[s.secondaryButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktake.finish')}</Text>
+                    </MaterialPressable>
+                  </View>
+                </>
               )}
               {isActive && (
-                <Text style={[s.hint, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('stocktake.activeHint')}</Text>
+                <Text style={[s.hint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('stocktake.activeHint')}</Text>
               )}
             </View>
 
-            <View style={s.filters}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroll} contentContainerStyle={s.filters}>
               {FILTERS.map((f) => {
                 const selected = filter === f;
                 return (
                   <MaterialPressable
                     key={f}
-                    style={[s.filterChip, { backgroundColor: selected ? colors.primary : colors.surface, borderColor: selected ? colors.primary : colors.border }]}
+                    style={[s.filterChip, { backgroundColor: selected ? colors.text : colors.surface, borderColor: selected ? colors.text : colors.border }]}
                     onPress={() => setFilter(f)}
+                    hitSlop={{ top: 4, bottom: 4 }}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
                   >
-                    <Text style={[s.filterText, { color: selected ? '#fff' : colors.text, fontFamily: selected ? fonts.semiBold : fonts.regular }]}>
+                    <Text style={[s.filterText, { color: selected ? colors.background : colors.text, fontFamily: selected ? fonts.semiBold : fonts.medium, fontWeight: selected ? '600' : '500' }]}>
                       {t(`stocktake.filter.${f}`)} {filterCount(f)}
                     </Text>
                   </MaterialPressable>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
         }
         ListEmptyComponent={
-          <Text style={[s.emptyText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{t('stocktake.emptyFilter')}</Text>
+          <Text style={[s.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('stocktake.emptyFilter')}</Text>
         }
         ListFooterComponent={
           <MaterialPressable style={s.deleteButton} onPress={remove} accessibilityRole="button">
-            <Text style={[s.deleteText, { color: colors.error || '#FF3B30', fontFamily: fonts.medium }]}>{t('stocktake.delete')}</Text>
+            <Text style={[s.deleteText, { color: colors.error, fontFamily: fonts.medium }]}>{t('stocktake.delete')}</Text>
           </MaterialPressable>
         }
       />
@@ -221,28 +299,48 @@ export default function StocktakeDetailScreen() {
 
 const s = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1 },
-  iconButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center', borderRadius: 20, overflow: 'hidden' },
-  headerTitle: { fontSize: 18, flex: 1, textAlign: 'center', marginHorizontal: 8 },
-  content: { padding: 16 },
-  summary: { borderRadius: 12, padding: 16, marginBottom: 12 },
-  bigNumber: { fontSize: 34 },
-  meta: { fontSize: 13, marginTop: 2 },
-  hint: { fontSize: 12, marginTop: 10, lineHeight: 17 },
-  bar: { height: 8, borderRadius: 4, marginTop: 12, overflow: 'hidden' },
-  barFill: { height: 8, borderRadius: 4 },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  actionButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 22, overflow: 'hidden' },
-  actionText: { fontSize: 14 },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  filterChip: { paddingHorizontal: 12, minHeight: 34, borderRadius: 17, borderWidth: 1, justifyContent: 'center', overflow: 'hidden' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingBottom: 8 },
+  iconButton: { width: SIZE.touch, height: SIZE.touch, justifyContent: 'center', alignItems: 'center', borderRadius: SIZE.touch / 2, overflow: 'hidden' },
+  headerTitle: { ...TYPE.screenTitle, flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  content: { paddingHorizontal: SPACE.screen, paddingTop: 4 },
+  summary: { borderRadius: RADIUS.card, borderWidth: 1, padding: SPACE.card, gap: 14, marginBottom: SPACE.section },
+  summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 28, paddingHorizontal: 10, borderRadius: 14 },
+  pillDot: { width: 7, height: 7, borderRadius: 4 },
+  pillText: { fontSize: 12, fontWeight: '600' },
+  qtyProgress: { fontSize: 13, flexShrink: 1 },
+  countRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  bigNumber: { fontSize: 40, fontWeight: '700', letterSpacing: -1 },
+  bigTotal: { fontSize: 18 },
+  bar: { flexDirection: 'row', height: 10, borderRadius: 5, overflow: 'hidden' },
+  stats: { flexDirection: 'row', gap: 8 },
+  stat: { flex: 1, gap: 2 },
+  statCount: { fontSize: 18, fontWeight: '700' },
+  statLabel: { fontSize: 12 },
+  primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: SIZE.primaryButton, borderRadius: RADIUS.button, overflow: 'hidden' },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  actions: { flexDirection: 'row', gap: 8 },
+  secondaryButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: SIZE.button, borderRadius: RADIUS.control, borderWidth: 1, overflow: 'hidden' },
+  secondaryButtonText: { fontSize: 15, fontWeight: '600' },
+  hint: { fontSize: 12, lineHeight: 17 },
+  filterScroll: { marginHorizontal: -SPACE.screen, marginBottom: SPACE.section },
+  filters: { flexDirection: 'row', gap: SPACE.gap, paddingHorizontal: SPACE.screen, paddingVertical: 4 },
+  filterChip: { height: SIZE.chip, paddingHorizontal: 12, borderRadius: RADIUS.chip, borderWidth: 1, justifyContent: 'center', overflow: 'hidden' },
   filterText: { fontSize: 13 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12, marginBottom: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  code: { fontSize: 15 },
-  qty: { fontSize: 16, minWidth: 48, textAlign: 'center' },
-  qtyButton: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: SIZE.rowWithDesc, paddingVertical: 10, paddingHorizontal: 16, borderLeftWidth: 1, borderRightWidth: 1 },
+  rowFirst: { borderTopLeftRadius: RADIUS.group, borderTopRightRadius: RADIUS.group },
+  rowLast: { borderBottomLeftRadius: RADIUS.group, borderBottomRightRadius: RADIUS.group },
+  rowText: { flex: 1, minWidth: 0, gap: 2 },
+  itemName: { ...TYPE.body },
+  itemCode: { fontFamily: MONO, fontSize: 12 },
+  rowRight: { alignItems: 'flex-end', gap: 4 },
+  badge: { height: 22, paddingHorizontal: 8, borderRadius: 6, justifyContent: 'center' },
+  badgeText: { fontSize: 11, fontWeight: '600' },
+  qty: { fontFamily: MONO, fontSize: 12 },
+  stepper: { flexDirection: 'row', alignItems: 'center', borderRadius: RADIUS.control, overflow: 'hidden' },
+  stepButton: { width: SIZE.touch, height: SIZE.touch, alignItems: 'center', justifyContent: 'center' },
+  stepDivider: { width: 1, height: 20 },
   emptyText: { textAlign: 'center', marginVertical: 24, fontSize: 14 },
-  deleteButton: { minHeight: 44, alignItems: 'center', justifyContent: 'center', marginTop: 16, borderRadius: 8, overflow: 'hidden' },
-  deleteText: { fontSize: 15 },
+  deleteButton: { minHeight: SIZE.button, alignItems: 'center', justifyContent: 'center', marginTop: 16, borderRadius: RADIUS.button, overflow: 'hidden' },
+  deleteText: { fontSize: 15, fontWeight: '500' },
 });
