@@ -33,7 +33,7 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..ea8d850 100644
+index 54ea5ab..5258f91 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 @@ -10,16 +10,32 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
@@ -70,7 +70,7 @@ index 54ea5ab..ea8d850 100644
  import org.jetbrains.annotations.NotNull;
  import org.jetbrains.annotations.Nullable;
  
-@@ -29,10 +45,41 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -29,10 +45,46 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
@@ -88,6 +88,11 @@ index 54ea5ab..ea8d850 100644
 +  // 화면 가운데(조준 코너) 영역만, N프레임마다, 정상 → 반전 순으로 시도한다
 +  private static final int DM_FALLBACK_EVERY_N_FRAMES = 4;
 +  private static final double DM_FALLBACK_CROP = 0.6; // 짧은 변 대비 가운데 정사각 크롭 비율
++  // ML Kit 2배 판독: 가운데 크롭을 2배로 키워 데이터 매트릭스만 찾는다 (iOS Vision과 같은 방식).
++  // ZXing은 코드 위치를 못 찾으면 키워도 못 읽지만, ML Kit·Vision 같은 검출기는 어디 있든 찾는다.
++  // 무거우니 8프레임마다, 정상·반전을 번갈아 (ZXing 보조 판독과 다른 프레임에)
++  private static final int DM_UPSCALE_EVERY_N_FRAMES = 8;
++  private static BarcodeScanner dataMatrixScanner = null;
 +
 +  // QR 값 → 오류 정정 레벨(L/M/Q/H). ML Kit는 이 값을 주지 않아 ZXing으로 한 번 읽고 기억해 둔다
 +  private static final int EC_CACHE_MAX = 300;
@@ -112,7 +117,7 @@ index 54ea5ab..ea8d850 100644
    }
  
    @Nullable
-@@ -40,46 +87,443 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,50 +92,538 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -208,7 +213,17 @@ index 54ea5ab..ea8d850 100644
 +      // 반전 재시도를 한 프레임은 건너뛴다 — 한 프레임에 판독이 셋 겹치면 프리뷰가 끊겼다
 +      int formats = getFormatsBitmapFromParams(params);
 +      boolean wantsDataMatrix = formats == Barcode.FORMAT_ALL_FORMATS || (formats & Barcode.FORMAT_DATA_MATRIX) != 0;
-+      if (wantsDataMatrix && !retryInverted && frameCount % DM_FALLBACK_EVERY_N_FRAMES == 0 && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX)) {
++      boolean dmMissing = wantsDataMatrix && !retryInverted && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX);
++      if (dmMissing && frameCount % DM_UPSCALE_EVERY_N_FRAMES == 0) {
++        // 0, 16, 32… 프레임은 정상, 8, 24, 40…은 반전
++        long t0 = System.nanoTime();
++        boolean invert = (frameCount / DM_UPSCALE_EVERY_N_FRAMES) % 2 == 1;
++        Map<String, Object> dm = detectDataMatrixUpscaled(mediaImage, invert);
++        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
++          barcodes.add(dm);
++        }
++        tZxing = System.nanoTime() - t0;
++      } else if (dmMissing && frameCount % DM_FALLBACK_EVERY_N_FRAMES == 0) {
 +        long t0 = System.nanoTime();
 +        Map<String, Object> dm = decodeDataMatrixWithZxing(mediaImage);
 +        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
@@ -533,10 +548,10 @@ index 54ea5ab..ea8d850 100644
 +      }
 +      return map;
 +    } catch (Exception e) {
-+      return null;
-+    }
-+  }
-+
+       return null;
+     }
+   }
+ 
 +  /**
 +   * 센서 좌표 (left, top)부터 side×side 영역을 잘라 밝기(Y)만 반전한 NV21 이미지.
 +   * 색차(UV)는 중립값으로 채워 회색조로 만든다. 회전값을 같이 넘기므로 결과는 크롭 영역 기준
@@ -565,10 +580,95 @@ index 54ea5ab..ea8d850 100644
 +                                      InputImage.IMAGE_FORMAT_NV21);
 +    } catch (Exception e) {
 +      Log.e(TAG, "Failed to create inverted image: " + e.getMessage());
-       return null;
-     }
-   }
-@@ -105,15 +549,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
++      return null;
++    }
++  }
++
++  /**
++   * 가운데 정사각(짧은 변 60%)을 2배로 키워(이중 선형) ML Kit로 데이터 매트릭스만 찾는다. invert면 밝기를 뒤집는다.
++   * 회전 0으로 넘기므로 결과는 크롭·확대 기준 센서 좌표 → 2로 나누고 크롭 위치를 더해 프레임 전체 센서 좌표로 되돌린다
++   */
++  @Nullable
++  private Map<String, Object> detectDataMatrixUpscaled(Image image, boolean invert) throws ExecutionException, InterruptedException {
++    int width = image.getWidth();
++    int height = image.getHeight();
++    int side = ((int) (Math.min(width, height) * DM_FALLBACK_CROP)) & ~1;
++    int left = ((width - side) / 2) & ~1;
++    int top = ((height - side) / 2) & ~1;
++
++    Image.Plane yPlane = image.getPlanes()[0];
++    ByteBuffer yBuffer = yPlane.getBuffer();
++    int rowStride = yPlane.getRowStride();
++    byte[] src = new byte[side * side];
++    for (int row = 0; row < side; row++) {
++      yBuffer.position((top + row) * rowStride + left);
++      yBuffer.get(src, row * side, side);
++    }
++
++    int out = side * 2;
++    int ySize = out * out;
++    byte[] nv21 = new byte[ySize + ySize / 2];
++    for (int y = 0; y < side; y++) {
++      int yNext = Math.min(y + 1, side - 1);
++      for (int x = 0; x < side; x++) {
++        int xNext = Math.min(x + 1, side - 1);
++        int p = src[y * side + x] & 0xFF;
++        int r = src[y * side + xNext] & 0xFF;
++        int d = src[yNext * side + x] & 0xFF;
++        int dr = src[yNext * side + xNext] & 0xFF;
++        int o = (2 * y) * out + 2 * x;
++        int v00 = p, v01 = (p + r) >> 1, v10 = (p + d) >> 1, v11 = (p + r + d + dr) >> 2;
++        if (invert) { v00 = 255 - v00; v01 = 255 - v01; v10 = 255 - v10; v11 = 255 - v11; }
++        nv21[o] = (byte) v00;
++        nv21[o + 1] = (byte) v01;
++        nv21[o + out] = (byte) v10;
++        nv21[o + out + 1] = (byte) v11;
++      }
++    }
++    java.util.Arrays.fill(nv21, ySize, nv21.length, (byte) 128);
++
++    if (dataMatrixScanner == null) {
++      dataMatrixScanner = BarcodeScanning.getClient(
++          new BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_DATA_MATRIX).build());
++    }
++    InputImage input = InputImage.fromByteArray(nv21, out, out, 0, InputImage.IMAGE_FORMAT_NV21);
++    List<Barcode> found = Tasks.await(dataMatrixScanner.process(input));
++    for (Barcode barcode : found) {
++      String raw = barcode.getRawValue();
++      if (raw == null || raw.isEmpty()) continue;
++      return scaleThenOffset(BarcodeConverter.convertBarcode(barcode), 0.5, left, top);
++    }
++    return null;
++  }
++
++  /** 크롭·확대 기준 좌표를 scale배 한 뒤 (dx, dy)만큼 옮긴다 */
++  @SuppressWarnings("unchecked")
++  private static Map<String, Object> scaleThenOffset(Map<String, Object> barcode, double scale, int dx, int dy) {
++    Object cornersObj = barcode.get("cornerPoints");
++    if (cornersObj instanceof List) {
++      for (Object pointObj : (List<Object>) cornersObj) {
++        Map<String, Object> point = (Map<String, Object>) pointObj;
++        point.put("x", (int) Math.round(((Number) point.get("x")).doubleValue() * scale) + dx);
++        point.put("y", (int) Math.round(((Number) point.get("y")).doubleValue() * scale) + dy);
++      }
++    }
++    Object boxObj = barcode.get("boundingBox");
++    if (boxObj instanceof Map) {
++      Map<String, Object> box = (Map<String, Object>) boxObj;
++      for (String k : new String[] { "left", "right" }) {
++        box.put(k, (int) Math.round(((Number) box.get(k)).doubleValue() * scale) + dx);
++      }
++      for (String k : new String[] { "top", "bottom" }) {
++        box.put(k, (int) Math.round(((Number) box.get(k)).doubleValue() * scale) + dy);
++      }
++    }
++    return barcode;
++  }
++
+   private synchronized BarcodeScanner
+   getBarcodeScannerClient(@Nullable Map<String, Object> params) {
+     int formatsBitmap = getFormatsBitmapFromParams(params);
+@@ -105,15 +645,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");
