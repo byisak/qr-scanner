@@ -4,7 +4,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const HARDWARE_KEY_MAP_KEY = 'hardwareKeyMap';
 export const SCAN_CONFIRM_MODE_KEY = 'scanConfirmMode';
 
-export const KEY_ACTIONS = ['none', 'confirm', 'torch', 'result', 'group', 'multiResults', 'dumpFrame'];
+// 'dumpFrame'(분석 프레임 저장)은 개발용이라 로컬 테스트 빌드(EXPO_PUBLIC_DEV_OPTIONS=1)에서만 고를 수 있다.
+// 스토어 빌드에선 목록에 없으므로 저장돼 있어도 normalizeKeyMap이 'none'으로 돌린다
+const DEV_KEY_ACTIONS = process.env.EXPO_PUBLIC_DEV_OPTIONS === '1' ? ['dumpFrame'] : [];
+export const KEY_ACTIONS = ['none', 'confirm', 'torch', 'result', 'group', 'multiResults', ...DEV_KEY_ACTIONS];
 export const DEFAULT_KEY_MAP = { volumeUp: 'none', volumeDown: 'none' };
 
 export function normalizeKeyMap(raw) {
