@@ -715,10 +715,10 @@ index 940e7d4..fcf6460 100644
            if (scanMode === "continuous") {
              onBarcodeScanned(barcodes, frame);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-index 28f1634..6644b4f 100644
+index 28f1634..ac2f7dc 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-@@ -1,6 +1,7 @@
+@@ -1,9 +1,22 @@
  #import "CodeScannerProcessorPlugin.h"
  #include <Foundation/Foundation.h>
  #import <React/RCTLog.h>
@@ -726,14 +726,123 @@ index 28f1634..6644b4f 100644
  
  static RCTEventEmitter* eventEmitter = nil;
  
-@@ -98,19 +99,59 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
++// 반전 재시도는 N번째 빈 프레임마다만 한다 (매 프레임 두 번 돌리면 실효 fps가 반으로 준다) — Android와 같은 값
++static const NSUInteger kInvertRetryEveryNFailedFrames = 3;
++// 작은·각인 데이터 매트릭스 보조 판독: N프레임마다, 가운데(짧은 변 60%) 정사각을 2배로 키워 정상 → 반전 순으로 본다
++static const NSUInteger kDataMatrixFallbackEveryNFrames = 4;
++static const CGFloat kDataMatrixFallbackCrop = 0.6;
++static const CGFloat kDataMatrixFallbackScale = 2.0;
++
++@interface CodeScannerProcessorPlugin ()
++@property (nonatomic) NSUInteger frameCount;
++@property (nonatomic) NSUInteger failedFrameCount;
++@end
++
+ @implementation CodeScannerProcessorPlugin
+ 
+ - (instancetype) initWithProxy:(VisionCameraProxyHolder*)proxy
+@@ -23,9 +36,8 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
+   // UIImageOrientation orientation = frame.orientation;
+ 
+   CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(buffer);
+-  size_t width = CVPixelBufferGetWidth(pixelBuffer);
+-  size_t height = CVPixelBufferGetHeight(pixelBuffer);
+-  RCTLogInfo(@"Processing frame with width: %lu, height: %lu and arguments: %@", width, height, arguments);
++  // 프레임마다 로그를 남기면 그 자체로 프리뷰가 느려진다 → 남기지 않는다
++  self.frameCount++;
+ 
+   // Parse the barcode types to be detected
+   NSArray* barcodeTypes = arguments[@"barcodeTypes"];
+@@ -61,7 +73,6 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
+            regionOfInterest:regionOfInterest
+                  completion:^(NSArray* observations) {
+                    for (VNBarcodeObservation* observation in observations) {
+-                     NSLog(@"Payload: %@ (%@)", observation.payloadStringValue, observation.symbology);
+                      NSDictionary* observationResult = [self dictionaryFromObservation:observation];
+                      // [observationResult setValue:[NSNumber numberWithInt:orientation] forKey:@"orientation"];
+                      [eventEmitter sendEventWithName:@"onBarcodeDetected" body:observationResult];
+@@ -72,9 +83,67 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
+ 
+   dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+ 
++  // 데이터 매트릭스를 찾는 중인데 못 찾았으면 가운데를 키워서 한 번 더 본다 (장비 명판처럼 작은 각인 코드)
++  BOOL wantsDataMatrix = symbologies.count == 0 || [symbologies containsObject:VNBarcodeSymbologyDataMatrix];
++  BOOL hasDataMatrix = NO;
++  for (NSDictionary* r in result) {
++    if ([r[@"symbology"] isEqualToString:VNBarcodeSymbologyDataMatrix]) { hasDataMatrix = YES; break; }
++  }
++  if (wantsDataMatrix && !hasDataMatrix && self.frameCount % kDataMatrixFallbackEveryNFrames == 0) {
++    NSDictionary* dm = [self detectDataMatrixInCenterOf:pixelBuffer];
++    if (dm) {
++      BOOL dup = NO;
++      for (NSDictionary* r in result) {
++        if ([r[@"payload"] isEqual:dm[@"payload"]]) { dup = YES; break; }
++      }
++      if (!dup) {
++        [eventEmitter sendEventWithName:@"onBarcodeDetected" body:dm];
++        [result addObject:dm];
++      }
++    }
++  }
++
+   return result;
+ }
+ 
++/**
++ * 가운데 정사각(짧은 변 60%)을 잘라 2배로 키운 뒤 데이터 매트릭스만 찾는다. 정상 → 반전 순.
++ * Vision은 작은 코드에 픽셀이 모자라면 못 찾는데, 키우면 모듈이 커져 찾는 경우가 있다.
++ * 결과 좌표는 프레임 전체 기준(정규화, 왼쪽 아래 원점)으로 되돌려 다른 결과와 같은 모양으로 만든다.
++ */
++- (NSDictionary* _Nullable)detectDataMatrixInCenterOf:(CVPixelBufferRef)pixelBuffer {
++  CGFloat w = CVPixelBufferGetWidth(pixelBuffer);
++  CGFloat h = CVPixelBufferGetHeight(pixelBuffer);
++  CGFloat side = floor(MIN(w, h) * kDataMatrixFallbackCrop);
++  CGRect crop = CGRectMake(floor((w - side) / 2), floor((h - side) / 2), side, side);
++  // 이 사각형(정규화)으로 결과 좌표를 프레임 전체 기준으로 되돌린다
++  CGRect cropNorm = CGRectMake(crop.origin.x / w, crop.origin.y / h, side / w, side / h);
++
++  CIImage* source = [[CIImage imageWithCVPixelBuffer:pixelBuffer] imageByCroppingToRect:crop];
++  CIImage* cropped = [source imageByApplyingTransform:CGAffineTransformMakeTranslation(-crop.origin.x, -crop.origin.y)];
++  CIImage* scaled = [cropped imageByApplyingTransform:CGAffineTransformMakeScale(kDataMatrixFallbackScale, kDataMatrixFallbackScale)];
++  CIFilter* invert = [CIFilter filterWithName:@"CIColorInvert"];
++  [invert setValue:scaled forKey:kCIInputImageKey];
++
++  for (CIImage* candidate in @[ scaled, invert.outputImage ?: scaled ]) {
++    VNImageRequestHandler* handler = [[VNImageRequestHandler alloc] initWithCIImage:candidate options:@{}];
++    VNDetectBarcodesRequest* request = [[VNDetectBarcodesRequest alloc] init];
++    if (@available(iOS 16.0, *)) {
++      request.revision = VNDetectBarcodesRequestRevision3;
++    }
++    request.symbologies = @[ VNBarcodeSymbologyDataMatrix ];
++    NSError* error = nil;
++    [handler performRequests:@[ request ] error:&error];
++    if (error) continue;
++    for (VNBarcodeObservation* o in request.results) {
++      if (o.payloadStringValue.length > 0) {
++        return [self dictionaryFromObservation:o inRect:cropNorm];
++      }
++    }
++  }
++  return nil;
++}
++
+ /**
+  * Detects barcodes in the given pixel buffer and calls the completion handler
+  * with the results.
+@@ -98,19 +167,65 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
            return;
          }
  
 -        completion(request.results);
 +        NSArray* results = request.results;
 +
-+        // 결과가 없으면 반전 이미지로 재시도 (어두운 배경 + 밝은 코드)
++        // 결과가 없으면 반전 이미지로 재시도 (어두운 배경 + 밝은 코드). 매 프레임은 무거우니 N번째 빈 프레임마다
++        if (results.count > 0) {
++          self.failedFrameCount = 0;
++        } else if (++self.failedFrameCount % kInvertRetryEveryNFailedFrames != 0) {
++          completion(results);
++          return;
++        }
 +        if (results.count == 0) {
 +          [self detectBarcodeInInvertedBuffer:pixelBuffer
 +                                 symbologies:symbologies
@@ -789,7 +898,7 @@ index 28f1634..6644b4f 100644
    }
  
    NSError* error;
-@@ -121,6 +162,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -121,6 +236,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
    }
  }
  
@@ -845,7 +954,71 @@ index 28f1634..6644b4f 100644
  /**
   * Converts a barcode observation to a dictionary representation.
   *
-@@ -174,6 +264,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
+@@ -128,36 +292,51 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+  * @return A dictionary representation of the observation.
+  */
+ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
++  return [self dictionaryFromObservation:observation inRect:CGRectMake(0, 0, 1, 1)];
++}
++
++/**
++ * rect: 이 관측이 나온 이미지가 프레임 전체에서 차지하는 정규화 사각형. 좌표를 프레임 전체 기준으로 옮긴다.
++ */
++- (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation inRect:(CGRect)rect {
++  CGPoint (^mp)(CGPoint) = ^CGPoint(CGPoint p) {
++    return CGPointMake(rect.origin.x + p.x * rect.size.width, rect.origin.y + p.y * rect.size.height);
++  };
++  CGRect bb = observation.boundingBox;
++  CGPoint bbOrigin = mp(bb.origin);
++  CGSize bbSize = CGSizeMake(bb.size.width * rect.size.width, bb.size.height * rect.size.height);
++  CGPoint tl = mp(observation.topLeft), tr = mp(observation.topRight);
++  CGPoint br = mp(observation.bottomRight), bl = mp(observation.bottomLeft);
+   NSMutableDictionary* observationRepresentation = [@{
+     @"uuid" : observation.uuid.UUIDString,
+     @"payload" : observation.payloadStringValue ?: [NSNull null],
+     @"symbology" : observation.symbology,
+     @"boundingBox" : @{
+       @"origin" : @{
+-        @"x" : @(observation.boundingBox.origin.x),
+-        @"y" : @(observation.boundingBox.origin.y),
++        @"x" : @(bbOrigin.x),
++        @"y" : @(bbOrigin.y),
+       },
+       @"size" : @{
+-        @"width" : @(observation.boundingBox.size.width),
+-        @"height" : @(observation.boundingBox.size.height)
++        @"width" : @(bbSize.width),
++        @"height" : @(bbSize.height)
+       },
+     },
+     @"corners" : @{
+       @"topLeft" : @{
+-        @"x" : @(observation.topLeft.x),
+-        @"y" : @(observation.topLeft.y)
++        @"x" : @(tl.x),
++        @"y" : @(tl.y)
+       },
+       @"topRight" : @{
+-        @"x" : @(observation.topRight.x),
+-        @"y" : @(observation.topRight.y)
++        @"x" : @(tr.x),
++        @"y" : @(tr.y)
+       },
+       @"bottomRight" : @{
+-        @"x" : @(observation.bottomRight.x),
+-        @"y" : @(observation.bottomRight.y)
++        @"x" : @(br.x),
++        @"y" : @(br.y)
+       },
+       @"bottomLeft" : @{
+-        @"x" : @(observation.bottomLeft.x),
+-        @"y" : @(observation.bottomLeft.y)
++        @"x" : @(bl.x),
++        @"y" : @(bl.y)
+       }
+     },
+     @"confidence" : @(observation.confidence)
+@@ -174,6 +353,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
  
