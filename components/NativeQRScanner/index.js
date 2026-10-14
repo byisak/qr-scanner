@@ -683,9 +683,16 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       const region = scanRegionShared.value;
       if (region) {
         const layout = layoutShared.value;
+        // 영역이 있는데 판정을 못 하는 프레임은 통과시키지 않고 버린다.
+        // (예전엔 첫 프레임을 "판정 없이 통과"시켜서, 스캔 화면에 돌아올 때마다 첫 코드는 영역 밖이어도 찍혔다)
         if (regionPristineShared.value) {
           regionPristineShared.value = false;
-        } else if (layout.width > 0 && layout.height > 0) {
+          return;
+        }
+        if (!(layout.width > 0 && layout.height > 0)) {
+          return;
+        }
+        {
           const rects = computeHighlights(
             barcodes,
             { width: frame.width, height: frame.height, orientation: frame.orientation },

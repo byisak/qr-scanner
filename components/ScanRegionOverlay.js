@@ -88,9 +88,11 @@ function roundedRectPath(x, y, w, h, r) {
   ].join(' ');
 }
 
-export default function ScanRegionOverlay({ mode = 'full', custom = null, onRegionChange, rememberAreaSize = false }) {
+// minSize = false: 줄인 미리보기(편집 화면)처럼 dp 최소 크기를 적용하면 안 되는 곳.
+// 미리보기 크기에서 80×48을 강제하면 테두리가 실제 영역(모서리 점)보다 크게 그려졌다
+export default function ScanRegionOverlay({ mode = 'full', custom = null, onRegionChange, rememberAreaSize = false, minSize = true }) {
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const region = computeScanRegion(mode, size.width, size.height, custom);
+  const region = computeScanRegion(mode, size.width, size.height, custom, minSize);
   const customKey = mode === 'custom' && custom ? `${custom.cx},${custom.cy},${custom.w},${custom.h}` : '';
 
   useEffect(() => {

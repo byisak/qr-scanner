@@ -243,7 +243,7 @@ export default function ScanRegionEditorScreen() {
           ) : (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: '#2A2F36' }]} />
           )}
-          <ScanRegionOverlay mode="custom" custom={previewCustom} />
+          <ScanRegionOverlay mode="custom" custom={previewCustom} minSize={false} />
           <GestureDetector gesture={moveGesture}>
             <View
               style={[s.dragArea, { left: rect.x * scale, top: rect.y * scale, width: rect.width * scale, height: rect.height * scale }]}
