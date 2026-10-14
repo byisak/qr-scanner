@@ -1,5 +1,5 @@
-// screens/ScanRegionSelectionScreen.js - 스캔 영역 선택 (전체 / 가운데 사각형 / 가로 띠)
-import React, { useState, useEffect } from 'react';
+// screens/ScanRegionSelectionScreen.js - 스캔 영역 선택 (전체 / 가운데 사각형 / 가로 띠 / 직접 지정)
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,26 +8,26 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
-import { SCAN_REGION_MODES, computeScanRegion } from '../components/ScanRegionOverlay';
+import { SCAN_REGION_MODES, SCAN_REGION_CUSTOM_KEY, computeScanRegion, parseCustomRegion } from '../components/ScanRegionOverlay';
 
 export const SCAN_REGION_MODE_KEY = 'scanRegionMode';
 
 const PREVIEW_BORDER = 1.5;
 
 // 작은 미리보기: 화면 모양 안에 영역을 그린다
-function RegionPreview({ mode, active, colors }) {
+function RegionPreview({ mode, active, colors, custom }) {
   const W = 30;
   const H = 48;
   // 안쪽 사각형은 테두리 안쪽(패딩 박스) 기준으로 놓이므로, 테두리 두께를 뺀 크기로 계산해야 가운데에 온다
   // (바깥 크기로 계산하면 테두리만큼 오른쪽 아래로 밀리고 오른쪽 끝이 잘렸다)
-  const region = computeScanRegion(mode, W - PREVIEW_BORDER * 2, H - PREVIEW_BORDER * 2);
+  const region = computeScanRegion(mode, W - PREVIEW_BORDER * 2, H - PREVIEW_BORDER * 2, custom, false);
   const line = active ? colors.primary : colors.textSecondary;
   return (
     <View style={[s.preview, { width: W, height: H, borderColor: line }]}>
@@ -47,19 +47,27 @@ export default function ScanRegionSelectionScreen() {
   const insets = useSafeAreaInsets();
   const colors = isDark ? Colors.dark : Colors.light;
   const [selectedMode, setSelectedMode] = useState('full');
+  const [custom, setCustom] = useState(null);
 
-  useEffect(() => {
+  // 편집 화면에서 돌아오면 바뀐 모드·영역을 다시 읽는다
+  useFocusEffect(useCallback(() => {
     (async () => {
       try {
-        const saved = await AsyncStorage.getItem(SCAN_REGION_MODE_KEY);
+        const [[, saved], [, customJson]] = await AsyncStorage.multiGet([SCAN_REGION_MODE_KEY, SCAN_REGION_CUSTOM_KEY]);
         if (saved && SCAN_REGION_MODES.includes(saved)) setSelectedMode(saved);
+        setCustom(customJson ? parseCustomRegion(customJson) : null);
       } catch (error) {
         console.error('Load scan region mode error:', error);
       }
     })();
-  }, []);
+  }, []));
 
   const selectMode = async (mode) => {
+    // 직접 지정: 아직 만든 영역이 없으면 편집 화면부터
+    if (mode === 'custom' && !custom) {
+      router.push('/scan-region-editor');
+      return;
+    }
     try {
       await AsyncStorage.setItem(SCAN_REGION_MODE_KEY, mode);
       setSelectedMode(mode);
@@ -106,7 +114,7 @@ export default function ScanRegionSelectionScreen() {
                 accessibilityRole="radio"
                 accessibilityState={{ selected: isSelected, checked: isSelected }}
               >
-                <RegionPreview mode={mode} active={isSelected} colors={colors} />
+                <RegionPreview mode={mode} active={isSelected} colors={colors} custom={custom} />
                 <View style={s.rowText}>
                   <Text style={[s.rowLabel, { color: colors.text, fontFamily: fonts.medium }]}>
                     {t(`scanRegion.${mode}`)}
@@ -115,6 +123,16 @@ export default function ScanRegionSelectionScreen() {
                     {t(`scanRegion.${mode}Desc`)}
                   </Text>
                 </View>
+                {mode === 'custom' && custom && (
+                  <MaterialPressable
+                    onPress={() => router.push('/scan-region-editor')}
+                    style={s.editButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('scanRegion.edit')}
+                  >
+                    <Text style={[s.editText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>{t('scanRegion.edit')}</Text>
+                  </MaterialPressable>
+                )}
                 <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
                   {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
                 </View>
@@ -189,6 +207,16 @@ const s = StyleSheet.create({
     position: 'absolute',
     borderWidth: 1.5,
     borderRadius: 3,
+  },
+  editButton: {
+    minHeight: SIZE.touch,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
+  },
+  editText: {
+    fontSize: 14,
   },
   rowText: {
     flex: 1,

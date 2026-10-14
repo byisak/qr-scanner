@@ -32,7 +32,7 @@ import { useSync } from '../contexts/SyncContext';
 import { useFeedback } from '../contexts/FeedbackContext';
 import { useTabBarOverlap } from '../hooks/useTabBarOverlap';
 import NewLabelPatternModal from '../components/NewLabelPatternModal';
-import ScanRegionOverlay from '../components/ScanRegionOverlay';
+import ScanRegionOverlay, { parseCustomRegion } from '../components/ScanRegionOverlay';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import useHardwareKeys from '../hooks/useHardwareKeys';
 import { parseKeyMap, confirmKeyOf, DEFAULT_KEY_MAP } from '../utils/hardwareKeys';
@@ -194,7 +194,8 @@ function ScannerScreen() {
   const [multiCodeModeEnabled, setMultiCodeModeEnabled] = useState(false); // 여러 코드 인식 모드
   const [showBarcodeValues, setShowBarcodeValues] = useState(true); // 바코드 값 표시 여부 (여러 코드 모드)
   const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 값 표시
-  const [scanRegionMode, setScanRegionMode] = useState('full'); // 스캔 영역 제한: full | center | band
+  const [scanRegionMode, setScanRegionMode] = useState('full'); // 스캔 영역 제한: full | center | band | custom
+  const [scanRegionCustom, setScanRegionCustom] = useState(null); // 사용자 지정 영역 (화면 비율)
   const [scanRegionDebug, setScanRegionDebug] = useState(false); // 개발자 옵션: 영역 밖 판정 표시
   const [scanTimingDebug, setScanTimingDebug] = useState(false); // 개발자 옵션: 네이티브 단계별 처리 시간 표시
   const [scanRegion, setScanRegion] = useState(null); // 오버레이가 잰 영역 사각형 (dp)
@@ -634,7 +635,7 @@ function ScannerScreen() {
             'scanResultMode', 'multiCodeModeEnabled', 'multiCodeShowValues', 'singleCodeShowValue',
             'resultWindowAutoOpen', 'lotteryScanEnabled', 'dontAskLotteryPrompt',
             'selectedGroupId', 'scanGroups', 'realtimeSyncEnabled',
-            'scanRegionMode', 'scanRegionDebug', 'scanTimingDebug', 'scanConfirmMode', 'hardwareKeyMap',
+            'scanRegionMode', 'scanRegionCustom', 'scanRegionDebug', 'scanTimingDebug', 'scanConfirmMode', 'hardwareKeyMap',
             'quantityMode', 'nfcReadEnabled',
           ];
           const settingsData = await AsyncStorage.multiGet(settingsKeys);
@@ -711,7 +712,8 @@ function ScannerScreen() {
 
           // 바코드 값 표시 설정 로드
           setSingleCodeShowValue(settings['singleCodeShowValue'] === 'true');
-          setScanRegionMode(['center', 'band'].includes(settings['scanRegionMode']) ? settings['scanRegionMode'] : 'full');
+          setScanRegionMode(['center', 'band', 'custom'].includes(settings['scanRegionMode']) ? settings['scanRegionMode'] : 'full');
+          setScanRegionCustom(parseCustomRegion(settings['scanRegionCustom']));
           setScanRegionDebug(settings['scanRegionDebug'] === 'true');
           setScanTimingDebug(settings['scanTimingDebug'] === 'true');
           setHardwareKeyMap(parseKeyMap(settings['hardwareKeyMap']));
@@ -3169,7 +3171,7 @@ function ScannerScreen() {
       />
 
       {/* 스캔 영역 제한 표시 (전체면 아무것도 안 그린다) */}
-      <ScanRegionOverlay mode={scanRegionMode} onRegionChange={setScanRegion} />
+      <ScanRegionOverlay mode={scanRegionMode} custom={scanRegionCustom} onRegionChange={setScanRegion} rememberAreaSize />
 
       <View style={styles.overlay} pointerEvents="box-none">
         {/* 현재 그룹 표시 (클릭 가능) - 글래스모피즘 효과 */}

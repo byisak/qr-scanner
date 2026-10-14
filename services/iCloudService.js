@@ -135,6 +135,7 @@ const SYNC_ALLOWED_PREFIXES = [
   'labelIgnoredPatterns',
   'labelAutoSplit',
   'scanRegionMode',
+  'scanRegionCustom',
   'scanConfirmMode',
   'hardwareKeyMap',
   'scanRules',
