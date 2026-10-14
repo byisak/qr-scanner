@@ -19,11 +19,15 @@ import { SCAN_REGION_MODES, computeScanRegion } from '../components/ScanRegionOv
 
 export const SCAN_REGION_MODE_KEY = 'scanRegionMode';
 
+const PREVIEW_BORDER = 1.5;
+
 // 작은 미리보기: 화면 모양 안에 영역을 그린다
 function RegionPreview({ mode, active, colors }) {
   const W = 30;
   const H = 48;
-  const region = computeScanRegion(mode, W, H);
+  // 안쪽 사각형은 테두리 안쪽(패딩 박스) 기준으로 놓이므로, 테두리 두께를 뺀 크기로 계산해야 가운데에 온다
+  // (바깥 크기로 계산하면 테두리만큼 오른쪽 아래로 밀리고 오른쪽 끝이 잘렸다)
+  const region = computeScanRegion(mode, W - PREVIEW_BORDER * 2, H - PREVIEW_BORDER * 2);
   const line = active ? colors.primary : colors.textSecondary;
   return (
     <View style={[s.preview, { width: W, height: H, borderColor: line }]}>
@@ -177,7 +181,7 @@ const s = StyleSheet.create({
     gap: 14,
   },
   preview: {
-    borderWidth: 1.5,
+    borderWidth: PREVIEW_BORDER,
     borderRadius: 6,
     overflow: 'hidden',
   },
