@@ -33,7 +33,7 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..5258f91 100644
+index 54ea5ab..7c842f8 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 @@ -10,16 +10,32 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
@@ -117,7 +117,7 @@ index 54ea5ab..5258f91 100644
    }
  
    @Nullable
-@@ -40,50 +92,538 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,50 +92,577 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -158,6 +158,8 @@ index 54ea5ab..5258f91 100644
 +    // 개발자 옵션: 단계별 처리 시간(ms)과 값 없는 검출 박스 수를 결과 끝에 _meta 항목으로 실어 보낸다.
 +    // JS 훅(useBarcodeScanner 패치)이 _meta를 떼어 onMeta로 넘기므로 바코드 목록에는 섞이지 않는다
 +    boolean debugTiming = params != null && Boolean.TRUE.equals(params.get("debugTiming"));
++    // 스캔 영역(센서 좌표 비율 [x, y, w, h]). 있으면 보조 판독 크롭의 중심·크기를 영역에 맞춘다
++    double[] focus = parseFocusRegion(params);
 +    boolean dumpFrame = params != null && Boolean.TRUE.equals(params.get("dumpFrame"));
 +    long tStart = System.nanoTime();
 +    long tMlKit = 0, tInvert = 0, tZxing = 0;
@@ -192,9 +194,8 @@ index 54ea5ab..5258f91 100644
 +      if (retryInverted) {
 +        long t0 = System.nanoTime();
 +        // 짝수로 맞춘다 (NV21 색차 평면 크기)
-+        int side = ((int) (Math.min(sensorWidth, sensorHeight) * INVERT_CROP)) & ~1;
-+        int cropLeft = ((sensorWidth - side) / 2) & ~1;
-+        int cropTop = ((sensorHeight - side) / 2) & ~1;
++        int[] crop = focusCrop(sensorWidth, sensorHeight, focus, INVERT_CROP, 1.0);
++        int cropLeft = crop[0], cropTop = crop[1], side = crop[2];
 +        InputImage invertedImage = getInvertedInputImage(mediaImage, rotationDegrees, cropLeft, cropTop, side);
 +        if (invertedImage != null) {
 +          List<Barcode> invertedList = Tasks.await(scanner.process(invertedImage));
@@ -218,14 +219,14 @@ index 54ea5ab..5258f91 100644
 +        // 0, 16, 32… 프레임은 정상, 8, 24, 40…은 반전
 +        long t0 = System.nanoTime();
 +        boolean invert = (frameCount / DM_UPSCALE_EVERY_N_FRAMES) % 2 == 1;
-+        Map<String, Object> dm = detectDataMatrixUpscaled(mediaImage, invert);
++        Map<String, Object> dm = detectDataMatrixUpscaled(mediaImage, invert, focusCrop(sensorWidth, sensorHeight, focus, DM_FALLBACK_CROP, DM_FALLBACK_CROP));
 +        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
 +          barcodes.add(dm);
 +        }
 +        tZxing = System.nanoTime() - t0;
 +      } else if (dmMissing && frameCount % DM_FALLBACK_EVERY_N_FRAMES == 0) {
 +        long t0 = System.nanoTime();
-+        Map<String, Object> dm = decodeDataMatrixWithZxing(mediaImage);
++        Map<String, Object> dm = decodeDataMatrixWithZxing(mediaImage, focusCrop(sensorWidth, sensorHeight, focus, DM_FALLBACK_CROP, 1.0));
 +        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
 +          barcodes.add(dm);
 +        }
@@ -248,6 +249,8 @@ index 54ea5ab..5258f91 100644
 +      meta.put("totalMs", (System.nanoTime() - tStart) / 1e6);
 +      meta.put("codes", barcodes.size());
 +      meta.put("emptyBoxes", emptyBoxes);
++      // 보조 판독이 스캔 영역 가운데를 보고 있는지 (영역 비율 x,y,w,h — 없으면 화면 가운데)
++      if (focus != null) meta.put("focus", String.format(java.util.Locale.US, "%.2f,%.2f,%.2f,%.2f", focus[0], focus[1], focus[2], focus[3]));
 +      if (dumpFrame) {
 +        String path = dumpLuminance(mediaImage);
 +        if (path != null) meta.put("dumpPath", path);
@@ -290,10 +293,10 @@ index 54ea5ab..5258f91 100644
 +      return out.getAbsolutePath();
 +    } catch (Exception e) {
 +      Log.e(TAG, "Failed to dump frame: " + e.getMessage());
-+      return null;
-+    }
-+  }
-+
+       return null;
+     }
+   }
+ 
 +  /**
 +   * QR 오류 정정 레벨을 결과에 붙인다. 같은 값은 캐시를 쓰고, 처음 보는 값만
 +   * 바운딩 박스 주변의 밝기(Y) 평면을 잘라 ZXing으로 디코드한다 (센서 좌표 기준, 회전 무관).
@@ -481,13 +484,11 @@ index 54ea5ab..5258f91 100644
 +   * 결과는 BarcodeConverter와 같은 모양(rawValue·format·cornerPoints·boundingBox, 센서 좌표)으로 만든다.
 +   */
 +  @Nullable
-+  private static Map<String, Object> decodeDataMatrixWithZxing(Image image) {
++  private static Map<String, Object> decodeDataMatrixWithZxing(Image image, int[] crop) {
 +    try {
 +      int width = image.getWidth();
 +      int height = image.getHeight();
-+      int side = (int) (Math.min(width, height) * DM_FALLBACK_CROP);
-+      int left = (width - side) / 2;
-+      int top = (height - side) / 2;
++      int left = crop[0], top = crop[1], side = crop[2];
 +
 +      Image.Plane yPlane = image.getPlanes()[0];
 +      ByteBuffer yBuffer = yPlane.getBuffer();
@@ -548,10 +549,10 @@ index 54ea5ab..5258f91 100644
 +      }
 +      return map;
 +    } catch (Exception e) {
-       return null;
-     }
-   }
- 
++      return null;
++    }
++  }
++
 +  /**
 +   * 센서 좌표 (left, top)부터 side×side 영역을 잘라 밝기(Y)만 반전한 NV21 이미지.
 +   * 색차(UV)는 중립값으로 채워 회색조로 만든다. 회전값을 같이 넘기므로 결과는 크롭 영역 기준
@@ -589,12 +590,10 @@ index 54ea5ab..5258f91 100644
 +   * 회전 0으로 넘기므로 결과는 크롭·확대 기준 센서 좌표 → 2로 나누고 크롭 위치를 더해 프레임 전체 센서 좌표로 되돌린다
 +   */
 +  @Nullable
-+  private Map<String, Object> detectDataMatrixUpscaled(Image image, boolean invert) throws ExecutionException, InterruptedException {
++  private Map<String, Object> detectDataMatrixUpscaled(Image image, boolean invert, int[] crop) throws ExecutionException, InterruptedException {
 +    int width = image.getWidth();
 +    int height = image.getHeight();
-+    int side = ((int) (Math.min(width, height) * DM_FALLBACK_CROP)) & ~1;
-+    int left = ((width - side) / 2) & ~1;
-+    int top = ((height - side) / 2) & ~1;
++    int left = crop[0], top = crop[1], side = crop[2];
 +
 +    Image.Plane yPlane = image.getPlanes()[0];
 +    ByteBuffer yBuffer = yPlane.getBuffer();
@@ -641,6 +640,46 @@ index 54ea5ab..5258f91 100644
 +    return null;
 +  }
 +
++  @Nullable
++  @SuppressWarnings("unchecked")
++  private static double[] parseFocusRegion(@Nullable Map<String, Object> params) {
++    if (params == null) return null;
++    Object o = params.get("focusRegion");
++    if (!(o instanceof List)) return null;
++    List<Object> l = (List<Object>) o;
++    if (l.size() != 4) return null;
++    double[] r = new double[4];
++    for (int i = 0; i < 4; i++) {
++      if (!(l.get(i) instanceof Number)) return null;
++      r[i] = ((Number) l.get(i)).doubleValue();
++    }
++    return (r[2] > 0 && r[3] > 0) ? r : null;
++  }
++
++  /**
++   * 보조 판독용 정사각 크롭 {left, top, side} (짝수, 센서 픽셀).
++   * 영역이 없으면 화면 가운데 · 짧은 변 × defaultRatio.
++   * 영역이 있으면 영역 가운데 · 영역 긴 쪽 × 1.15 (작은 영역도 판독기가 볼 만큼 최소 짧은 변의 25%),
++   * 최대 짧은 변 × maxRatio(확대 판독처럼 비싼 건 작게), 프레임 안으로 민다
++   */
++  private static int[] focusCrop(int width, int height, @Nullable double[] focus, double defaultRatio, double maxRatio) {
++    int shortSide = Math.min(width, height);
++    double cx = width / 2.0, cy = height / 2.0;
++    double side = shortSide * defaultRatio;
++    if (focus != null) {
++      cx = (focus[0] + focus[2] / 2) * width;
++      cy = (focus[1] + focus[3] / 2) * height;
++      double longest = Math.max(focus[2] * width, focus[3] * height) * 1.15;
++      side = Math.min(Math.max(longest, shortSide * 0.25), shortSide * maxRatio);
++    }
++    int s = ((int) side) & ~1;
++    int left = (int) Math.round(cx - s / 2.0);
++    int top = (int) Math.round(cy - s / 2.0);
++    left = Math.max(0, Math.min(width - s, left)) & ~1;
++    top = Math.max(0, Math.min(height - s, top)) & ~1;
++    return new int[] { left, top, s };
++  }
++
 +  /** 크롭·확대 기준 좌표를 scale배 한 뒤 (dx, dy)만큼 옮긴다 */
 +  @SuppressWarnings("unchecked")
 +  private static Map<String, Object> scaleThenOffset(Map<String, Object> barcode, double scale, int dx, int dy) {
@@ -668,7 +707,7 @@ index 54ea5ab..5258f91 100644
    private synchronized BarcodeScanner
    getBarcodeScannerClient(@Nullable Map<String, Object> params) {
      int formatsBitmap = getFormatsBitmapFromParams(params);
-@@ -105,15 +645,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +684,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");
@@ -695,7 +734,7 @@ index 54ea5ab..5258f91 100644
      return barcodeFormats.isEmpty() ? Barcode.FORMAT_ALL_FORMATS
                                      : barcodeFormatsToBitmap(barcodeFormats);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
-index 121a08f..3fe2c4d 100644
+index 121a08f..65eff6f 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
 @@ -354,7 +354,7 @@ var visionCameraProcessorPlugin = import_react_native_vision_camera.VisionCamera
@@ -727,18 +766,19 @@ index 121a08f..3fe2c4d 100644
  };
  
  // src/hooks/useLatestSharedValue.ts
-@@ -395,7 +403,9 @@ var useBarcodeScanner = ({
+@@ -395,7 +403,10 @@ var useBarcodeScanner = ({
    resizeMode = "cover",
    scanMode = "continuous",
    isMountedRef,
 -  fps = 5
 +  fps = 5,
 +  extraOptions,
-+  onMeta
++  onMeta,
++  getFocusRegion
  }) => {
    const layoutRef = (0, import_react_native_worklets_core2.useSharedValue)({ width: 0, height: 0 });
    const onLayout = (event) => {
-@@ -428,7 +438,14 @@ var useBarcodeScanner = ({
+@@ -428,7 +439,21 @@ var useBarcodeScanner = ({
            const { x, y, width: width2, height: height2 } = regionOfInterest;
            options.regionOfInterest = [x, y, width2, height2];
          }
@@ -746,6 +786,13 @@ index 121a08f..3fe2c4d 100644
 +        // extraOptions: 매 프레임 네이티브에 같이 넘길 값(공유값). debugTiming·dumpFrame 같은 개발자 옵션용
 +        if (extraOptions !== void 0 && extraOptions.value) {
 +          Object.assign(options, extraOptions.value);
++        }
++        // getFocusRegion: 스캔 영역을 센서 좌표 비율 [x, y, w, h]로 돌려주는 worklet. 네이티브 보조 판독이 이 영역 가운데를 본다
++        if (getFocusRegion !== void 0) {
++          const focus = getFocusRegion(frame);
++          if (focus) {
++            options.focusRegion = focus;
++          }
 +        }
 +        const { codes: barcodes, meta } = scanCodesWithMeta(frame, options);
 +        if (meta && onMeta) {
@@ -755,7 +802,7 @@ index 121a08f..3fe2c4d 100644
            if (scanMode === "continuous") {
              onBarcodeScanned(barcodes, frame);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
-index 940e7d4..fcf6460 100644
+index 940e7d4..621c775 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
 @@ -293,7 +293,7 @@ var visionCameraProcessorPlugin = VisionCameraProxy.initFrameProcessorPlugin(
@@ -787,18 +834,19 @@ index 940e7d4..fcf6460 100644
  };
  
  // src/hooks/useLatestSharedValue.ts
-@@ -334,7 +342,9 @@ var useBarcodeScanner = ({
+@@ -334,7 +342,10 @@ var useBarcodeScanner = ({
    resizeMode = "cover",
    scanMode = "continuous",
    isMountedRef,
 -  fps = 5
 +  fps = 5,
 +  extraOptions,
-+  onMeta
++  onMeta,
++  getFocusRegion
  }) => {
    const layoutRef = useSharedValue2({ width: 0, height: 0 });
    const onLayout = (event) => {
-@@ -367,7 +377,14 @@ var useBarcodeScanner = ({
+@@ -367,7 +378,21 @@ var useBarcodeScanner = ({
            const { x, y, width: width2, height: height2 } = regionOfInterest;
            options.regionOfInterest = [x, y, width2, height2];
          }
@@ -806,6 +854,13 @@ index 940e7d4..fcf6460 100644
 +        // extraOptions: 매 프레임 네이티브에 같이 넘길 값(공유값). debugTiming·dumpFrame 같은 개발자 옵션용
 +        if (extraOptions !== void 0 && extraOptions.value) {
 +          Object.assign(options, extraOptions.value);
++        }
++        // getFocusRegion: 스캔 영역을 센서 좌표 비율 [x, y, w, h]로 돌려주는 worklet. 네이티브 보조 판독이 이 영역 가운데를 본다
++        if (getFocusRegion !== void 0) {
++          const focus = getFocusRegion(frame);
++          if (focus) {
++            options.focusRegion = focus;
++          }
 +        }
 +        const { codes: barcodes, meta } = scanCodesWithMeta(frame, options);
 +        if (meta && onMeta) {
@@ -815,7 +870,7 @@ index 940e7d4..fcf6460 100644
            if (scanMode === "continuous") {
              onBarcodeScanned(barcodes, frame);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-index 28f1634..ac2f7dc 100644
+index 28f1634..21f6db8 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 @@ -1,9 +1,22 @@
@@ -861,7 +916,7 @@ index 28f1634..ac2f7dc 100644
                       NSDictionary* observationResult = [self dictionaryFromObservation:observation];
                       // [observationResult setValue:[NSNumber numberWithInt:orientation] forKey:@"orientation"];
                       [eventEmitter sendEventWithName:@"onBarcodeDetected" body:observationResult];
-@@ -72,9 +83,67 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
+@@ -72,9 +83,82 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
  
    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
  
@@ -872,7 +927,7 @@ index 28f1634..ac2f7dc 100644
 +    if ([r[@"symbology"] isEqualToString:VNBarcodeSymbologyDataMatrix]) { hasDataMatrix = YES; break; }
 +  }
 +  if (wantsDataMatrix && !hasDataMatrix && self.frameCount % kDataMatrixFallbackEveryNFrames == 0) {
-+    NSDictionary* dm = [self detectDataMatrixInCenterOf:pixelBuffer];
++    NSDictionary* dm = [self detectDataMatrixInCenterOf:pixelBuffer focus:arguments[@"focusRegion"]];
 +    if (dm) {
 +      BOOL dup = NO;
 +      for (NSDictionary* r in result) {
@@ -893,11 +948,26 @@ index 28f1634..ac2f7dc 100644
 + * Vision은 작은 코드에 픽셀이 모자라면 못 찾는데, 키우면 모듈이 커져 찾는 경우가 있다.
 + * 결과 좌표는 프레임 전체 기준(정규화, 왼쪽 아래 원점)으로 되돌려 다른 결과와 같은 모양으로 만든다.
 + */
-+- (NSDictionary* _Nullable)detectDataMatrixInCenterOf:(CVPixelBufferRef)pixelBuffer {
++- (NSDictionary* _Nullable)detectDataMatrixInCenterOf:(CVPixelBufferRef)pixelBuffer focus:(NSArray* _Nullable)focus {
 +  CGFloat w = CVPixelBufferGetWidth(pixelBuffer);
 +  CGFloat h = CVPixelBufferGetHeight(pixelBuffer);
-+  CGFloat side = floor(MIN(w, h) * kDataMatrixFallbackCrop);
-+  CGRect crop = CGRectMake(floor((w - side) / 2), floor((h - side) / 2), side, side);
++  CGFloat shortSide = MIN(w, h);
++  CGFloat side = floor(shortSide * kDataMatrixFallbackCrop);
++  CGFloat cx = w / 2, cy = h / 2;
++  // 스캔 영역(Vision 좌표 비율 [x, y, w, h], 왼쪽 아래 원점)이 있으면 그 가운데를, 영역 긴 쪽 × 1.15 크기로 본다
++  // (최소 짧은 변의 25%, 최대 60% — 확대 판독이라 크게 잡으면 느리다). CIImage도 왼쪽 아래 원점이라 그대로 쓴다
++  if (focus.count == 4) {
++    CGFloat fx = [focus[0] doubleValue], fy = [focus[1] doubleValue], fw = [focus[2] doubleValue], fh = [focus[3] doubleValue];
++    if (fw > 0 && fh > 0) {
++      cx = (fx + fw / 2) * w;
++      cy = (fy + fh / 2) * h;
++      CGFloat longest = MAX(fw * w, fh * h) * 1.15;
++      side = floor(MIN(MAX(longest, shortSide * 0.25), shortSide * kDataMatrixFallbackCrop));
++    }
++  }
++  CGFloat left = MAX(0, MIN(w - side, round(cx - side / 2)));
++  CGFloat top = MAX(0, MIN(h - side, round(cy - side / 2)));
++  CGRect crop = CGRectMake(left, top, side, side);
 +  // 이 사각형(정규화)으로 결과 좌표를 프레임 전체 기준으로 되돌린다
 +  CGRect cropNorm = CGRectMake(crop.origin.x / w, crop.origin.y / h, side / w, side / h);
 +
@@ -929,7 +999,7 @@ index 28f1634..ac2f7dc 100644
  /**
   * Detects barcodes in the given pixel buffer and calls the completion handler
   * with the results.
-@@ -98,19 +167,65 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -98,19 +182,65 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
            return;
          }
  
@@ -998,7 +1068,7 @@ index 28f1634..ac2f7dc 100644
    }
  
    NSError* error;
-@@ -121,6 +236,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -121,6 +251,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
    }
  }
  
@@ -1054,7 +1124,7 @@ index 28f1634..ac2f7dc 100644
  /**
   * Converts a barcode observation to a dictionary representation.
   *
-@@ -128,36 +292,51 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -128,36 +307,51 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
   * @return A dictionary representation of the observation.
   */
  - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
@@ -1118,7 +1188,7 @@ index 28f1634..ac2f7dc 100644
        }
      },
      @"confidence" : @(observation.confidence)
-@@ -174,6 +353,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
+@@ -174,6 +368,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
  
@@ -1145,7 +1215,7 @@ index 28f1634..ac2f7dc 100644
  }
  
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
-index b2e706a..0a75491 100644
+index b2e706a..ee42220 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
 @@ -7,7 +7,7 @@ import {
@@ -1157,7 +1227,7 @@ index b2e706a..0a75491 100644
  import type { Barcode, BarcodeType, Highlight, Rect, Size } from "src/types";
  import { computeHighlights } from "..";
  import { useLatestSharedValue } from "./useLatestSharedValue";
-@@ -23,6 +23,10 @@ export type UseBarcodeScannerOptions = {
+@@ -23,6 +23,12 @@ export type UseBarcodeScannerOptions = {
    resizeMode?: ResizeMode;
    scanMode?: "continuous" | "once";
    isMountedRef?: { value: boolean };
@@ -1165,25 +1235,34 @@ index b2e706a..0a75491 100644
 +  extraOptions?: { value: Record<string, unknown> | null };
 +  /** 네이티브가 결과 끝에 붙인 _meta(처리 시간·덤프 경로) */
 +  onMeta?: (meta: Record<string, unknown>, frame: Frame) => void;
++  /** 스캔 영역을 센서 좌표 비율 [x, y, w, h]로 돌려주는 worklet (없으면 null) */
++  getFocusRegion?: (frame: Frame) => [number, number, number, number] | null;
  };
  
  export const useBarcodeScanner = ({
-@@ -34,6 +38,8 @@ export const useBarcodeScanner = ({
+@@ -34,6 +40,9 @@ export const useBarcodeScanner = ({
    scanMode = "continuous",
    isMountedRef,
    fps = 5,
 +  extraOptions,
 +  onMeta,
++  getFocusRegion,
  }: UseBarcodeScannerOptions) => {
    // Layout of the <Camera /> component
    const layoutRef = useSharedValue<Size>({ width: 0, height: 0 });
-@@ -75,7 +81,13 @@ export const useBarcodeScanner = ({
+@@ -75,7 +84,19 @@ export const useBarcodeScanner = ({
            const { x, y, width, height } = regionOfInterest;
            options.regionOfInterest = [x, y, width, height];
          }
 -        const barcodes = scanCodes(frame, options);
 +        if (extraOptions !== undefined && extraOptions.value) {
 +          Object.assign(options, extraOptions.value);
++        }
++        if (getFocusRegion !== undefined) {
++          const focus = getFocusRegion(frame);
++          if (focus) {
++            (options as Record<string, unknown>).focusRegion = focus;
++          }
 +        }
 +        const { codes: barcodes, meta } = scanCodesWithMeta(frame, options);
 +        if (meta && onMeta) {

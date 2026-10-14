@@ -19,6 +19,9 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { LABEL_COLORS } from '../../constants/Colors';
+import { viewRegionToSensor } from '../../utils/scanRegionGeometry';
+
+const IS_IOS = Platform.OS === 'ios';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -460,7 +463,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       const fps = Math.round((n * 1000) / (now - acc.since));
       runOnJSSetTimingText(
         `${meta.width}x${meta.height} ${fps}fps | ML ${(acc.ml / n).toFixed(1)} inv ${(acc.inv / n).toFixed(1)} zx ${(acc.zx / n).toFixed(1)} | ` +
-        `avg ${(acc.total / n).toFixed(1)} max ${acc.max.toFixed(0)}ms | codes ${acc.codes} empty ${acc.empty}`
+        `avg ${(acc.total / n).toFixed(1)} max ${acc.max.toFixed(0)}ms | codes ${acc.codes} empty ${acc.empty}` +
+        (meta.focus ? ` | roi ${meta.focus}` : '')
       );
       timingAccShared.value = { n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: now };
     }
@@ -662,6 +666,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     barcodeTypes: visionCameraCodeTypes,
     scanMode: 'continuous',
     extraOptions: extraOptionsShared,
+    // 스캔 영역이 있으면 네이티브 보조 판독(반전 재시도·데이터 매트릭스 확대)이 화면 가운데 대신 영역 가운데를 보게 한다
+    getFocusRegion: (frame) => {
+      'worklet';
+      return viewRegionToSensor(scanRegionShared.value, layoutShared.value, frame, IS_IOS);
+    },
     onMeta: handleMeta,
     onBarcodeScanned: (barcodes, frame) => {
       'worklet';
