@@ -6,7 +6,7 @@ import {
   RewardedAdEventType,
   AdEventType,
   TestIds,
-} from 'react-native-google-mobile-ads';
+} from '../utils/adsShim';
 
 // 테스트 광고 ID (개발용)
 // 실제 배포 시에는 AdMob 콘솔에서 발급받은 광고 단위 ID로 교체

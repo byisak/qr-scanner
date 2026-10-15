@@ -8,7 +8,7 @@ import {
   RewardedAdEventType,
   AdEventType,
   TestIds,
-} from 'react-native-google-mobile-ads';
+} from '../utils/adsShim';
 import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_TYPES, FREE_QR_STYLE_INDEX, DEV_MODE_UNLOCK_ALL } from '../config/lockedFeatures';
 import { useLanguage } from './LanguageContext';
 import config from '../config/config';

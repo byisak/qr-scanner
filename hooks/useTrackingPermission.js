@@ -3,7 +3,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { setAnalyticsConsent } from '../utils/analytics';
-import mobileAds, { MaxAdContentRating } from 'react-native-google-mobile-ads';
+import mobileAds, { MaxAdContentRating } from '../utils/adsShim';
+import { ADS_ENABLED } from '../config/ads';
 
 // 네이티브 모듈 안전한 import (빌드 문제 대응)
 let TrackingTransparency = null;
@@ -23,7 +24,7 @@ const ATT_REQUESTED_KEY = '@att_requested';
 // 첫 화면에는 필요 없으므로 기다리지 않는다. 광고 요청은 초기화가 끝날 때까지 SDK가 대기시킨다
 let adsInitStarted = false;
 function initializeAdsInBackground() {
-  if (adsInitStarted) return;
+  if (!ADS_ENABLED || adsInitStarted) return;
   adsInitStarted = true;
   mobileAds().initialize().catch(error => {
     adsInitStarted = false;
@@ -46,6 +47,17 @@ export function useTrackingPermission() {
           .then(consent => (consent === null ? setAnalyticsConsent(true) : null))
           .catch(() => {});
         initializeAdsInBackground();
+        return;
+      }
+
+      // iOS: 광고를 쓰지 않으면 추적(ATT)을 묻지 않는다 (추적할 것이 없는데 묻는 건 심사 거절 사유).
+      // 사용 분석은 따로 동의하기 전까지 끈다
+      if (!ADS_ENABLED) {
+        AsyncStorage.getItem('@analytics_consent')
+          .then(consent => (consent === null ? setAnalyticsConsent(false) : null))
+          .catch(() => {});
+        setPermissionStatus('denied');
+        setIsLoading(false);
         return;
       }
 

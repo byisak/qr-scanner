@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 
-// 광고 활성화 플래그 (AdMob 승인 후 true로 변경)
-export const AD_ENABLED = false;
+// 광고 활성화 플래그 (config/ads.js). 꺼져 있으면 광고 SDK를 아예 불러오지 않는다
+import { ADS_ENABLED } from '../config/ads';
+export const AD_ENABLED = ADS_ENABLED;
 
 // 네이티브 모듈 동적 로드 (Expo Go 호환성)
 let BannerAd = null;
@@ -15,7 +16,7 @@ let isInitialized = false;
 
 if (AD_ENABLED) {
   try {
-    const AdModule = require('react-native-google-mobile-ads');
+    const AdModule = require('../utils/adsShim'); // 광고를 다시 켤 때 'react-native-google-mobile-ads'로
     BannerAd = AdModule.BannerAd;
     BannerAdSize = AdModule.BannerAdSize;
     TestIds = AdModule.TestIds;

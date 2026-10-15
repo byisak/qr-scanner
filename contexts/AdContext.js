@@ -6,7 +6,7 @@ import {
   RewardedAdEventType,
   AdEventType,
   TestIds,
-} from 'react-native-google-mobile-ads';
+} from '../utils/adsShim';
 import { useLanguage } from './LanguageContext';
 
 const AdContext = createContext();
