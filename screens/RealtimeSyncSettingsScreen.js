@@ -379,7 +379,7 @@ export default function RealtimeSyncSettingsScreen() {
           });
         }
 
-        // 활성 세션들에 대해 join-session 이벤트 발송 (user_id 업데이트)
+        // 활성 세션들을 내 세션으로 다시 등록 (POST /api/sessions, user_id 업데이트)
         if (websocketClient.getConnectionStatus()) {
           const activeSessions = allSessions.filter(s => s.status !== 'DELETED');
           for (const session of activeSessions) {
@@ -584,23 +584,8 @@ export default function RealtimeSyncSettingsScreen() {
           websocketClient.setUserId(user.id);
         }
 
-        if (!websocketClient.getConnectionStatus()) {
-          websocketClient.connect(config.serverUrl);
-          // 연결 완료 대기 (최대 3초)
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Connection timeout'));
-            }, 3000);
-
-            const checkConnection = setInterval(() => {
-              if (websocketClient.getConnectionStatus()) {
-                clearInterval(checkConnection);
-                clearTimeout(timeout);
-                resolve();
-              }
-            }, 100);
-          });
-        }
+        // REST 요청이라 연결을 기다릴 필요 없음 (네트워크 오류는 createSession 안에서 재시도)
+        websocketClient.connect(config.serverUrl);
         await websocketClient.createSession(newSessionId, sessionSettings);
         console.log('서버에 세션 생성 요청:', newSessionId, '설정:', sessionSettings);
       } catch (error) {

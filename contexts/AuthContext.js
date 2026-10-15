@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import config from '../config/config';
 import { useFeatureLock } from './FeatureLockContext';
+import websocketClient from '../utils/websocket';
 
 const AuthContext = createContext();
 
@@ -690,6 +691,11 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   };
+
+  // 실시간 서버 전송(REST)이 최신 토큰을 쓰고, 401이면 갱신할 수 있게 도우미를 등록
+  useEffect(() => {
+    websocketClient.setAuthHandlers({ getToken, refreshAccessToken });
+  });
 
   const value = {
     user,
