@@ -46,3 +46,6 @@ scripts/dm-bench/.build/
 
 # 로컬 모듈 빌드 산출물
 modules/hardware-keys/android/build/
+
+# 플레이 콘솔 양식 분석(보안 취약점 메모 포함) — 공개 저장소에 올리지 않는다
+store/play-forms.md
