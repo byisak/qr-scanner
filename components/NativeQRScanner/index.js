@@ -430,6 +430,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const scanRegionShared = useSharedValue(scanRegion);
   useEffect(() => { scanRegionShared.value = scanRegion; }, [scanRegion]);
   const layoutShared = useSharedValue({ width: 0, height: 0 });
+  const regionDebugShared = useSharedValue(scanRegionDebug);
+  useEffect(() => { regionDebugShared.value = scanRegionDebug; }, [scanRegionDebug]);
+  // 개발자 옵션 "스캔 영역 판정 표시": 마지막 판정 근거(프레임 크기·방향, 코드 중심, 영역)를 화면에 글자로
+  const [regionDebugText, setRegionDebugText] = useState('');
+  const runOnJSSetRegionDebugText = Worklets.createRunOnJS(setRegionDebugText);
   const regionPristineShared = useSharedValue(true); // 첫 프레임은 가로세로가 뒤집혀 올 수 있어 건너뛴다 (라이브러리와 같은 처리)
   const [regionHighlights, setRegionHighlights] = useState({ kept: [], dropped: [] });
 
@@ -708,6 +713,14 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
             const cx = r.origin.x + r.size.width / 2;
             const cy = r.origin.y + r.size.height / 2;
             const inside = cx >= region.x && cx <= region.x + region.width && cy >= region.y && cy <= region.y + region.height;
+            if (regionDebugShared.value) {
+              const raw = barcodes[i].value || barcodes[i].rawValue || '';
+              runOnJSSetRegionDebugText(
+                `${inside ? 'IN ' : 'OUT'} ${String(raw).slice(0, 16)} | frame ${frame.width}x${frame.height} ${frame.orientation}` +
+                ` | view ${Math.round(layout.width)}x${Math.round(layout.height)}` +
+                ` | code c(${Math.round(cx)},${Math.round(cy)}) | region ${Math.round(region.x)},${Math.round(region.y)} ${Math.round(region.width)}x${Math.round(region.height)}`
+              );
+            }
             if (inside) {
               kept.push(barcodes[i]);
               keptRects.push(r);
@@ -994,6 +1007,19 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
           <Text style={styles.timingText}>{timingText}</Text>
         </View>
       )}
+      {scanRegion && scanRegionDebug && !!regionDebugText && (
+        <View pointerEvents="none" style={styles.regionDebugBox}>
+          <Text style={styles.timingText}>{regionDebugText}</Text>
+        </View>
+      )}
+      {/* 판정 디버그: 영역 안으로 판정된 코드는 초록, 밖은 빨강 */}
+      {scanRegion && scanRegionDebug && highlights.length > 0 && regionHighlights.kept.map((r, i) => (
+        <View
+          key={`keep-${i}`}
+          pointerEvents="none"
+          style={{ position: 'absolute', left: r.origin.x, top: r.origin.y, width: r.size.width, height: r.size.height, borderWidth: 2, borderColor: '#3BD16F' }}
+        />
+      ))}
       {scanRegion && scanRegionDebug && highlights.length > 0 && regionHighlights.dropped.map((r, i) => (
         <View
           key={`drop-${i}`}
@@ -1064,6 +1090,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 6,
     paddingVertical: 3,
+    borderRadius: 4,
+  },
+  regionDebugBox: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    top: 110,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 4,
     borderRadius: 4,
   },
   timingText: {
