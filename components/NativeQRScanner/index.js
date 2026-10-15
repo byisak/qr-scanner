@@ -10,7 +10,10 @@ import {
   useCameraPermission,
 } from 'react-native-vision-camera';
 import { useBarcodeScanner, computeHighlights } from '@mgcrea/vision-camera-barcode-scanner';
-import { Worklets } from 'react-native-worklets-core';
+// 프레임 프로세서(VisionCamera, worklets-core 런타임)에서 읽는 값은 반드시 worklets-core의 공유값으로.
+// Reanimated의 useSharedValue로 만들면 프레임 프로세서는 처음 값만 보고 이후 변경을 못 본다
+// (스캔 영역이 늘 null로 보여 영역 판정이 한 번도 안 돌았다)
+import { Worklets, useSharedValue as useFrameSharedValue } from 'react-native-worklets-core';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -427,25 +430,45 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
   // 스캔 영역 제한: 워크릿에서 바코드의 화면 좌표(computeHighlights, 라이브러리의 하이라이트와 같은 계산)를 구해
   // 중심이 영역 안인 것만 남긴다. 카메라 뷰 크기는 onLayout을 가로채서 따로 들고 있는다
-  const scanRegionShared = useSharedValue(scanRegion);
+  const scanRegionShared = useFrameSharedValue(scanRegion);
   useEffect(() => { scanRegionShared.value = scanRegion; }, [scanRegion]);
-  const layoutShared = useSharedValue({ width: 0, height: 0 });
-  const regionDebugShared = useSharedValue(scanRegionDebug);
+  const layoutShared = useFrameSharedValue({ width: 0, height: 0 });
+  const regionDebugShared = useFrameSharedValue(scanRegionDebug);
   useEffect(() => { regionDebugShared.value = scanRegionDebug; }, [scanRegionDebug]);
   // 개발자 옵션 "스캔 영역 판정 표시": 마지막 판정 근거(프레임 크기·방향, 코드 중심, 영역)를 화면에 글자로
   const [regionDebugText, setRegionDebugText] = useState('');
   const runOnJSSetRegionDebugText = Worklets.createRunOnJS(setRegionDebugText);
-  const regionPristineShared = useSharedValue(true); // 첫 프레임은 가로세로가 뒤집혀 올 수 있어 건너뛴다 (라이브러리와 같은 처리)
+  const regionPristineShared = useFrameSharedValue(true); // 첫 프레임은 가로세로가 뒤집혀 올 수 있어 건너뛴다 (라이브러리와 같은 처리)
   const [regionHighlights, setRegionHighlights] = useState({ kept: [], dropped: [] });
 
   // 개발자 옵션: 네이티브에 매 프레임 같이 넘길 값. dumpFrame은 한 프레임만 켜고 바로 끈다
-  const extraOptionsShared = useSharedValue(null);
+  const extraOptionsShared = useFrameSharedValue(null);
   useEffect(() => {
     extraOptionsShared.value = scanTimingDebug ? { debugTiming: true } : null;
   }, [scanTimingDebug]);
   const [timingText, setTimingText] = useState('');
-  const timingAccShared = useSharedValue({ n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: 0 });
-  const runOnJSSetTimingText = Worklets.createRunOnJS(setTimingText);
+  // 1초 평균은 JS 쪽(ref)에서 낸다. worklet 안 공유값 객체로 누적하면 값이 남지 않아 표시가 한 번도 안 떴다
+  const timingAccRef = useRef({ n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: 0 });
+  const handleMetaJS = useCallback((m) => {
+    const acc = timingAccRef.current;
+    const now = Date.now();
+    if (acc.since === 0) acc.since = now;
+    acc.n += 1;
+    acc.ml += m.ml; acc.inv += m.inv; acc.zx += m.zx; acc.total += m.total;
+    if (m.total > acc.max) acc.max = m.total;
+    acc.codes += m.codes; acc.empty += m.empty;
+    if (now - acc.since >= 1000) {
+      const n = acc.n;
+      const fps = Math.round((n * 1000) / (now - acc.since));
+      setTimingText(
+        `${m.width}x${m.height} ${fps}fps | ML ${(acc.ml / n).toFixed(1)} inv ${(acc.inv / n).toFixed(1)} zx ${(acc.zx / n).toFixed(1)} | ` +
+        `avg ${(acc.total / n).toFixed(1)} max ${acc.max.toFixed(0)}ms | codes ${acc.codes} empty ${acc.empty}` +
+        (m.focus ? ` | roi ${m.focus}` : '')
+      );
+      timingAccRef.current = { n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: now };
+    }
+  }, []);
+  const runOnJSMeta = Worklets.createRunOnJS(handleMetaJS);
   const runOnJSFrameDumped = Worklets.createRunOnJS((path) => {
     extraOptionsShared.value = scanTimingDebug ? { debugTiming: true } : null;
     if (onFrameDumped) onFrameDumped(path);
@@ -456,30 +479,17 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       runOnJSFrameDumped(meta.dumpPath);
     }
     if (meta.totalMs === undefined) return;
-    const acc = timingAccShared.value;
-    const now = Date.now();
-    if (acc.since === 0) acc.since = now;
-    acc.n += 1;
-    acc.ml += meta.mlkitMs; acc.inv += meta.invertMs; acc.zx += meta.zxingMs; acc.total += meta.totalMs;
-    if (meta.totalMs > acc.max) acc.max = meta.totalMs;
-    acc.codes += meta.codes; acc.empty += meta.emptyBoxes;
-    if (now - acc.since >= 1000) {
-      const n = acc.n;
-      const fps = Math.round((n * 1000) / (now - acc.since));
-      runOnJSSetTimingText(
-        `${meta.width}x${meta.height} ${fps}fps | ML ${(acc.ml / n).toFixed(1)} inv ${(acc.inv / n).toFixed(1)} zx ${(acc.zx / n).toFixed(1)} | ` +
-        `avg ${(acc.total / n).toFixed(1)} max ${acc.max.toFixed(0)}ms | codes ${acc.codes} empty ${acc.empty}` +
-        (meta.focus ? ` | roi ${meta.focus}` : '')
-      );
-      timingAccShared.value = { n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: now };
-    }
+    runOnJSMeta({
+      ml: meta.mlkitMs, inv: meta.invertMs, zx: meta.zxingMs, total: meta.totalMs,
+      codes: meta.codes, empty: meta.emptyBoxes, width: meta.width, height: meta.height, focus: meta.focus || '',
+    });
   };
   const runOnJSSetRegionHighlights = Worklets.createRunOnJS((kept, dropped) => {
     setRegionHighlights({ kept, dropped });
   });
 
   // selectCenterBarcode를 worklet에서 사용하기 위한 shared value
-  const selectCenterBarcodeShared = useSharedValue(selectCenterBarcode);
+  const selectCenterBarcodeShared = useFrameSharedValue(selectCenterBarcode);
   useEffect(() => {
     console.log(`[NativeQRScanner] selectCenterBarcode prop changed: ${selectCenterBarcode}`);
     selectCenterBarcodeShared.value = selectCenterBarcode;
@@ -1084,9 +1094,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   timingBox: {
+    // 아래쪽은 탭바 뒤로 가려진다(카메라 뷰가 탭바 높이까지 내려가 있음) → 위에 둔다
     position: 'absolute',
     left: 8,
-    bottom: 8,
+    right: 8,
+    top: 64,
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -1096,7 +1108,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 8,
     right: 8,
-    top: 110,
+    top: 120,
     backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 6,
     paddingVertical: 4,
