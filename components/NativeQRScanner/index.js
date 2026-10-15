@@ -1098,7 +1098,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 8,
     right: 8,
-    top: 64,
+    top: 112, // 위쪽 버튼(그룹·사진·플래시, 위에서 약 100dp까지)과 겹치지 않게
     backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 6,
     paddingVertical: 3,
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 8,
     right: 8,
-    top: 120,
+    top: 160,
     backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: 6,
     paddingVertical: 4,
