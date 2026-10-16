@@ -3,6 +3,7 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { LOTTERY_FEATURE_ENABLED } from '../config/features';
 
 // 알림 설정
 Notifications.setNotificationHandler({
@@ -331,6 +332,8 @@ export async function schedulePensionNotification() {
  * 모든 복권 알림 스케줄링
  */
 export async function scheduleLotteryNotification() {
+  // 복권 기능을 꺼 두면 어떤 경로로 불려도 예약하지 않는다 (config/features.js)
+  if (!LOTTERY_FEATURE_ENABLED) return false;
   const lottoResult = await scheduleLottoNotification();
   const pensionResult = await schedulePensionNotification();
   return lottoResult || pensionResult;

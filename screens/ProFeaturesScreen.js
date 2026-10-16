@@ -17,6 +17,7 @@ import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { LOCKED_FEATURES } from '../config/lockedFeatures';
+import { LOTTERY_FEATURE_ENABLED } from '../config/features';
 import MaterialPressable from '../components/MaterialPressable';
 
 // 기능 카테고리별 정리
@@ -29,7 +30,8 @@ const FEATURE_CATEGORIES = {
       { id: 'scanUrlIntegration', icon: 'link-outline' },
       { id: 'productSearch', icon: 'search-outline' },
       { id: 'photoSave', icon: 'camera-outline' },
-      { id: 'lotteryScan', icon: 'ticket-outline' },
+      // 복권 인식은 기능 플래그가 켜졌을 때만 목록에 보인다
+      ...(LOTTERY_FEATURE_ENABLED ? [{ id: 'lotteryScan', icon: 'ticket-outline' }] : []),
     ],
   },
   generator: {
@@ -295,7 +297,7 @@ export default function ProFeaturesScreen() {
 
   // 전체 잠금 상태 계산
   const getTotalProgress = () => {
-    const allFeatures = Object.keys(LOCKED_FEATURES);
+    const allFeatures = Object.keys(LOCKED_FEATURES).filter(id => LOTTERY_FEATURE_ENABLED || id !== 'lotteryScan');
     const unlockedCount = allFeatures.filter(id => !isLocked(id)).length;
     return { unlocked: unlockedCount, total: allFeatures.length };
   };

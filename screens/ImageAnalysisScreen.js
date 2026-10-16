@@ -35,6 +35,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
 import { scheduleLotteryNotification } from '../utils/lotteryNotification';
+import { LOTTERY_FEATURE_ENABLED, isLotteryActive } from '../utils/lotteryFeature';
 
 // 이미지 위 바코드 번호 라벨 글자색 (연한 오버레이 색 위라 테마와 무관하게 진하게)
 const BARCODE_LABEL_TEXT = '#0B0D10';
@@ -315,6 +316,7 @@ function ImageAnalysisScreen() {
 
   // 현재 그룹이 복권 그룹인지 확인
   const isCurrentGroupLottery = useCallback(() => {
+    if (!LOTTERY_FEATURE_ENABLED) return false; // 복권 기능을 꺼 두면 복권 그룹도 일반 그룹처럼
     if (currentGroupId.startsWith('lottery-')) {
       return true;
     }
@@ -943,8 +945,8 @@ function ImageAnalysisScreen() {
   const handleSaveToHistory = async (result, index) => {
     try {
       // 복권 인식 설정 확인
-      const lotteryScanEnabled = await AsyncStorage.getItem('lotteryScanEnabled');
-      const isLotteryEnabled = lotteryScanEnabled === 'true';
+      // 기능 플래그가 꺼져 있으면 저장된 설정과 무관하게 false
+      const isLotteryEnabled = await isLotteryActive();
 
       // 복권 QR 코드인지 확인
       let targetGroupId = 'default';
@@ -952,7 +954,7 @@ function ImageAnalysisScreen() {
       let isLotteryCode = false;
 
       // 복권 인식이 꺼져있는데 복권 QR이 감지된 경우 활성화 유도 모달 표시
-      if (!isLotteryEnabled && isLotteryQR(result.text) && !dontAskLotteryPrompt) {
+      if (LOTTERY_FEATURE_ENABLED && !isLotteryEnabled && isLotteryQR(result.text) && !dontAskLotteryPrompt) {
         setPendingLotteryResult({ result, index, isAll: false });
         setLotteryPromptVisible(true);
         return;
@@ -1111,7 +1113,7 @@ function ImageAnalysisScreen() {
 
       for (const result of results) {
         // 복권 코드는 건너뛰기 (복권 그룹에 저장되어야 함)
-        if (isLotteryQR(result.text)) continue;
+        if (LOTTERY_FEATURE_ENABLED && isLotteryQR(result.text)) continue;
 
         const normalizedType = result.format.toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -1161,11 +1163,11 @@ function ImageAnalysisScreen() {
 
     try {
       // 복권 인식 설정 확인
-      const lotteryScanEnabled = await AsyncStorage.getItem('lotteryScanEnabled');
-      const isLotteryEnabled = lotteryScanEnabled === 'true';
+      // 기능 플래그가 꺼져 있으면 저장된 설정과 무관하게 false
+      const isLotteryEnabled = await isLotteryActive();
 
       // 복권 인식이 꺼져있는데 결과 중 복권 QR이 있는 경우 활성화 유도 모달 표시
-      if (!isLotteryEnabled && !dontAskLotteryPrompt) {
+      if (LOTTERY_FEATURE_ENABLED && !isLotteryEnabled && !dontAskLotteryPrompt) {
         const hasLotteryCode = results.some(r => isLotteryQR(r.text));
         if (hasLotteryCode) {
           setPendingLotteryResult({ result: null, index: null, isAll: true });

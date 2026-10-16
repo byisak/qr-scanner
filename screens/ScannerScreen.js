@@ -79,6 +79,7 @@ try {
 // 복권 유틸리티
 import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
 import { updateLotteryNotificationOnScan } from '../utils/lotteryNotification';
+import { LOTTERY_FEATURE_ENABLED } from '../utils/lotteryFeature';
 
 // 분리된 컴포넌트
 import ScanReticle from '../components/ScanReticle'; // 조준 코너 (숨 쉬기 → 코드에 붙기 → 확정 펑)
@@ -743,7 +744,8 @@ function ScannerScreen() {
 
           // 복권 인식 활성화 설정 로드
           const lotteryScan = settings['lotteryScanEnabled'];
-          setLotteryScanEnabled(lotteryScan === 'true');
+          // 기능 플래그가 꺼져 있으면 저장된 값(그대로 둠)과 무관하게 끈 상태로
+          setLotteryScanEnabled(LOTTERY_FEATURE_ENABLED && lotteryScan === 'true');
 
           // 복권 인식 활성화 다시 묻지 않기 설정 로드
           const dontAskLottery = settings['dontAskLotteryPrompt'];
@@ -1381,6 +1383,7 @@ function ScannerScreen() {
 
   // 현재 그룹이 복권 그룹인지 확인
   const isCurrentGroupLottery = useCallback(() => {
+    if (!LOTTERY_FEATURE_ENABLED) return false; // 복권 기능을 꺼 두면 복권 그룹도 일반 그룹처럼
     // ID로 체크 (lottery-lotto, lottery-pension)
     if (currentGroupId.startsWith('lottery-')) {
       return true;
@@ -2170,7 +2173,7 @@ function ScannerScreen() {
       }
 
       // 복권 QR 코드 감지 - 비활성화 상태에서 감지 시 활성화 유도 모달 표시
-      if (!lotteryScanEnabledRef.current && isLotteryQR(data) && !dontAskLotteryPrompt) {
+      if (LOTTERY_FEATURE_ENABLED && !lotteryScanEnabledRef.current && isLotteryQR(data) && !dontAskLotteryPrompt) {
         console.log('[ScannerScreen] Lottery QR detected but feature disabled, showing prompt');
         // 모달을 띄운 동안 일반 처리를 보류한다. 같이 진행하면 결과 화면·토스트와 모달이 겹친다
         isProcessingRef.current = true;
@@ -2181,7 +2184,7 @@ function ScannerScreen() {
       }
 
       // 복권 QR 코드 감지 및 처리 (설정에서 활성화된 경우에만)
-      if (lotteryScanEnabledRef.current && isLotteryQR(data)) {
+      if (LOTTERY_FEATURE_ENABLED && lotteryScanEnabledRef.current && isLotteryQR(data)) {
         const lotteryData = parseLotteryQR(data);
         if (lotteryData) {
           console.log('[ScannerScreen] Lottery QR detected:', lotteryData.typeName, lotteryData.round);

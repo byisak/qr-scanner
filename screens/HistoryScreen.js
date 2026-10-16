@@ -33,6 +33,7 @@ import { SwipeListView } from 'react-native-swipe-list-view';
 import { updateLotteryNotificationOnCheck } from '../utils/lotteryNotification';
 import { isDrawCompleted } from '../utils/lotteryApi';
 import { LotteryIcon } from '../components/LotteryIcons';
+import { LOTTERY_FEATURE_ENABLED } from '../utils/lotteryFeature';
 import MaterialPressable from '../components/MaterialPressable';
 
 const DEFAULT_GROUP_ID = 'default';
@@ -298,8 +299,8 @@ export default function HistoryScreen() {
   }, [filteredList]);
 
   const handleItemPress = async (item) => {
-    // 복권 아이템인 경우 복권 결과 화면으로 이동
-    if (item.lotteryData) {
+    // 복권 아이템인 경우 복권 결과 화면으로 이동 (기능을 꺼 두면 일반 결과 화면으로, lotteryData는 그대로)
+    if (LOTTERY_FEATURE_ENABLED && item.lotteryData) {
       // 결과 확인 시 isChecked를 true로 업데이트
       if (!item.lotteryData.isChecked) {
         try {
@@ -476,8 +477,8 @@ export default function HistoryScreen() {
             // QR 콘텐츠 파싱 (QR 코드인 경우에만)
             const parsedContent = isQRCode ? parseQRContent(item.code) : null;
 
-            // 복권 아이템인 경우 특별 렌더링
-            if (item.lotteryData) {
+            // 복권 아이템인 경우 특별 렌더링 (기능을 꺼 두면 일반 항목처럼 보인다)
+            if (LOTTERY_FEATURE_ENABLED && item.lotteryData) {
               const lotteryInfo = item.lotteryData;
               const isLotto = lotteryInfo.type === 'lotto';
 

@@ -1,7 +1,8 @@
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { setupNotificationListeners } from '../utils/lotteryNotification';
+import { setupNotificationListeners, cancelLotteryNotification } from '../utils/lotteryNotification';
+import { LOTTERY_FEATURE_ENABLED } from '../config/features';
 import { loadHapticSettings } from '../utils/haptics';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -37,7 +38,12 @@ export default function RootLayout() {
   }, []);
 
   // 복권 알림 탭 → 히스토리 탭으로 이동 (이전엔 어디서도 연결돼 있지 않았다)
+  // 복권 기능을 꺼 두면 리스너를 달지 않고, 예전에 예약된 복권 알림도 취소한다 (저장된 복권 데이터는 그대로)
   useEffect(() => {
+    if (!LOTTERY_FEATURE_ENABLED) {
+      cancelLotteryNotification().catch(() => {});
+      return undefined;
+    }
     return setupNotificationListeners(router);
   }, [router]);
 
