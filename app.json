@@ -33,6 +33,12 @@
           "kakaokompassauth",
           "kakaolink",
           "naversearchapp",
+          "naversearchthirdlogin",
+          "googlechrome",
+          "googlechromes",
+          "kakaokompassauth",
+          "kakaolink",
+          "naversearchapp",
           "naversearchthirdlogin"
         ],
         "NSAppTransportSecurity": {
@@ -43,18 +49,28 @@
             "CFBundleURLSchemes": [
               "com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"
             ]
+          },
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"
+            ]
           }
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
         "com.apple.developer.icloud-container-identifiers": [
+          "iCloud.com.cubion.qrscanner",
           "iCloud.com.cubion.qrscanner"
         ],
         "com.apple.developer.icloud-services": [
           "CloudDocuments",
+          "CloudKit",
+          "CloudDocuments",
           "CloudKit"
         ],
         "com.apple.developer.ubiquity-container-identifiers": [
+          "iCloud.com.cubion.qrscanner",
           "iCloud.com.cubion.qrscanner"
         ],
         "com.apple.developer.ubiquity-kvstore-identifier": "$(TeamIdentifierPrefix)com.cubion.qrscanner",
@@ -63,7 +79,7 @@
       "config": {
         "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
       },
-      "buildNumber": "120"
+      "buildNumber": "122"
     },
     "android": {
       "splash": {
@@ -92,7 +108,13 @@
         "android.permission.ACCESS_WIFI_STATE",
         "android.permission.CHANGE_WIFI_STATE",
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.NFC"
       ],
       "config": {
         "googleMaps": {
