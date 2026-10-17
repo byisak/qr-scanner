@@ -144,6 +144,8 @@ export default {
     errorAgreeTerms: 'Please agree to Terms of Service',
     errorAgreePrivacy: 'Please agree to Privacy Policy',
     errorLoginFailed: 'Login failed',
+    errorGooglePlayServices: 'Google Play services aren\'t available, so Google sign-in can\'t continue. Please install or update Play services and try again.',
+    errorGoogleLoginFailed: 'Couldn\'t sign in with Google. Please try again later.',
     errorSignupFailed: 'Sign up failed',
     errorEmailExists: 'Email is already in use',
     // Email duplicate check

@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import config from '../config/config';
 import { useFeatureLock } from './FeatureLockContext';
 import websocketClient from '../utils/websocket';
+import { signOutNativeGoogle } from '../hooks/useSocialLogin';
 
 const AuthContext = createContext();
 
@@ -166,6 +167,10 @@ export const AuthProvider = ({ children }) => {
       await SecureStore.deleteItemAsync(AUTH_STORAGE_KEY);
       await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
       await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY);
+
+      // Android 네이티브 구글 세션 정리 (다음 로그인 때 계정 선택창이 다시 뜨게)
+      await signOutNativeGoogle();
+
       setUser(null);
       setIsLoggedIn(false);
       return { success: true };

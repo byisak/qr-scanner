@@ -142,6 +142,8 @@ export default {
     errorAgreeTerms: 'Por favor, acepta los Términos de Servicio',
     errorAgreePrivacy: 'Por favor, acepta la Política de Privacidad',
     errorLoginFailed: 'Error al iniciar sesión',
+    errorGooglePlayServices: 'Los servicios de Google Play no están disponibles, así que no se puede iniciar sesión con Google. Instálalos o actualízalos e inténtalo de nuevo.',
+    errorGoogleLoginFailed: 'No se pudo iniciar sesión con Google. Inténtalo de nuevo más tarde.',
     errorSignupFailed: 'Error al registrarse',
     errorEmailExists: 'El correo ya está en uso',
     // Verificación de correo duplicado

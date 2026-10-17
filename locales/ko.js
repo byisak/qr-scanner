@@ -144,6 +144,8 @@ export default {
     errorAgreeTerms: '이용약관에 동의해 주세요',
     errorAgreePrivacy: '개인정보 처리방침에 동의해 주세요',
     errorLoginFailed: '로그인하지 못했어요. 이메일과 비밀번호를 확인해 주세요',
+    errorGooglePlayServices: 'Google Play 서비스를 쓸 수 없어서 Google로 로그인할 수 없어요. Play 서비스를 설치하거나 업데이트한 뒤 다시 시도해 주세요',
+    errorGoogleLoginFailed: 'Google로 로그인하지 못했어요. 잠시 후 다시 시도해 주세요',
     errorSignupFailed: '회원가입을 하지 못했어요. 잠시 후 다시 시도해 주세요',
     errorEmailExists: '이미 사용 중인 이메일입니다',
     // 이메일 중복 확인

@@ -142,6 +142,8 @@ export default {
     errorAgreeTerms: '利用規約に同意してください',
     errorAgreePrivacy: 'プライバシーポリシーに同意してください',
     errorLoginFailed: 'ログインに失敗しました',
+    errorGooglePlayServices: 'Google Play 開発者サービスが利用できないため、Googleでログインできません。インストールまたは更新してから再度お試しください',
+    errorGoogleLoginFailed: 'Googleでログインできませんでした。しばらくしてから再度お試しください',
     errorSignupFailed: '会員登録に失敗しました',
     errorEmailExists: 'すでに使用中のメールアドレスです',
     // メール重複確認

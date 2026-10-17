@@ -103,9 +103,120 @@ export const useNaverLogin = () => {
   return { login, isLoading };
 };
 
+// ---------------------------------------------
+// Android 구글 로그인: 네이티브 Google Sign-In
+// ---------------------------------------------
+// 브라우저(expo-auth-session) 방식은 Android에서 redirect_uri=qrscanner:// 를
+// Google이 정책 위반(400 invalid_request)으로 막아서, Android는 기기의 구글 계정
+// 선택창(Credential Manager)을 쓰는 네이티브 로그인으로 바꿨다.
+// webClientId로 받은 ID 토큰(aud = 웹 클라이언트 ID)을 서버로 보낸다.
+// iOS는 기존 브라우저 방식(iOS 클라이언트 ID + 리버스 클라이언트 ID 리다이렉트)을 그대로 쓴다.
+let nativeGoogleConfigured = false;
+
+const getNativeGoogleSignin = () => {
+  if (Platform.OS !== 'android') return null;
+  try {
+    // 네이티브 모듈이 없는 환경(Expo Go 등)에서도 앱이 죽지 않도록 지연 로딩
+    return require('@react-native-google-signin/google-signin');
+  } catch (e) {
+    console.warn('Google Sign-In native module unavailable:', e?.message);
+    return null;
+  }
+};
+
+const ensureNativeGoogleConfigured = (lib) => {
+  if (nativeGoogleConfigured) return;
+  lib.GoogleSignin.configure({
+    webClientId: config.google?.webClientId || '',
+    scopes: ['profile', 'email'],
+    offlineAccess: false,
+  });
+  nativeGoogleConfigured = true;
+};
+
+/**
+ * 앱 로그아웃 시 네이티브 구글 세션도 정리해서
+ * 다음 로그인 때 계정 선택창이 다시 뜨게 한다. (Android 전용, 실패해도 무시)
+ */
+export const signOutNativeGoogle = async () => {
+  const lib = getNativeGoogleSignin();
+  if (!lib) return;
+  try {
+    ensureNativeGoogleConfigured(lib);
+    await lib.GoogleSignin.signOut();
+  } catch (e) {
+    console.warn('Google native signOut failed:', e?.message);
+  }
+};
+
+const nativeGoogleLogin = async () => {
+  const lib = getNativeGoogleSignin();
+  if (!lib) {
+    return { success: false, error: 'Google login is not available', code: 'NOT_AVAILABLE' };
+  }
+  const { GoogleSignin, statusCodes, isErrorWithCode, isSuccessResponse } = lib;
+
+  if (!config.google?.webClientId) {
+    console.error('Google web client ID is not configured');
+    return { success: false, error: 'Google login is not configured' };
+  }
+
+  try {
+    ensureNativeGoogleConfigured(lib);
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+    const response = await GoogleSignin.signIn();
+    if (!isSuccessResponse(response)) {
+      // type === 'cancelled' : 사용자가 계정 선택창을 닫음
+      return { success: false, error: 'Google login cancelled' };
+    }
+
+    let idToken = response.data?.idToken || null;
+    let accessToken = null;
+    try {
+      const tokens = await GoogleSignin.getTokens();
+      idToken = idToken || tokens?.idToken || null;
+      accessToken = tokens?.accessToken || null;
+    } catch (e) {
+      // 서버는 ID 토큰만으로 검증하므로 액세스 토큰은 없어도 된다
+      console.warn('Google getTokens failed:', e?.message);
+    }
+
+    if (!idToken) {
+      return { success: false, error: 'Google ID token missing', code: 'NO_ID_TOKEN' };
+    }
+
+    return { success: true, idToken, ...(accessToken && { accessToken }) };
+  } catch (error) {
+    if (isErrorWithCode(error)) {
+      switch (error.code) {
+        case statusCodes.SIGN_IN_CANCELLED:
+        case statusCodes.IN_PROGRESS:
+          // 취소했거나 이미 진행 중 → 알림 없이 조용히 끝낸다
+          return { success: false, error: 'Google login cancelled' };
+        case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+          return {
+            success: false,
+            error: 'Google Play services not available',
+            code: 'PLAY_SERVICES_NOT_AVAILABLE',
+          };
+        default:
+          break;
+      }
+    }
+    console.error('Google native login error:', error?.code, error?.message);
+    return {
+      success: false,
+      error: error?.message || 'Login failed',
+      code: error?.code ? String(error.code) : 'UNKNOWN',
+    };
+  }
+};
+
 /**
  * 구글 로그인 훅
- * PKCE Authorization Code 플로우 사용
+ * - Android: 네이티브 Google Sign-In (위 nativeGoogleLogin)
+ * - iOS: PKCE Authorization Code 플로우 (expo-auth-session)
  */
 export const useGoogleLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -177,6 +288,15 @@ export const useGoogleLogin = () => {
   // to avoid duplicate exchange attempts (authorization codes can only be used once)
 
   const login = useCallback(async () => {
+    if (Platform.OS === 'android') {
+      setIsLoading(true);
+      try {
+        return await nativeGoogleLogin();
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
     if (!clientId) {
       console.error('Google client ID is not configured');
       return { success: false, error: 'Google login is not configured' };
@@ -215,7 +335,7 @@ export const useGoogleLogin = () => {
     }
   }, [promptAsync, request, clientId, redirectUri]);
 
-  return { login, isLoading, isReady: !!request };
+  return { login, isLoading, isReady: Platform.OS === 'android' ? true : !!request };
 };
 
 /**

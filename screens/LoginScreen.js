@@ -123,7 +123,17 @@ export default function LoginScreen() {
       const sdkResult = await googleLogin.login();
       if (!sdkResult.success) {
         if (sdkResult.error !== 'Google login cancelled') {
-          Alert.alert(t('settings.error'), sdkResult.error || t('auth.errorLoginFailed'));
+          if (sdkResult.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+            Alert.alert(t('settings.error'), t('auth.errorGooglePlayServices'));
+          } else if (sdkResult.code) {
+            // Android 네이티브 로그인 오류: 안내 문구 + 진단용 코드
+            Alert.alert(
+              t('settings.error'),
+              `${t('auth.errorGoogleLoginFailed')}\n(${sdkResult.code})`
+            );
+          } else {
+            Alert.alert(t('settings.error'), sdkResult.error || t('auth.errorLoginFailed'));
+          }
         }
         return;
       }

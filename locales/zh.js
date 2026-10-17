@@ -142,6 +142,8 @@ export default {
     errorAgreeTerms: '请同意服务条款',
     errorAgreePrivacy: '请同意隐私政策',
     errorLoginFailed: '登录失败',
+    errorGooglePlayServices: 'Google Play 服务不可用，无法使用Google登录。请安装或更新 Play 服务后重试',
+    errorGoogleLoginFailed: '无法使用Google登录，请稍后重试',
     errorSignupFailed: '注册失败',
     errorEmailExists: '该邮箱已被使用',
     // 邮箱重复检查

@@ -222,7 +222,13 @@
           "includeNdefEntitlement": false
         }
       ],
-      "./plugins/withFirebaseModularHeaders.js"
+      "./plugins/withFirebaseModularHeaders.js",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
