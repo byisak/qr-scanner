@@ -199,7 +199,8 @@
           "nfcPermission": "NFC 태그의 내용을 읽어 스캔 기록으로 저장합니다",
           "includeNdefEntitlement": false
         }
-      ]
+      ],
+      "./plugins/withFirebaseModularHeaders.js"
     ],
     "experiments": {
       "typedRoutes": true
