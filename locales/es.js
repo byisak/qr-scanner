@@ -93,9 +93,10 @@ export default {
     forgotPasswordTitle: 'Olvidé mi contraseña',
     forgotPasswordSubtitle: 'Ingresa tu correo electrónico y te enviaremos\nun enlace para restablecer tu contraseña',
     sendResetLink: 'Enviar enlace',
-    resetEmailSent: 'Revisa tu correo',
-    resetEmailSentDesc: 'Te hemos enviado un enlace para restablecer tu contraseña.\nRevisa tu correo electrónico.',
+    resetEmailSent: 'Revisa tu bandeja de entrada',
+    resetEmailSentDesc: 'Si este correo está registrado, te hemos enviado un enlace para restablecer la contraseña. Si no llega en unos minutos, revisa la carpeta de spam o comprueba que sea el correo con el que te registraste.',
     checkSpamFolder: 'Si no ves el correo, revisa tu carpeta de spam.',
+    errorResetRequestFailed: 'No se pudo enviar la solicitud. Revisa tu conexión a internet e inténtalo de nuevo.',
     backToLogin: 'Volver al inicio de sesión',
     // Registro
     signupTitle: 'Registrarse',

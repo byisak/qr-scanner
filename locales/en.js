@@ -77,9 +77,10 @@ export default {
     forgotPasswordTitle: 'Forgot Password',
     forgotPasswordSubtitle: 'Enter your email and we\'ll send you\na link to reset your password',
     sendResetLink: 'Send Reset Link',
-    resetEmailSent: 'Check Your Email',
-    resetEmailSentDesc: 'We\'ve sent you a password reset link.\nPlease check your email.',
+    resetEmailSent: 'Check your inbox',
+    resetEmailSentDesc: 'If this email is registered, we\'ve sent a password reset link. If it doesn\'t arrive within a few minutes, check your spam folder or make sure this is the email you signed up with.',
     checkSpamFolder: 'If you don\'t see the email, check your spam folder.',
+    errorResetRequestFailed: 'We couldn\'t send the request. Check your internet connection and try again.',
     backToLogin: 'Back to Login',
     // Sign up
     signupTitle: 'Sign Up',

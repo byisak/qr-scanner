@@ -18,19 +18,27 @@ import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
+import useKeyboardVisible from '../hooks/useKeyboardVisible';
 import { RADIUS, SIZE, TYPE } from '../constants/Design';
 import config from '../config/config';
+
+// 키보드 피하기: iOS·안드로이드 모두 'padding' (여백은 화면 바탕색으로 칠해진다).
+// 안드로이드는 edge-to-edge라 adjustResize로 창이 줄지 않으니 키보드만큼 여백을 직접 줘야 한다.
+// 예전 'height'는 키보드를 닫은 뒤에도 줄어든 높이가 남아(useKeyboardVisible 주석 참고) 아래에 밝은 띠가 보였다.
+const KEYBOARD_BEHAVIOR = 'padding';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { t, fonts, language } = useLanguage();
   const { isDark } = useTheme();
   const colors = isDark ? Colors.dark : Colors.light;
+  const keyboardVisible = useKeyboardVisible();
 
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [focusedInput, setFocusedInput] = useState(null);
+  const [requestError, setRequestError] = useState(null);
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -42,12 +50,13 @@ export default function ForgotPasswordScreen() {
       Alert.alert(t('common.error'), t('auth.errorEmailRequired'));
       return;
     }
-    if (!validateEmail(email)) {
+    if (!validateEmail(email.trim())) {
       Alert.alert(t('common.error'), t('auth.errorInvalidEmail'));
       return;
     }
 
     setIsLoading(true);
+    setRequestError(null);
     try {
       const response = await fetch(`${config.serverUrl}/api/auth/forgot-password`, {
         method: 'POST',
@@ -57,19 +66,17 @@ export default function ForgotPasswordScreen() {
         body: JSON.stringify({ email: email.trim().toLowerCase(), locale: language }),
       });
 
-      // Content-Type 확인 (HTML 반환 시 JSON 파싱 방지)
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        console.log('Password reset response:', data);
+      // 보안상 서버는 가입 여부와 관계없이 같은 응답을 준다 → 요청이 제대로 받아들여졌을 때만 '확인해 주세요' 화면으로
+      if (!response.ok) {
+        console.warn('[ForgotPassword] request failed:', response.status);
+        setRequestError(t('auth.errorResetRequestFailed'));
+        return;
       }
-
-      // 보안상 이메일 존재 여부와 관계없이 항상 성공 메시지 표시
       setIsSent(true);
     } catch (error) {
-      console.log('Password reset request sent (API may not exist yet)');
-      // API가 없거나 오류가 발생해도 보안상 성공으로 표시
-      setIsSent(true);
+      // 네트워크 자체가 실패하면 보낸 척하지 않고 알려 준다
+      console.warn('[ForgotPassword] network error:', error?.message);
+      setRequestError(t('auth.errorResetRequestFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -96,20 +103,21 @@ export default function ForgotPasswordScreen() {
 
         <View style={styles.successContainer}>
           <View style={[styles.iconTile, { backgroundColor: colors.successSoft }]}>
-            <Ionicons name="mail-open" size={24} color={colors.success} />
+            <Ionicons name="mail-unread-outline" size={24} color={colors.success} />
           </View>
 
           <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
-            {t('auth.resetEmailSent') || '이메일을 확인하세요'}
+            {t('auth.resetEmailSent')}
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-            {t('auth.resetEmailSentDesc') || `${email}로 비밀번호 재설정 링크를 보냈습니다. 이메일을 확인해주세요.`}
+            {t('auth.resetEmailSentDesc')}
           </Text>
 
+          {/* 입력한 주소를 보여 줘서 오타를 스스로 알아챌 수 있게 */}
           <View style={[styles.tipRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Ionicons name="information-circle" size={18} color={colors.textSecondary} />
-            <Text style={[styles.tipText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('auth.checkSpamFolder') || '이메일이 보이지 않으면 스팸 폴더를 확인해주세요.'}
+            <Ionicons name="mail-outline" size={18} color={colors.textSecondary} />
+            <Text style={[styles.tipText, { color: colors.text, fontFamily: fonts.medium }]}>
+              {email.trim().toLowerCase()}
             </Text>
           </View>
 
@@ -119,7 +127,7 @@ export default function ForgotPasswordScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.primaryButtonText, { color: '#FFFFFF', fontFamily: fonts.semiBold }]}>
-              {t('auth.backToLogin') || '로그인으로 돌아가기'}
+              {t('auth.backToLogin')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -133,7 +141,8 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={KEYBOARD_BEHAVIOR}
+        enabled={Platform.OS === 'ios' || keyboardVisible}
       >
         {/* 헤더 */}
         <View style={styles.header}>
@@ -159,17 +168,17 @@ export default function ForgotPasswordScreen() {
               <Ionicons name="key" size={24} color={colors.primaryText} />
             </View>
             <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
-              {t('auth.forgotPasswordTitle') || '비밀번호 찾기'}
+              {t('auth.forgotPasswordTitle')}
             </Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-              {t('auth.forgotPasswordSubtitle') || '가입한 이메일을 입력하면\n비밀번호 재설정 링크를 보내드립니다'}
+              {t('auth.forgotPasswordSubtitle')}
             </Text>
           </View>
 
           {/* 이메일 입력 */}
           <View style={styles.inputGroup}>
             <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-              {t('auth.email') || '이메일'}
+              {t('auth.email')}
             </Text>
             <View
               style={[
@@ -182,10 +191,13 @@ export default function ForgotPasswordScreen() {
             >
               <TextInput
                 style={[styles.input, { color: colors.text, fontFamily: fonts.regular }]}
-                placeholder={t('auth.emailPlaceholder') || '가입한 이메일 주소'}
+                placeholder={t('auth.emailPlaceholder')}
                 placeholderTextColor={colors.textTertiary}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (requestError) setRequestError(null);
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -193,6 +205,15 @@ export default function ForgotPasswordScreen() {
                 onBlur={() => setFocusedInput(null)}
               />
             </View>
+            {/* 요청 실패(네트워크·서버 오류) */}
+            {requestError && (
+              <View style={styles.errorRow} accessibilityLiveRegion="polite">
+                <Ionicons name="alert-circle" size={14} color={colors.error} />
+                <Text style={[styles.errorText, { color: colors.error, fontFamily: fonts.medium }]}>
+                  {requestError}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* 재설정 버튼 */}
@@ -211,7 +232,7 @@ export default function ForgotPasswordScreen() {
                   { color: canSubmit ? '#FFFFFF' : colors.textTertiary, fontFamily: fonts.semiBold },
                 ]}
               >
-                {t('auth.sendResetLink') || '재설정 링크 보내기'}
+                {t('auth.sendResetLink')}
               </Text>
             )}
           </TouchableOpacity>
@@ -224,7 +245,7 @@ export default function ForgotPasswordScreen() {
             accessibilityRole="button"
           >
             <Text style={[styles.loginLinkText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-              {t('auth.backToLogin') || '로그인으로 돌아가기'}
+              {t('auth.backToLogin')}
             </Text>
           </TouchableOpacity>
 
@@ -232,7 +253,7 @@ export default function ForgotPasswordScreen() {
           <View style={styles.footer}>
             <Ionicons name="shield-checkmark-outline" size={14} color={colors.textTertiary} />
             <Text style={[styles.footerText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-              {t('auth.secureConnection') || '안전한 암호화 연결'}
+              {t('auth.secureConnection')}
             </Text>
           </View>
         </ScrollView>
@@ -305,6 +326,17 @@ const styles = StyleSheet.create({
     height: '100%',
     fontSize: 15,
     paddingVertical: 0,
+  },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    marginTop: 8,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
   },
   primaryButton: {
     height: SIZE.primaryButton,

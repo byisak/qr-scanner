@@ -7,7 +7,8 @@ import { loadHapticSettings } from '../utils/haptics';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { LanguageProvider } from '../contexts/LanguageContext';
-import { ThemeProvider } from '../contexts/ThemeContext';
+import { ThemeProvider, useTheme } from '../contexts/ThemeContext';
+import { Colors } from '../constants/Colors';
 import { AuthProvider } from '../contexts/AuthContext';
 import { SyncProvider } from '../contexts/SyncContext';
 import { FeatureLockProvider } from '../contexts/FeatureLockContext';
@@ -63,86 +64,7 @@ export default function RootLayout() {
               <SyncProvider>
                 <StatusBar style="auto" />
                 <AppLockScreen />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                  }}
-                >
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="result"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="webview"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="login"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="email-login"
-                    options={{
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="register"
-                    options={{
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="profile-settings"
-                    options={{
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="image-analysis"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="security-settings"
-                    options={{
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="pin-setup"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="pin-verify"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false
-                    }}
-                  />
-                  <Stack.Screen
-                    name="pin-change"
-                    options={{
-                      presentation: 'modal',
-                      headerShown: false
-                    }}
-                  />
-                </Stack>
+                <ThemedStack />
               </SyncProvider>
             </AppLockProvider>
           </AuthProvider>
@@ -151,5 +73,93 @@ export default function RootLayout() {
         </ThemeProvider>
       </FeatureLockProvider>
     </LanguageProvider>
+  );
+}
+
+// 테마(라이트/다크)를 읽어 스택 바탕색을 맞춘다 — ThemeProvider 안쪽에서 렌더돼야 해서 따로 뺐다
+function ThemedStack() {
+  const { isDark } = useTheme();
+  const colors = isDark ? Colors.dark : Colors.light;
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="result"
+        options={{
+          presentation: 'modal',
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="webview"
+        options={{
+          presentation: 'modal',
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="login"
+        options={{
+          presentation: 'modal',
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="email-login"
+        options={{
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="register"
+        options={{
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="profile-settings"
+        options={{
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="image-analysis"
+        options={{
+          presentation: 'modal',
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="security-settings"
+        options={{
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="pin-setup"
+        options={{
+          presentation: 'modal',
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="pin-verify"
+        options={{
+          presentation: 'modal',
+          headerShown: false
+        }}
+      />
+      <Stack.Screen
+        name="pin-change"
+        options={{
+          presentation: 'modal',
+          headerShown: false
+        }}
+      />
+    </Stack>
   );
 }

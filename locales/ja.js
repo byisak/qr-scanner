@@ -93,9 +93,10 @@ export default {
     forgotPasswordTitle: 'パスワードを忘れた方',
     forgotPasswordSubtitle: '登録したメールアドレスを入力すると\nパスワード再設定リンクをお送りします',
     sendResetLink: '再設定リンクを送信',
-    resetEmailSent: 'メールをご確認ください',
-    resetEmailSentDesc: 'パスワード再設定リンクを送信しました。\nメールをご確認ください。',
+    resetEmailSent: 'メールボックスをご確認ください',
+    resetEmailSentDesc: '登録済みのメールアドレスであれば、パスワード再設定リンクを送信しました。数分たっても届かない場合は、迷惑メールフォルダや登録したメールアドレスに誤りがないかご確認ください。',
     checkSpamFolder: 'メールが届かない場合は迷惑メールフォルダをご確認ください。',
+    errorResetRequestFailed: 'リクエストを送信できませんでした。インターネット接続を確認して、もう一度お試しください。',
     backToLogin: 'ログインに戻る',
     // 会員登録
     signupTitle: '会員登録',

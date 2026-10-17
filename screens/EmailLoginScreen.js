@@ -19,8 +19,14 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import useKeyboardVisible from '../hooks/useKeyboardVisible';
 import { RADIUS, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// 키보드 피하기: iOS·안드로이드 모두 'padding' (여백은 화면 바탕색으로 칠해진다).
+// 안드로이드는 edge-to-edge라 adjustResize로 창이 줄지 않으니 키보드만큼 여백을 직접 줘야 한다.
+// 예전 'height'는 키보드를 닫은 뒤에도 줄어든 높이가 남아(useKeyboardVisible 주석 참고) 아래에 밝은 띠가 보였다.
+const KEYBOARD_BEHAVIOR = 'padding';
 
 export default function EmailLoginScreen() {
   const insets = useSafeAreaInsets();
@@ -30,6 +36,7 @@ export default function EmailLoginScreen() {
   const { loginWithEmail, getToken } = useAuth();
   const { syncWithServer } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
+  const keyboardVisible = useKeyboardVisible();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -97,7 +104,8 @@ export default function EmailLoginScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={KEYBOARD_BEHAVIOR}
+      enabled={Platform.OS === 'ios' || keyboardVisible}
     >
       {/* 헤더 */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>

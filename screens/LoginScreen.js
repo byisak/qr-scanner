@@ -21,11 +21,17 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import useKeyboardVisible from '../hooks/useKeyboardVisible';
 import { RADIUS, SIZE, TYPE } from '../constants/Design';
 import {
   useGoogleLogin,
   useAppleLogin,
 } from '../hooks/useSocialLogin';
+
+// 키보드 피하기: iOS·안드로이드 모두 'padding' (여백은 화면 바탕색으로 칠해진다).
+// 안드로이드는 edge-to-edge라 adjustResize로 창이 줄지 않으니 키보드만큼 여백을 직접 줘야 한다.
+// 예전 'height'는 키보드를 닫은 뒤에도 줄어든 높이가 남아(useKeyboardVisible 주석 참고) 아래에 밝은 띠가 보였다.
+const KEYBOARD_BEHAVIOR = 'padding';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -34,6 +40,7 @@ export default function LoginScreen() {
   const { loginWithEmail, loginWithGoogle, loginWithApple, getToken } = useAuth();
   const { syncWithServer } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
+  const keyboardVisible = useKeyboardVisible();
 
   // 소셜 로그인 훅
   const googleLogin = useGoogleLogin();
@@ -197,7 +204,8 @@ export default function LoginScreen() {
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView
           style={styles.keyboardView}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={KEYBOARD_BEHAVIOR}
+          enabled={Platform.OS === 'ios' || keyboardVisible}
         >
           {/* 헤더: 닫기 */}
           <View style={styles.header}>
@@ -226,10 +234,10 @@ export default function LoginScreen() {
                   <Ionicons name="cloud-upload-outline" size={24} color={colors.primaryText} />
                 </View>
                 <Text style={[styles.title, { color: colors.text, fontFamily: fonts.bold }]}>
-                  {t('auth.realtimeSyncLogin') || '실시간 전송'}
+                  {t('auth.realtimeSyncLogin')}
                 </Text>
                 <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                  {t('auth.loginSubtitle') || '로그인하여 실시간 동기화를 시작하세요'}
+                  {t('auth.loginSubtitle')}
                 </Text>
               </View>
 
@@ -241,7 +249,7 @@ export default function LoginScreen() {
                   activeOpacity={0.8}
                   disabled={isLoading}
                   accessibilityRole="button"
-                  accessibilityLabel={t('auth.loginWithGoogle') || 'Google로 로그인'}
+                  accessibilityLabel={t('auth.loginWithGoogle')}
                 >
                   {isLoading && googleLogin.isLoading ? (
                     <ActivityIndicator color={colors.text} />
@@ -249,7 +257,7 @@ export default function LoginScreen() {
                     <>
                       <Ionicons name="logo-google" size={20} color={colors.text} />
                       <Text style={[styles.socialButtonText, { color: colors.text, fontFamily: fonts.semiBold }]}>
-                        {t('auth.loginWithGoogle') || 'Google로 로그인'}
+                        {t('auth.loginWithGoogle')}
                       </Text>
                     </>
                   )}
@@ -263,7 +271,7 @@ export default function LoginScreen() {
                     activeOpacity={0.8}
                     disabled={isLoading}
                     accessibilityRole="button"
-                    accessibilityLabel={t('auth.loginWithApple') || 'Apple로 로그인'}
+                    accessibilityLabel={t('auth.loginWithApple')}
                   >
                     {isLoading && appleLogin.isLoading ? (
                       <ActivityIndicator color={colors.background} />
@@ -271,7 +279,7 @@ export default function LoginScreen() {
                       <>
                         <Ionicons name="logo-apple" size={20} color={colors.background} />
                         <Text style={[styles.socialButtonText, { color: colors.background, fontFamily: fonts.semiBold }]}>
-                          {t('auth.loginWithApple') || 'Apple로 로그인'}
+                          {t('auth.loginWithApple')}
                         </Text>
                       </>
                     )}
@@ -283,7 +291,7 @@ export default function LoginScreen() {
               <View style={styles.separator}>
                 <View style={[styles.separatorLine, { backgroundColor: colors.border }]} />
                 <Text style={[styles.separatorText, { color: colors.textTertiary, fontFamily: fonts.medium }]}>
-                  {t('auth.orContinueWith') || '또는'}
+                  {t('auth.orContinueWith')}
                 </Text>
                 <View style={[styles.separatorLine, { backgroundColor: colors.border }]} />
               </View>
@@ -292,11 +300,11 @@ export default function LoginScreen() {
               <View style={styles.form}>
                 <View style={styles.field}>
                   <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                    {t('auth.email') || '이메일'}
+                    {t('auth.email')}
                   </Text>
                   <TextInput
                     style={inputStyle('email')}
-                    placeholder={t('auth.emailPlaceholder') || '이메일 주소'}
+                    placeholder={t('auth.emailPlaceholder')}
                     placeholderTextColor={colors.textTertiary}
                     value={email}
                     onChangeText={setEmail}
@@ -307,18 +315,18 @@ export default function LoginScreen() {
                     textContentType="emailAddress"
                     onFocus={() => setFocusedInput('email')}
                     onBlur={() => setFocusedInput(null)}
-                    accessibilityLabel={t('auth.email') || '이메일'}
+                    accessibilityLabel={t('auth.email')}
                   />
                 </View>
 
                 <View style={styles.field}>
                   <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                    {t('auth.password') || '비밀번호'}
+                    {t('auth.password')}
                   </Text>
                   <View>
                     <TextInput
                       style={[inputStyle('password'), styles.passwordInput]}
-                      placeholder={t('auth.passwordPlaceholder') || '비밀번호'}
+                      placeholder={t('auth.passwordPlaceholder')}
                       placeholderTextColor={colors.textTertiary}
                       value={password}
                       onChangeText={setPassword}
@@ -328,13 +336,13 @@ export default function LoginScreen() {
                       textContentType="password"
                       onFocus={() => setFocusedInput('password')}
                       onBlur={() => setFocusedInput(null)}
-                      accessibilityLabel={t('auth.password') || '비밀번호'}
+                      accessibilityLabel={t('auth.password')}
                     />
                     <TouchableOpacity
                       style={styles.passwordToggle}
                       onPress={() => setShowPassword(!showPassword)}
                       accessibilityRole="button"
-                      accessibilityLabel={t('auth.password') || '비밀번호'}
+                      accessibilityLabel={t('auth.password')}
                       accessibilityState={{ checked: showPassword }}
                     >
                       <Ionicons
@@ -359,7 +367,7 @@ export default function LoginScreen() {
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text style={[styles.loginButtonText, { color: isFormValid ? '#fff' : colors.textTertiary, fontFamily: fonts.semiBold }]}>
-                      {t('auth.login') || '로그인'}
+                      {t('auth.login')}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -368,12 +376,12 @@ export default function LoginScreen() {
                 <View style={styles.linksRow}>
                   <TouchableOpacity style={styles.linkButton} onPress={handleSignup} accessibilityRole="button">
                     <Text style={[styles.linkText, { color: colors.text, fontFamily: fonts.medium }]}>
-                      {t('auth.signup') || '회원가입'}
+                      {t('auth.signup')}
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.linkButton} onPress={handleFindAccount} accessibilityRole="button">
                     <Text style={[styles.linkText, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-                      {t('auth.findAccount') || '계정 찾기'}
+                      {t('auth.findAccount')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -384,7 +392,7 @@ export default function LoginScreen() {
             <View style={styles.footer}>
               <Ionicons name="shield-checkmark-outline" size={14} color={colors.textTertiary} />
               <Text style={[styles.footerText, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                {t('auth.secureConnection') || '안전한 암호화 연결'}
+                {t('auth.secureConnection')}
               </Text>
             </View>
           </ScrollView>

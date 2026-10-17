@@ -19,8 +19,14 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { Colors } from '../constants/Colors';
+import useKeyboardVisible from '../hooks/useKeyboardVisible';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// 키보드 피하기: iOS·안드로이드 모두 'padding' (여백은 화면 바탕색으로 칠해진다).
+// 안드로이드는 edge-to-edge라 adjustResize로 창이 줄지 않으니 키보드만큼 여백을 직접 줘야 한다.
+// 예전 'height'는 키보드를 닫은 뒤에도 줄어든 높이가 남아(useKeyboardVisible 주석 참고) 아래에 밝은 띠가 보였다.
+const KEYBOARD_BEHAVIOR = 'padding';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -30,6 +36,7 @@ export default function RegisterScreen() {
   const { register, checkEmailExists, getToken } = useAuth();
   const { syncWithServer } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
+  const keyboardVisible = useKeyboardVisible();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,7 +63,7 @@ export default function RegisterScreen() {
 
   const isFormValid =
     email &&
-    validateEmail(email) &&
+    validateEmail(email.trim()) &&
     isEmailChecked &&
     isEmailAvailable &&
     isPasswordLongEnough &&
@@ -77,14 +84,14 @@ export default function RegisterScreen() {
       Alert.alert(t('settings.error'), t('auth.errorEmailRequired'));
       return;
     }
-    if (!validateEmail(email)) {
+    if (!validateEmail(email.trim())) {
       Alert.alert(t('settings.error'), t('auth.errorInvalidEmail'));
       return;
     }
 
     setIsCheckingEmail(true);
     try {
-      const result = await checkEmailExists(email);
+      const result = await checkEmailExists(email.trim());
       setIsEmailChecked(true);
       if (result.success) {
         setIsEmailAvailable(!result.exists);
@@ -106,7 +113,7 @@ export default function RegisterScreen() {
       Alert.alert(t('settings.error'), t('auth.errorEmailRequired'));
       return;
     }
-    if (!validateEmail(email)) {
+    if (!validateEmail(email.trim())) {
       Alert.alert(t('settings.error'), t('auth.errorInvalidEmail'));
       return;
     }
@@ -137,7 +144,7 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
-      const result = await register(email, password, nickname);
+      const result = await register(email.trim(), password, nickname);
       if (result.success) {
         // 광고 기록 서버 동기화 (회원가입 후)
         try {
@@ -188,13 +195,19 @@ export default function RegisterScreen() {
     />
   );
 
-  const fieldBorder = (name) => (focusedInput === name ? colors.primary : colors.border);
-  const canCheckEmail = validateEmail(email) && !isCheckingEmail;
+  // 이메일 칸이 비어 있지 않은데 형식이 틀리면 칸 아래에 바로 알려 준다 (중복확인 버튼이 왜 안 눌리는지 보이게)
+  const isEmailFormatInvalid = email.trim().length > 0 && !validateEmail(email.trim());
+  const fieldBorder = (name) => {
+    if (name === 'email' && isEmailFormatInvalid) return colors.error;
+    return focusedInput === name ? colors.primary : colors.border;
+  };
+  const canCheckEmail = validateEmail(email.trim()) && !isCheckingEmail;
 
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={KEYBOARD_BEHAVIOR}
+      enabled={Platform.OS === 'ios' || keyboardVisible}
     >
       {/* 헤더 */}
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === 'ios' ? 3 : 12) }]}>
@@ -238,12 +251,19 @@ export default function RegisterScreen() {
                 onBlur={() => setFocusedInput(null)}
               />
             </View>
+            {/* 중복확인: 형식이 맞을 때만 누를 수 있다. 못 누를 땐 흐리게 */}
             <TouchableOpacity
-              style={[styles.checkButton, { backgroundColor: colors.raised, borderColor: colors.border }]}
+              style={[
+                styles.checkButton,
+                canCheckEmail || isCheckingEmail
+                  ? { backgroundColor: colors.primarySoft, borderColor: colors.primary }
+                  : { backgroundColor: colors.raised, borderColor: colors.border, opacity: 0.5 },
+              ]}
               onPress={handleCheckEmail}
-              disabled={isCheckingEmail || !validateEmail(email)}
+              disabled={!canCheckEmail}
               activeOpacity={0.8}
               accessibilityRole="button"
+              accessibilityState={{ disabled: !canCheckEmail, busy: isCheckingEmail }}
             >
               {isCheckingEmail ? (
                 <ActivityIndicator color={colors.textSecondary} size="small" />
@@ -262,8 +282,22 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
           </View>
+          {/* 이메일 형식 오류 */}
+          {isEmailFormatInvalid && (
+            <View style={styles.validationRow}>
+              <View style={styles.validationItem}>
+                <Ionicons name="alert-circle" size={14} color={colors.error} />
+                <Text
+                  style={[styles.validationText, { color: colors.error, fontFamily: fonts.medium }]}
+                  accessibilityLiveRegion="polite"
+                >
+                  {t('auth.errorInvalidEmail')}
+                </Text>
+              </View>
+            </View>
+          )}
           {/* 이메일 중복 확인 결과 */}
-          {isEmailChecked && (
+          {isEmailChecked && !isEmailFormatInvalid && (
             <View style={styles.validationRow}>
               <View style={styles.validationItem}>
                 {renderValidationIcon(isEmailAvailable, !isEmailAvailable)}
