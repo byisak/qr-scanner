@@ -11,7 +11,7 @@ import { useFeedback } from '../contexts/FeedbackContext';
 import { getAnalyticsConsent, setAnalyticsConsent } from '../utils/analytics';
 import { SettingsSubScreen, Group, SettingRow, NavRight, settingsStyles as s, useSettingsUi } from '../components/SettingsKit';
 
-export const SUPPORT_EMAIL = 'qrscanner.app.help@gmail.com';
+export const SUPPORT_EMAIL = 'support@scanview.app';
 export const APP_VERSION = Constants.expoConfig?.version || '';
 
 export default function AboutSettingsScreen() {

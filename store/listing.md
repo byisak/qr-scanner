@@ -45,7 +45,7 @@ QR·바코드·데이터 매트릭스를 빠르게 읽고, 기록·재고 실사
 • 다크 모드, 한국어·영어·일본어·중국어·스페인어
 • 회원가입 없이 바로 사용, 스캔 기록은 기기에 저장
 
-문의: qrscanner.app.help@gmail.com
+문의: support@scanview.app
 
 ### 출시 노트 (1.3.0)
 • 새 디자인: 모든 화면을 깔끔하게 정리했어요
@@ -97,7 +97,7 @@ A QR & barcode scanner built for real work. It reads tiny laser-engraved Data Ma
 • Dark mode; Korean, English, Japanese, Chinese, Spanish
 • No sign-up needed; scan history stays on your device
 
-Contact: qrscanner.app.help@gmail.com
+Contact: support@scanview.app
 
 ### Release notes (1.3.0)
 • New design across every screen
@@ -109,7 +109,7 @@ Contact: qrscanner.app.help@gmail.com
 ---
 
 ## 연락처·URL
-- 이메일: qrscanner.app.help@gmail.com
+- 이메일: support@scanview.app
 - 개인정보처리방침: https://scanview.app/legal/privacy
 - 웹사이트(선택): https://scanview.app
 - 카테고리: 도구(Tools)

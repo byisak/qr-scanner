@@ -2117,7 +2117,7 @@ export default {
     section7Title: '7. 개인정보 보호책임자',
     section7Content: '앱은 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 이용자의 불만처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.',
     section7Officer: '개인정보 보호책임자',
-    section7OfficerInfo: '• 담당자: 개발팀\n• 연락처: qrscanner.app.help@gmail.com',
+    section7OfficerInfo: '• 담당자: 개발팀\n• 연락처: support@scanview.app',
     section8Title: '8. 개인정보 처리방침의 변경',
     section8Content: '이 개인정보처리방침은 시행일로부터 적용되며, 법령 및 방침에 따른 변경내용의 추가, 삭제 및 정정이 있는 경우에는 변경사항의 시행 7일 전부터 공지사항을 통하여 고지할 것입니다.',
     section9Title: '9. 카메라 및 갤러리 접근 권한',

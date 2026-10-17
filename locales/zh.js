@@ -2074,7 +2074,7 @@ export default {
     section7Title: '7. 个人信息保护负责人',
     section7Content: '应用指定个人信息保护负责人，负责个人信息处理相关业务，并处理用户关于个人信息处理的投诉和损害救济等事宜。',
     section7Officer: '个人信息保护负责人',
-    section7OfficerInfo: '• 负责人：开发团队\n• 联系方式：qrscanner.app.help@gmail.com',
+    section7OfficerInfo: '• 负责人：开发团队\n• 联系方式：support@scanview.app',
     section8Title: '8. 隐私政策的变更',
     section8Content: '本隐私政策自施行日起适用，如因法律法规和政策变更而有内容的增加、删除和修正，将在变更事项施行7天前通过公告通知。',
     section9Title: '9. 相机和相册访问权限',

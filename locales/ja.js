@@ -2074,7 +2074,7 @@ export default {
     section7Title: '7. 個人情報保護責任者',
     section7Content: 'アプリは個人情報処理に関する業務を総括して責任を負い、個人情報処理に関連した利用者の不満処理および被害救済などのために以下のように個人情報保護責任者を指定しています。',
     section7Officer: '個人情報保護責任者',
-    section7OfficerInfo: '• 担当者：開発チーム\n• 連絡先：qrscanner.app.help@gmail.com',
+    section7OfficerInfo: '• 担当者：開発チーム\n• 連絡先：support@scanview.app',
     section8Title: '8. プライバシーポリシーの変更',
     section8Content: 'このプライバシーポリシーは施行日から適用され、法令および方針による変更内容の追加、削除および訂正がある場合には、変更事項の施行7日前から告知を通じて告知します。',
     section9Title: '9. カメラおよびギャラリーアクセス権限',

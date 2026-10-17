@@ -2127,7 +2127,7 @@ export default {
     section7Title: '7. Personal Information Protection Officer',
     section7Content: 'The App designates a Personal Information Protection Officer to oversee personal information processing and handle user complaints and damage relief related to personal information processing.',
     section7Officer: 'Personal Information Protection Officer',
-    section7OfficerInfo: '• Contact: Development Team\n• Email: qrscanner.app.help@gmail.com',
+    section7OfficerInfo: '• Contact: Development Team\n• Email: support@scanview.app',
     section8Title: '8. Changes to Privacy Policy',
     section8Content: 'This privacy policy becomes effective from the enforcement date, and if there are additions, deletions, or corrections due to changes in laws and policies, notice will be given through announcements 7 days before the effective date of changes.',
     section9Title: '9. Camera and Gallery Access Permissions',

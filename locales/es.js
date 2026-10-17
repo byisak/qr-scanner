@@ -2074,7 +2074,7 @@ export default {
     section7Title: '7. Responsable de Protección de Información Personal',
     section7Content: 'La Aplicación es responsable del procesamiento de información personal y ha designado a un responsable de protección de información personal para manejar las quejas de los usuarios y la compensación de daños relacionados con el procesamiento de información personal.',
     section7Officer: 'Responsable de Protección de Información Personal',
-    section7OfficerInfo: '• Responsable: Equipo de Desarrollo\n• Contacto: qrscanner.app.help@gmail.com',
+    section7OfficerInfo: '• Responsable: Equipo de Desarrollo\n• Contacto: support@scanview.app',
     section8Title: '8. Cambios en la Política de Privacidad',
     section8Content: 'Esta política de privacidad entra en vigor a partir de la fecha de implementación, y si hay adiciones, eliminaciones o correcciones de acuerdo con las leyes y políticas, se notificará a través de avisos 7 días antes de la implementación de los cambios.',
     section9Title: '9. Permisos de Acceso a Cámara y Galería',
