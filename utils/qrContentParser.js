@@ -1,4 +1,5 @@
 // utils/qrContentParser.js - QR 코드 콘텐츠 타입 감지 및 파싱
+import { parseWifiQr } from './wifiQr';
 
 /**
  * QR 콘텐츠 타입 정의
@@ -141,29 +142,7 @@ const parseEmail = (data) => {
 /**
  * WiFi 파싱 (WIFI:T:WPA;S:NetworkName;P:password;;)
  */
-const parseWifi = (data) => {
-  if (!data.startsWith('WIFI:')) return null;
-
-  const result = {};
-
-  // 암호화 타입
-  const typeMatch = data.match(/T:([^;]*)/i);
-  if (typeMatch) result.encryption = typeMatch[1] || 'nopass';
-
-  // SSID (네트워크 이름)
-  const ssidMatch = data.match(/S:([^;]*)/i);
-  if (ssidMatch) result.ssid = ssidMatch[1];
-
-  // 비밀번호
-  const passMatch = data.match(/P:([^;]*)/i);
-  if (passMatch) result.password = passMatch[1];
-
-  // 숨김 네트워크
-  const hiddenMatch = data.match(/H:([^;]*)/i);
-  if (hiddenMatch) result.hidden = hiddenMatch[1].toLowerCase() === 'true';
-
-  return result;
-};
+const parseWifi = (data) => parseWifiQr(data);
 
 /**
  * 위치 파싱 (geo:37.5665,126.9780 또는 geo:37.5665,126.9780?q=Seoul)

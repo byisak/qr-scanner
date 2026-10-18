@@ -63,6 +63,8 @@ import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved,
 import PresetSaveModal from '../components/PresetSaveModal';
 import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 import { saveGeneratedCodeToHistory } from '../utils/generatedHistoryStorage';
+import { buildWifiQr } from '../utils/wifiQr';
+import { normalizeIcsDate } from '../utils/icsDate';
 
 // 기본 표시되는 바코드 타입 bcid 목록 (1개)
 const DEFAULT_BARCODE_BCIDS = [
@@ -71,6 +73,8 @@ const DEFAULT_BARCODE_BCIDS = [
 
 // 카테고리 순서 (2D 바코드 제외 - QR코드는 별도 탭에서 생성)
 const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'postal', 'stacked', 'automotive', 'other'];
+// 바코드 탭에서 실제로 고를 수 있는 종류 수 (2D 제외). 전체 목록 길이(95)가 아니라 이 값을 보여 준다
+const GENERATOR_BARCODE_COUNT = ALL_BWIP_BARCODES.filter((b) => CATEGORY_ORDER.includes(b.category)).length;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 // QR 유형 3열 격자: 화면 좌우 여백과 칸 사이 간격을 뺀 너비를 3등분 (내림해서 줄바꿈 방지)
@@ -91,6 +95,11 @@ const QR_TYPES = [
 
 export default function GeneratorScreen() {
   const { t, fonts, language } = useLanguage();
+  // QR 도트·코너 모양 이름 (번역이 없으면 영문 id 그대로)
+  const shapeLabel = (type) => {
+    const label = t(`generator.shape.${type}`);
+    return label === `generator.shape.${type}` ? type : label;
+  };
   const { isDark } = useTheme();
   const { isLocked, showUnlockAlert, isBarcodeTypeLocked, getBarcodeFeatureId, isQrTypeLocked, getQrTypeFeatureId, getAdProgress } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
@@ -621,7 +630,8 @@ export default function GeneratorScreen() {
         return vcard;
 
       case 'wifi':
-        return `WIFI:T:${data.security};S:${data.ssid};P:${data.password};;`;
+        // 특수문자(; , : " \)를 표준대로 이스케이프해야 찍었을 때 연결된다
+        return buildWifiQr({ ssid: data.ssid, password: data.password, security: data.security });
 
       case 'text':
       case 'clipboard':
@@ -646,8 +656,9 @@ export default function GeneratorScreen() {
           'BEGIN:VEVENT',
           data.title && `SUMMARY:${data.title}`,
           data.location && `LOCATION:${data.location}`,
-          data.startDate && `DTSTART:${data.startDate}`,
-          data.endDate && `DTEND:${data.endDate}`,
+          // 2026-10-18 같은 입력도 iCalendar 형식(20261018)으로 맞춘다
+          data.startDate && `DTSTART:${normalizeIcsDate(data.startDate) || data.startDate.trim()}`,
+          data.endDate && `DTEND:${normalizeIcsDate(data.endDate) || data.endDate.trim()}`,
           data.description && `DESCRIPTION:${data.description}`,
           'END:VEVENT',
         ].filter(Boolean).join('\n');
@@ -1253,7 +1264,7 @@ export default function GeneratorScreen() {
       const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
         setSaveProgress({ visible: false, progress: 0, message: '' });
-        Alert.alert(t('common.error'), 'Permission to access media library is required');
+        Alert.alert(t('common.error'), t('generator.photoPermissionRequired'));
         return;
       }
 
@@ -1752,6 +1763,9 @@ export default function GeneratorScreen() {
                   value={data.startDate}
                   onChangeText={(text) => updateFormData('startDate', text)}
                 />
+                {!!data.startDate?.trim() && !normalizeIcsDate(data.startDate) && (
+                  <Text style={[s.errorTextRed, { color: colors.error }]}>{t('generator.fields.dateInvalid')}</Text>
+                )}
               </View>
               <View style={[s.fieldContainer, { flex: 1 }]}>
                 <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>
@@ -1764,6 +1778,9 @@ export default function GeneratorScreen() {
                   value={data.endDate}
                   onChangeText={(text) => updateFormData('endDate', text)}
                 />
+                {!!data.endDate?.trim() && !normalizeIcsDate(data.endDate) && (
+                  <Text style={[s.errorTextRed, { color: colors.error }]}>{t('generator.fields.dateInvalid')}</Text>
+                )}
               </View>
             </View>
             <View style={s.fieldContainer}>
@@ -2734,11 +2751,11 @@ export default function GeneratorScreen() {
                         onPress={() => setQrStyle(prev => ({ ...prev, dotType: type }))}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={`${t('generator.qrStyle.dotType') || '도트 타입'} ${type}`}
+                        accessibilityLabel={`${t('generator.qrStyle.dotType') || '도트 타입'} ${shapeLabel(type)}`}
                         accessibilityState={{ selected: qrStyle.dotType === type }}
                       >
                         <Text style={[s.qrOptionText, { color: qrStyle.dotType === type ? colors.primaryText : colors.text }]}>
-                          {type}
+                          {shapeLabel(type)}
                         </Text>
                       </MaterialPressable>
                     ))}
@@ -2802,11 +2819,11 @@ export default function GeneratorScreen() {
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerSquareType: type }))}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={`${t('generator.qrStyle.cornerSquareType') || '코너 스퀘어 타입'} ${type}`}
+                        accessibilityLabel={`${t('generator.qrStyle.cornerSquareType') || '코너 스퀘어 타입'} ${shapeLabel(type)}`}
                         accessibilityState={{ selected: qrStyle.cornerSquareType === type }}
                       >
                         <Text style={[s.qrOptionText, { color: qrStyle.cornerSquareType === type ? colors.primaryText : colors.text }]}>
-                          {type}
+                          {shapeLabel(type)}
                         </Text>
                       </MaterialPressable>
                     ))}
@@ -2865,11 +2882,11 @@ export default function GeneratorScreen() {
                         onPress={() => setQrStyle(prev => ({ ...prev, cornerDotType: type }))}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={`${t('generator.qrStyle.cornerDotType') || '코너 도트 타입'} ${type}`}
+                        accessibilityLabel={`${t('generator.qrStyle.cornerDotType') || '코너 도트 타입'} ${shapeLabel(type)}`}
                         accessibilityState={{ selected: qrStyle.cornerDotType === type }}
                       >
                         <Text style={[s.qrOptionText, { color: qrStyle.cornerDotType === type ? colors.primaryText : colors.text }]}>
-                          {type}
+                          {shapeLabel(type)}
                         </Text>
                       </MaterialPressable>
                     ))}
@@ -3076,7 +3093,13 @@ export default function GeneratorScreen() {
                         accessibilityLabel={`${t('generator.saveQuality') || '저장 품질'} ${item.label}`}
                         accessibilityState={{ selected: qrResLevel === item.level }}
                       >
-                        <Text style={[s.qrOptionText, { color: qrResLevel === item.level ? colors.primaryText : colors.text }]}>
+                        {/* 영어 등 긴 이름이 두 줄로 끊기지 않게 한 줄에 맞춰 줄인다 */}
+                        <Text
+                          style={[s.qrOptionText, { color: qrResLevel === item.level ? colors.primaryText : colors.text }]}
+                          numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.75}
+                        >
                           {item.label}
                         </Text>
                         <Text style={[s.qrOptionSubtext, { color: qrResLevel === item.level ? colors.primaryText : colors.textTertiary }]}>
@@ -3523,7 +3546,7 @@ export default function GeneratorScreen() {
                   {t('generator.selectBarcodeType') || '바코드 타입 선택'}
                 </Text>
                 <Text style={[s.modalSubtitle, { color: colors.textSecondary }]}>
-                  {t('generator.barcodeCount', { count: ALL_BWIP_BARCODES.length }) || `${ALL_BWIP_BARCODES.length}종 지원`}
+                  {t('generator.barcodeCount', { count: GENERATOR_BARCODE_COUNT })}
                 </Text>
               </View>
               <MaterialPressable

@@ -73,7 +73,7 @@ export default function StocktakeNewScreen() {
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder={'8801234567890,생수 500ml,24\n180100048,박스 A,3\nO-02-A1'}
+            placeholder={t('stocktake.listPlaceholder')}
             placeholderTextColor={colors.textTertiary}
             multiline
             autoCapitalize="none"

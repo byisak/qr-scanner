@@ -25,6 +25,7 @@ import { labelOfItem, signatureOf, fieldNameAt } from '../utils/labelParser';
 import { parseGs1, gs1AiLabel, gs1DisplayValue } from '../utils/gs1';
 import { findHistoryItem, updateHistoryItem } from '../utils/historyItem';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern } from '../utils/labelCategories';
+import { parseWifiQr } from '../utils/wifiQr';
 
 // 바코드 타입 표시 이름 (다른 화면의 'EAN-13' 표기와 맞춘다)
 const BARCODE_TYPE_LABELS = {
@@ -551,16 +552,12 @@ export default function ResultScreen() {
     // WiFi
     if (trimmedData.startsWith('WIFI:')) {
       const parsedData = { ssid: '', password: '', security: 'WPA' };
-      const wifiMatch = trimmedData.match(/WIFI:(.+)/);
-      if (wifiMatch) {
-        const params = wifiMatch[1];
-        const ssidMatch = params.match(/S:([^;]*)/);
-        const passMatch = params.match(/P:([^;]*)/);
-        const typeMatch = params.match(/T:([^;]*)/);
-
-        if (ssidMatch) parsedData.ssid = ssidMatch[1];
-        if (passMatch) parsedData.password = passMatch[1];
-        if (typeMatch) parsedData.security = typeMatch[1] || 'WPA';
+      // 이스케이프(\;)를 풀어서 읽는다 (utils/wifiQr)
+      const wifi = parseWifiQr(trimmedData);
+      if (wifi) {
+        parsedData.ssid = wifi.ssid || '';
+        parsedData.password = wifi.password || '';
+        parsedData.security = wifi.encryption || 'WPA';
       }
       return { type: 'wifi', parsedData };
     }
