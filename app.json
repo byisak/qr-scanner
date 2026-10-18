@@ -134,7 +134,7 @@
         "android.permission.ACCESS_ADSERVICES_AD_ID",
         "android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
       ],
-      "versionCode": 130
+      "versionCode": 131
     },
     "web": {
       "favicon": "./assets/favicon.png",
