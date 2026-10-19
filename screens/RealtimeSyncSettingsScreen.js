@@ -552,7 +552,7 @@ export default function RealtimeSyncSettingsScreen() {
       // 세션 설정
       const sessionSettings = {
         sessionName: sessionName,
-        password: newSessionPassword || null,
+        password: (newSessionIsPublic && newSessionPassword) || null, // 비공개는 비밀번호를 쓰지 않는다
         isPublic: newSessionIsPublic,
       };
 
@@ -564,11 +564,11 @@ export default function RealtimeSyncSettingsScreen() {
         deletedAt: null,
         name: sessionName,
         isPublic: newSessionIsPublic,
-        hasPassword: !!newSessionPassword,
+        hasPassword: newSessionIsPublic && !!newSessionPassword,
       };
 
       // 비밀번호는 SecureStore에 별도 저장
-      if (newSessionPassword) {
+      if (newSessionIsPublic && newSessionPassword) {
         await SecureStore.setItemAsync(`session_pw_${newSessionId}`, newSessionPassword);
       }
 
@@ -1480,24 +1480,30 @@ export default function RealtimeSyncSettingsScreen() {
                 {/* 비밀번호 설정 */}
                 <View style={[styles.optionRow, { borderTopColor: colors.borderLight }]}>
                   <Ionicons
-                    name={passwordInput.trim() ? "key" : "key-outline"}
+                    name={passwordInput.trim() && selectedIsPublic ? "key" : "key-outline"}
                     size={20}
-                    color={passwordInput.trim() ? colors.success : colors.textSecondary}
+                    color={passwordInput.trim() && selectedIsPublic ? colors.success : colors.textTertiary}
                   />
                   <View style={styles.rowText}>
                     <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
                       {t('settings.password') || '비밀번호'}
                     </Text>
                     <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                      {t('settings.passwordDescShort') || '접근 시 비밀번호 필요'}
+                      {selectedIsPublic ? (t('settings.passwordDescShort') || '접근 시 비밀번호 필요') : t('settings.passwordNotNeededPrivate')}
                     </Text>
                   </View>
                 </View>
 
-                <View style={[styles.inputContainer, styles.passwordInputSpacing, { backgroundColor: colors.inputBackground }, inputBorder('editPassword')]}>
+                {/* 비공개 세션은 소유자·관리자만 열 수 있고 비밀번호를 보지 않으므로(서버 canViewSession) 입력을 막는다 */}
+                <View
+                  style={[styles.inputContainer, styles.passwordInputSpacing, { backgroundColor: colors.inputBackground }, inputBorder('editPassword'), !selectedIsPublic && styles.inputDisabled]}
+                  pointerEvents={selectedIsPublic ? 'auto' : 'none'}
+                  accessibilityState={{ disabled: !selectedIsPublic }}
+                >
                   <TextInput
                     style={[styles.inputField, { color: colors.text, fontFamily: fonts.regular }]}
                     value={passwordInput}
+                    editable={selectedIsPublic}
                     onChangeText={setPasswordInput}
                     placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (비워두면 해제)'}
                     placeholderTextColor={colors.textTertiary}
@@ -1623,12 +1629,17 @@ export default function RealtimeSyncSettingsScreen() {
                 {/* 비밀번호 설정 */}
                 <View style={styles.passwordSection}>
                   <Text style={[styles.inputLabel, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                    {t('settings.sessionPassword') || '세션 비밀번호'} {!newSessionIsPublic && <Text style={{ color: colors.error }}>*</Text>}
+                    {t('settings.sessionPassword') || '세션 비밀번호'}
                   </Text>
-                  <View style={[styles.inputContainer, { backgroundColor: colors.inputBackground }, inputBorder('newPassword')]}>
+                  <View
+                    style={[styles.inputContainer, { backgroundColor: colors.inputBackground }, inputBorder('newPassword'), !newSessionIsPublic && styles.inputDisabled]}
+                    pointerEvents={newSessionIsPublic ? 'auto' : 'none'}
+                    accessibilityState={{ disabled: !newSessionIsPublic }}
+                  >
                     <TextInput
                       style={[styles.inputField, { color: colors.text, fontFamily: fonts.regular }]}
                       value={newSessionPassword}
+                      editable={newSessionIsPublic}
                       onChangeText={setNewSessionPassword}
                       placeholder={t('settings.passwordPlaceholder') || '비밀번호 입력 (선택사항)'}
                       placeholderTextColor={colors.textTertiary}
@@ -1649,7 +1660,7 @@ export default function RealtimeSyncSettingsScreen() {
                     </MaterialPressable>
                   </View>
                   <Text style={[styles.inputHint, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
-                    {t('settings.passwordHint') || '비밀번호를 설정하면 세션 접근 시 입력이 필요합니다.'}
+                    {newSessionIsPublic ? (t('settings.passwordHint') || '비밀번호를 설정하면 세션 접근 시 입력이 필요합니다.') : t('settings.passwordNotNeededPrivate')}
                   </Text>
                 </View>
 
@@ -1933,6 +1944,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingLeft: 14,
   },
+  inputDisabled: { opacity: 0.4 },
   passwordInputSpacing: {
     marginBottom: 20,
   },
