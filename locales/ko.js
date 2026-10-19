@@ -1275,7 +1275,7 @@ export default {
     searchBarcode: '바코드 검색 (이름, 설명)',
     searchResults: '{{count}}개 결과',
     noSearchResults: '검색 결과가 없어요',
-    barcodePickerDescription: '체크하면 바코드 목록에 추가돼요',
+    barcodePickerDescription: '동그라미: 목록에 표시 · 줄 누르기: 바로 선택',
     barcodeCategories: {
       industrial: '산업/물류',
       retail: '상품 바코드',
@@ -1537,6 +1537,10 @@ export default {
     reorderTypes: 'QR 타입 순서 변경',
     reorderTypesDesc: '드래그하여 순서를 변경하세요',
     reorder: '순서',
+    reorderEdit: '순서 편집',
+    codeKinds: '코드 종류',
+    pickerSelected: '선택됨',
+    pickerShowInList: '목록에 표시',
     reorderBarcodeTypes: '바코드 타입 순서 변경',
     digits: '자리',
     // QR 스타일

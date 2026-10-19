@@ -14,7 +14,7 @@ import {
   Animated,
   Image,
   Modal,
-  Dimensions,
+  useWindowDimensions,
   InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,9 +76,9 @@ const CATEGORY_ORDER = ['industrial', 'retail', 'gs1', 'medical', 'special', 'po
 // 바코드 탭에서 실제로 고를 수 있는 종류 수 (2D 제외). 전체 목록 길이(95)가 아니라 이 값을 보여 준다
 const GENERATOR_BARCODE_COUNT = ALL_BWIP_BARCODES.filter((b) => CATEGORY_ORDER.includes(b.category)).length;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-// QR 유형 3열 격자: 화면 좌우 여백과 칸 사이 간격을 뺀 너비를 3등분 (내림해서 줄바꿈 방지)
-const TYPE_GRID_ITEM_WIDTH = Math.floor((SCREEN_WIDTH - SPACE.screen * 2 - SPACE.gap * 2) / 3);
+// 화면 폭은 접고 펼 때(폴드)나 회전할 때 바뀌므로 상수로 두지 않고 useWindowDimensions로 매번 읽는다.
+// QR 유형 격자 열 수: 휴대폰 3열, 펼친 폴드·작은 태블릿 4열, 큰 화면 6열
+const qrTypeColumns = (width) => (width >= 840 ? 6 : width >= 600 ? 4 : 3);
 
 const QR_TYPES = [
   { id: 'text', icon: 'text-outline', gradient: ['#43e97b', '#38f9d7'] },
@@ -105,6 +105,14 @@ export default function GeneratorScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const qrCols = qrTypeColumns(windowWidth);
+  // 화면 좌우 여백과 칸 사이 간격을 뺀 너비를 열 수로 나눔 (내림해서 줄바꿈 방지)
+  const typeGridItemWidth = Math.floor((windowWidth - SPACE.screen * 2 - SPACE.gap * (qrCols - 1)) / qrCols);
+  const carouselItemWidth = windowWidth - 96; // 미리보기 카드 안쪽 폭 (styles qrSection 주석 참고)
+  // 바코드 선택 창: 휴대폰은 한 줄 목록, 넓은 화면은 2~3칸 (창 좌우 여백 20씩, 칸 사이 8)
+  const barcodeListColumns = windowWidth >= 840 ? 3 : windowWidth >= 600 ? 2 : 1;
+  const barcodeRowWidth = Math.floor((windowWidth - 40 - 8 * (barcodeListColumns - 1)) / barcodeListColumns);
   const tabBarOverlap = useTabBarOverlap(); // 탭바에 가려지는 높이 (목록 끝 여백)
   const params = useLocalSearchParams();
 
@@ -350,6 +358,9 @@ export default function GeneratorScreen() {
     if (hapticEnabled) {
       await haptics.impact();
     }
+    // 목록에 없는 바코드를 고르면 위쪽 바코드 목록에도 넣어서, 고른 항목이 늘 보이게 한다
+    const isShown = (DEFAULT_BARCODE_BCIDS.includes(bcid) && !hiddenDefaults.includes(bcid)) || favoriteBarcodes.includes(bcid);
+    if (!isShown) await toggleFavoriteBarcode(bcid);
     setSelectedBarcodeFormat(bcid);
     setBarcodeValue('');
     setBarcodeError(null);
@@ -1995,7 +2006,20 @@ export default function GeneratorScreen() {
         {/* QR 코드 모드 */}
         {codeMode === 'qr' && (
           <>
-            {/* Type Selector: 3열 격자 (선택 = 연한 파랑 바탕 + 파랑 테두리) */}
+            {/* Type Selector: 화면 폭에 맞춘 격자 (선택 = 연한 파랑 바탕 + 파랑 테두리), 순서 편집은 제목 줄 오른쪽 */}
+            <View style={s.typeHeader}>
+              <Text style={[s.typeHeaderTitle, { color: colors.textSecondary }]}>{t('generator.codeKinds')}</Text>
+              <MaterialPressable
+                style={s.typeHeaderAction}
+                onPress={() => setQrTypeReorderVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t('generator.reorderEdit')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="swap-vertical" size={15} color={colors.primary} />
+                <Text style={[s.typeHeaderActionText, { color: colors.primary, fontFamily: fonts.semiBold }]}>{t('generator.reorderEdit')}</Text>
+              </MaterialPressable>
+            </View>
             <View style={s.typeGrid}>
               {orderedQrTypes.map((type) => {
                 const isTypeLocked = isQrTypeLocked(type.id);
@@ -2009,6 +2033,7 @@ export default function GeneratorScreen() {
                     style={[
                       s.typeGridButton,
                       {
+                        width: typeGridItemWidth,
                         backgroundColor: isTypeSelected ? colors.primarySoft : colors.surface,
                         borderColor: isTypeSelected ? colors.primary : colors.border,
                       },
@@ -2043,27 +2068,6 @@ export default function GeneratorScreen() {
                   </MaterialPressable>
                 );
               })}
-              {/* 순서 변경 버튼 */}
-              <MaterialPressable
-                style={[
-                  s.typeGridButton,
-                  { backgroundColor: colors.surface, borderColor: colors.border }
-                ]}
-                onPress={() => setQrTypeReorderVisible(true)}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={t('generator.reorder') || '순서'}
-              >
-                <Ionicons name="swap-vertical" size={16} color={colors.textSecondary} />
-                <Text
-                  style={[s.typeGridText, { color: colors.textSecondary, fontWeight: '500' }]}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.8}
-                >
-                  {t('generator.reorder') || '순서'}
-                </Text>
-              </MaterialPressable>
             </View>
 
             {/* 배너 광고 - 타입 선택과 정보 입력 사이 */}
@@ -3136,14 +3140,14 @@ export default function GeneratorScreen() {
                     showsHorizontalScrollIndicator={false}
                     keyExtractor={(item) => item.id}
                     onMomentumScrollEnd={(e) => {
-                      const itemWidth = SCREEN_WIDTH - 96;
+                      const itemWidth = carouselItemWidth;
                       const newIndex = Math.round(e.nativeEvent.contentOffset.x / itemWidth);
                       setFrameIndex(newIndex);
                     }}
                     renderItem={({ item: frame, index }) => {
                       const isCurrentFrame = index === frameIndex;
                       const frameObj = frame.id === 'none' ? null : frame;
-                      const itemWidth = SCREEN_WIDTH - 96;
+                      const itemWidth = carouselItemWidth;
                       return (
                         <View style={[s.carouselItem, { width: itemWidth }]}>
                           <Animated.View
@@ -3627,8 +3631,9 @@ export default function GeneratorScreen() {
                           {barcodes.length}
                         </Text>
                       </View>
-                      <View style={s.categoryGrid}>
-                        {barcodes.map((format) => {
+                      {/* 한 줄 목록: 왼쪽 동그라미 = 목록에 표시, 줄 누르기 = 바로 선택 (넓은 화면은 2~3칸) */}
+                      <View style={[s.barcodeRows, barcodeListColumns > 1 ? s.barcodeRowsWide : { borderWidth: 1, borderColor: colors.border }]}>
+                        {barcodes.map((format, index) => {
                           const isDefault = DEFAULT_BARCODE_BCIDS.includes(format.bcid);
                           const isFavorite = favoriteBarcodes.includes(format.bcid);
                           const isHiddenDefault = hiddenDefaults.includes(format.bcid);
@@ -3638,71 +3643,64 @@ export default function GeneratorScreen() {
                           const barcodeFeatureId = getBarcodeFeatureId(format.bcid);
                           const hasBarcodeProgress = barcodeFeatureId ? getAdProgress(barcodeFeatureId).current > 0 : false;
                           const barcodeLockColor = hasBarcodeProgress ? colors.textSecondary : colors.error;
+                          const desc = (() => { const d = t(`barcodeSelection.${format.bcid}Desc`); return d.includes('.') ? format.description : d; })();
 
                           return (
                             <MaterialPressable
                               key={format.bcid}
                               style={[
-                                s.modalBarcodeItem,
-                                {
-                                  backgroundColor: isSelected ? colors.primary : colors.background,
-                                  borderColor: isSelected ? colors.primary : isChecked ? colors.success : colors.border,
-                                },
+                                s.barcodeRow,
+                                barcodeListColumns > 1
+                                  ? [s.barcodeRowWide, { width: barcodeRowWidth, borderColor: isSelected ? colors.primary : colors.border }]
+                                  : index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+                                { backgroundColor: isSelected ? colors.primarySoft : colors.background },
                               ]}
                               onPress={() => {
                                 if (isBarcodeLocked) {
-                                  const featureId = getBarcodeFeatureId(format.bcid);
-                                  if (featureId) {
-                                    showUnlockAlert(featureId, () => handleSelectBarcodeFromModal(format.bcid));
+                                  if (barcodeFeatureId) {
+                                    showUnlockAlert(barcodeFeatureId, () => handleSelectBarcodeFromModal(format.bcid));
                                   }
                                 } else {
                                   handleSelectBarcodeFromModal(format.bcid);
                                 }
                               }}
-                              activeOpacity={0.7}
                               accessibilityRole="button"
-                              accessibilityLabel={format.name}
+                              accessibilityLabel={`${format.name}, ${desc}`}
                               accessibilityState={{ selected: isSelected }}
                             >
-                              {/* 잠금 아이콘 또는 체크박스 - 오른쪽 상단 (둘 중 하나만 표시) */}
-                              {isBarcodeLocked ? (
-                                <View style={s.barcodeLockIcon}>
-                                  <Ionicons name="lock-closed" size={12} color={barcodeLockColor} />
-                                </View>
-                              ) : (
-                                <MaterialPressable
-                                  style={s.barcodeCheckbox}
-                                  onPress={(e) => {
-                                    e.stopPropagation();
-                                    toggleFavoriteBarcode(format.bcid);
-                                  }}
-                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                  accessibilityRole="switch"
-                                  accessibilityLabel={`${format.name} - ${t('generator.a11y.showInList')}`}
-                                  accessibilityState={{ checked: isChecked }}
+                              {isSelected && <View style={[s.barcodeRowSelectedBar, { backgroundColor: colors.primary }]} />}
+                              <MaterialPressable
+                                style={s.barcodeRowCheck}
+                                onPress={() => toggleFavoriteBarcode(format.bcid)}
+                                borderless
+                                accessibilityRole="checkbox"
+                                accessibilityLabel={`${format.name} - ${t('generator.pickerShowInList')}`}
+                                accessibilityState={{ checked: isChecked }}
+                              >
+                                <Ionicons
+                                  name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
+                                  size={22}
+                                  color={isChecked ? colors.success : colors.textTertiary}
+                                />
+                              </MaterialPressable>
+                              <View style={s.barcodeRowText}>
+                                <Text
+                                  style={[s.barcodeRowTitle, { color: isBarcodeLocked ? colors.textTertiary : colors.text, fontFamily: fonts.semiBold }]}
+                                  numberOfLines={1}
                                 >
-                                  <Ionicons
-                                    name={isChecked ? 'checkmark-circle' : 'ellipse-outline'}
-                                    size={20}
-                                    color={isChecked ? colors.success : colors.textTertiary}
-                                  />
-                                </MaterialPressable>
-                              )}
-
-                              <View style={s.modalBarcodeTextContainer}>
-                                <Text style={[
-                                  s.modalBarcodeTitleMain,
-                                  { color: isSelected ? '#fff' : isBarcodeLocked ? colors.textTertiary : colors.text, fontFamily: fonts.semiBold }
-                                ]} numberOfLines={1}>
                                   {format.name}
                                 </Text>
-                                <Text style={[
-                                  s.modalBarcodeDescSmall,
-                                  { color: isSelected ? 'rgba(255,255,255,0.7)' : colors.textSecondary, fontFamily: fonts.regular }
-                                ]} numberOfLines={2}>
-                                  {(() => { const desc = t(`barcodeSelection.${format.bcid}Desc`); return desc.includes('.') ? format.description : desc; })()}
+                                <Text style={[s.barcodeRowDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                                  {desc}
                                 </Text>
                               </View>
+                              {isBarcodeLocked ? (
+                                <Ionicons name="lock-closed" size={14} color={barcodeLockColor} style={s.barcodeRowEnd} />
+                              ) : isSelected ? (
+                                <Text style={[s.barcodeRowSelectedText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>
+                                  {t('generator.pickerSelected')}
+                                </Text>
+                              ) : null}
                             </MaterialPressable>
                           );
                         })}
@@ -4123,8 +4121,17 @@ const s = StyleSheet.create({
     marginHorizontal: SPACE.screen,
     marginBottom: SPACE.section,
   },
+  typeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: SPACE.screen,
+    marginBottom: 8,
+  },
+  typeHeaderTitle: { ...TYPE.sectionHeader },
+  typeHeaderAction: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2 },
+  typeHeaderActionText: { fontSize: 13 },
   typeGridButton: {
-    width: TYPE_GRID_ITEM_WIDTH,
     height: SIZE.button,
     borderRadius: RADIUS.control,
     borderWidth: 1,
@@ -4262,7 +4269,7 @@ const s = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  // 미리보기 카드 (가로 여백 16 + 안쪽 20 + qrContainer 12 = 양쪽 48 → 캐러셀 칸 너비 SCREEN_WIDTH - 96)
+  // 미리보기 카드 (가로 여백 16 + 안쪽 20 + qrContainer 12 = 양쪽 48 → 캐러셀 칸 너비 화면 폭 - 96)
   qrSection: {
     marginHorizontal: SPACE.screen,
     borderRadius: RADIUS.card,
@@ -4854,14 +4861,51 @@ const s = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
-  modalBarcodeItem: {
-    width: (SCREEN_WIDTH - 64) / 2,
-    padding: 16,
+  // 바코드 선택 창 한 줄 목록
+  barcodeRows: {
     borderRadius: RADIUS.control,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    position: 'relative',
+    overflow: 'hidden',
   },
+  barcodeRowsWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    borderRadius: 0,
+    overflow: 'visible',
+  },
+  barcodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 56,
+    paddingRight: 14,
+    overflow: 'hidden',
+  },
+  barcodeRowWide: {
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+  },
+  barcodeRowSelectedBar: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3,
+  },
+  barcodeRowCheck: {
+    width: 48,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  barcodeRowText: {
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 8,
+  },
+  barcodeRowTitle: { fontSize: 15 },
+  barcodeRowDesc: { fontSize: 12, marginTop: 1 },
+  barcodeRowEnd: { marginLeft: 8 },
+  barcodeRowSelectedText: { fontSize: 12, marginLeft: 8 },
   favoriteButton: {
     position: 'absolute',
     top: 8,

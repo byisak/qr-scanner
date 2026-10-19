@@ -1286,7 +1286,7 @@ export default {
     searchBarcode: 'Search barcode (name, description)',
     searchResults: '{{count}} results',
     noSearchResults: 'No results found',
-    barcodePickerDescription: 'Check to add to barcode list',
+    barcodePickerDescription: 'Circle: show in list · Tap a row: select it',
     barcodeCategories: {
       industrial: 'Industrial/Logistics',
       retail: 'Retail Products',
@@ -1548,6 +1548,10 @@ export default {
     reorderTypes: 'Reorder QR Types',
     reorderTypesDesc: 'Drag to reorder',
     reorder: 'Order',
+    reorderEdit: 'Edit order',
+    codeKinds: 'Code types',
+    pickerSelected: 'Selected',
+    pickerShowInList: 'Show in list',
     reorderBarcodeTypes: 'Reorder Barcode Types',
     digits: 'digits',
     // QR Style
