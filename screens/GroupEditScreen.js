@@ -384,6 +384,9 @@ export default function GroupEditScreen() {
     () => (pending ? groups.filter(g => !pending.ids.includes(g.id)) : groups),
     [groups, pending]
   );
+  // 그룹이 빠지거나 더해지면 목록을 새로 그린다. ReorderableList는 칸 위치를 인덱스로 기억해서,
+  // 앞쪽 항목이 사라지면 남은 행이 옛 자리(빈칸) 그대로 남는다. 순서만 바뀔 때는 그대로 둔다.
+  const listKey = useMemo(() => visibleGroups.map(g => g.id).sort().join('|'), [visibleGroups]);
   const selectable = useMemo(() => visibleGroups.filter(g => g.id !== DEFAULT_GROUP_ID), [visibleGroups]);
   const allSelected = selectable.length > 0 && selectable.every(g => selected.has(g.id));
 
@@ -480,6 +483,7 @@ export default function GroupEditScreen() {
 
         {/* 그룹 목록 (≡ 를 끌어 순서 바꾸기) - 한 묶음 카드 */}
         <ReorderableList
+          key={listKey}
           data={visibleGroups}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
