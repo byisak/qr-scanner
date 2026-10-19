@@ -590,7 +590,6 @@ function ScannerScreen() {
   useFocusEffect(
     useCallback(() => {
       // 화면 조회 추적
-      trackScreenView('Scanner', 'ScannerScreen');
 
       // 이전 cleanup 타이머 취소 (경쟁 상태 방지)
       if (cleanupTimeoutRef.current) {

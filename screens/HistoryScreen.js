@@ -165,7 +165,6 @@ export default function HistoryScreen() {
   useFocusEffect(
     React.useCallback(() => {
       // 화면 조회 추적
-      trackScreenView('History', 'HistoryScreen');
       loadGroups();
     }, [t])
   );

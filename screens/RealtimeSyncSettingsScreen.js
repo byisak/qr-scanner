@@ -28,6 +28,7 @@ import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import websocketClient from '../utils/websocket';
 import config from '../config/config';
+import { trackRealtimeSessionCreated } from '../utils/analytics';
 
 // 암호학적으로 안전한 세션 ID 생성 함수 (16자리)
 const generateSessionId = async () => {
@@ -582,6 +583,7 @@ export default function RealtimeSyncSettingsScreen() {
       }
 
       setSessionUrls(prev => [newSessionUrl, ...prev]);
+      trackRealtimeSessionCreated(newSessionIsPublic, newSessionIsPublic && !!newSessionPassword);
 
       // 서버에 세션 생성 알림 (설정 포함)
       try {

@@ -12,6 +12,7 @@ import {
 import { LOCKED_FEATURES, FREE_BARCODE_TYPES, FREE_QR_TYPES, FREE_QR_STYLE_INDEX, DEV_MODE_UNLOCK_ALL } from '../config/lockedFeatures';
 import { useLanguage } from './LanguageContext';
 import config from '../config/config';
+import { trackFeatureLockHit } from '../utils/analytics';
 
 const FeatureLockContext = createContext();
 
@@ -970,6 +971,7 @@ export const FeatureLockProvider = ({ children }) => {
   const showUnlockAlert = useCallback(async (featureId, onUnlock) => {
     const feature = LOCKED_FEATURES[featureId];
     if (!feature) return;
+    trackFeatureLockHit(featureId);
 
     const { current, required, remaining } = getAdProgress(featureId);
 

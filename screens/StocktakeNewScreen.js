@@ -12,6 +12,7 @@ import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { parseExpectedList, createStocktake, upsertStocktake, setActiveStocktake } from '../utils/stocktake';
+import { trackStocktakeStarted } from '../utils/analytics';
 
 export default function StocktakeNewScreen() {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function StocktakeNewScreen() {
     const stocktake = createStocktake(name, items);
     await upsertStocktake(stocktake);
     await setActiveStocktake(stocktake.id);
+    trackStocktakeStarted(items.length);
     feedback.success(t('stocktake.started', { name: stocktake.name }));
     router.replace({ pathname: '/stocktake-detail', params: { id: stocktake.id } });
   };

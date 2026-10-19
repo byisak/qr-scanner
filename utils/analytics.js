@@ -145,3 +145,19 @@ export const trackError = (errorType, errorMessage) => {
     error_message: errorMessage?.substring(0, 100),
   });
 };
+
+// ===== 핵심 기능 사용 (화면에 머문 시간보다 실제로 쓰는지가 중요) =====
+// 잠금 기능에 막힘: 어떤 기능을 사람들이 가장 원하는지 (가격·무료 범위 결정용)
+export const trackFeatureLockHit = (featureId) => trackEvent('feature_lock_hit', { feature_id: featureId });
+// 유료(Pro) 안내 화면 열람
+export const trackPaywallView = (source) => trackEvent('paywall_view', { source: source || 'unknown' });
+// 기록 내보내기
+export const trackExport = (format, groupCount, itemCount) =>
+  trackEvent('export_done', { format, group_count: groupCount, item_count: itemCount });
+// 실시간 PC 전송 세션 만들기
+export const trackRealtimeSessionCreated = (isPublic, hasPassword) =>
+  trackEvent('realtime_session_created', { is_public: isPublic ? 1 : 0, has_password: hasPassword ? 1 : 0 });
+// 재고 실사 시작·완료
+export const trackStocktakeStarted = (itemCount) => trackEvent('stocktake_started', { item_count: itemCount });
+export const trackStocktakeFinished = (expected, missing, extra) =>
+  trackEvent('stocktake_finished', { expected_count: expected, missing_count: missing, extra_count: extra });

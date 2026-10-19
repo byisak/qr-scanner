@@ -537,7 +537,6 @@ export default function GeneratorScreen() {
   useFocusEffect(
     useCallback(() => {
       // 화면 조회 추적
-      trackScreenView('Generator', 'GeneratorScreen');
 
       const loadSelectedLocation = async () => {
         try {

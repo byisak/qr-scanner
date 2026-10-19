@@ -51,10 +51,10 @@ export function useTrackingPermission() {
       }
 
       // iOS: 광고를 쓰지 않으면 추적(ATT)을 묻지 않는다 (추적할 것이 없는데 묻는 건 심사 거절 사유).
-      // 사용 분석은 따로 동의하기 전까지 끈다
+      // 사용 분석(광고 ID 없이, 추적에 쓰지 않음)은 안드로이드처럼 기본으로 켜고 설정에서 끌 수 있게 한다
       if (!ADS_ENABLED) {
         AsyncStorage.getItem('@analytics_consent')
-          .then(consent => (consent === null ? setAnalyticsConsent(false) : null))
+          .then(consent => (consent === null ? setAnalyticsConsent(true) : null))
           .catch(() => {});
         setPermissionStatus('denied');
         setIsLoading(false);

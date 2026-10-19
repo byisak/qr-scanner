@@ -17,6 +17,7 @@ import {
   loadStocktakes, upsertStocktake, deleteStocktake, setActiveStocktake, summarizeStocktake,
   stocktakeStatusOf, setStocktakeCount, stocktakeCsv, ACTIVE_STOCKTAKE_KEY,
 } from '../utils/stocktake';
+import { trackStocktakeFinished } from '../utils/analytics';
 
 const FILTERS = ['todo', 'missing', 'partial', 'complete', 'over', 'extra', 'all'];
 
@@ -78,6 +79,7 @@ export default function StocktakeDetailScreen() {
         onPress: async () => {
           await persist({ ...stocktake, finishedAt: Date.now() });
           await setActiveStocktake(null);
+          trackStocktakeFinished(sum.total, sum.missing + sum.partial, sum.extra);
           setIsActive(false);
         },
       },

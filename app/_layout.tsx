@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { setupNotificationListeners, cancelLotteryNotification } from '../utils/lotteryNotification';
@@ -17,6 +17,7 @@ import { FeedbackProvider } from '../contexts/FeedbackContext';
 import PaperThemeProvider from '../contexts/PaperThemeProvider';
 import { FontAssets } from '../constants/Fonts';
 import { useTrackingPermission } from '../hooks/useTrackingPermission';
+import { trackScreenView } from '../utils/analytics';
 import AppLockScreen from '../components/AppLockScreen';
 
 // Keep the splash screen visible while we fetch resources
@@ -26,6 +27,14 @@ export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts(FontAssets);
   const { isLoading: isTrackingLoading } = useTrackingPermission();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // 모든 화면 조회를 한 곳에서 기록 (Firebase가 화면별 조회 수·평균 참여 시간을 계산)
+  useEffect(() => {
+    if (!pathname) return;
+    const name = pathname === '/' ? 'scan' : pathname.replace(/^\//, '');
+    trackScreenView(name);
+  }, [pathname]);
 
   useEffect(() => {
     if ((fontsLoaded || fontError) && !isTrackingLoading) {

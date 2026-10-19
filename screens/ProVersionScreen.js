@@ -1,5 +1,5 @@
 // screens/ProVersionScreen.js - Pro 버전 구매 페이지
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialPressable from '../components/MaterialPressable';
+import { trackPaywallView } from '../utils/analytics';
 
 // Pro 기능 목록 - 실제 앱에 구현된 기능들 (11개)
 const PRO_FEATURES = [
@@ -39,6 +40,8 @@ export default function ProVersionScreen() {
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const colors = isDark ? Colors.dark : Colors.light;
+
+  useEffect(() => { trackPaywallView('pro_version'); }, []);
 
   const handlePurchase = () => {
     Alert.alert(

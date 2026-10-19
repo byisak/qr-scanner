@@ -21,6 +21,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
+import { trackExport } from '../utils/analytics';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -196,6 +197,7 @@ export default function ExportHistoryScreen() {
           dialogTitle: t('exportHistory.exportCSV'),
           UTI: 'public.comma-separated-values-text',
         });
+        trackExport('csv', selectedGroups.length, selectedGroups.reduce((n, g) => n + (scanHistory[g] || []).length, 0));
       } else {
         Alert.alert(t('exportHistory.exportSuccess'), `${t('exportHistory.fileSaved')}\n${fileUri}`);
       }
@@ -285,6 +287,7 @@ export default function ExportHistoryScreen() {
           dialogTitle: t('exportHistory.exportTXT'),
           UTI: 'public.plain-text',
         });
+        trackExport('txt', selectedGroups.length, selectedGroups.reduce((n, g) => n + (scanHistory[g] || []).length, 0));
       } else {
         Alert.alert(t('exportHistory.exportSuccess'), `${t('exportHistory.fileSaved')}\n${fileUri}`);
       }
