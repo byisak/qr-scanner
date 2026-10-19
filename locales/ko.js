@@ -805,7 +805,20 @@ export default {
     cannotEditDefault: '기본 그룹은 이름을 변경할 수 없어요.',
     emptyName: '그룹 이름을 입력해주세요.',
     selectGroup: '그룹 선택',
-    dragToReorder: '≡ 아이콘을 길게 눌러 순서를 변경하세요',
+    dragToReorder: '≡ 를 길게 눌러 끌면 순서를 바꿀 수 있어요',
+    edit: '편집',
+    done: '완료',
+    selectHint: '삭제할 그룹을 선택하세요',
+    selectAll: '전체 선택',
+    deselectAll: '선택 해제',
+    deleteSelected: '삭제 ({{count}})',
+    deleteManyTitle: '그룹 {{count}}개 삭제',
+    deleteManyMessage: '스캔 기록 {{records}}건도 함께 삭제돼요.',
+    deleteOneMessage: '\'{{name}}\' 그룹과 스캔 기록 {{records}}건이 삭제돼요.',
+    deleteOneEmpty: '\'{{name}}\' 그룹을 삭제할까요? 저장된 기록은 없어요.',
+    deleteManyEmpty: '저장된 스캔 기록은 없어요.',
+    deletedCount: '그룹 {{count}}개를 삭제했어요',
+    undo: '실행 취소',
   },
 
   // 내보내기 화면
@@ -2240,6 +2253,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    sectionQuick: '빠른 설정',
     sectionScan: '스캔',
     sectionApp: '앱',
     scan: '스캔',

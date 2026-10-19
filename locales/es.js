@@ -800,7 +800,20 @@ export default {
     cannotEditDefault: 'No se puede cambiar el nombre del grupo predeterminado.',
     emptyName: 'Por favor, ingresa un nombre de grupo.',
     selectGroup: 'Seleccionar grupo',
-    dragToReorder: 'Mantén presionado ≡ para reordenar',
+    dragToReorder: 'Mantén pulsado ≡ y arrastra para reordenar',
+    edit: 'Editar',
+    done: 'Listo',
+    selectHint: 'Selecciona los grupos que quieres eliminar',
+    selectAll: 'Seleccionar todo',
+    deselectAll: 'Deseleccionar todo',
+    deleteSelected: 'Eliminar ({{count}})',
+    deleteManyTitle: 'Eliminar {{count}} grupos',
+    deleteManyMessage: 'También se eliminarán {{records}} registros de escaneo.',
+    deleteOneMessage: 'Se eliminarán «{{name}}» y sus {{records}} registros de escaneo.',
+    deleteOneEmpty: '¿Eliminar el grupo "{{name}}"? No tiene registros de escaneo.',
+    deleteManyEmpty: 'Estos grupos no tienen registros de escaneo.',
+    deletedCount: 'Se eliminaron {{count}} grupo(s)',
+    undo: 'Deshacer',
   },
 
   // Pantalla de exportar historial
@@ -2218,6 +2231,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    sectionQuick: 'Ajustes rápidos',
     sectionScan: 'Escaneo',
     sectionApp: 'App',
     scan: 'Escaneo',

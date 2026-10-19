@@ -800,7 +800,20 @@ export default {
     cannotEditDefault: '无法重命名默认分组。',
     emptyName: '请输入分组名称。',
     selectGroup: '选择分组',
-    dragToReorder: '长按≡图标可调整顺序',
+    dragToReorder: '长按 ≡ 并拖动即可调整顺序',
+    edit: '编辑',
+    done: '完成',
+    selectHint: '选择要删除的分组',
+    selectAll: '全选',
+    deselectAll: '取消全选',
+    deleteSelected: '删除 ({{count}})',
+    deleteManyTitle: '删除 {{count}} 个分组',
+    deleteManyMessage: '{{records}} 条扫描记录也会一并删除。',
+    deleteOneMessage: '将删除“{{name}}”及其 {{records}} 条扫描记录。',
+    deleteOneEmpty: '要删除“{{name}}”分组吗?没有扫描记录。',
+    deleteManyEmpty: '这些分组没有扫描记录。',
+    deletedCount: '已删除 {{count}} 个分组',
+    undo: '撤销',
   },
 
   // 导出界面
@@ -2218,6 +2231,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    sectionQuick: '快捷设置',
     sectionScan: '扫描',
     sectionApp: '应用',
     scan: '扫描',

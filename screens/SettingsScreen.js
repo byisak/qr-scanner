@@ -12,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   ScrollView,
   Platform,
+  Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MaterialPressable from '../components/MaterialPressable';
@@ -41,7 +42,7 @@ export default function SettingsScreen() {
   const { language, t, fonts } = useLanguage();
   const { themeMode, isDark } = useTheme();
   const { user, isLoggedIn } = useAuth();
-  const { devModeEnabled } = useFeatureLock();
+  const { devModeEnabled, isLocked, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const tabBarOverlap = useTabBarOverlap(); // 탭바에 가려지는 높이 (목록 끝 여백)
@@ -54,24 +55,46 @@ export default function SettingsScreen() {
   const [hapticEnabled, setHapticEnabled] = useState(true);
   const [hapticIntensity, setHapticIntensity] = useState('medium');
   const [workOnCount, setWorkOnCount] = useState(0);
+  // 빠른 설정 (첫 페이지에서 바로 켜고 끄는 것)
+  const [resultAutoOpen, setResultAutoOpen] = useState(true);
+  const [realtimeSyncOn, setRealtimeSyncOn] = useState(false);
+  const [realtimeExplained, setRealtimeExplained] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       (async () => {
         try {
-          const [[, ss], [, h]] = await AsyncStorage.multiGet(['scanSoundEnabled', 'hapticEnabled']);
+          const [[, ss], [, h], [, rwa], [, rex]] = await AsyncStorage.multiGet(['scanSoundEnabled', 'hapticEnabled', 'resultWindowAutoOpen', 'realtimeSyncExplained']);
           setScanSoundEnabled(ss === null ? true : ss === 'true');
           setHapticEnabled(h === null ? true : h === 'true');
+          setResultAutoOpen(rwa === null ? true : rwa === 'true');
+          setRealtimeExplained(rex === 'true');
           const { intensity } = await loadHapticSettings();
           setHapticIntensity(intensity);
           const states = await loadWorkFeatureStates();
           setWorkOnCount(COUNTED_WORK_FEATURES.filter(key => states[key]).length);
+          setRealtimeSyncOn(!!states.realtimeSync);
         } catch (error) {
           console.error('Load settings summary error:', error);
         }
       })();
     }, [])
   );
+
+  // 빠른 설정: 스위치는 바로 저장한다 (하위 화면과 같은 키)
+  const switchColors = {
+    trackColor: { true: colors.primary, false: colors.switchOff },
+    thumbColor: '#fff',
+    ios_backgroundColor: colors.switchOff,
+  };
+  const saveFlag = (key, setter) => async (value) => {
+    setter(value);
+    try { await AsyncStorage.setItem(key, value.toString()); } catch (error) { console.error('Save quick setting error:', key, error); }
+  };
+  const openRealtimeSync = () => {
+    const go = () => router.push(realtimeExplained ? '/realtime-sync-settings' : '/realtime-sync-explanation');
+    if (isLocked('realtimeSync')) showUnlockAlert('realtimeSync', go); else go();
+  };
 
   // 상단 그라데이션은 화면 바탕색에서 투명으로
   const bgRgb = [1, 3, 5].map(i => parseInt(colors.background.slice(i, i + 2), 16)).join(',');
@@ -155,6 +178,28 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
           </MaterialPressable>
         )}
+
+        {/* 빠른 설정: 자주 바꾸는 것만 첫 페이지에 (나머지는 아래 묶음 안에) */}
+        <SectionHeader {...rowProps} title={t('settingsHub.sectionQuick')} />
+        <Group colors={colors}>
+          <SettingRow {...rowProps} iconBox icon="volume-high-outline" label={t('settings.scanSound')}>
+            <Switch value={scanSoundEnabled} onValueChange={saveFlag('scanSoundEnabled', setScanSoundEnabled)} {...switchColors} accessibilityLabel={t('settings.scanSound')} />
+          </SettingRow>
+          <SettingRow {...rowProps} iconBox icon="phone-portrait-outline" label={t('settingsHub.vibration')}>
+            <Switch value={hapticEnabled} onValueChange={saveFlag('hapticEnabled', setHapticEnabled)} {...switchColors} accessibilityLabel={t('settingsHub.vibration')} />
+          </SettingRow>
+          <SettingRow {...rowProps} iconBox icon="open-outline" label={t('settingsHub.resultAutoOpen')} desc={t('settingsHub.resultAutoOpenDesc')}>
+            <Switch value={resultAutoOpen} onValueChange={saveFlag('resultWindowAutoOpen', setResultAutoOpen)} {...switchColors} accessibilityLabel={t('settingsHub.resultAutoOpen')} />
+          </SettingRow>
+          <SettingRow {...rowProps} iconBox icon="desktop-outline" label={t('settingsHub.realtimeSync')} onPress={openRealtimeSync}>
+            <NavRight {...rowProps} lockFeature="realtimeSync"
+              value={realtimeSyncOn ? t('settings.statusOn') : t('settings.statusOff')}
+              valueColor={realtimeSyncOn ? colors.success : colors.textSecondary} />
+          </SettingRow>
+          <SettingRow {...rowProps} iconBox icon="download-outline" label={t('settings.exportHistory')} desc={t('settings.exportHistoryDesc')} onPress={() => router.push('/export-history')}>
+            <NavRight {...rowProps} />
+          </SettingRow>
+        </Group>
 
         {/* 배너 광고 - AD_ENABLED일 때만 표시 */}
         {AD_ENABLED && (

@@ -800,7 +800,20 @@ export default {
     cannotEditDefault: 'デフォルトグループの名前は変更できません。',
     emptyName: 'グループ名を入力してください。',
     selectGroup: 'グループを選択',
-    dragToReorder: '≡アイコンを長押しして順序を変更',
+    dragToReorder: '≡ を長押ししてドラッグすると並べ替えられます',
+    edit: '編集',
+    done: '完了',
+    selectHint: '削除するグループを選択してください',
+    selectAll: 'すべて選択',
+    deselectAll: '選択解除',
+    deleteSelected: '削除 ({{count}})',
+    deleteManyTitle: '{{count}}個のグループを削除',
+    deleteManyMessage: 'スキャン履歴{{records}}件も一緒に削除されます。',
+    deleteOneMessage: '「{{name}}」とスキャン履歴{{records}}件が削除されます。',
+    deleteOneEmpty: '「{{name}}」グループを削除しますか?スキャン履歴はありません。',
+    deleteManyEmpty: 'スキャン履歴はありません。',
+    deletedCount: '{{count}}個のグループを削除しました',
+    undo: '元に戻す',
   },
 
   // エクスポート画面
@@ -2218,6 +2231,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    sectionQuick: 'クイック設定',
     sectionScan: 'スキャン',
     sectionApp: 'アプリ',
     scan: 'スキャン',

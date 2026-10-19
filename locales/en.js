@@ -816,7 +816,20 @@ export default {
     cannotEditDefault: 'Cannot rename default group.',
     emptyName: 'Please enter a group name.',
     selectGroup: 'Select Group',
-    dragToReorder: 'Hold ≡ icon to reorder',
+    dragToReorder: 'Press and drag ≡ to reorder',
+    edit: 'Edit',
+    done: 'Done',
+    selectHint: 'Select groups to delete',
+    selectAll: 'Select all',
+    deselectAll: 'Deselect all',
+    deleteSelected: 'Delete ({{count}})',
+    deleteManyTitle: 'Delete {{count}} groups',
+    deleteManyMessage: '{{records}} scan records will also be deleted.',
+    deleteOneMessage: '\'{{name}}\' and its {{records}} scan records will be deleted.',
+    deleteOneEmpty: 'Delete the "{{name}}" group? It has no scan records.',
+    deleteManyEmpty: 'These groups have no scan records.',
+    deletedCount: 'Deleted {{count}} group(s)',
+    undo: 'Undo',
   },
 
   // Export history screen
@@ -2250,6 +2263,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    sectionQuick: 'Quick settings',
     sectionScan: 'Scanning',
     sectionApp: 'App',
     scan: 'Scanning',
