@@ -1462,7 +1462,7 @@ export default function RealtimeSyncSettingsScreen() {
                   />
                   <View style={styles.rowText}>
                     <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
-                      {selectedIsPublic ? (t('settings.public') || '공개') : (t('settings.private') || '비공개')}
+                      {t('settings.private') || '비공개'}
                     </Text>
                     <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                       {selectedIsPublic
@@ -1470,9 +1470,11 @@ export default function RealtimeSyncSettingsScreen() {
                         : (t('settings.privateDesc') || '링크로 접근 불가')}
                     </Text>
                   </View>
+                  {/* 스위치 켜짐 = 비공개 (이름은 고정, 상태는 스위치로만 표시) */}
                   <Switch
-                    value={selectedIsPublic}
-                    onValueChange={setSelectedIsPublic}
+                    value={!selectedIsPublic}
+                    onValueChange={(on) => setSelectedIsPublic(!on)}
+                    accessibilityLabel={t('settings.private') || '비공개'}
                     {...switchColors}
                   />
                 </View>
@@ -1611,7 +1613,7 @@ export default function RealtimeSyncSettingsScreen() {
                   />
                   <View style={styles.rowText}>
                     <Text style={[styles.label, { color: colors.text, fontFamily: fonts.medium }]}>
-                      {t('settings.publicSession') || '공개 세션'}
+                      {t('settings.private') || '비공개'}
                     </Text>
                     <Text style={[styles.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
                       {newSessionIsPublic
@@ -1620,8 +1622,9 @@ export default function RealtimeSyncSettingsScreen() {
                     </Text>
                   </View>
                   <Switch
-                    value={newSessionIsPublic}
-                    onValueChange={setNewSessionIsPublic}
+                    value={!newSessionIsPublic}
+                    onValueChange={(on) => setNewSessionIsPublic(!on)}
+                    accessibilityLabel={t('settings.private') || '비공개'}
                     {...switchColors}
                   />
                 </View>
