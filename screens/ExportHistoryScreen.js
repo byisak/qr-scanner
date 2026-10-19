@@ -65,7 +65,8 @@ export default function ExportHistoryScreen() {
         loadLabelSettings().then(ls => setLabelCategories(ls.categories)).catch(() => {});
 
         if (groupsData) {
-          const parsed = JSON.parse(groupsData);
+          // 기본 그룹은 저장된 이름('default' 등) 대신 현재 언어의 '기본 그룹'으로 보여 준다
+          const parsed = JSON.parse(groupsData).map(g => (g.id === DEFAULT_GROUP_ID ? { ...g, name: t('groupEdit.defaultGroup') } : g));
           setGroups(parsed.length > 0 ? parsed : [{ id: DEFAULT_GROUP_ID, name: t('groupEdit.defaultGroup'), createdAt: Date.now() }]);
           // 기본적으로 모든 그룹 선택
           setSelectedGroups(parsed.map(g => g.id));
