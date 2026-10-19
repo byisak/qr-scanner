@@ -160,7 +160,8 @@ export default function RegisterScreen() {
         Alert.alert(t('settings.success'), t('auth.signupSuccess'), [
           {
             text: t('common.confirm'),
-            onPress: () => router.dismissAll(),
+            // 회원가입·로그인 화면 두 개를 닫고 로그인 화면을 연 곳으로 돌아간다
+            onPress: () => router.dismiss(2),
           },
         ]);
       } else {

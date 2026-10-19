@@ -104,7 +104,8 @@ export default function LoginScreen() {
       if (result.success) {
         // 광고 기록 서버 동기화
         await syncAdRecords(result.user?.id);
-        router.dismissAll();
+        // 로그인 화면을 연 곳(예: 실시간 PC 전송 설정)으로 돌아간다. 구글·애플 로그인과 같게
+        if (router.canGoBack()) router.back(); else router.replace('/');
       } else {
         // 서버에서 받은 구체적인 에러 메시지 표시
         const errorMessage = result.error || t('auth.errorLoginFailed');
