@@ -1,5 +1,5 @@
 // screens/RealtimeSyncSettingsScreen.js - 실시간 서버전송 설정 화면
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -89,6 +89,8 @@ export default function RealtimeSyncSettingsScreen() {
 
   // 실시간 서버전송 관련 상태
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
+  // 로그인 안 된 상태에서 켜려고 했으면 기억해 두고, 로그인하고 돌아오면 바로 켠다
+  const enableAfterLoginRef = useRef(false);
   const [sessionUrls, setSessionUrls] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -399,6 +401,13 @@ export default function RealtimeSyncSettingsScreen() {
 
     return allSessions;
   }, [getToken, user]);
+
+  useEffect(() => {
+    if (isLoggedIn && enableAfterLoginRef.current) {
+      enableAfterLoginRef.current = false;
+      setRealtimeSyncEnabled(true);
+    }
+  }, [isLoggedIn]);
 
   // 초기 로드
   useEffect(() => {
@@ -1182,7 +1191,8 @@ export default function RealtimeSyncSettingsScreen() {
                 onValueChange={(value) => {
                   // 켜려고 할 때만 로그인 체크
                   if (value && !isLoggedIn) {
-                    // 로그인되지 않은 경우 로그인 화면으로 이동
+                    // 로그인되지 않은 경우 로그인 화면으로 이동 (로그인하면 아래 effect가 켬)
+                    enableAfterLoginRef.current = true;
                     router.push('/login');
                     return;
                   }
