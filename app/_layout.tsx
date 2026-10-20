@@ -19,6 +19,7 @@ import { FontAssets } from '../constants/Fonts';
 import { useTrackingPermission } from '../hooks/useTrackingPermission';
 import { trackScreenView } from '../utils/analytics';
 import { loadItems } from '../utils/itemMaster';
+import { initPcKeyboard } from '../utils/pcKeyboard';
 import AppLockScreen from '../components/AppLockScreen';
 
 // Keep the splash screen visible while we fetch resources
@@ -47,6 +48,7 @@ export default function RootLayout() {
   useEffect(() => {
     loadHapticSettings();
     loadItems().catch(() => {});
+    initPcKeyboard().catch(() => {}); // PC 키보드 입력을 켜 뒀으면 키보드로 등록하고 마지막 PC에 연결
   }, []);
 
   // 복권 알림 탭 → 히스토리 탭으로 이동 (이전엔 어디서도 연결돼 있지 않았다)

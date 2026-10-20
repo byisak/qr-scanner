@@ -1,0 +1,7 @@
+{
+  "name": "bluetooth-hid",
+  "version": "1.0.0",
+  "description": "휴대폰을 PC의 블루투스 키보드로 등록해 스캔 값을 입력하는 로컬 Expo 모듈 (Android 9+)",
+  "main": "index.js",
+  "private": true
+}

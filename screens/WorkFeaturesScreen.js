@@ -9,6 +9,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { getActiveStocktake } from '../utils/stocktake';
 import { loadItems } from '../utils/itemMaster';
+import { isPcKeyboardAvailable, PC_KEYBOARD_ENABLED_KEY } from '../utils/pcKeyboard';
 import { loadScanRules } from '../utils/scanRulesStore';
 import { LABEL_AUTO_SPLIT_KEY } from '../utils/labelCategories';
 import { SettingsSubScreen, SectionHeader, Group, SettingRow, NavRight, SettingsHint, settingsStyles as s, useSettingsUi } from '../components/SettingsKit';
@@ -44,6 +45,7 @@ export default function WorkFeaturesScreen() {
 
   const [states, setStates] = useState({});
   const [itemCount, setItemCount] = useState(0); // 품목 마스터 건수
+  const [pcKeyboardOn, setPcKeyboardOn] = useState(false);
   const [quantityMode, setQuantityMode] = useState(false); // 같은 코드 → 수량 +1
   const [nfcReadEnabled, setNfcReadEnabled] = useState(true); // NFC 태그 읽기
   const [on, setOn] = useState(false); // 스캔 연동 URL 사용
@@ -59,6 +61,7 @@ export default function WorkFeaturesScreen() {
           const next = await loadWorkFeatureStates();
           setStates(next);
           loadItems().then(list => setItemCount(list.length)).catch(() => {});
+          setPcKeyboardOn((await AsyncStorage.getItem(PC_KEYBOARD_ENABLED_KEY)) === 'true');
           setQuantityMode(next.quantityMode);
           setNfcReadEnabled(next.nfc);
           setOn(next.scanUrl);
@@ -221,6 +224,16 @@ export default function WorkFeaturesScreen() {
           <NavRight {...rowProps} lockFeature="productSearch" {...statusProps(!!states.productSearch)} />
         </SettingRow>
         */}
+        {/* PC 키보드 입력 (블루투스, Android 9+) */}
+        {isPcKeyboardAvailable && (
+          <SettingRow {...rowProps}
+            label={t('pcKeyboard.title')}
+            desc={t('pcKeyboard.rowDesc')}
+            onPress={() => router.push('/pc-keyboard')}
+          >
+            <NavRight {...rowProps} {...statusProps(pcKeyboardOn)} />
+          </SettingRow>
+        )}
       </Group>
 
       {/* 기타 */}

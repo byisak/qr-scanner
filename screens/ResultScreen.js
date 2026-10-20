@@ -27,6 +27,7 @@ import { findHistoryItem, updateHistoryItem } from '../utils/historyItem';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern } from '../utils/labelCategories';
 import { parseWifiQr } from '../utils/wifiQr';
 import { lookupItem, getItemCount } from '../utils/itemMaster';
+import { checkUrlSafety } from '../utils/urlSafety';
 
 // 바코드 타입 표시 이름 (다른 화면의 'EAN-13' 표기와 맞춘다)
 const BARCODE_TYPE_LABELS = {
@@ -187,6 +188,15 @@ export default function ResultScreen() {
   const labelInfo = useMemo(() => labelOfItem({ code: displayText }, labelCategories), [displayText, labelCategories]);
   const gs1Info = useMemo(() => parseGs1(displayText), [displayText]);
 
+  // URL 안전 검사: 알려진 위험 사이트면 경고하고, 열기 전에 한 번 더 묻는다
+  const [urlSafety, setUrlSafety] = useState({ status: 'unknown', threats: [] });
+  useEffect(() => {
+    if (!isUrl || isGeneratedCode) return undefined;
+    let alive = true;
+    checkUrlSafety(displayText).then(r => { if (alive) setUrlSafety(r); });
+    return () => { alive = false; };
+  }, [displayText, isUrl, isGeneratedCode]);
+
   // 품목 마스터: 등록된 코드면 품명 카드, 아니면(품목을 쓰는 중일 때만) "품목으로 등록"
   const itemEligible = !!displayText && !isUrl && !isGeneratedCode && (!isQRCode || parsedContent.type === QR_CONTENT_TYPES.TEXT);
   const [masterItem, setMasterItem] = useState(null);
@@ -313,7 +323,18 @@ export default function ResultScreen() {
     }
   };
 
-  const handleOpenUrl = async () => {
+  const handleOpenUrl = () => {
+    if (urlSafety.status === 'danger' && !isEditing) {
+      Alert.alert(t('urlSafety.confirmTitle'), t('urlSafety.confirmMessage'), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('urlSafety.openAnyway'), style: 'destructive', onPress: openUrlNow },
+      ]);
+      return;
+    }
+    openUrlNow();
+  };
+
+  const openUrlNow = async () => {
     const urlToOpen = isEditing ? editedText : displayText;
     if (urlToOpen.startsWith('http://') || urlToOpen.startsWith('https://')) {
       if (urlOpenMode === 'safari' || urlOpenMode === 'default') {
@@ -893,6 +914,25 @@ export default function ResultScreen() {
             )}
           </View>
 
+          {/* URL 안전 검사 결과 */}
+          {!isEditing && isUrl && urlSafety.status === 'danger' && (
+            <View style={[styles.safetyBanner, { backgroundColor: colors.errorSoft }]} accessibilityRole="alert">
+              <Ionicons name="warning" size={18} color={colors.error} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.safetyTitle, { color: colors.error, fontFamily: fonts.semiBold }]}>{t('urlSafety.dangerTitle')}</Text>
+                <Text style={[styles.safetyDesc, { color: colors.text, fontFamily: fonts.regular }]}>
+                  {t(`urlSafety.threat.${['MALWARE', 'SOCIAL_ENGINEERING', 'UNWANTED_SOFTWARE'].includes(urlSafety.threats[0]) ? urlSafety.threats[0] : 'UNKNOWN'}`)}
+                </Text>
+              </View>
+            </View>
+          )}
+          {!isEditing && isUrl && urlSafety.status === 'safe' && (
+            <View style={styles.safetySafe}>
+              <Ionicons name="shield-checkmark-outline" size={14} color={colors.success} />
+              <Text style={[styles.safetySafeText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('urlSafety.safe')}</Text>
+            </View>
+          )}
+
           {/* QR 콘텐츠 정보 표시 (WiFi, 위치, 연락처, 일정 등) */}
           {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT && parsedContent.type !== QR_CONTENT_TYPES.URL && (
             <QRContentInfoDisplay
@@ -1307,6 +1347,18 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingVertical: 4,
   },
+  safetyBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    borderRadius: RADIUS.control,
+    padding: 12,
+    marginTop: 12,
+  },
+  safetyTitle: { fontSize: 15 },
+  safetyDesc: { fontSize: 13, marginTop: 2, lineHeight: 18 },
+  safetySafe: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+  safetySafeText: { fontSize: 12 },
   itemCard: {
     flexDirection: 'row',
     alignItems: 'center',

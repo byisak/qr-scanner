@@ -7,6 +7,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { loadHardwareKeySettings, confirmKeyOf } from '../utils/hardwareKeys';
 import { SettingsSubScreen, SectionHeader, Group, SettingRow, NavRight, SettingsHint, useSettingsUi } from '../components/SettingsKit';
+import { URL_SAFETY_KEY } from '../utils/urlSafety';
 
 export default function ScanSettingsScreen() {
   const router = useRouter();
@@ -19,6 +20,7 @@ export default function ScanSettingsScreen() {
   const [resultWindowAutoOpen, setResultWindowAutoOpen] = useState(true); // 결과창 자동 열림 (기본값: true)
   const [singleCodeShowValue, setSingleCodeShowValue] = useState(false); // 일반 스캔에서도 인식된 값 표시
   const [urlOpenMode, setUrlOpenMode] = useState('inApp');
+  const [urlSafetyOn, setUrlSafetyOn] = useState(true); // 링크 안전 검사 (기본 켬)
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
   const [photoQuality, setPhotoQuality] = useState('0.5'); // 기본값: 중간
   const [hardwareKeySettings, setHardwareKeySettings] = useState({ keyMap: {}, scanConfirmMode: 'auto' });
@@ -43,6 +45,7 @@ export default function ScanSettingsScreen() {
           setSingleCodeShowValue((await AsyncStorage.getItem('singleCodeShowValue')) === 'true');
           const savedUrlOpenMode = await AsyncStorage.getItem('urlOpenMode');
           if (savedUrlOpenMode) setUrlOpenMode(savedUrlOpenMode);
+          setUrlSafetyOn((await AsyncStorage.getItem(URL_SAFETY_KEY)) !== 'false');
           const p = await AsyncStorage.getItem('photoSaveEnabled');
           // null이면 기본값 true (스캔 화면·사진 저장 화면과 같은 기본값)
           setPhotoSaveEnabled(p === null ? true : p === 'true');
@@ -137,6 +140,16 @@ export default function ScanSettingsScreen() {
           onPress={() => router.push('/url-open-mode-selection')}
         >
           <NavRight {...rowProps} value={t(`urlOpenMode.${urlOpenMode}`)} />
+        </SettingRow>
+
+        {/* 링크 안전 검사 */}
+        <SettingRow {...rowProps} label={t('urlSafety.settingLabel')} desc={t('urlSafety.settingDesc')}>
+          <Switch
+            value={urlSafetyOn}
+            onValueChange={(v) => { setUrlSafetyOn(v); AsyncStorage.setItem(URL_SAFETY_KEY, v ? 'true' : 'false').catch(() => {}); }}
+            {...switchColors}
+            accessibilityLabel={t('urlSafety.settingLabel')}
+          />
         </SettingRow>
       </Group>
 

@@ -88,6 +88,7 @@ import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
 import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
 import AdBanner from '../components/AdBanner';
+import { sendScanToPc } from '../utils/pcKeyboard';
 
 function ScannerScreen() {
   const router = useRouter();
@@ -1197,6 +1198,7 @@ function ScannerScreen() {
   // extra: 기록 항목에 같이 넣을 부가 정보 (라벨 카테고리·필드 값·위치 등). 없는 키는 건드리지 않는다
   const saveHistory = useCallback(async (code, url = null, photoUri = null, barcodeType = 'qr', ecLevel = null, targetGroupId = null, extra = null) => {
     if (reticleRef.current) reticleRef.current.confirm();
+    sendScanToPc(code); // PC 키보드 입력이 켜져 있고 연결돼 있으면 PC에 바로 입력 (기다리지 않음)
     try {
       // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
       let selectedGroupId = targetGroupId || currentGroupId;
