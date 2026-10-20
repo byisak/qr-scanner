@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -26,6 +26,7 @@ import { parseGs1, gs1AiLabel, gs1DisplayValue } from '../utils/gs1';
 import { findHistoryItem, updateHistoryItem } from '../utils/historyItem';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern } from '../utils/labelCategories';
 import { parseWifiQr } from '../utils/wifiQr';
+import { lookupItem, getItemCount } from '../utils/itemMaster';
 
 // 바코드 타입 표시 이름 (다른 화면의 'EAN-13' 표기와 맞춘다)
 const BARCODE_TYPE_LABELS = {
@@ -185,6 +186,21 @@ export default function ResultScreen() {
 
   const labelInfo = useMemo(() => labelOfItem({ code: displayText }, labelCategories), [displayText, labelCategories]);
   const gs1Info = useMemo(() => parseGs1(displayText), [displayText]);
+
+  // 품목 마스터: 등록된 코드면 품명 카드, 아니면(품목을 쓰는 중일 때만) "품목으로 등록"
+  const itemEligible = !!displayText && !isUrl && !isGeneratedCode && (!isQRCode || parsedContent.type === QR_CONTENT_TYPES.TEXT);
+  const [masterItem, setMasterItem] = useState(null);
+  const [usesItemMaster, setUsesItemMaster] = useState(false);
+  useFocusEffect(useCallback(() => {
+    if (!itemEligible) return undefined;
+    let alive = true;
+    lookupItem(displayText).then(found => {
+      if (!alive) return;
+      setMasterItem(found);
+      setUsesItemMaster(getItemCount() > 0);
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [displayText, itemEligible]));
 
   // 기록 항목의 메모·수량 (스캔 직후엔 저장이 조금 늦을 수 있어 한 번 더 읽는다)
   const [memo, setMemo] = useState('');
@@ -820,6 +836,36 @@ export default function ResultScreen() {
             </View>
           )}
 
+          {/* 품목 마스터 */}
+          {!isEditing && itemEligible && masterItem && (
+            <MaterialPressable
+              style={[styles.itemCard, { backgroundColor: colors.primarySoft }]}
+              onPress={() => router.push({ pathname: '/item-edit', params: { code: masterItem.code } })}
+              accessibilityRole="button"
+              accessibilityLabel={`${masterItem.name}. ${t('itemMaster.editItem')}`}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.itemName, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={2}>{masterItem.name}</Text>
+                {!![masterItem.spec, masterItem.unit, masterItem.location].filter(Boolean).length && (
+                  <Text style={[styles.itemMeta, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+                    {[masterItem.spec, masterItem.unit, masterItem.location].filter(Boolean).join(' · ')}
+                  </Text>
+                )}
+              </View>
+              <Ionicons name="pricetag-outline" size={18} color={colors.primaryText} />
+            </MaterialPressable>
+          )}
+          {!isEditing && itemEligible && !masterItem && usesItemMaster && (
+            <MaterialPressable
+              style={[styles.itemRegister, { borderColor: colors.border }]}
+              onPress={() => router.push({ pathname: '/item-edit', params: { prefill: displayText } })}
+              accessibilityRole="button"
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.primaryText} />
+              <Text style={[styles.itemRegisterText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>{t('itemMaster.registerFromScan')}</Text>
+            </MaterialPressable>
+          )}
+
           {/* 스캔 데이터 */}
           <View style={styles.dataSection}>
             {isEditing ? (
@@ -1261,6 +1307,30 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingVertical: 4,
   },
+  itemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: RADIUS.control,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  itemName: { fontSize: 17 },
+  itemMeta: { fontSize: 13, marginTop: 2 },
+  itemRegister: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  itemRegisterText: { fontSize: 14 },
   labelCard: {
     borderRadius: RADIUS.control,
     paddingVertical: 4,

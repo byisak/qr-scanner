@@ -35,6 +35,7 @@ import { isDrawCompleted } from '../utils/lotteryApi';
 import { LotteryIcon } from '../components/LotteryIcons';
 import { LOTTERY_FEATURE_ENABLED } from '../utils/lotteryFeature';
 import MaterialPressable from '../components/MaterialPressable';
+import { loadItems, lookupItemSync, subscribeItems } from '../utils/itemMaster';
 
 const DEFAULT_GROUP_ID = 'default';
 const HISTORY_VIEW_GROUP_KEY = 'historyViewGroupId';
@@ -85,6 +86,12 @@ export default function HistoryScreen() {
   const [selectedGroupId, setSelectedGroupId] = useState(DEFAULT_GROUP_ID);
   const [scanHistory, setScanHistory] = useState({ [DEFAULT_GROUP_ID]: [] });
   const [query, setQuery] = useState('');
+  // 품목 마스터: 불러온 뒤 다시 그리도록 버전 숫자를 올린다 (목록 행에서 lookupItemSync)
+  const [itemsVersion, setItemsVersion] = useState(0);
+  useEffect(() => {
+    loadItems().then(() => setItemsVersion(v => v + 1)).catch(() => {});
+    return subscribeItems(() => setItemsVersion(v => v + 1));
+  }, []);
   const [filteredList, setFilteredList] = useState([]);
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
@@ -184,10 +191,11 @@ export default function HistoryScreen() {
     const q = query.toLowerCase();
     setFilteredList(
       currentHistory.filter(
-        (i) => (i.code && i.code.toLowerCase().includes(q)) || (i.url && i.url.toLowerCase().includes(q)),
+        (i) => (i.code && i.code.toLowerCase().includes(q)) || (i.url && i.url.toLowerCase().includes(q))
+          || (lookupItemSync(i.code)?.name || '').toLowerCase().includes(q),
       ),
     );
-  }, [query, currentHistory]);
+  }, [query, currentHistory, itemsVersion]);
 
   // 그룹 선택
   const selectGroup = async (groupId) => {
@@ -556,6 +564,7 @@ export default function HistoryScreen() {
             };
 
             const kind = getKindBadge(item, isQRCode, parsedContent, colors);
+            const masterItem = itemsVersion ? lookupItemSync(item.code) : null;
 
             // 보조 줄: 코드 종류 · 수량 · 라벨/GS1 요약 · 위치
             const labelSummary = formatLabelSummary(labelOfItem(item, labelCategories), 3, t);
@@ -625,6 +634,12 @@ export default function HistoryScreen() {
                 )}
 
                 <View style={s.rowBody}>
+                  {/* 품목 마스터에 있으면 품명을 먼저 */}
+                  {masterItem ? (
+                    <Text style={[s.itemName, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+                      {masterItem.name}{masterItem.spec ? ` · ${masterItem.spec}` : ''}
+                    </Text>
+                  ) : null}
                   {/* 1줄: 스캔값 */}
                   <Text style={[s.value, { color: colors.text }]} numberOfLines={1} ellipsizeMode="middle">
                     {item.code}
@@ -837,6 +852,10 @@ const s = StyleSheet.create({
   },
   rowTitle: {
     ...TYPE.body,
+  },
+  itemName: {
+    ...TYPE.body,
+    marginBottom: 1,
   },
   value: {
     fontFamily: MONO,

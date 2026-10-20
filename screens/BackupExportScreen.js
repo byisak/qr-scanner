@@ -24,6 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import MaterialPressable from '../components/MaterialPressable';
+import { exportItemsForBackup } from '../utils/itemMaster';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -170,6 +171,10 @@ export default function BackupExportScreen() {
           backupData.data[key] = value;
         }
       });
+
+      // 품목 마스터는 AsyncStorage가 아니라 파일에 있어 따로 담는다
+      const itemMaster = await exportItemsForBackup();
+      if (itemMaster) backupData.itemMaster = itemMaster;
 
       return backupData;
     } catch (error) {

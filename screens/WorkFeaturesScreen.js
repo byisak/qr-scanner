@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { getActiveStocktake } from '../utils/stocktake';
+import { loadItems } from '../utils/itemMaster';
 import { loadScanRules } from '../utils/scanRulesStore';
 import { LABEL_AUTO_SPLIT_KEY } from '../utils/labelCategories';
 import { SettingsSubScreen, SectionHeader, Group, SettingRow, NavRight, SettingsHint, settingsStyles as s, useSettingsUi } from '../components/SettingsKit';
@@ -42,6 +43,7 @@ export default function WorkFeaturesScreen() {
   const { t, colors, fonts, switchColors, rowProps, statusProps } = useSettingsUi();
 
   const [states, setStates] = useState({});
+  const [itemCount, setItemCount] = useState(0); // 품목 마스터 건수
   const [quantityMode, setQuantityMode] = useState(false); // 같은 코드 → 수량 +1
   const [nfcReadEnabled, setNfcReadEnabled] = useState(true); // NFC 태그 읽기
   const [on, setOn] = useState(false); // 스캔 연동 URL 사용
@@ -56,6 +58,7 @@ export default function WorkFeaturesScreen() {
         try {
           const next = await loadWorkFeatureStates();
           setStates(next);
+          loadItems().then(list => setItemCount(list.length)).catch(() => {});
           setQuantityMode(next.quantityMode);
           setNfcReadEnabled(next.nfc);
           setOn(next.scanUrl);
@@ -89,6 +92,15 @@ export default function WorkFeaturesScreen() {
           onPress={() => router.push('/stocktakes')}
         >
           <NavRight {...rowProps} {...statusProps(!!states.stocktake)} />
+        </SettingRow>
+
+        {/* 품목 관리 (코드 → 품명 사전) */}
+        <SettingRow {...rowProps}
+          label={t('itemMaster.title')}
+          desc={t('itemMaster.desc')}
+          onPress={() => router.push('/item-master')}
+        >
+          <NavRight {...rowProps} value={itemCount ? t('itemMaster.count', { count: itemCount }) : undefined} />
         </SettingRow>
 
         {/* 수량 누적 */}

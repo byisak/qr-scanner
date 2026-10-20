@@ -1,6 +1,7 @@
 // utils/stocktake.js - 재고 실사: 예상 목록을 불러와 스캔하면 일치·누락·초과를 센다
 // 매칭: 코드가 같거나, GS1 GTIN이 같거나, 라벨 대표 필드 값이 같으면 같은 품목으로 본다
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { lookupItemSync, codeKey } from './itemMaster';
 
 export const STOCKTAKES_KEY = 'stocktakes';
 export const ACTIVE_STOCKTAKE_KEY = 'activeStocktakeId';
@@ -43,7 +44,7 @@ export function createStocktake(name, items) {
     name: name && name.trim() ? name.trim() : new Date().toISOString().slice(0, 10),
     createdAt: Date.now(),
     finishedAt: null,
-    items: items.map(i => ({ code: i.code, name: i.name || '', expected: i.expected || 1, scanned: 0, lastAt: null })),
+    items: items.map(i => ({ code: i.code, name: i.name || lookupItemSync(i.code)?.name || '', expected: i.expected || 1, scanned: 0, lastAt: null })),
     extras: [], // 목록에 없는 코드 { code, scanned, lastAt }
   };
 }
@@ -54,7 +55,13 @@ export function recordStocktakeScan(stocktake, scan) {
   const qty = scan.qty && scan.qty > 0 ? scan.qty : 1;
   const now = Date.now();
   const candidates = [scan.code, scan.gtin, scan.keyValue].filter(Boolean);
-  const index = stocktake.items.findIndex(i => candidates.includes(i.code));
+  let index = stocktake.items.findIndex(i => candidates.includes(i.code));
+  if (index === -1) {
+    // 품목 마스터로 한 번 더: 박스 바코드(대체 코드)나 앞자리 0만 다른 코드도 같은 품목으로
+    const master = lookupItemSync(scan.code) || (scan.gtin ? lookupItemSync(scan.gtin) : null);
+    const keys = new Set([...candidates, ...(master ? [master.code, ...(master.altCodes || [])] : [])].map(codeKey));
+    index = stocktake.items.findIndex(i => keys.has(codeKey(i.code)));
+  }
   if (index !== -1) {
     const item = { ...stocktake.items[index] };
     item.scanned += qty;
@@ -110,7 +117,7 @@ export function stocktakeCsv(stocktake, t) {
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const header = [t('stocktake.csv.code'), t('stocktake.csv.name'), t('stocktake.csv.expected'), t('stocktake.csv.scanned'), t('stocktake.csv.diff'), t('stocktake.csv.status')];
   const rows = stocktake.items.map(i => [i.code, i.name, i.expected, i.scanned, i.scanned - i.expected, t(`stocktake.status.${stocktakeStatusOf(i)}`)]);
-  for (const e of stocktake.extras) rows.push([e.code, '', 0, e.scanned, e.scanned, t('stocktake.status.extra')]);
+  for (const e of stocktake.extras) rows.push([e.code, lookupItemSync(e.code)?.name || '', 0, e.scanned, e.scanned, t('stocktake.status.extra')]);
   return '﻿' + [header, ...rows].map(r => r.map(q).join(',')).join('\n') + '\n';
 }
 

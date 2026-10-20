@@ -22,6 +22,7 @@ import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { trackExport } from '../utils/analytics';
+import { loadItems, lookupItemSync } from '../utils/itemMaster';
 
 const DEFAULT_GROUP_ID = 'default';
 
@@ -64,6 +65,7 @@ export default function ExportHistoryScreen() {
         const groupsData = await AsyncStorage.getItem('scanGroups');
         const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
         loadLabelSettings().then(ls => setLabelCategories(ls.categories)).catch(() => {});
+        loadItems().catch(() => {}); // 내보내기 때 품명 열을 동기로 찾도록 미리
 
         if (groupsData) {
           // 기본 그룹은 저장된 이름('default' 등) 대신 현재 언어의 '기본 그룹'으로 보여 준다
@@ -131,7 +133,10 @@ export default function ExportHistoryScreen() {
     const hasMemo = anyItem(item => item.memo);
     const gs1Of = (item) => item.gs1 || parseGs1(item.code);
     const hasGs1 = anyItem(item => gs1Of(item));
+    // 품목 마스터에 있는 코드가 하나라도 있으면 품명·규격 열
+    const hasItem = anyItem(item => lookupItemSync(item.code));
     let csv = '\uFEFF' + t('exportHistory.csvHeader');
+    if (hasItem) csv += ',' + [t('itemMaster.fields.name'), t('itemMaster.fields.spec')].map(quote).join(',');
     if (hasLocation) csv += ',' + quote(t('exportHistory.locationColumn'));
     if (hasQuantity) csv += ',' + quote(t('quantity.title'));
     if (hasMemo) csv += ',' + quote(t('memo.title'));
@@ -149,6 +154,10 @@ export default function ExportHistoryScreen() {
         const code = `"${item.code.replace(/"/g, '""')}"`;
         const scanCount = item.scanCount || 1;
         csv += `${groupName},${code},${date},${scanCount}`;
+        if (hasItem) {
+          const it = lookupItemSync(item.code);
+          csv += ',' + [it?.name, it?.spec].map(quote).join(',');
+        }
         if (hasLocation) csv += ',' + quote(item.location || '');
         if (hasQuantity) csv += ',' + quote(typeof item.quantity === 'number' ? item.quantity : '');
         if (hasMemo) csv += ',' + quote(item.memo || '');
@@ -236,6 +245,10 @@ export default function ExportHistoryScreen() {
           const date = formatDate(item.timestamp);
           const scanCount = item.scanCount || 1;
           txt += `${t('exportHistory.codeLabel')}: ${item.code}\n`;
+          {
+            const it = lookupItemSync(item.code);
+            if (it) txt += `${t('itemMaster.fields.name')}: ${it.name}${it.spec ? ` (${it.spec})` : ''}\n`;
+          }
           txt += `${t('exportHistory.scanDateLabel')}: ${date}\n`;
           txt += `${t('exportHistory.duplicateLabel')}: ${scanCount}\n`;
           if (item.location) txt += `${t('exportHistory.locationColumn')}: ${item.location}\n`;

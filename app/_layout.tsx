@@ -18,6 +18,7 @@ import PaperThemeProvider from '../contexts/PaperThemeProvider';
 import { FontAssets } from '../constants/Fonts';
 import { useTrackingPermission } from '../hooks/useTrackingPermission';
 import { trackScreenView } from '../utils/analytics';
+import { loadItems } from '../utils/itemMaster';
 import AppLockScreen from '../components/AppLockScreen';
 
 // Keep the splash screen visible while we fetch resources
@@ -42,9 +43,10 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError, isTrackingLoading]);
 
-  // 진동 세기·패턴 설정을 미리 읽어 둔다 (첫 스캔부터 반영)
+  // 진동 세기·패턴 설정과 품목 마스터를 미리 읽어 둔다 (첫 스캔부터 반영)
   useEffect(() => {
     loadHapticSettings();
+    loadItems().catch(() => {});
   }, []);
 
   // 복권 알림 탭 → 히스토리 탭으로 이동 (이전엔 어디서도 연결돼 있지 않았다)

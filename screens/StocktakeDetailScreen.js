@@ -18,6 +18,7 @@ import {
   stocktakeStatusOf, setStocktakeCount, stocktakeCsv, ACTIVE_STOCKTAKE_KEY,
 } from '../utils/stocktake';
 import { trackStocktakeFinished } from '../utils/analytics';
+import { lookupItemSync } from '../utils/itemMaster';
 
 const FILTERS = ['todo', 'missing', 'partial', 'complete', 'over', 'extra', 'all'];
 
@@ -48,7 +49,7 @@ export default function StocktakeDetailScreen() {
     if (!stocktake) return [];
     const all = [
       ...stocktake.items.map(i => ({ ...i, status: stocktakeStatusOf(i) })),
-      ...stocktake.extras.map(e => ({ ...e, name: '', expected: undefined, status: 'extra' })),
+      ...stocktake.extras.map(e => ({ ...e, name: lookupItemSync(e.code)?.name || '', expected: undefined, status: 'extra' })),
     ];
     if (filter === 'all') return all;
     if (filter === 'todo') return all.filter(r => r.status === 'missing' || r.status === 'partial');

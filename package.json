@@ -37,6 +37,7 @@
     "expo-contacts": "^15.0.11",
     "expo-crypto": "^15.0.8",
     "expo-dev-client": "~6.0.18",
+    "expo-document-picker": "~14.0.8",
     "expo-file-system": "~19.0.24",
     "expo-font": "~14.0.12",
     "expo-haptics": "~15.0.7",
@@ -77,6 +78,7 @@
     "react-native-wifi-reborn": "^4.13.6",
     "react-native-worklets-core": "^1.6.2",
     "reanimated-color-picker": "^4.1.1",
+    "xlsx": "^0.18.5",
     "zxing-wasm": "^2.2.4"
   },
   "private": true,

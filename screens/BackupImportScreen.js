@@ -23,6 +23,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { loadFromICloud, restoreFromBackup, getICloudBackupInfo } from '../services/iCloudService';
 import MaterialPressable from '../components/MaterialPressable';
+import { restoreItemsFromBackup } from '../utils/itemMaster';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -157,6 +158,7 @@ export default function BackupImportScreen() {
         const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
         await AsyncStorage.setItem(key, stringValue);
       }
+      if (backupData.itemMaster) await restoreItemsFromBackup(backupData.itemMaster);
 
       return true;
     } catch (error) {
