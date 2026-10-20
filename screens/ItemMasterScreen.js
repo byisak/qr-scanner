@@ -17,6 +17,8 @@ import { loadItems, subscribeItems, clearItems } from '../utils/itemMaster';
 import { readRowsFromFile, buildTemplateBase64, buildExportXlsxBase64, buildExportCsv } from '../utils/itemImport';
 import { setPendingImport } from '../utils/itemImportSession';
 import { trackEvent } from '../utils/analytics';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
+import { ITEM_MASTER_FREE_LIMIT } from '../config/lockedFeatures';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -27,6 +29,8 @@ export default function ItemMasterScreen() {
   const insets = useSafeAreaInsets();
   const feedback = useFeedback();
   const colors = isDark ? Colors.dark : Colors.light;
+  const { isLocked } = useFeatureLock();
+  const limited = isLocked('itemMasterUnlimited');
   const [items, setItems] = useState(null);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
@@ -218,7 +222,9 @@ export default function ItemMasterScreen() {
             />
           </View>
           <Text style={[s.count, { color: colors.textSecondary, fontFamily: fonts.medium }]}>
-            {query.trim() ? t('itemMaster.searchCount', { count: filtered.length, total: items.length }) : t('itemMaster.count', { count: items.length })}
+            {query.trim()
+              ? t('itemMaster.searchCount', { count: filtered.length, total: items.length })
+              : limited ? t('itemMaster.countOfLimit', { count: items.length, limit: ITEM_MASTER_FREE_LIMIT }) : t('itemMaster.count', { count: items.length })}
           </Text>
           <FlatList
             data={filtered}

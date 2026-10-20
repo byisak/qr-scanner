@@ -16,6 +16,8 @@ import { IMPORT_FIELDS, rowsFromText, detectMapping, buildRecords } from '../uti
 import { takePendingImport } from '../utils/itemImportSession';
 import { loadItems, upsertItems, codeKey } from '../utils/itemMaster';
 import { trackEvent } from '../utils/analytics';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
+import { ITEM_MASTER_FREE_LIMIT } from '../config/lockedFeatures';
 
 const POLICIES = ['overwrite', 'fill', 'skip'];
 
@@ -27,6 +29,7 @@ export default function ItemImportScreen() {
   const insets = useSafeAreaInsets();
   const feedback = useFeedback();
   const colors = isDark ? Colors.dark : Colors.light;
+  const { isLocked, showUnlockAlert } = useFeatureLock();
 
   const [fileImport] = useState(() => (params.mode === 'paste' ? null : takePendingImport()));
   const [text, setText] = useState('');
@@ -82,11 +85,31 @@ export default function ItemImportScreen() {
     }
   };
 
-  const save = async () => {
+  // 무료 한도: 이미 있는 품목 갱신은 그대로, 새 품목은 남은 자리만큼
+  const save = () => {
     if (!result.records.length || saving) return;
+    const limited = isLocked('itemMasterUnlimited');
+    const room = Math.max(0, ITEM_MASTER_FREE_LIMIT - (existingKeys?.size || 0));
+    if (!limited || newCount <= room) { commit(result.records); return; }
+    const updates = result.records.filter(r => existingKeys.has(codeKey(r.code)));
+    const fresh = result.records.filter(r => !existingKeys.has(codeKey(r.code))).slice(0, room);
+    Alert.alert(
+      t('itemMaster.limitTitle', { limit: ITEM_MASTER_FREE_LIMIT }),
+      room > 0
+        ? t('itemMaster.limitMessage', { limit: ITEM_MASTER_FREE_LIMIT, count: existingKeys.size, room })
+        : t('itemMaster.limitFullMessage', { limit: ITEM_MASTER_FREE_LIMIT }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        ...(room > 0 || updates.length ? [{ text: t('itemMaster.limitSavePart', { count: updates.length + fresh.length }), onPress: () => commit([...updates, ...fresh]) }] : []),
+        { text: t('itemMaster.limitUnlock'), onPress: () => showUnlockAlert('itemMasterUnlimited', () => commit(result.records)) },
+      ]
+    );
+  };
+
+  const commit = async (records) => {
     setSaving(true);
     try {
-      const stats = await upsertItems(result.records, policy);
+      const stats = await upsertItems(records, policy);
       trackEvent('item_master_imported', {
         source: fileImport ? 'file' : 'paste',
         added: stats.added, updated: stats.updated, skipped: stats.skipped, errors: result.errors.length,

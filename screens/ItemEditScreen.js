@@ -12,6 +12,9 @@ import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { lookupItem, saveItem, deleteItem, codeKey } from '../utils/itemMaster';
 import { trackEvent } from '../utils/analytics';
+import { useFeatureLock } from '../contexts/FeatureLockContext';
+import { ITEM_MASTER_FREE_LIMIT } from '../config/lockedFeatures';
+import { getItemCount } from '../utils/itemMaster';
 
 const TEXT_FIELDS = ['name', 'spec', 'unit', 'category', 'location', 'altCodes', 'memo'];
 
@@ -23,6 +26,7 @@ export default function ItemEditScreen() {
   const insets = useSafeAreaInsets();
   const feedback = useFeedback();
   const colors = isDark ? Colors.dark : Colors.light;
+  const { isLocked, showUnlockAlert } = useFeatureLock();
 
   const editingCode = typeof params.code === 'string' ? params.code : null;
   const [original, setOriginal] = useState(null);
@@ -52,6 +56,14 @@ export default function ItemEditScreen() {
     if (!form.name.trim()) { feedback.error(t('itemMaster.nameRequired')); return; }
     // 코드를 다른 품목의 코드로 바꾸면 그 품목을 덮어쓴다 → 한 번 묻는다
     const other = await lookupItem(code);
+    // 새 품목인데 무료 한도가 찼으면 해제 안내
+    if (!original && !other && isLocked('itemMasterUnlimited') && getItemCount() >= ITEM_MASTER_FREE_LIMIT) {
+      Alert.alert(t('itemMaster.limitTitle', { limit: ITEM_MASTER_FREE_LIMIT }), t('itemMaster.limitFullMessage', { limit: ITEM_MASTER_FREE_LIMIT }), [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('itemMaster.limitUnlock'), onPress: () => showUnlockAlert('itemMasterUnlimited', doSave) },
+      ]);
+      return;
+    }
     if (other && (!original || codeKey(other.code) !== codeKey(original.code))) {
       Alert.alert(t('itemMaster.duplicateTitle'), t('itemMaster.duplicateMessage', { name: other.name }), [
         { text: t('common.cancel'), style: 'cancel' },

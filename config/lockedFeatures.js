@@ -8,6 +8,9 @@
 // ========================================
 export const DEV_MODE_UNLOCK_ALL = true;
 
+// 품목 마스터 무료 개수 (넘으면 itemMasterUnlimited 잠금)
+export const ITEM_MASTER_FREE_LIMIT = 200;
+
 // ========================================
 // 광고 횟수 기준:
 // 2회: 기본 프리미엄 기능, 개별 바코드/QR 타입
@@ -130,6 +133,13 @@ export const LOCKED_FEATURES = {
     adCount: 3, // 업무 효율화 - 대량 스캔에 필수
     type: 'settings',
     description: '배치 스캔 모드',
+  },
+  // 품목 마스터: 무료는 ITEM_MASTER_FREE_LIMIT개까지, 해제하면 무제한
+  itemMasterUnlimited: {
+    id: 'itemMasterUnlimited',
+    adCount: 3, // 업무 효율화
+    type: 'settings',
+    description: '품목 무제한',
   },
   realtimeSync: {
     id: 'realtimeSync',

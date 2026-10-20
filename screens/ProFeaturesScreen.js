@@ -27,6 +27,7 @@ const FEATURE_CATEGORIES = {
     features: [
       { id: 'batchScan', icon: 'layers-outline' },
       { id: 'realtimeSync', icon: 'sync-outline' },
+      { id: 'itemMasterUnlimited', icon: 'pricetags-outline' },
       { id: 'scanUrlIntegration', icon: 'link-outline' },
       { id: 'productSearch', icon: 'search-outline' },
       { id: 'photoSave', icon: 'camera-outline' },
