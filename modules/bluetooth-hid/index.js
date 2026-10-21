@@ -27,6 +27,7 @@ export async function stop() { return native ? native.stop() : true; }
 export function getPairedDevices() { try { return native ? native.getPairedDevices() : []; } catch { return []; } }
 export async function connect(address) { return native ? native.connect(address) : false; }
 export async function disconnect() { return native ? native.disconnect() : true; }
+export function getAdapterName() { try { return native?.getAdapterName ? native.getAdapterName() : null; } catch { return null; } }
 export function requestDiscoverable(seconds = 120) { try { return native ? native.requestDiscoverable(seconds) : false; } catch { return false; } }
 export async function sendText(text) {
   if (!native) return { sent: 0, skipped: String(text).length, connected: false };

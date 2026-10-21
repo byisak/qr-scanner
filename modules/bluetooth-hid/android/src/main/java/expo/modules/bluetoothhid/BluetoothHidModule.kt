@@ -195,6 +195,11 @@ class BluetoothHidModule : Module() {
       hid?.disconnect(d) ?: true
     }
 
+    // PC 목록에 보일 이 휴대폰의 블루투스 이름
+    Function("getAdapterName") {
+      try { adapter()?.name } catch (e: SecurityException) { null }
+    }
+
     // PC가 이 폰을 찾을 수 있게 (시스템 확인 창)
     Function("requestDiscoverable") { seconds: Int ->
       val activity = appContext.currentActivity ?: return@Function false

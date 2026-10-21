@@ -22,10 +22,14 @@ export default function PcKeyboardScreen() {
   const [status, setStatus] = useState(Hid.getStatus());
   const [devices, setDevices] = useState([]);
   const [busy, setBusy] = useState(null); // 'start' | address
+  const [showOthers, setShowOthers] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [phoneName, setPhoneName] = useState(null);
 
   const refresh = useCallback(() => {
     setStatus(Hid.getStatus());
     setDevices(Hid.getPairedDevices());
+    setPhoneName(Hid.getAdapterName());
   }, []);
 
   useFocusEffect(useCallback(() => {
@@ -82,7 +86,16 @@ export default function PcKeyboardScreen() {
     setBusy(d.address);
     const ok = await Hid.connect(d.address).catch(() => false);
     setBusy(null);
-    if (!ok) feedback.error(t('pcKeyboard.connectFailed'));
+    if (!ok) {
+      feedback.error(t('pcKeyboard.connectFailed'));
+      setShowHelp(true);
+    }
+  };
+
+  const makeDiscoverable = () => {
+    Hid.requestDiscoverable(180);
+    setShowHelp(true);
+    trackEvent('hid_discoverable');
   };
 
   const sendTest = async () => {
@@ -119,9 +132,29 @@ export default function PcKeyboardScreen() {
 
       {enabled && (
         <>
+          {/* 새 PC: 휴대폰을 찾을 수 있게 → PC에서 장치 추가 */}
+          <SectionHeader {...rowProps} title={t('pcKeyboard.sectionNew')} />
+          <Group colors={colors}>
+            <SettingRow {...rowProps} icon="add-circle-outline" iconColor={colors.primary}
+              label={t('pcKeyboard.pairNew')}
+              desc={t('pcKeyboard.pairNewDesc', { name: phoneName || t('pcKeyboard.thisPhone') })}
+              onPress={makeDiscoverable} />
+            <SettingRow {...rowProps} icon="help-circle-outline" label={t('pcKeyboard.notFoundTitle')} onPress={() => setShowHelp(v => !v)}>
+              <Ionicons name={showHelp ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+            </SettingRow>
+          </Group>
+          {showHelp && (
+            <View style={[styles.help, { backgroundColor: colors.raised }]}>
+              {['notFound1', 'notFound2', 'notFound3'].map((k, i) => (
+                <Text key={k} style={[styles.helpText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{`${i + 1}. ${t(`pcKeyboard.${k}`)}`}</Text>
+              ))}
+            </View>
+          )}
+
+          {/* 이미 페어링된 PC (다른 블루투스 기기는 접어 둔다) */}
           <SectionHeader {...rowProps} title={t('pcKeyboard.sectionPc')} />
           <Group colors={colors}>
-            {devices.map(d => {
+            {devices.filter(d => d.isComputer || showOthers || device?.address === d.address).map(d => {
               const isConnected = device?.address === d.address;
               return (
                 <SettingRow
@@ -140,7 +173,14 @@ export default function PcKeyboardScreen() {
                 </SettingRow>
               );
             })}
-            <SettingRow {...rowProps} icon="add-circle-outline" label={t('pcKeyboard.pairNew')} desc={t('pcKeyboard.pairNewDesc')} onPress={() => Hid.requestDiscoverable(180)} />
+            {!devices.some(d => d.isComputer) && (
+              <SettingRow {...rowProps} label={t('pcKeyboard.noPc')} />
+            )}
+            {devices.some(d => !d.isComputer) && (
+              <SettingRow {...rowProps} label={showOthers ? t('pcKeyboard.hideOthers') : t('pcKeyboard.showOthers', { count: devices.filter(d => !d.isComputer).length })} onPress={() => setShowOthers(v => !v)}>
+                <Ionicons name={showOthers ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
+              </SettingRow>
+            )}
           </Group>
 
           <SectionHeader {...rowProps} title={t('pcKeyboard.sectionSuffix')} />
@@ -184,4 +224,6 @@ const styles = StyleSheet.create({
   note: { fontSize: 12, lineHeight: 18, marginTop: 8, marginHorizontal: 4 },
   testButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48, borderRadius: RADIUS.control, borderWidth: 1, marginTop: 16, overflow: 'hidden' },
   testText: { fontSize: 15 },
+  help: { borderRadius: RADIUS.control, padding: 14, marginTop: 8, gap: 8 },
+  helpText: { fontSize: 13, lineHeight: 19 },
 });
