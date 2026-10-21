@@ -6,6 +6,7 @@ import config from '../config/config';
 import { useFeatureLock } from './FeatureLockContext';
 import websocketClient from '../utils/websocket';
 import { signOutNativeGoogle } from '../hooks/useSocialLogin';
+import { setApiAuthHandlers } from '../utils/serverApi';
 
 const AuthContext = createContext();
 
@@ -700,6 +701,7 @@ export const AuthProvider = ({ children }) => {
   // 실시간 서버 전송(REST)이 최신 토큰을 쓰고, 401이면 갱신할 수 있게 도우미를 등록
   useEffect(() => {
     websocketClient.setAuthHandlers({ getToken, refreshAccessToken });
+    setApiAuthHandlers({ getToken, refreshAccessToken });
   });
 
   const value = {

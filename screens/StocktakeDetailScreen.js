@@ -1,6 +1,6 @@
 // screens/StocktakeDetailScreen.js - 재고 실사 진행: 진행률, 상태별 목록(누락·부족·완료·초과·목록 외), 수량 고치기, 보고서
-import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, Alert } from 'react-native';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, ScrollView, Alert, Share, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -19,6 +19,11 @@ import {
 } from '../utils/stocktake';
 import { trackStocktakeFinished } from '../utils/analytics';
 import { lookupItemSync } from '../utils/itemMaster';
+import { shareStocktake, syncSharedStocktake, enqueueShareEvent, setSharedFinished, leaveOrDeleteShared } from '../utils/stocktakeShare';
+import { useAuth } from '../contexts/AuthContext';
+
+const SYNC_MS = 5000;
+const formatCode = (c) => (c && c.length === 6 ? `${c.slice(0, 3)}-${c.slice(3)}` : c || '');
 
 const FILTERS = ['todo', 'missing', 'partial', 'complete', 'over', 'extra', 'all'];
 
@@ -33,15 +38,76 @@ export default function StocktakeDetailScreen() {
   const [stocktake, setStocktake] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const [filter, setFilter] = useState('todo');
+  const { isLoggedIn } = useAuth();
+  const [sharing, setSharing] = useState(false);
+  const [syncError, setSyncError] = useState(false);
+  const stocktakeRef = useRef(null);
+  stocktakeRef.current = stocktake;
 
   useFocusEffect(useCallback(() => {
+    let alive = true;
+    let timer = null;
+    const sync = async () => {
+      const cur = stocktakeRef.current;
+      if (!cur?.shared) return;
+      try {
+        const next = await syncSharedStocktake(cur);
+        if (alive) { setStocktake(next); setSyncError(false); }
+      } catch {
+        if (alive) setSyncError(true);
+      }
+    };
     (async () => {
       const list = await loadStocktakes();
       const st = list.find(x => x.id === id) || null;
+      if (!alive) return;
       setStocktake(st);
+      stocktakeRef.current = st;
       setIsActive(!!st && (await AsyncStorage.getItem(ACTIVE_STOCKTAKE_KEY)) === st.id && !st.finishedAt);
+      // 함께 하는 실사: 화면이 보이는 동안 5초마다 서버 합계로 새로 고친다
+      if (st?.shared) { sync(); timer = setInterval(sync, SYNC_MS); }
     })();
+    return () => { alive = false; if (timer) clearInterval(timer); };
   }, [id]));
+
+  const startSharing = () => {
+    if (!isLoggedIn) { router.push('/login'); return; }
+    Alert.alert(t('stocktakeShare.startTitle'), t('stocktakeShare.startMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('stocktakeShare.start'),
+        onPress: async () => {
+          setSharing(true);
+          try {
+            const next = await shareStocktake(stocktake);
+            setStocktake(next);
+            feedback.success(t('stocktakeShare.started', { code: formatCode(next.shared.joinCode) }));
+          } catch {
+            feedback.error(t('stocktakeShare.startFailed'));
+          } finally {
+            setSharing(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const shareCode = () => {
+    const code = formatCode(stocktake.shared.joinCode);
+    Share.share({ message: t('stocktakeShare.inviteMessage', { name: stocktake.name, code }) }).catch(() => {});
+  };
+
+  // 수량 −/+ : 기기에 바로 반영하고, 함께 하는 실사면 차이만큼 기록을 보낸다
+  const changeCount = (item, next) => {
+    if (next < 0) return;
+    const delta = next - item.scanned;
+    if (!delta) return;
+    const updated = setStocktakeCount(stocktake, item.code, next);
+    persist(updated);
+    if (stocktake.shared) {
+      enqueueShareEvent(updated, { code: item.code, itemCode: item.status !== 'extra' ? item.code : undefined, qty: delta }).catch(() => {});
+    }
+  };
 
   const sum = useMemo(() => (stocktake ? summarizeStocktake(stocktake) : null), [stocktake]);
 
@@ -80,6 +146,7 @@ export default function StocktakeDetailScreen() {
         onPress: async () => {
           await persist({ ...stocktake, finishedAt: Date.now() });
           await setActiveStocktake(null);
+          if (stocktake.shared?.role === 'owner') setSharedFinished(stocktake, true).catch(() => {});
           trackStocktakeFinished(sum.total, sum.missing + sum.partial, sum.extra);
           setIsActive(false);
         },
@@ -100,9 +167,21 @@ export default function StocktakeDetailScreen() {
   };
 
   const remove = () => {
-    Alert.alert(t('stocktake.deleteTitle'), t('stocktake.deleteMessage', { name: stocktake.name }), [
+    const shared = stocktake.shared;
+    const message = !shared ? t('stocktake.deleteMessage', { name: stocktake.name })
+      : shared.role === 'owner' ? t('stocktakeShare.deleteOwnerMessage', { name: stocktake.name })
+      : t('stocktakeShare.leaveMessage', { name: stocktake.name });
+    Alert.alert(t('stocktake.deleteTitle'), message, [
       { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.delete'), style: 'destructive', onPress: async () => { await deleteStocktake(stocktake.id); router.back(); } },
+      {
+        text: t('common.delete'),
+        style: 'destructive',
+        onPress: async () => {
+          if (shared) await leaveOrDeleteShared(stocktake);
+          await deleteStocktake(stocktake.id);
+          router.back();
+        },
+      },
     ]);
   };
 
@@ -177,11 +256,11 @@ export default function StocktakeDetailScreen() {
         </View>
         {!stocktake.finishedAt && (
           <View style={[s.stepper, { backgroundColor: colors.raised }]}>
-            <MaterialPressable style={s.stepButton} onPress={() => persist(setStocktakeCount(stocktake, item.code, item.scanned - 1))} accessibilityLabel={t('quantity.decrease')}>
+            <MaterialPressable style={s.stepButton} onPress={() => changeCount(item, item.scanned - 1)} accessibilityLabel={t('quantity.decrease')}>
               <Ionicons name="remove" size={18} color={colors.text} />
             </MaterialPressable>
             <View style={[s.stepDivider, { backgroundColor: colors.border }]} />
-            <MaterialPressable style={s.stepButton} onPress={() => persist(setStocktakeCount(stocktake, item.code, item.scanned + 1))} accessibilityLabel={t('quantity.increase')}>
+            <MaterialPressable style={s.stepButton} onPress={() => changeCount(item, item.scanned + 1)} accessibilityLabel={t('quantity.increase')}>
               <Ionicons name="add" size={18} color={colors.text} />
             </MaterialPressable>
           </View>
@@ -266,6 +345,36 @@ export default function StocktakeDetailScreen() {
               )}
             </View>
 
+            {/* 함께 실사 */}
+            {stocktake.shared ? (
+              <View style={[s.shareCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View style={s.shareTop}>
+                  <Ionicons name="people" size={18} color={colors.primaryText} />
+                  <Text style={[s.shareTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktakeShare.together')}</Text>
+                  <MaterialPressable style={[s.codeChip, { backgroundColor: colors.raised }]} onPress={shareCode} accessibilityRole="button" accessibilityLabel={t('stocktakeShare.shareCode')}>
+                    <Text style={[s.codeText, { color: colors.text }]}>{formatCode(stocktake.shared.joinCode)}</Text>
+                    <Ionicons name="share-social-outline" size={16} color={colors.primaryText} />
+                  </MaterialPressable>
+                </View>
+                {!!stocktake.shared.members?.length && (
+                  <Text style={[s.shareMembers, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={2}>
+                    {stocktake.shared.members.map(m => `${m.name || t('stocktakeShare.noName')} ${m.scans}`).join(' · ')}
+                  </Text>
+                )}
+                <Text style={[s.shareStatus, { color: syncError ? colors.warning : colors.textTertiary, fontFamily: fonts.regular }]}>
+                  {syncError ? t('stocktakeShare.offline', { count: stocktake.shared.pending || 0 }) : stocktake.shared.pending ? t('stocktakeShare.pending', { count: stocktake.shared.pending }) : t('stocktakeShare.synced')}
+                </Text>
+              </View>
+            ) : !stocktake.finishedAt ? (
+              <MaterialPressable style={[s.shareStart, { borderColor: colors.border }]} onPress={startSharing} disabled={sharing} accessibilityRole="button">
+                {sharing ? <ActivityIndicator color={colors.primary} /> : <Ionicons name="people-outline" size={18} color={colors.primaryText} />}
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.shareStartTitle, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>{t('stocktakeShare.startButton')}</Text>
+                  <Text style={[s.shareStartDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{t('stocktakeShare.startDesc')}</Text>
+                </View>
+              </MaterialPressable>
+            ) : null}
+
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterScroll} contentContainerStyle={s.filters}>
               {FILTERS.map((f) => {
                 const selected = filter === f;
@@ -346,4 +455,14 @@ const s = StyleSheet.create({
   emptyText: { textAlign: 'center', marginVertical: 24, fontSize: 14 },
   deleteButton: { minHeight: SIZE.button, alignItems: 'center', justifyContent: 'center', marginTop: 16, borderRadius: RADIUS.button, overflow: 'hidden' },
   deleteText: { fontSize: 15, fontWeight: '500' },
+  shareCard: { borderWidth: 1, borderRadius: RADIUS.card, padding: 16, marginBottom: SPACE.section, gap: 6 },
+  shareTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  shareTitle: { fontSize: 15, flex: 1 },
+  codeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 36, borderRadius: 18, overflow: 'hidden' },
+  codeText: { fontFamily: MONO, fontSize: 16, fontWeight: '700', letterSpacing: 2 },
+  shareMembers: { fontSize: 13 },
+  shareStatus: { fontSize: 12 },
+  shareStart: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: RADIUS.control, padding: 14, marginBottom: SPACE.section, overflow: 'hidden' },
+  shareStartTitle: { fontSize: 15 },
+  shareStartDesc: { fontSize: 12, marginTop: 2, lineHeight: 17 },
 });

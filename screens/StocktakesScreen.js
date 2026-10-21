@@ -1,6 +1,6 @@
 // screens/StocktakesScreen.js - 재고 실사 목록 (진행 중 / 끝난 실사)
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -11,6 +11,9 @@ import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
 import { loadStocktakes, summarizeStocktake, ACTIVE_STOCKTAKE_KEY } from '../utils/stocktake';
+import { joinStocktake } from '../utils/stocktakeShare';
+import { useAuth } from '../contexts/AuthContext';
+import { useFeedback } from '../contexts/FeedbackContext';
 
 export default function StocktakesScreen() {
   const router = useRouter();
@@ -20,6 +23,27 @@ export default function StocktakesScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const [list, setList] = useState([]);
   const [activeId, setActiveId] = useState(null);
+  const { isLoggedIn } = useAuth();
+  const feedback = useFeedback();
+  // 참여 코드로 함께 하는 실사에 들어가기
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [joining, setJoining] = useState(false);
+
+  const join = async () => {
+    if (!isLoggedIn) { router.push('/login'); return; }
+    setJoining(true);
+    try {
+      const st = await joinStocktake(joinCode);
+      feedback.success(t('stocktakeShare.joined', { name: st.name }));
+      setJoinOpen(false); setJoinCode('');
+      router.push({ pathname: '/stocktake-detail', params: { id: st.id } });
+    } catch (e) {
+      feedback.error(e?.status === 404 ? t('stocktakeShare.codeNotFound') : e?.status === 429 ? t('stocktakeShare.tooMany') : t('stocktakeShare.joinFailed'));
+    } finally {
+      setJoining(false);
+    }
+  };
 
   useFocusEffect(useCallback(() => {
     (async () => {
@@ -45,7 +69,41 @@ export default function StocktakesScreen() {
         </MaterialPressable>
       </View>
 
-      <ScrollView contentContainerStyle={[s.content, { paddingBottom: 24 + insets.bottom }]}>
+      <ScrollView contentContainerStyle={[s.content, { paddingBottom: 24 + insets.bottom }]} keyboardShouldPersistTaps="handled">
+        {/* 참여 코드로 함께 하기 */}
+        {joinOpen ? (
+          <View style={[s.joinCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.joinTitle, { color: colors.text, fontFamily: fonts.semiBold }]}>{t('stocktakeShare.joinTitle')}</Text>
+            <Text style={[s.joinDesc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{isLoggedIn ? t('stocktakeShare.joinDesc') : t('stocktakeShare.loginNeeded')}</Text>
+            <View style={s.joinRow}>
+              <TextInput
+                value={joinCode}
+                onChangeText={(v) => setJoinCode(v.toUpperCase().replace(/[^A-Z0-9-]/g, ''))}
+                placeholder="ABC-123"
+                placeholderTextColor={colors.textTertiary}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                maxLength={7}
+                style={[s.joinInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.inputBackground }]}
+                accessibilityLabel={t('stocktakeShare.joinTitle')}
+              />
+              <MaterialPressable
+                style={[s.joinButton, { backgroundColor: joinCode.replace(/-/g, '').length === 6 || !isLoggedIn ? colors.primary : colors.textTertiary }]}
+                onPress={join}
+                disabled={joining || (isLoggedIn && joinCode.replace(/-/g, '').length !== 6)}
+                accessibilityRole="button"
+              >
+                {joining ? <ActivityIndicator color="#FFFFFF" /> : <Text style={[s.joinButtonText, { fontFamily: fonts.semiBold }]}>{isLoggedIn ? t('stocktakeShare.join') : t('stocktakeShare.login')}</Text>}
+              </MaterialPressable>
+            </View>
+          </View>
+        ) : (
+          <MaterialPressable style={[s.joinLink, { borderColor: colors.border }]} onPress={() => setJoinOpen(true)} accessibilityRole="button">
+            <Ionicons name="people-outline" size={18} color={colors.primaryText} />
+            <Text style={[s.joinLinkText, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>{t('stocktakeShare.joinWithCode')}</Text>
+          </MaterialPressable>
+        )}
+
         {list.length === 0 ? (
           <View style={s.empty}>
             <Ionicons name="clipboard-outline" size={40} color={colors.textTertiary} />
@@ -75,6 +133,7 @@ export default function StocktakesScreen() {
                 >
                   <View style={s.rowTop}>
                     <Text style={[s.rowTitle, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{st.name}</Text>
+                    {st.shared && <Ionicons name="people" size={15} color={colors.primaryText} accessibilityLabel={t('stocktakeShare.shared')} />}
                     <View style={[s.badge, { backgroundColor: tone.bg }]}>
                       {isActive && <View style={[s.badgeDot, { backgroundColor: tone.fg }]} />}
                       <Text style={[s.badgeText, { color: tone.fg, fontFamily: fonts.semiBold }]}>
@@ -112,6 +171,15 @@ const s = StyleSheet.create({
   primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24, height: SIZE.primaryButton, borderRadius: RADIUS.button, marginTop: 20, overflow: 'hidden' },
   primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
   group: { borderRadius: RADIUS.group, borderWidth: 1, overflow: 'hidden' },
+  joinLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: SIZE.button, borderWidth: 1, borderRadius: RADIUS.control, marginBottom: SPACE.section, overflow: 'hidden' },
+  joinLinkText: { fontSize: 14 },
+  joinCard: { borderWidth: 1, borderRadius: RADIUS.card, padding: SPACE.card, marginBottom: SPACE.section, gap: 8 },
+  joinTitle: { fontSize: 15 },
+  joinDesc: { fontSize: 13, lineHeight: 19 },
+  joinRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
+  joinInput: { flex: 1, height: SIZE.input, borderWidth: 1, borderRadius: RADIUS.control, paddingHorizontal: 14, fontSize: 18, letterSpacing: 3, fontWeight: '700' },
+  joinButton: { minWidth: 88, height: SIZE.input, borderRadius: RADIUS.control, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14, overflow: 'hidden' },
+  joinButtonText: { color: '#FFFFFF', fontSize: 15 },
   row: { minHeight: SIZE.rowWithDesc, justifyContent: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 4 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowTitle: { ...TYPE.body, flex: 1 },

@@ -89,6 +89,7 @@ import ScanToast from '../components/ScanToast';
 import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
 import AdBanner from '../components/AdBanner';
 import { sendScanToPc } from '../utils/pcKeyboard';
+import { enqueueShareEvent } from '../utils/stocktakeShare';
 
 function ScannerScreen() {
   const router = useRouter();
@@ -1112,6 +1113,11 @@ function ScannerScreen() {
       qty: meta.extra && meta.extra.gs1 ? meta.extra.gs1.qty : null,
     });
     stocktakeRef.current = stocktake;
+    // 함께 하는 실사면 서버로 보낼 기록을 쌓는다 (맞춘 품목 코드와 수량)
+    if (stocktake.shared) {
+      const qty = meta.extra && meta.extra.gs1 && meta.extra.gs1.qty > 0 ? meta.extra.gs1.qty : 1;
+      enqueueShareEvent(stocktake, { code, itemCode: status !== 'extra' && item ? item.code : undefined, qty }).catch(() => {});
+    }
     const sum = summarizeStocktake(stocktake);
     setStocktakeBadge({ id: stocktake.id, name: stocktake.name, done: sum.complete + sum.over, total: sum.total, extra: sum.extra });
     upsertStocktake(stocktake).catch(() => {});

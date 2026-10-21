@@ -1,7 +1,7 @@
 // screens/ItemImportScreen.js - 품목 불러오기 미리보기: 열 맞추기 → 새로·갱신·오류 건수 확인 → 저장
 // 파일에서 온 행은 itemImportSession 으로 받고, 붙여 넣기(mode=paste)는 이 화면에서 글을 받는다
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, Switch, Alert, Platform, ActionSheetIOS, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, Switch, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -12,6 +12,7 @@ import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
+import ActionMenu from '../components/ActionMenu';
 import { IMPORT_FIELDS, rowsFromText, detectMapping, buildRecords } from '../utils/itemImport';
 import { takePendingImport } from '../utils/itemImportSession';
 import { loadItems, upsertItems, codeKey } from '../utils/itemMaster';
@@ -53,6 +54,7 @@ export default function ItemImportScreen() {
   const newCount = result.records.length - updateCount;
   const [policy, setPolicy] = useState('overwrite');
   const [saving, setSaving] = useState(false);
+  const [fieldMenu, setFieldMenu] = useState(null);
 
   const width = Math.max(0, ...rows.slice(0, 20).map(r => r.length));
   const columns = Array.from({ length: width }, (_, i) => ({
@@ -72,17 +74,7 @@ export default function ItemImportScreen() {
       next[col] = field;
       return next;
     });
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        { title: columns[col]?.title, options: [...options.map(fieldLabel), t('common.cancel')], cancelButtonIndex: options.length },
-        (i) => { if (i < options.length) apply(options[i]); }
-      );
-    } else {
-      Alert.alert(columns[col]?.title, undefined, [
-        ...options.map(f => ({ text: fieldLabel(f), onPress: () => apply(f) })),
-        { text: t('common.cancel'), style: 'cancel' },
-      ], { cancelable: true });
-    }
+    setFieldMenu({ title: columns[col]?.title, actions: options.map(f => ({ label: fieldLabel(f), run: () => apply(f) })) });
   };
 
   // 무료 한도: 이미 있는 품목 갱신은 그대로, 새 품목은 남은 자리만큼
@@ -270,6 +262,7 @@ export default function ItemImportScreen() {
           <Text style={[s.primaryButtonText, { fontFamily: fonts.semiBold }]}>{t('itemMaster.saveCount', { count: result.records.length })}</Text>
         </MaterialPressable>
       </View>
+      <ActionMenu visible={!!fieldMenu} title={fieldMenu?.title} actions={fieldMenu?.actions || []} onClose={() => setFieldMenu(null)} />
     </KeyboardAvoidingView>
   );
 }

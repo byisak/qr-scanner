@@ -1,6 +1,6 @@
 // screens/ItemMasterScreen.js - 품목 관리: 코드 → 품명 사전. 엑셀·CSV 불러오기, 붙여 넣기, 서식 파일, 내보내기
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator, Platform, ActionSheetIOS } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -13,10 +13,13 @@ import { useFeedback } from '../contexts/FeedbackContext';
 import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE, MONO } from '../constants/Design';
 import MaterialPressable from '../components/MaterialPressable';
+import ActionMenu from '../components/ActionMenu';
 import { loadItems, subscribeItems, clearItems } from '../utils/itemMaster';
 import { readRowsFromFile, buildTemplateBase64, buildExportXlsxBase64, buildExportCsv } from '../utils/itemImport';
 import { setPendingImport } from '../utils/itemImportSession';
 import { trackEvent } from '../utils/analytics';
+import { pullItemsFromAccount, pushItemsToAccount } from '../utils/itemSync';
+import { useAuth } from '../contexts/AuthContext';
 import { useFeatureLock } from '../contexts/FeatureLockContext';
 import { ITEM_MASTER_FREE_LIMIT } from '../config/lockedFeatures';
 
@@ -31,9 +34,11 @@ export default function ItemMasterScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const { isLocked } = useFeatureLock();
   const limited = isLocked('itemMasterUnlimited');
+  const { isLoggedIn } = useAuth();
   const [items, setItems] = useState(null);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -121,29 +126,39 @@ export default function ItemMasterScreen() {
     ]);
   };
 
-  // 더보기: iOS는 액션 시트, Android는 알림 창 목록
-  const openMore = () => {
-    const actions = [
-      { label: t('itemMaster.downloadTemplate'), run: downloadTemplate },
-      ...(items?.length ? [
-        { label: t('itemMaster.exportXlsx'), run: () => exportAs('xlsx') },
-        { label: t('itemMaster.exportCsv'), run: () => exportAs('csv') },
-        { label: t('itemMaster.clearAll'), run: confirmClear, destructive: true },
-      ] : []),
-    ];
-    if (Platform.OS === 'ios') {
-      const destructiveButtonIndex = actions.findIndex(a => a.destructive);
-      ActionSheetIOS.showActionSheetWithOptions(
-        { options: [...actions.map(a => a.label), t('common.cancel')], cancelButtonIndex: actions.length, destructiveButtonIndex: destructiveButtonIndex === -1 ? undefined : destructiveButtonIndex },
-        (i) => { if (i < actions.length) actions[i].run(); }
-      );
-    } else {
-      Alert.alert(t('itemMaster.title'), undefined, [
-        ...actions.map(a => ({ text: a.label, style: a.destructive ? 'destructive' : 'default', onPress: a.run })),
-        { text: t('common.cancel'), style: 'cancel' },
-      ]);
+  // 계정(scanview.app)과 주고받기
+  const syncWithAccount = async (direction) => {
+    if (!isLoggedIn) { router.push('/login'); return; }
+    setBusy(true);
+    try {
+      if (direction === 'pull') {
+        const r = await pullItemsFromAccount();
+        feedback.success(r.total ? t('itemMaster.pulled', { added: r.added, updated: r.updated }) : t('itemMaster.accountEmpty'));
+      } else {
+        const r = await pushItemsToAccount();
+        feedback.success(t('itemMaster.pushed', { count: r.total }));
+      }
+      trackEvent('item_master_synced', { direction });
+    } catch (e) {
+      feedback.error(e?.status === 503 ? t('itemMaster.serverNotReady') : t('itemMaster.syncFailed'));
+    } finally {
+      setBusy(false);
     }
   };
+
+  // 더보기: 아래에서 올라오는 메뉴 (Android 알림 창은 버튼이 3개까지)
+  const moreActions = [
+    { icon: 'cloud-download-outline', label: t('itemMaster.pullFromAccount'), run: () => syncWithAccount('pull') },
+    ...(items?.length ? [{ icon: 'cloud-upload-outline', label: t('itemMaster.pushToAccount'), run: () => syncWithAccount('push') }] : []),
+    ...(items?.length ? [{ icon: 'print-outline', label: t('labelPrint.title'), run: () => router.push('/label-print') }] : []),
+    { icon: 'download-outline', label: t('itemMaster.downloadTemplate'), run: downloadTemplate },
+    ...(items?.length ? [
+      { icon: 'grid-outline', label: t('itemMaster.exportXlsx'), run: () => exportAs('xlsx') },
+      { icon: 'document-text-outline', label: t('itemMaster.exportCsv'), run: () => exportAs('csv') },
+      { icon: 'trash-outline', label: t('itemMaster.clearAll'), run: confirmClear, destructive: true },
+    ] : []),
+  ];
+  const openMore = () => setMoreOpen(true);
 
   const renderItem = useCallback(({ item }) => {
     const meta = [item.spec, item.unit, item.location].filter(Boolean).join(' · ');
@@ -239,6 +254,7 @@ export default function ItemMasterScreen() {
           />
         </>
       )}
+      <ActionMenu visible={moreOpen} title={t('itemMaster.title')} actions={moreActions} onClose={() => setMoreOpen(false)} />
     </View>
   );
 }
