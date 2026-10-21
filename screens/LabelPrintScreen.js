@@ -83,8 +83,8 @@ export default function LabelPrintScreen() {
       }
       trackEvent('labels_printed', { kind, template, mode, label_count: labelCount });
     } catch (e) {
-      // 인쇄 창을 닫은 것은 오류로 보지 않는다
-      if (!/cancel/i.test(e?.message || '')) {
+      // 인쇄 창을 닫은 것은 오류로 보지 않는다 (iOS: "Printing did not complete")
+      if (!/cancel|did not complete/i.test(e?.message || '')) {
         console.warn('[labelPrint] failed:', e?.message);
         feedback.error(t('labelPrint.failed'));
       }
