@@ -47,7 +47,7 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.585698187056-rfr4k7k4vkb9rjhngb0tdnh5afqgogot"
+              "qrscanner"
             ]
           },
           {
@@ -79,7 +79,7 @@
       "config": {
         "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
       },
-      "buildNumber": "122"
+      "buildNumber": "123"
     },
     "android": {
       "splash": {
