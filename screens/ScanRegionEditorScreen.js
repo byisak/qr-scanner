@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Svg, { Path, Line } from 'react-native-svg';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -29,7 +30,9 @@ import ScanRegionOverlay, {
 import { SCAN_REGION_MODE_KEY } from './ScanRegionSelectionScreen';
 
 const SNAP = 8;        // 가운데선에 붙는 거리 (dp, 스캔 화면 기준)
-const HANDLE = 28;     // 모서리 손잡이 (미리보기 화면 기준)
+const HANDLE = 44;     // 손잡이 터치 영역 (미리보기 화면 기준)
+const RADIUS_PX = 16;  // ScanRegionOverlay 테두리 둥글기 (미리보기 px)
+const BRACKET = 22;    // 모서리 꺾쇠 길이
 const REPEAT_DELAY = 400;
 const REPEAT_EVERY = 60;
 
@@ -113,6 +116,7 @@ export default function ScanRegionEditorScreen() {
   // 스캔 화면 카메라 영역 크기(dp). 아직 스캔 화면을 연 적이 없으면 창 크기로 짐작
   const [area, setArea] = useState(null);
   const [rect, setRect] = useState(null);
+  const [active, setActive] = useState(null); // 끄는 중인 손잡이: 'move' | 'tl' | 't' ...
 
   useEffect(() => {
     (async () => {
@@ -154,7 +158,8 @@ export default function ScanRegionEditorScreen() {
   const startRef = useRef(null);
   const moveGesture = Gesture.Pan()
     .runOnJS(true)
-    .onBegin(() => { startRef.current = rect; })
+    .onBegin(() => { startRef.current = rect; setActive('move'); })
+    .onFinalize(() => setActive(null))
     .onUpdate((e) => {
       const r = startRef.current;
       if (!r) return;
@@ -162,7 +167,8 @@ export default function ScanRegionEditorScreen() {
     });
   const cornerGesture = (corner) => Gesture.Pan()
     .runOnJS(true)
-    .onBegin(() => { startRef.current = rect; })
+    .onBegin(() => { startRef.current = rect; setActive(corner); })
+    .onFinalize(() => setActive(null))
     .onUpdate((e) => {
       const r = startRef.current;
       if (!r) return;
@@ -185,10 +191,40 @@ export default function ScanRegionEditorScreen() {
   const pw = Math.round(area.width * scale);
   const ph = Math.round(area.height * scale);
   const previewCustom = rectToCustom(rect, area.width, area.height);
-  const handleStyle = (corner) => ({
-    left: (rect.x + (corner.includes('r') ? rect.width : 0)) * scale - HANDLE / 2,
-    top: (rect.y + (corner.includes('b') ? rect.height : 0)) * scale - HANDLE / 2,
+  // 손잡이 자리: 모서리(tl…)는 꼭짓점, 변(t/b/l/r)은 변의 가운데
+  const handlePoint = (h) => ({
+    x: (rect.x + (h.includes('r') ? rect.width : h.includes('l') ? 0 : rect.width / 2)) * scale,
+    y: (rect.y + (h.includes('b') ? rect.height : h.includes('t') ? 0 : rect.height / 2)) * scale,
   });
+  const handleStyle = (h) => {
+    const p = handlePoint(h);
+    return { left: p.x - HANDLE / 2, top: p.y - HANDLE / 2 };
+  };
+  // 미리보기 좌표의 영역
+  const R = { x: rect.x * scale, y: rect.y * scale, w: rect.width * scale, h: rect.height * scale };
+  const rr = Math.min(RADIUS_PX, R.w / 2, R.h / 2);
+  const bl = Math.max(rr + 4, Math.min(BRACKET + rr, R.w / 2 - 6, R.h / 2 - 6));
+  // 둥근 모서리를 따라가는 꺾쇠 (흰 굵은 선)
+  const bracketPath = (c) => {
+    const { x, y, w, h } = R;
+    if (c === 'tl') return `M${x} ${y + bl} V${y + rr} A${rr} ${rr} 0 0 1 ${x + rr} ${y} H${x + bl}`;
+    if (c === 'tr') return `M${x + w - bl} ${y} H${x + w - rr} A${rr} ${rr} 0 0 1 ${x + w} ${y + rr} V${y + bl}`;
+    if (c === 'br') return `M${x + w} ${y + h - bl} V${y + h - rr} A${rr} ${rr} 0 0 1 ${x + w - rr} ${y + h} H${x + w - bl}`;
+    return `M${x + bl} ${y + h} H${x + rr} A${rr} ${rr} 0 0 1 ${x} ${y + h - rr} V${y + h - bl}`;
+  };
+  // 변 손잡이: 짧은 막대
+  const edgePath = (e) => {
+    const p = handlePoint(e);
+    const half = Math.min(12, (e === 't' || e === 'b' ? R.w : R.h) / 2 - bl);
+    if (half < 4) return null;
+    return e === 't' || e === 'b' ? `M${p.x - half} ${p.y} H${p.x + half}` : `M${p.x} ${p.y - half} V${p.y + half}`;
+  };
+  // 가운데에 붙었는지 (안내선)
+  const centeredX = Math.abs(rect.x + rect.width / 2 - area.width / 2) < 0.5;
+  const centeredY = Math.abs(rect.y + rect.height / 2 - area.height / 2) < 0.5;
+  const accent = colors.primary;
+  const sizeLabel = `${Math.round(rect.width)} × ${Math.round(rect.height)}`;
+  const labelAbove = R.y > 30;
 
   const save = async () => {
     try {
@@ -251,11 +287,28 @@ export default function ScanRegionEditorScreen() {
               accessibilityLabel={t('scanRegion.dragHint')}
             />
           </GestureDetector>
-          {['tl', 'tr', 'bl', 'br'].map((corner) => (
-            <GestureDetector key={corner} gesture={cornerGesture(corner)}>
-              <View style={[s.handle, handleStyle(corner)]}>
-                <View style={[s.handleDot, { backgroundColor: colors.primary }]} />
-              </View>
+          {/* 가운데 안내선 · 꺾쇠 · 변 막대 (그리기만, 터치는 아래 투명 손잡이) */}
+          <Svg width={pw} height={ph} style={StyleSheet.absoluteFill} pointerEvents="none">
+            {active === 'move' && centeredX && <Line x1={pw / 2} y1={0} x2={pw / 2} y2={ph} stroke={accent} strokeWidth={1} strokeDasharray="4 4" />}
+            {active === 'move' && centeredY && <Line x1={0} y1={ph / 2} x2={pw} y2={ph / 2} stroke={accent} strokeWidth={1} strokeDasharray="4 4" />}
+            {['tl', 'tr', 'br', 'bl'].map((c) => (
+              <Path key={c} d={bracketPath(c)} stroke={active === c ? accent : '#FFFFFF'} strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            ))}
+            {['t', 'r', 'b', 'l'].map((e) => {
+              const d = edgePath(e);
+              return d ? <Path key={e} d={d} stroke={active === e ? accent : '#FFFFFF'} strokeWidth={4} strokeLinecap="round" fill="none" /> : null;
+            })}
+          </Svg>
+          {/* 크기 표시 (dp) */}
+          <View
+            pointerEvents="none"
+            style={[s.sizeChip, { left: Math.min(Math.max(R.x + R.w / 2 - 50, 4), pw - 104), top: labelAbove ? R.y - 28 : R.y + R.h + 6, backgroundColor: active ? accent : 'rgba(0,0,0,0.6)' }]}
+          >
+            <Text style={[s.sizeChipText, { fontFamily: MONO }]}>{sizeLabel}</Text>
+          </View>
+          {['t', 'r', 'b', 'l', 'tl', 'tr', 'bl', 'br'].map((h) => (
+            <GestureDetector key={h} gesture={cornerGesture(h)}>
+              <View style={[s.handle, handleStyle(h)]} accessibilityLabel={t('scanRegion.dragHint')} />
             </GestureDetector>
           ))}
         </View>
@@ -327,7 +380,8 @@ const s = StyleSheet.create({
   },
   dragArea: { position: 'absolute' },
   handle: { position: 'absolute', width: HANDLE, height: HANDLE, alignItems: 'center', justifyContent: 'center' },
-  handleDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: '#fff' },
+  sizeChip: { position: 'absolute', width: 100, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  sizeChipText: { color: '#fff', fontSize: 12 },
   hint: { fontSize: 13, lineHeight: 19, textAlign: 'center', marginHorizontal: 4 },
   quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   quickButton: {

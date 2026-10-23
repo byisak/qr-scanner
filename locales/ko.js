@@ -1135,7 +1135,7 @@ export default {
     top: '위',
     bottom: '아래',
     unitHint: '단위: dp(화면 점). 한쪽 위치를 바꾸면 크기는 그대로 두고 옮겨요',
-    editorHint: '사각형을 끌어 옮기고, 모서리 점으로 크기를 바꾸세요. 스캔 화면 크기 {{width}} × {{height}} dp 기준',
+    editorHint: '사각형을 끌어 옮기고, 모서리나 변의 손잡이로 크기를 바꾸세요. 스캔 화면 크기 {{width}} × {{height}} dp 기준',
     dragHint: '스캔 영역. 끌어서 옮겨요',
     clamped: '화면 밖으로 나가지 않게 맞췄어요',
     decrease: '줄이기',

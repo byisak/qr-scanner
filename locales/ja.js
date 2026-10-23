@@ -1130,7 +1130,7 @@ export default {
     top: '上',
     bottom: '下',
     unitHint: '単位: dp（画面ポイント）。片側の位置を変えるとサイズはそのままで移動します',
-    editorHint: '四角形をドラッグで移動、角の点でサイズを変更します。スキャン画面 {{width}} × {{height}} dp 基準',
+    editorHint: '四角形をドラッグで移動、角や辺のハンドルでサイズを変更します。スキャン画面 {{width}} × {{height}} dp 基準',
     dragHint: 'スキャン範囲。ドラッグで移動',
     clamped: '画面からはみ出さないよう調整しました',
     decrease: '減らす',

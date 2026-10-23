@@ -1130,7 +1130,7 @@ export default {
     top: 'Arriba',
     bottom: 'Abajo',
     unitHint: 'Unidad: dp (puntos de pantalla). Cambiar un lado mueve el área sin cambiar su tamaño',
-    editorHint: 'Arrastra el recuadro para moverlo y los puntos de las esquinas para cambiar el tamaño. Según una pantalla de escaneo de {{width}} × {{height}} dp',
+    editorHint: 'Arrastra el recuadro para moverlo y usa las asas de las esquinas o los lados para cambiar el tamaño. Según una pantalla de escaneo de {{width}} × {{height}} dp',
     dragHint: 'Área de escaneo. Arrastra para mover',
     clamped: 'Ajustado para que no salga de la pantalla',
     decrease: 'reducir',

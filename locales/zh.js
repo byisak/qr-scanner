@@ -1130,7 +1130,7 @@ export default {
     top: '上',
     bottom: '下',
     unitHint: '单位：dp（屏幕点）。改动一侧位置时保持大小不变并移动',
-    editorHint: '拖动方框移动，拖动角点调整大小。以 {{width}} × {{height}} dp 扫描画面为准',
+    editorHint: '拖动方框移动，拖动角或边上的手柄调整大小。以 {{width}} × {{height}} dp 扫描画面为准',
     dragHint: '扫描区域。拖动以移动',
     clamped: '已调整，避免超出屏幕',
     decrease: '减少',

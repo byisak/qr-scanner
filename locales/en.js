@@ -1146,7 +1146,7 @@ export default {
     top: 'Top',
     bottom: 'Bottom',
     unitHint: 'Unit: dp (screen points). Changing one side moves the area and keeps its size',
-    editorHint: 'Drag the box to move it and the corner dots to resize. Based on a {{width}} × {{height}} dp scan screen',
+    editorHint: 'Drag the box to move it, and drag a corner or edge handle to resize. Based on a {{width}} × {{height}} dp scan screen',
     dragHint: 'Scan area. Drag to move',
     clamped: 'Adjusted to stay on screen',
     decrease: 'decrease',
