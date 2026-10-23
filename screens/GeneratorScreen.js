@@ -24,6 +24,7 @@ import * as MediaLibrary from 'expo-media-library';
 import haptics from '../utils/haptics';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 // 네이티브 모듈 안전한 import (빌드 문제 대응)
 let ImagePicker = null;
@@ -1261,9 +1262,6 @@ export default function GeneratorScreen() {
     }
   };
 
-  // 내용·스타일이 바뀌면 예전 SVG 는 버린다 (새 미리보기가 다시 보낸다)
-  useEffect(() => { qrSvgRef.current = {}; }, [qrData, qrStyle, frameTextColor]);
-
   // 벡터 파일(SVG·EPS)로 저장·공유. 바코드는 저장 설정, QR 은 미리보기와 같은 스타일 그대로
   const QR_VECTOR_MM = 50;
   const exportVector = async (format, mode) => {
@@ -1297,8 +1295,14 @@ export default function GeneratorScreen() {
         // 미리보기 WebView 가 SVG 를 보내올 때까지 잠깐 기다린다
         const start = Date.now();
         const key = selectedFrame ? selectedFrame.id : 'none';
-        while (!qrSvgRef.current[key] && Date.now() - start < 4000) await new Promise(r => setTimeout(r, 100));
-        const entry = qrSvgRef.current[key];
+        // 지금 내용·스타일로 그린 SVG 인지 확인 (바뀐 직후면 새 SVG 가 올 때까지)
+        const styleKey = JSON.stringify(qrStyle);
+        const fresh = () => {
+          const e = qrSvgRef.current[key];
+          return e && e.value === qrData && e.styleKey === styleKey && e.textColor === frameTextColor ? e : null;
+        };
+        while (!fresh() && Date.now() - start < 4000) await new Promise(r => setTimeout(r, 100));
+        const entry = fresh() || qrSvgRef.current[key];
         if (!entry) throw new Error('qr svg not ready');
         const qrSvg = entry.svg;
         epsImages = entry.images || [];
@@ -1325,7 +1329,7 @@ export default function GeneratorScreen() {
         const r = await saveTextFile(name, content, format);
         if (r.canceled) return;
         if (r.method === 'folder') {
-          Alert.alert('✓ ' + t('generator.saveSuccess'), t('generator.vectorSavedTo', { folder: r.folder, name }));
+          Alert.alert('✓ ' + t('generator.saveSuccess'), t('generator.vectorSavedTo', { folder: r.folder, name: r.name || name }));
         }
       }
       trackEvent('code_vector_exported', { format, mode, kind: isBarcode ? 'barcode' : 'qr', bcid: isBarcode ? selectedBarcodeFormat : 'qr' });
@@ -1507,21 +1511,30 @@ export default function GeneratorScreen() {
       // 이미지 선택
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
+        // Android 자르기 화면은 결과가 비면 네이티브에서 죽는다(CropImageContract) → iOS 만 자르기. 로고는 어차피 정사각형 안에 맞춰 넣는다
+        allowsEditing: Platform.OS === 'ios',
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.9,
         base64: true,
       });
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
-        const base64Image = `data:image/png;base64,${asset.base64}`;
+        // 큰 사진은 512px PNG 로 줄인다 (WebView·SVG·EPS 에 그대로 들어가므로)
+        let base64Image = `data:image/png;base64,${asset.base64}`;
+        try {
+          const small = await ImageManipulator.manipulateAsync(asset.uri, [{ resize: { width: Math.min(512, asset.width || 512) } }], { format: ImageManipulator.SaveFormat.PNG, base64: true });
+          if (small.base64) base64Image = `data:image/png;base64,${small.base64}`;
+        } catch (e) {
+          console.warn('[logo] resize failed:', e?.message);
+        }
         setLogoImage(base64Image);
 
-        // qrStyle에 로고 추가
+        // qrStyle에 로고 추가. 로고가 가리는 만큼 오류 정정을 H 로 올린다
         setQrStyle(prev => ({
           ...prev,
           logo: base64Image,
+          errorCorrectionLevel: 'H',
         }));
       }
     } catch (error) {
@@ -2694,6 +2707,7 @@ export default function GeneratorScreen() {
                     { id: 'corners', icon: 'scan-outline', label: t('generator.qrStyle.corners') || '코너' },
                     { id: 'background', icon: 'image-outline', label: t('generator.qrStyle.background') || '배경' },
                     { id: 'textColor', icon: 'text-outline', label: t('generator.qrStyle.textColor') || '글자' },
+                    { id: 'logo', icon: 'happy-outline', label: t('generator.qrStyle.logo') },
                     { id: 'settings', icon: 'settings-outline', label: t('generator.qrStyle.settings') || '설정' },
                   ].map((tab) => (
                     <MaterialPressable
@@ -3064,6 +3078,56 @@ export default function GeneratorScreen() {
                 </View>
               )}
 
+              {/* 로고 탭 */}
+              {qrSettingsTab === 'logo' && (
+                <View style={s.qrOptionSection}>
+                  <Text style={[s.qrOptionTitle, { color: colors.text }]}>{t('generator.qrStyle.logoImage')}</Text>
+                  {qrStyle.logo ? (
+                    <View style={s.logoRow}>
+                      <Image source={{ uri: qrStyle.logo }} style={[s.logoPreview, { borderColor: colors.border }]} />
+                      <View style={s.logoButtons}>
+                        <MaterialPressable style={[s.logoButton, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={handlePickLogo} accessibilityRole="button">
+                          <Ionicons name="swap-horizontal" size={16} color={colors.primaryText} />
+                          <Text style={[s.qrOptionText, { color: colors.primaryText }]}>{t('generator.qrStyle.change')}</Text>
+                        </MaterialPressable>
+                        <MaterialPressable style={[s.logoButton, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={handleRemoveLogo} accessibilityRole="button">
+                          <Ionicons name="trash-outline" size={16} color={colors.error} />
+                          <Text style={[s.qrOptionText, { color: colors.error }]}>{t('generator.qrStyle.removeLogo')}</Text>
+                        </MaterialPressable>
+                      </View>
+                    </View>
+                  ) : (
+                    <MaterialPressable style={[s.logoAdd, { borderColor: colors.border }]} onPress={handlePickLogo} accessibilityRole="button">
+                      <Ionicons name="add-circle-outline" size={22} color={colors.primaryText} />
+                      <Text style={[s.qrOptionText, { color: colors.primaryText }]}>{t('generator.qrStyle.addLogo')}</Text>
+                    </MaterialPressable>
+                  )}
+                  {!!qrStyle.logo && (
+                    <>
+                      <Text style={[s.qrOptionTitle, { color: colors.text, marginTop: 16 }]}>{t('generator.qrStyle.imageSize')}</Text>
+                      <View style={s.logoSizeRow}>
+                        {[['small', 0.25], ['medium', 0.4], ['large', 0.5]].map(([k, v]) => {
+                          const cur = qrStyle.imageOptions?.imageSize ?? 0.4;
+                          const on = Math.abs(cur - v) < 0.02;
+                          return (
+                            <MaterialPressable
+                              key={k}
+                              style={[s.logoSizeOption, { backgroundColor: on ? colors.primarySoft : colors.inputBackground, borderColor: on ? colors.primary : colors.border }]}
+                              onPress={() => setQrStyle(prev => ({ ...prev, imageOptions: { ...(prev.imageOptions || {}), imageSize: v } }))}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected: on }}
+                            >
+                              <Text style={[s.qrOptionText, { color: on ? colors.primaryText : colors.text }]}>{t(`generator.qrStyle.logoSize.${k}`)}</Text>
+                            </MaterialPressable>
+                          );
+                        })}
+                      </View>
+                    </>
+                  )}
+                  <Text style={[s.logoHint, { color: colors.textSecondary }]}>{t('generator.qrStyle.logoHintEcl')}</Text>
+                </View>
+              )}
+
               {/* 글자 색상 탭 */}
               {qrSettingsTab === 'textColor' && (
                 <View style={s.qrOptionSection}>
@@ -3268,7 +3332,7 @@ export default function GeneratorScreen() {
                                   frameTextColor={frameTextColor}
                                   isDark={isDark}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
-                                  onSvg={(svg, images) => { qrSvgRef.current[frame.id] = { svg, images }; }}
+                                  onSvg={(svg, images) => { qrSvgRef.current[frame.id] = { svg, images, value: qrData, styleKey: JSON.stringify(qrStyle), textColor: frameTextColor }; }}
                                 />
                               </View>
                             ) : (
@@ -3279,7 +3343,7 @@ export default function GeneratorScreen() {
                                     size={200}
                                     qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
                                     onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
-                                    onSvg={(svg, images) => { qrSvgRef.current[frame.id] = { svg, images }; }}
+                                    onSvg={(svg, images) => { qrSvgRef.current[frame.id] = { svg, images, value: qrData, styleKey: JSON.stringify(qrStyle), textColor: frameTextColor }; }}
                                   />
                                 ) : (
                                   <QRCode
@@ -4524,6 +4588,14 @@ const s = StyleSheet.create({
   frameWithQrPreview: {
     position: 'relative',
   },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  logoPreview: { width: 72, height: 72, borderRadius: 12, borderWidth: 1 },
+  logoButtons: { flex: 1, gap: 8 },
+  logoButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40, borderRadius: 10, borderWidth: 1, overflow: 'hidden' },
+  logoAdd: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 56, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', overflow: 'hidden' },
+  logoSizeRow: { flexDirection: 'row', gap: 8 },
+  logoSizeOption: { flex: 1, minHeight: 40, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  logoHint: { fontSize: 12, lineHeight: 17, marginTop: 12 },
   framePreviewSvg: {
     position: 'absolute',
     left: 0,

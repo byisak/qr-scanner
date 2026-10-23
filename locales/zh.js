@@ -1543,6 +1543,14 @@ export default {
     selectFromMap: '从地图选择',
     // QR样式
     qrStyle: {
+      logo: '徽标',
+      removeLogo: '移除徽标',
+      logoHintEcl: '添加徽标后会把纠错等级提高到 H（30%）。徽标太大可能无法扫描，保存前请先扫一次试试。',
+      logoSize: {
+        small: '小',
+        medium: '中',
+        large: '大',
+      },
       frame: '边框',
       title: 'QR样式',
       customize: '样式',

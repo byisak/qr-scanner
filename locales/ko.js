@@ -1557,6 +1557,14 @@ export default {
     digits: '자리',
     // QR 스타일
     qrStyle: {
+      logo: '로고',
+      removeLogo: '로고 빼기',
+      logoHintEcl: '로고를 넣으면 오류 정정을 H(30%)로 올려요. 로고가 크면 스캔이 안 될 수 있으니 저장 전에 한 번 찍어 보세요.',
+      logoSize: {
+        small: '작게',
+        medium: '보통',
+        large: '크게',
+      },
       title: 'QR 스타일',
       customize: '스타일',
       basic: '기본',

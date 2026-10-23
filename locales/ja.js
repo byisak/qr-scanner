@@ -1543,6 +1543,14 @@ export default {
     selectFromMap: '地図から選択',
     // QRスタイル
     qrStyle: {
+      logo: 'ロゴ',
+      removeLogo: 'ロゴを外す',
+      logoHintEcl: 'ロゴを入れると誤り訂正をH（30%）に上げます。ロゴが大きいと読み取れないことがあるので、保存前に一度スキャンしてください。',
+      logoSize: {
+        small: '小',
+        medium: '中',
+        large: '大',
+      },
       frame: 'フレーム',
       title: 'QRスタイル',
       customize: 'スタイル',

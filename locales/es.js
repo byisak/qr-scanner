@@ -1543,6 +1543,14 @@ export default {
     selectFromMap: 'Seleccionar del mapa',
     // Estilo QR
     qrStyle: {
+      logo: 'Logotipo',
+      removeLogo: 'Quitar logotipo',
+      logoHintEcl: 'Al añadir un logotipo, la corrección de errores sube a H (30 %). Un logotipo grande puede impedir la lectura; escanéalo una vez antes de guardar.',
+      logoSize: {
+        small: 'Pequeño',
+        medium: 'Mediano',
+        large: 'Grande',
+      },
       frame: 'Marco',
       title: 'Estilo QR',
       customize: 'Estilo',

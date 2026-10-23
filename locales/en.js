@@ -1568,6 +1568,14 @@ export default {
     digits: 'digits',
     // QR Style
     qrStyle: {
+      logo: 'Logo',
+      removeLogo: 'Remove logo',
+      logoHintEcl: 'Adding a logo raises error correction to H (30%). A large logo can make the code unreadable, so scan it once before saving.',
+      logoSize: {
+        small: 'Small',
+        medium: 'Medium',
+        large: 'Large',
+      },
       title: 'QR Style',
       customize: 'Style',
       basic: 'Basic',

@@ -44,14 +44,28 @@ async function pickAndroidDir() {
   return res.directoryUri;
 }
 
-async function writeAndroid(dirUri, name, content, format) {
+// 같은 이름이 있으면 name-2.ext, name-3.ext … (SAF 는 "name.ext (1)" 처럼 확장자 뒤에 붙인다)
+async function uniqueName(dirUri, name) {
+  try {
+    const uris = await FileSystem.StorageAccessFramework.readDirectoryAsync(dirUri);
+    const taken = new Set(uris.map(u => decodeURIComponent(u).split('/').pop()));
+    if (!taken.has(name)) return name;
+    const dot = name.lastIndexOf('.');
+    const base = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+    for (let i = 2; i < 1000; i++) if (!taken.has(`${base}-${i}${ext}`)) return `${base}-${i}${ext}`;
+  } catch { /* 목록을 못 읽으면 그대로 */ }
+  return name;
+}
+
+async function writeAndroid(dirUri, rawName, content, format) {
   const SAF = FileSystem.StorageAccessFramework;
   const f = VECTOR_FORMATS[format];
+  const name = await uniqueName(dirUri, rawName);
   // SAF 는 확장자를 MIME 으로 붙이므로 이름에서는 뺀다 (keepExt: 이름 그대로)
   const base = f.keepExt ? name : name.replace(new RegExp(`\\.${f.ext}$`), '');
   const fileUri = await SAF.createFileAsync(dirUri, base, f.safMime || f.mime);
   await SAF.writeAsStringAsync(fileUri, content, { encoding: FileSystem.EncodingType.UTF8 });
-  return fileUri;
+  return { fileUri, name };
 }
 
 /** Android: 저장 폴더를 이미 골랐는지 (처음이면 고르기 전에 안내한다) */
@@ -81,14 +95,15 @@ export async function saveTextFile(name, content, format, { changeFolder = false
     dir = await pickAndroidDir();
     if (!dir) return { method: 'folder', canceled: true };
   }
+  let saved;
   try {
-    await writeAndroid(dir, name, content, format);
+    saved = await writeAndroid(dir, name, content, format);
   } catch (e) {
     // 폴더 권한이 사라졌으면 한 번 다시 고른다
     await AsyncStorage.removeItem(DIR_KEY);
     dir = await pickAndroidDir();
     if (!dir) return { method: 'folder', canceled: true };
-    await writeAndroid(dir, name, content, format);
+    saved = await writeAndroid(dir, name, content, format);
   }
-  return { method: 'folder', folder: folderLabel(dir) };
+  return { method: 'folder', folder: folderLabel(dir), name: saved.name };
 }
