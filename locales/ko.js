@@ -1176,8 +1176,6 @@ export default {
 
   // QR 코드 생성 화면
   generator: {
-    vectorFrameTitle: '프레임 QR은 아직 PNG만 돼요',
-    vectorFrameMessage: '프레임을 넣은 QR의 SVG·EPS 저장은 다음 업데이트에서 지원해요. 프레임 없이 저장하려면 프레임을 "없음"으로 바꿔 주세요.',
     epsNoLogo: '로고는 빠져요 (SVG에는 들어가요)',
     pickFolderTitle: '저장할 폴더 고르기',
     pickFolderMessage: '처음 한 번만 저장할 폴더를 골라요. 다음 화면에서 "새 폴더 만들기"로 다운로드 안에 폴더(예: QRScanner)를 만든 뒤 "이 폴더 사용"을 누르세요.',

@@ -1171,8 +1171,6 @@ export default {
 
   // Pantalla de generador de código QR
   generator: {
-    vectorFrameTitle: 'QR con marco: solo PNG por ahora',
-    vectorFrameMessage: 'El guardado en SVG y EPS de QR con marco llegará en la próxima actualización. Para guardar sin marco, elige "Ninguno".',
     epsNoLogo: 'sin logotipo (el SVG lo conserva)',
     pickFolderTitle: 'Elige una carpeta',
     pickFolderMessage: 'Solo se hace una vez. En la siguiente pantalla, usa "Crear carpeta" para crear una carpeta dentro de Descargas (p. ej., QRScanner) y toca "Usar esta carpeta".',

@@ -207,6 +207,7 @@ const FRAME_SVG_DATA = {
 <path fill="#595959" d="M398.39,467.81c-9.28,0-17.59-6.49-19.56-15.93L308.98,116.3c-3.55-15.44-15.08-28.1-30.13-33.06c-0.04-0.01-0.07-0.02-0.11-0.04L148.13,39.32c-10.47-3.52-16.11-14.86-12.59-25.33c3.52-10.47,14.86-16.1,25.33-12.59l130.55,43.86c28.33,9.36,50.03,33.25,56.61,62.35c0.03,0.11,0.05,0.23,0.07,0.34l69.88,335.77c2.25,10.81-4.69,21.41-15.5,23.66C401.11,467.67,399.74,467.81,398.39,467.81z" />
 <path fill="#000000" d="M53.13,219.67l447.39,0l446.45,0c5.55,0.39,8.58,3.06,9.65,4.22c1.18,1.29,1.78,2.58,1.78,3.85c-11.04,176.05-23.99,349.56-38.48,515.72l-0.01,0.09c-1.72,20.8-3.49,41.83-5.2,62.17c-12.75,151.48-24.79,294.57-24.49,444.19c-0.07,5.98-3.56,9.96-5.87,9.99h-766.3c-4.13-0.52-10.34-7.27-10.63-15.86l-0.01-0.32c-3.06-61.22-5.72-120.65-8.29-178.13c-5.16-115.39-10.03-224.39-17.54-335.19c-5.94-93.92-13.91-190.38-21.63-283.67c-5.89-71.2-11.97-144.81-17.22-217.92c0.2-2.75,1.54-4.66,2.68-5.81C46.53,221.62,49.07,219.68,53.13,219.67 M947.98,179.67c-149.15,0-298.31,0-447.46,0s-298.31,0-447.46,0c-28.03,0.05-50.57,22.33-50.38,50C14.89,400.1,31.2,567.59,41.64,732.79c11.26,166.06,16.64,329.85,25.79,512.7c0.97,28.81,23.14,53.5,49.43,54.51c255.87,0,511.73,0,767.6,0c25.35-0.1,45.61-22.47,45.75-49.89c-0.34-168.56,15.48-332.56,29.55-503.17c14.8-169.67,27.85-345.95,38.59-517.27C999.51,203.23,977.04,180.83,947.98,179.67z" />
 <path fill="#000000" d="M49.37,336.21l34.81,842.57c0,65.88,13.08,96.26,44.42,96.26h745.77c31.34,0,43.75-38.42,43.75-75.9l33.87-833.73c0,0-84.54-21.01-202.49-12.66c-98.4,6.97-285.78,29.91-384.42,28.61C236.09,379.66,49.37,336.21,49.37,336.21z" />
+<rect fill="#ffffff" x="152.5" y="382" width="696" height="696" rx="40" />
 <text fill="#ffffff" font-size="90" x="50%" y="1229" dominant-baseline="middle" text-anchor="middle" font-family="Inter-SemiBold">Scan me!</text>
 </svg>`,
   'gift-box': `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 990">
@@ -224,7 +225,7 @@ const FRAME_QR_POSITIONS = {
   'play-button': { x: 40, y: 40, width: 920, height: 920, viewBoxWidth: 1000, viewBoxHeight: 1300 },
   'hand-phone': { x: 184, y: 222, width: 631, height: 621, viewBoxWidth: 1000, viewBoxHeight: 1300 },
   'film-strip': { x: 140, y: 304, width: 760, height: 590, viewBoxWidth: 1000, viewBoxHeight: 1300 },
-  'beer-mug': { x: 186, y: 362, width: 629, height: 600, viewBoxWidth: 1000, viewBoxHeight: 1300 },
+  'beer-mug': { x: 186, y: 362, width: 629, height: 600, viewBoxWidth: 1000, viewBoxHeight: 1300, qrFill: 0.78 }, // 거품 윤곽과 붙지 않게 조금 작게
   'car': { x: 22, y: 40, width: 512, height: 474, viewBoxWidth: 1000, viewBoxHeight: 990 },
   'coffee-cup': { x: 179, y: 323, width: 641, height: 640, viewBoxWidth: 1000, viewBoxHeight: 1300 },
   'smartphone': { x: 80, y: 290, width: 840, height: 980, viewBoxWidth: 1000, viewBoxHeight: 1600 },
@@ -233,7 +234,7 @@ const FRAME_QR_POSITIONS = {
   'clipboard': { x: 40, y: 166, width: 920, height: 850, viewBoxWidth: 1000, viewBoxHeight: 1300 },
   'chat-bubble': { x: 40, y: 40, width: 920, height: 960, viewBoxWidth: 1000, viewBoxHeight: 1300 },
   'notebook': { x: 100, y: 181, width: 860, height: 820, viewBoxWidth: 1000, viewBoxHeight: 1300 },
-  'shopping-bag': { x: 84, y: 380, width: 833, height: 700, viewBoxWidth: 1000, viewBoxHeight: 1300 },
+  'shopping-bag': { x: 84, y: 380, width: 833, height: 700, viewBoxWidth: 1000, viewBoxHeight: 1300, qrAbove: true }, // 검은 가방 몸통 위 흰 판에 QR
   'gift-box': { x: 195, y: 106, width: 611, height: 621, viewBoxWidth: 1000, viewBoxHeight: 990 },
 };
 
@@ -252,6 +253,8 @@ export default function QRFrameRenderer({
   // 저장용 오프스크린 렌더링 옵션 (StyledQRCode로 그대로 전달)
   renderScale = 1,
   snapshotAsImage = false,
+  // 벡터 저장용: 프레임 안 QR 의 SVG (배경 투명, 여백 0)
+  onSvg,
 }) {
   if (!frame || !frame.id || frame.id === 'none') {
     // 프레임이 없으면 QR 코드만 렌더링
@@ -319,11 +322,21 @@ export default function QRFrameRenderer({
   const bgX = Math.floor(qrPosition.x * scale);
   const bgY = Math.floor(qrPosition.y * scale);
 
-  // QR 코드는 내부 영역 중앙에 정사각형으로 배치 (88%로 패딩 확보)
-  const qrSize = Math.floor(Math.min(bgAreaWidth, bgAreaHeight) * 0.88);
+  // QR 코드는 내부 영역 중앙에 정사각형으로 배치 (기본 88%로 패딩 확보, 프레임별 qrFill)
+  const qrSize = Math.floor(Math.min(bgAreaWidth, bgAreaHeight) * (qrPosition.qrFill || 0.88));
 
   return (
     <View style={[styles.container, { width: frameWidth, height: frameHeight }]} onLayout={onLayout}>
+      {/* QR 이 프레임 위에 오는 프레임(qrAbove)은 프레임을 먼저 그린다 */}
+      {qrPosition.qrAbove && (
+      <SvgXml
+        xml={coloredFrameSvg}
+        width={frameWidth}
+        height={frameHeight}
+        style={styles.frameSvg}
+        pointerEvents="none"
+      />
+      )}
       {/* 1. QR 코드 영역 - 프레임이 있는 경우 배경은 투명 */}
       <View
         style={[
@@ -342,11 +355,13 @@ export default function QRFrameRenderer({
           size={qrSize}
           qrStyle={{ ...qrStyle, backgroundColor: 'transparent', width: undefined, height: undefined, margin: 0 }}
           onCapture={onCapture}
+          onSvg={onSvg}
           renderScale={renderScale}
           snapshotAsImage={snapshotAsImage}
         />
       </View>
       {/* 2. 프레임 SVG (가장 위) - 배경색에 맞춰 색상 조화 적용 */}
+      {!qrPosition.qrAbove && (
       <SvgXml
         xml={coloredFrameSvg}
         width={frameWidth}
@@ -354,12 +369,13 @@ export default function QRFrameRenderer({
         style={styles.frameSvg}
         pointerEvents="none"
       />
+      )}
     </View>
   );
 }
 
 // 프레임 SVG 데이터 export (다른 컴포넌트에서 사용 가능)
-export { FRAME_SVG_DATA, FRAME_QR_POSITIONS };
+export { FRAME_SVG_DATA, FRAME_QR_POSITIONS, generateFrameColors, recolorSvg };
 
 const styles = StyleSheet.create({
   container: {

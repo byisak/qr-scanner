@@ -65,6 +65,7 @@ import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 import { saveGeneratedCodeToHistory } from '../utils/generatedHistoryStorage';
 import ActionMenu from '../components/ActionMenu';
 import { svgToEps, withPhysicalSize } from '../utils/vectorExport';
+import { composeFramedQrSvg } from '../utils/frameVector';
 import { saveTextFile, shareTextFile, safeFileName, needsFolderPick } from '../utils/vectorFileSave';
 import { trackEvent } from '../utils/analytics';
 import { buildWifiQr } from '../utils/wifiQr';
@@ -148,7 +149,7 @@ export default function GeneratorScreen() {
   const [highResLevel, setHighResLevel] = useState(0);
   const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '', type: 'qr' });
   const [formatMenu, setFormatMenu] = useState(null); // 'save' | 'share' : 저장 형식 고르기
-  const qrSvgRef = useRef(null); // 미리보기 QR 의 SVG (벡터 저장용)
+  const qrSvgRef = useRef({}); // 미리보기 QR 의 SVG (벡터 저장용), 프레임 id 별
 
   // 고해상도 레벨별 설정
   const HIGH_RES_LEVELS = [
@@ -1261,7 +1262,7 @@ export default function GeneratorScreen() {
   };
 
   // 내용·스타일이 바뀌면 예전 SVG 는 버린다 (새 미리보기가 다시 보낸다)
-  useEffect(() => { qrSvgRef.current = null; }, [qrData, qrStyle]);
+  useEffect(() => { qrSvgRef.current = {}; }, [qrData, qrStyle, frameTextColor]);
 
   // 벡터 파일(SVG·EPS)로 저장·공유. 바코드는 저장 설정, QR 은 미리보기와 같은 스타일 그대로
   const QR_VECTOR_MM = 50;
@@ -1269,10 +1270,6 @@ export default function GeneratorScreen() {
     const isBarcode = codeMode === 'barcode';
     if (!(isBarcode ? hasBarcodeData : hasData)) {
       Alert.alert(t('common.error'), t('generator.emptyText'));
-      return;
-    }
-    if (!isBarcode && selectedFrame) {
-      Alert.alert(t('generator.vectorFrameTitle'), t('generator.vectorFrameMessage'));
       return;
     }
     if (isLocked('vectorExport')) {
@@ -1298,9 +1295,14 @@ export default function GeneratorScreen() {
       } else {
         // 미리보기 WebView 가 SVG 를 보내올 때까지 잠깐 기다린다
         const start = Date.now();
-        while (!qrSvgRef.current && Date.now() - start < 4000) await new Promise(r => setTimeout(r, 100));
-        if (!qrSvgRef.current) throw new Error('qr svg not ready');
-        svg = withPhysicalSize(qrSvgRef.current, QR_VECTOR_MM);
+        const key = selectedFrame ? selectedFrame.id : 'none';
+        while (!qrSvgRef.current[key] && Date.now() - start < 4000) await new Promise(r => setTimeout(r, 100));
+        const qrSvg = qrSvgRef.current[key];
+        if (!qrSvg) throw new Error('qr svg not ready');
+        svg = selectedFrame
+          ? composeFramedQrSvg({ frameId: selectedFrame.id, qrSvg, qrStyle, frameTextColor, isDark })
+          : withPhysicalSize(qrSvg, QR_VECTOR_MM);
+        if (!svg) throw new Error('frame compose failed');
         title = `QR ${String(qrData).slice(0, 40)}`;
         base = `qr_${String(qrData).replace(/^https?:\/\//, '').slice(0, 30)}`;
       }
@@ -3263,6 +3265,7 @@ export default function GeneratorScreen() {
                                   frameTextColor={frameTextColor}
                                   isDark={isDark}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
+                                  onSvg={(svg) => { qrSvgRef.current[frame.id] = svg; }}
                                 />
                               </View>
                             ) : (
@@ -3273,7 +3276,7 @@ export default function GeneratorScreen() {
                                     size={200}
                                     qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
                                     onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
-                                    onSvg={isCurrentFrame ? (svg) => { qrSvgRef.current = svg; } : undefined}
+                                    onSvg={(svg) => { qrSvgRef.current[frame.id] = svg; }}
                                   />
                                 ) : (
                                   <QRCode
