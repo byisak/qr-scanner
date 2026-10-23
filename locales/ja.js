@@ -1171,6 +1171,17 @@ export default {
 
   // QRコード生成画面
   generator: {
+    pickFolderTitle: '保存先フォルダを選ぶ',
+    pickFolderMessage: '最初の1回だけ保存先を選びます。次の画面で「新しいフォルダを作成」からダウンロード内にフォルダ（例：QRScanner）を作り、「このフォルダを使用」を押してください。',
+    pickFolder: 'フォルダを選ぶ',
+    saveAs: '保存形式',
+    shareAs: '共有形式',
+    formatPngSave: '写真に画像として保存',
+    formatPngShare: '画像として送る',
+    formatSvg: 'Web・デザイン用のベクター。拡大しても粗くなりません',
+    formatEps: '印刷所・Illustrator 用のベクター（RGB）',
+    vectorSavedTo: '{{folder}} フォルダに {{name}} を保存しました。',
+    vectorFailed: 'ファイルを作成できませんでした。バーコードの値を確認してください。',
     // 접근성 라벨
     a11y: {
       customColor: '色を自分で選ぶ',

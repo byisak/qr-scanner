@@ -1171,6 +1171,17 @@ export default {
 
   // 二维码生成界面
   generator: {
+    pickFolderTitle: '选择保存文件夹',
+    pickFolderMessage: '只需选择一次。在下一个界面用"新建文件夹"在下载目录中创建文件夹（例如 QRScanner），然后点按"使用此文件夹"。',
+    pickFolder: '选择文件夹',
+    saveAs: '保存格式',
+    shareAs: '分享格式',
+    formatPngSave: '以图片保存到相册',
+    formatPngShare: '以图片发送',
+    formatSvg: '用于网页和设计的矢量图，放大也不会模糊',
+    formatEps: '用于印刷厂和 Illustrator 的矢量图（RGB）',
+    vectorSavedTo: '已将 {{name}} 保存到 {{folder}} 文件夹。',
+    vectorFailed: '无法生成文件，请检查条码内容。',
     // 접근성 라벨
     a11y: {
       customColor: '自定义颜色',

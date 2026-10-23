@@ -127,6 +127,14 @@ export const LOCKED_FEATURES = {
     type: 'qrStyle',
   },
 
+  // 코드 생성: 벡터 파일(SVG·EPS) 저장 (인쇄·디자인용)
+  vectorExport: {
+    id: 'vectorExport',
+    adCount: 3,
+    type: 'generator',
+    description: 'SVG·EPS 저장',
+  },
+
   // ===== 설정 화면 =====
   batchScan: {
     id: 'batchScan',

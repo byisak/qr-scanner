@@ -9,7 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { Colors } from '../constants/Colors';
 import { RADIUS, SIZE } from '../constants/Design';
 
-/** actions: [{ label, icon?, run, destructive? }] */
+/** actions: [{ label, desc?, icon?, badge?, run, destructive? }] */
 export default function ActionMenu({ visible, title, actions, onClose }) {
   const { t, fonts } = useLanguage();
   const { isDark } = useTheme();
@@ -25,7 +25,11 @@ export default function ActionMenu({ visible, title, actions, onClose }) {
         {actions.map((a) => (
           <MaterialPressable key={a.label} style={s.row} onPress={() => pick(a)} accessibilityRole="button">
             {a.icon ? <Ionicons name={a.icon} size={20} color={a.destructive ? colors.error : colors.textSecondary} /> : null}
-            <Text style={[s.label, { color: a.destructive ? colors.error : colors.text, fontFamily: fonts.medium }]}>{a.label}</Text>
+            <View style={s.text}>
+              <Text style={[s.label, { color: a.destructive ? colors.error : colors.text, fontFamily: fonts.medium }]}>{a.label}</Text>
+              {!!a.desc && <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={2}>{a.desc}</Text>}
+            </View>
+            {!!a.badge && <Text style={[s.badge, { color: colors.primaryText, backgroundColor: colors.raised, fontFamily: fonts.semiBold }]}>{a.badge}</Text>}
           </MaterialPressable>
         ))}
       </View>
@@ -39,5 +43,8 @@ const s = StyleSheet.create({
   handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 8 },
   title: { fontSize: 13, paddingHorizontal: 20, paddingVertical: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: SIZE.row, paddingHorizontal: 20, overflow: 'hidden' },
+  text: { flex: 1, paddingVertical: 10 },
   label: { fontSize: 16 },
+  desc: { fontSize: 12, marginTop: 2, lineHeight: 16 },
+  badge: { fontSize: 11, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, overflow: 'hidden' },
 });

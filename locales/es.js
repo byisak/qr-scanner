@@ -1171,6 +1171,17 @@ export default {
 
   // Pantalla de generador de código QR
   generator: {
+    pickFolderTitle: 'Elige una carpeta',
+    pickFolderMessage: 'Solo se hace una vez. En la siguiente pantalla, usa "Crear carpeta" para crear una carpeta dentro de Descargas (p. ej., QRScanner) y toca "Usar esta carpeta".',
+    pickFolder: 'Elegir carpeta',
+    saveAs: 'Guardar como',
+    shareAs: 'Compartir como',
+    formatPngSave: 'Guardar una imagen en Fotos',
+    formatPngShare: 'Enviar como imagen',
+    formatSvg: 'Vector para web y diseño. Se ve nítido a cualquier tamaño',
+    formatEps: 'Vector para imprentas e Illustrator (RGB)',
+    vectorSavedTo: 'Se guardó {{name}} en la carpeta {{folder}}.',
+    vectorFailed: 'No se pudo crear el archivo. Revisa el valor del código.',
     // 접근성 라벨
     a11y: {
       customColor: 'Elegir color personalizado',

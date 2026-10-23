@@ -1176,6 +1176,17 @@ export default {
 
   // QR 코드 생성 화면
   generator: {
+    pickFolderTitle: '저장할 폴더 고르기',
+    pickFolderMessage: '처음 한 번만 저장할 폴더를 골라요. 다음 화면에서 "새 폴더 만들기"로 다운로드 안에 폴더(예: QRScanner)를 만든 뒤 "이 폴더 사용"을 누르세요.',
+    pickFolder: '폴더 고르기',
+    saveAs: '저장 형식',
+    shareAs: '공유 형식',
+    formatPngSave: '사진 앨범에 이미지로 저장',
+    formatPngShare: '이미지로 보내기',
+    formatSvg: '웹·디자인용 벡터. 크게 키워도 깨지지 않아요',
+    formatEps: '인쇄소·일러스트레이터용 벡터 (RGB)',
+    vectorSavedTo: '{{folder}} 폴더에 {{name}}을(를) 저장했어요.',
+    vectorFailed: '파일을 만들지 못했어요. 바코드 값을 확인해 주세요.',
     // 접근성 라벨
     a11y: {
       customColor: '색상 직접 선택',

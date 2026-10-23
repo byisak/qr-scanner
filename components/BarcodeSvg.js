@@ -517,6 +517,47 @@ export const generateHighResBarcode = async (options) => {
 };
 
 /**
+ * 벡터 바코드 (SVG 문자열). 저장 설정(높이·글자·회전·대체 문구·색)을 그대로 쓴다.
+ * bwip-js 의 scale 1 = 1pt 라서, scale 4 로 그리고 크기는 mm 로 적는다 (인쇄할 때 실제 크기).
+ * @returns {{ svg: string, widthMm: number, heightMm: number }}
+ */
+export const VECTOR_SCALE = 4;
+export const generateBarcodeSvg = (options) => {
+  if (!options || !options.bcid || !options.text) {
+    throw new Error('Missing required options: bcid and text are required');
+  }
+  const settings = BARCODE_OPTIMAL_SETTINGS[options.bcid] || BARCODE_OPTIMAL_SETTINGS.default;
+  const userHeight = options.height || 100;
+  const effectiveHeight = userHeight > 50 ? userHeight / 10 : userHeight;
+  const opts = {
+    bcid: options.bcid,
+    text: String(options.text),
+    scale: VECTOR_SCALE,
+    height: Math.max(effectiveHeight, settings.defaultHeight || 15),
+    includetext: options.includetext !== false,
+    textxalign: 'center',
+    textsize: options.textsize ? Math.round((options.textsize * 10) / 14) : 10, // 화면 글자 크기(14 기준) → pt
+    backgroundcolor: (options.backgroundcolor || 'ffffff').replace('#', ''),
+    barcolor: (options.barcolor || '000000').replace('#', ''),
+    textcolor: (options.barcolor || '000000').replace('#', ''),
+    paddingwidth: 10,
+    paddingheight: 8,
+    rotate: options.rotate || 'N',
+  };
+  if (options.alttext) opts.alttext = options.alttext;
+  if (settings.guardwhitespace) opts.guardwhitespace = true;
+  let svg = bwipjs.toSVG(opts);
+  const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(svg);
+  const PT_MM = 25.4 / 72;
+  const widthMm = vb ? (Number(vb[1]) / VECTOR_SCALE) * PT_MM : 0;
+  const heightMm = vb ? (Number(vb[2]) / VECTOR_SCALE) * PT_MM : 0;
+  if (vb) {
+    svg = svg.replace('<svg ', `<svg width="${widthMm.toFixed(2)}mm" height="${heightMm.toFixed(2)}mm" `);
+  }
+  return { svg: `<?xml version="1.0" encoding="UTF-8"?>\n${svg}`, widthMm, heightMm };
+};
+
+/**
  * 스케일 경고 체크
  * @param {string} bcid - 바코드 타입
  * @param {number} scale - 현재 스케일

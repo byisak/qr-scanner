@@ -54,7 +54,7 @@ const IS_ANDROID = Platform.OS === 'android';
 import { QR_STYLE_PRESETS, QR_FRAMES, COLOR_PRESETS, GRADIENT_PRESETS } from '../components/QRStylePicker';
 import NativeColorPicker from '../components/NativeColorPicker';
 import Svg, { Circle, Path } from 'react-native-svg';
-import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
+import BarcodeSvg, { BARCODE_FORMATS, validateBarcode, calculateChecksum, formatCodabar, ALL_BWIP_BARCODES, BARCODE_CATEGORIES, generateHighResBarcode, generateBarcodeSvg, BARCODE_OPTIMAL_SETTINGS, checkScaleWarning } from '../components/BarcodeSvg';
 import AdBanner from '../components/AdBanner';
 import DraggableFlatList, { ScaleDecorator } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -63,6 +63,10 @@ import { trackScreenView, trackQRGenerated, trackBarcodeGenerated, trackQRSaved,
 import PresetSaveModal from '../components/PresetSaveModal';
 import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 import { saveGeneratedCodeToHistory } from '../utils/generatedHistoryStorage';
+import ActionMenu from '../components/ActionMenu';
+import { svgToEps } from '../utils/vectorExport';
+import { saveTextFile, shareTextFile, safeFileName, needsFolderPick } from '../utils/vectorFileSave';
+import { trackEvent } from '../utils/analytics';
 import { buildWifiQr } from '../utils/wifiQr';
 import { normalizeIcsDate } from '../utils/icsDate';
 
@@ -143,6 +147,7 @@ export default function GeneratorScreen() {
   // 고해상도 저장 설정 (0: 빠른저장, 1-4: 고해상도 레벨)
   const [highResLevel, setHighResLevel] = useState(0);
   const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '', type: 'qr' });
+  const [formatMenu, setFormatMenu] = useState(null); // 'save' | 'share' : 저장 형식 고르기 (바코드)
 
   // 고해상도 레벨별 설정
   const HIGH_RES_LEVELS = [
@@ -1254,6 +1259,63 @@ export default function GeneratorScreen() {
     }
   };
 
+  // 벡터 파일(SVG·EPS)로 저장·공유 (바코드). 지금 저장 설정을 그대로 쓴다
+  const exportVector = async (format, mode) => {
+    if (!hasBarcodeData) {
+      Alert.alert(t('common.error'), t('generator.emptyText'));
+      return;
+    }
+    if (isLocked('vectorExport')) {
+      showUnlockAlert('vectorExport', () => exportVector(format, mode));
+      return;
+    }
+    try {
+      const { svg } = generateBarcodeSvg({
+        bcid: selectedBarcodeFormat,
+        text: finalBarcodeValue,
+        height: barcodeSettings.height,
+        includetext: barcodeSettings.showText,
+        textsize: barcodeSettings.fontSize,
+        rotate: barcodeSettings.rotate,
+        alttext: barcodeSettings.customText || undefined,
+        backgroundcolor: 'ffffff',
+        barcolor: '000000',
+      });
+      const content = format === 'svg' ? svg : svgToEps(svg, { title: `${selectedBarcodeFormat} ${finalBarcodeValue}` }).eps;
+      const name = safeFileName(`${selectedBarcodeFormat}_${finalBarcodeValue}`, format);
+      if (mode === 'share') {
+        await shareTextFile(name, content, format);
+      } else {
+        // 처음 한 번: 저장할 폴더를 고르는 방법 안내 (Android 는 다운로드 폴더 자체는 고를 수 없다)
+        if (await needsFolderPick()) {
+          const go = await new Promise(resolve => Alert.alert(t('generator.pickFolderTitle'), t('generator.pickFolderMessage'), [
+            { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+            { text: t('generator.pickFolder'), onPress: () => resolve(true) },
+          ], { cancelable: true, onDismiss: () => resolve(false) }));
+          if (!go) return;
+        }
+        const r = await saveTextFile(name, content, format);
+        if (r.canceled) return;
+        if (r.method === 'folder') {
+          Alert.alert('✓ ' + t('generator.saveSuccess'), t('generator.vectorSavedTo', { folder: r.folder, name }));
+        }
+      }
+      trackEvent('code_vector_exported', { format, mode, kind: 'barcode', bcid: selectedBarcodeFormat });
+    } catch (e) {
+      console.warn('[vectorExport] failed:', e?.message);
+      Alert.alert(t('generator.saveError'), t('generator.vectorFailed'));
+    }
+  };
+
+  const formatActions = (mode) => {
+    const locked = isLocked('vectorExport');
+    return [
+      { icon: 'image-outline', label: 'PNG', desc: mode === 'save' ? t('generator.formatPngSave') : t('generator.formatPngShare'), run: mode === 'save' ? handleSaveImage : handleShare },
+      { icon: 'code-slash-outline', label: 'SVG', desc: t('generator.formatSvg'), badge: locked ? 'PRO' : undefined, run: () => exportVector('svg', mode) },
+      { icon: 'print-outline', label: 'EPS', desc: t('generator.formatEps'), badge: locked ? 'PRO' : undefined, run: () => exportVector('eps', mode) },
+    ];
+  };
+
   const handleSaveImage = async () => {
     const isBarcode = codeMode === 'barcode';
     const currentHasData = isBarcode ? hasBarcodeData : hasData;
@@ -1878,7 +1940,7 @@ export default function GeneratorScreen() {
     <View style={s.buttonRow}>
       <MaterialPressable
         style={[s.actionButton, { backgroundColor: colors.primary }]}
-        onPress={handleSaveImage}
+        onPress={codeMode === 'barcode' ? () => setFormatMenu('save') : handleSaveImage}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={t('generator.save')}
@@ -1891,7 +1953,7 @@ export default function GeneratorScreen() {
 
       <MaterialPressable
         style={[s.actionButton, s.actionButtonSecondary, { backgroundColor: colors.raised, borderColor: colors.border }]}
-        onPress={handleShare}
+        onPress={codeMode === 'barcode' ? () => setFormatMenu('share') : handleShare}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={t('generator.share')}
@@ -3757,6 +3819,12 @@ export default function GeneratorScreen() {
       />
 
       {/* 프리셋 저장 모달 */}
+      <ActionMenu
+        visible={!!formatMenu}
+        title={formatMenu === 'share' ? t('generator.shareAs') : t('generator.saveAs')}
+        actions={formatMenu ? formatActions(formatMenu) : []}
+        onClose={() => setFormatMenu(null)}
+      />
       <PresetSaveModal
         visible={presetSaveModalVisible}
         onClose={() => setPresetSaveModalVisible(false)}

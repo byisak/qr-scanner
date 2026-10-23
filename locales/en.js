@@ -1187,6 +1187,17 @@ export default {
 
   // QR code generator screen
   generator: {
+    pickFolderTitle: 'Choose a save folder',
+    pickFolderMessage: 'You only do this once. On the next screen, use "Create new folder" to make a folder inside Downloads (e.g. QRScanner), then tap "Use this folder".',
+    pickFolder: 'Choose folder',
+    saveAs: 'Save as',
+    shareAs: 'Share as',
+    formatPngSave: 'Save an image to Photos',
+    formatPngShare: 'Send as an image',
+    formatSvg: 'Vector for web and design. Stays sharp at any size',
+    formatEps: 'Vector for print shops and Illustrator (RGB)',
+    vectorSavedTo: 'Saved {{name}} to the {{folder}} folder.',
+    vectorFailed: 'Couldn\'t create the file. Check the barcode value.',
     // 접근성 라벨
     a11y: {
       customColor: 'Choose custom color',
