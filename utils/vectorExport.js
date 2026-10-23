@@ -2,7 +2,8 @@
 // SVG → EPS: 우리가 만드는 SVG(바코드 bwip-js, 이후 QR)에 쓰는 요소만 옮긴다.
 //   path(d: M L H V C S Q T A Z, 절대·상대) / rect / circle / ellipse / polygon / g
 //   fill·stroke(#hex, rgb()), stroke-width, fill-rule, transform(matrix·translate·scale·rotate), viewBox
-// 색은 RGB 그대로. 그 밖의 요소(image·text·그라데이션)는 건너뛰고 skipped 로 알린다.
+//   clip-path(url(#id)) → PostScript clip, 선형·원형 그라데이션 → shfill (LanguageLevel 3)
+// 색은 RGB 그대로. 그 밖의 요소(image·text)는 건너뛰고 skipped 로 알린다.
 
 const PT_PER_MM = 72 / 25.4;
 const num = (v) => {
@@ -245,6 +246,75 @@ function commandsToPs(cmds, m) {
   return ps;
 }
 
+const urlId = (v) => {
+  const m = /url\(\s*['"]?#([^'")]+)['"]?\s*\)/.exec(v || '');
+  return m ? m[1] : null;
+};
+
+function collectDefs(root) {
+  const clips = {}, grads = {};
+  const visit = (n) => {
+    if (n.tag === 'clipPath' && n.attrs.id) clips[n.attrs.id] = n;
+    else if ((n.tag === 'linearGradient' || n.tag === 'radialGradient') && n.attrs.id) grads[n.attrs.id] = n;
+    for (const c of n.children) visit(c);
+  };
+  visit(root);
+  return { clips, grads };
+}
+
+const pctOrNum = (v, total) => (typeof v === 'string' && v.trim().endsWith('%') ? (parseFloat(v) / 100) * total : parseFloat(v));
+
+// 그라데이션 색 함수 (정지점 2개면 Type 2, 그 이상이면 Type 3 로 이어 붙인다)
+function shadingFunction(stops) {
+  const c = (st) => `[${st.color.map(num).join(' ')}]`;
+  const t2 = (a, b) => `<< /FunctionType 2 /Domain [0 1] /C0 ${c(a)} /C1 ${c(b)} /N 1 >>`;
+  if (stops.length === 1) return t2(stops[0], stops[0]);
+  if (stops.length === 2 && stops[0].offset === 0 && stops[1].offset === 1) return t2(stops[0], stops[1]);
+  const pts = [...stops];
+  if (pts[0].offset > 0) pts.unshift({ offset: 0, color: pts[0].color });
+  if (pts[pts.length - 1].offset < 1) pts.push({ offset: 1, color: pts[pts.length - 1].color });
+  const fns = [], bounds = [], encode = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    fns.push(t2(pts[i], pts[i + 1]));
+    if (i > 0) bounds.push(num(pts[i].offset));
+    encode.push('0 1');
+  }
+  return `<< /FunctionType 3 /Domain [0 1] /Functions [${fns.join(' ')}] /Bounds [${bounds.join(' ')}] /Encode [${encode.join(' ')}] >>`;
+}
+
+function gradientShading(g, m, box) {
+  const a = g.attrs;
+  const stops = g.children.filter(c => c.tag === 'stop').map(st => ({
+    offset: Math.min(1, Math.max(0, pctOrNum(st.attrs.offset || '0', 1))),
+    color: parseColor(st.attrs['stop-color'] || '#000') || [0, 0, 0],
+  })).sort((x, y) => x.offset - y.offset);
+  if (!stops.length) return null;
+  // objectBoundingBox(기본)면 도형 상자 기준 비율
+  const userSpace = a.gradientUnits === 'userSpaceOnUse';
+  const P = (x, y) => (userSpace ? apply(m, x, y) : apply(m, box.x + x * box.w, box.y + y * box.h));
+  const scale = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
+  const fn = shadingFunction(stops);
+  if (g.tag === 'linearGradient') {
+    const x1 = pctOrNum(a.x1 ?? (userSpace ? '0' : '0'), 1), y1 = pctOrNum(a.y1 ?? '0', 1);
+    const x2 = pctOrNum(a.x2 ?? (userSpace ? '0' : '1'), 1), y2 = pctOrNum(a.y2 ?? '0', 1);
+    const p1 = P(x1, y1), p2 = P(x2, y2);
+    return `<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [${num(p1[0])} ${num(p1[1])} ${num(p2[0])} ${num(p2[1])}] /Function ${fn} /Extend [true true] >> shfill`;
+  }
+  const cx = pctOrNum(a.cx ?? '0.5', 1), cy = pctOrNum(a.cy ?? '0.5', 1), r = pctOrNum(a.r ?? '0.5', 1);
+  const fx = a.fx !== undefined ? pctOrNum(a.fx, 1) : cx, fy = a.fy !== undefined ? pctOrNum(a.fy, 1) : cy;
+  const c0 = P(fx, fy), c1 = P(cx, cy);
+  const rr = userSpace ? r * scale : r * Math.max(box.w, box.h) * scale;
+  return `<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [${num(c0[0])} ${num(c0[1])} 0 ${num(c1[0])} ${num(c1[1])} ${num(rr)}] /Function ${fn} /Extend [true true] >> shfill`;
+}
+
+function bboxOf(cmds) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const c of cmds) for (let i = 1; i + 1 < c.length; i += 2) {
+    x0 = Math.min(x0, c[i]); x1 = Math.max(x1, c[i]); y0 = Math.min(y0, c[i + 1]); y1 = Math.max(y1, c[i + 1]);
+  }
+  return isFinite(x0) ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : { x: 0, y: 0, w: 1, h: 1 };
+}
+
 /**
  * SVG 문자열 → EPS 문자열
  * @param {string} svg
@@ -266,6 +336,8 @@ export function svgToEps(svg, { widthMm, title = 'code' } = {}) {
   // SVG(y 아래로) → PS(y 위로)
   const base = [k, 0, 0, -k, -vbX * k, heightPt + vbY * k];
   const skipped = new Set();
+  const defs = collectDefs(root);
+  let usesShading = false;
   let body = '';
 
   const walk = (node, m, inherited) => {
@@ -285,19 +357,43 @@ export function svgToEps(svg, { widthMm, title = 'code' } = {}) {
       return;
     }
     if (node.tag === 'image' || node.tag === 'text' || node.tag === 'use' || node.tag === 'foreignObject') { skipped.add(node.tag); return; }
-    if (a['clip-path']) skipped.add('clip-path');
     const cmds = shapeCommands(node, { x: vbX, y: vbY, w: vbW, h: vbH });
     if (!cmds.length) return;
     const path = commandsToPs(cmds, mm);
-    const fill = parseColor(st.fill === undefined ? '#000' : st.fill);
-    if (fill === undefined) skipped.add('gradient');
-    if (fill) body += `${path}${rgbOp(fill)}\n${st.fillRule === 'evenodd' ? 'eofill' : 'fill'}\n`;
+    // clip-path: clipPath 안의 도형들을 잘라내기 영역으로 (qr-code-styling 은 점들을 이렇게 칠한다)
+    const clipNode = a['clip-path'] ? defs.clips[urlId(a['clip-path'])] : null;
+    let clipPs = '';
+    if (clipNode) {
+      const parts = [];
+      const collect = (cn, cm) => {
+        const cmm = multiply(cm, parseTransform(cn.attrs.transform));
+        if (cn.tag === 'g') { for (const k of cn.children) collect(k, cmm); return; }
+        const cc = shapeCommands(cn, { x: vbX, y: vbY, w: vbW, h: vbH });
+        if (cc.length) parts.push(commandsToPs(cc, cmm).replace(/^newpath\n/, ''));
+      };
+      for (const k of clipNode.children) collect(k, mm);
+      if (!parts.length) return; // 빈 잘라내기 영역 = 아무것도 안 보인다
+      clipPs = `newpath\n${parts.join('')}clip\n`;
+    }
+    const fillRaw = st.fill === undefined ? '#000' : st.fill;
+    const gradNode = urlId(fillRaw) ? defs.grads[urlId(fillRaw)] : null;
+    if (gradNode) {
+      const sh = gradientShading(gradNode, mm, bboxOf(cmds));
+      if (sh) {
+        usesShading = true;
+        body += `gsave\n${clipPs}${path}${st.fillRule === 'evenodd' ? 'eoclip' : 'clip'}\n${sh}\ngrestore\n`;
+      }
+    } else {
+      const fill = parseColor(fillRaw);
+      if (fill === undefined) skipped.add('paint');
+      if (fill) body += `${clipPs ? `gsave\n${clipPs}` : ''}${path}${rgbOp(fill)}\n${st.fillRule === 'evenodd' ? 'eofill' : 'fill'}\n${clipPs ? 'grestore\n' : ''}`;
+    }
     const stroke = parseColor(st.stroke);
     if (stroke && st.strokeWidth !== 0) {
       // 선 굵기는 현재 변환의 크기만큼
       const scale = Math.sqrt(Math.abs(mm[0] * mm[3] - mm[1] * mm[2]));
       const cap = st.lineCap === 'round' ? 1 : st.lineCap === 'square' ? 2 : 0;
-      body += `${path}${rgbOp(stroke)}\n${num((st.strokeWidth ?? 1) * scale)} setlinewidth ${cap} setlinecap\nstroke\n`;
+      body += `${clipPs ? `gsave\n${clipPs}` : ''}${path}${rgbOp(stroke)}\n${num((st.strokeWidth ?? 1) * scale)} setlinewidth ${cap} setlinecap\nstroke\n${clipPs ? 'grestore\n' : ''}`;
     }
   };
   walk(root, base, { fill: undefined, stroke: undefined, strokeWidth: 1, fillRule: 'nonzero', lineCap: 'butt' });
@@ -312,7 +408,7 @@ export function svgToEps(svg, { widthMm, title = 'code' } = {}) {
     '%%Creator: QR Scanner (ScanView)',
     `%%CreationDate: (${new Date().toISOString()})`,
     '%%DocumentData: Clean7Bit',
-    '%%LanguageLevel: 2',
+    `%%LanguageLevel: ${usesShading ? 3 : 2}`,
     '%%Pages: 1',
     '%%EndComments',
     '%%BeginProlog',
@@ -326,6 +422,23 @@ export function svgToEps(svg, { widthMm, title = 'code' } = {}) {
     '',
   ].join('\n');
   return { eps, widthPt, heightPt, skipped: [...skipped] };
+}
+
+/** SVG 에 viewBox 와 실제 크기(mm)를 넣는다 (qr-code-styling SVG 는 px width/height 만 있다) */
+export function withPhysicalSize(svg, widthMm) {
+  const m = /<svg\b([^>]*)>/.exec(svg);
+  if (!m) return svg;
+  const attrs = parseAttrs(m[1]);
+  let vb = attrs.viewBox;
+  const w = parseFloat(attrs.width) || 100, h = parseFloat(attrs.height) || w;
+  if (!vb) vb = `0 0 ${w} ${h}`;
+  const [, , vw, vh] = vb.split(/[\s,]+/).map(Number);
+  const heightMm = (widthMm * vh) / vw;
+  const rest = m[1].replace(/\s(width|height|viewBox)\s*=\s*("[^"]*"|'[^']*')/g, '');
+  const head = `<svg${rest} width="${num(widthMm)}mm" height="${num(heightMm)}mm" viewBox="${vb}">`;
+  let out = svg.replace(m[0], head);
+  if (!/^<\?xml/.test(out.trim())) out = `<?xml version="1.0" encoding="UTF-8"?>\n${out}`;
+  return out;
 }
 
 export const mmFromPt = (pt) => pt / PT_PER_MM;

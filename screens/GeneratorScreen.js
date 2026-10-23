@@ -64,7 +64,7 @@ import PresetSaveModal from '../components/PresetSaveModal';
 import { getPresets, savePreset, deletePreset } from '../utils/presetStorage';
 import { saveGeneratedCodeToHistory } from '../utils/generatedHistoryStorage';
 import ActionMenu from '../components/ActionMenu';
-import { svgToEps } from '../utils/vectorExport';
+import { svgToEps, withPhysicalSize } from '../utils/vectorExport';
 import { saveTextFile, shareTextFile, safeFileName, needsFolderPick } from '../utils/vectorFileSave';
 import { trackEvent } from '../utils/analytics';
 import { buildWifiQr } from '../utils/wifiQr';
@@ -147,7 +147,8 @@ export default function GeneratorScreen() {
   // 고해상도 저장 설정 (0: 빠른저장, 1-4: 고해상도 레벨)
   const [highResLevel, setHighResLevel] = useState(0);
   const [saveProgress, setSaveProgress] = useState({ visible: false, progress: 0, message: '', type: 'qr' });
-  const [formatMenu, setFormatMenu] = useState(null); // 'save' | 'share' : 저장 형식 고르기 (바코드)
+  const [formatMenu, setFormatMenu] = useState(null); // 'save' | 'share' : 저장 형식 고르기
+  const qrSvgRef = useRef(null); // 미리보기 QR 의 SVG (벡터 저장용)
 
   // 고해상도 레벨별 설정
   const HIGH_RES_LEVELS = [
@@ -1259,10 +1260,19 @@ export default function GeneratorScreen() {
     }
   };
 
-  // 벡터 파일(SVG·EPS)로 저장·공유 (바코드). 지금 저장 설정을 그대로 쓴다
+  // 내용·스타일이 바뀌면 예전 SVG 는 버린다 (새 미리보기가 다시 보낸다)
+  useEffect(() => { qrSvgRef.current = null; }, [qrData, qrStyle]);
+
+  // 벡터 파일(SVG·EPS)로 저장·공유. 바코드는 저장 설정, QR 은 미리보기와 같은 스타일 그대로
+  const QR_VECTOR_MM = 50;
   const exportVector = async (format, mode) => {
-    if (!hasBarcodeData) {
+    const isBarcode = codeMode === 'barcode';
+    if (!(isBarcode ? hasBarcodeData : hasData)) {
       Alert.alert(t('common.error'), t('generator.emptyText'));
+      return;
+    }
+    if (!isBarcode && selectedFrame) {
+      Alert.alert(t('generator.vectorFrameTitle'), t('generator.vectorFrameMessage'));
       return;
     }
     if (isLocked('vectorExport')) {
@@ -1270,19 +1280,32 @@ export default function GeneratorScreen() {
       return;
     }
     try {
-      const { svg } = generateBarcodeSvg({
-        bcid: selectedBarcodeFormat,
-        text: finalBarcodeValue,
-        height: barcodeSettings.height,
-        includetext: barcodeSettings.showText,
-        textsize: barcodeSettings.fontSize,
-        rotate: barcodeSettings.rotate,
-        alttext: barcodeSettings.customText || undefined,
-        backgroundcolor: 'ffffff',
-        barcolor: '000000',
-      });
-      const content = format === 'svg' ? svg : svgToEps(svg, { title: `${selectedBarcodeFormat} ${finalBarcodeValue}` }).eps;
-      const name = safeFileName(`${selectedBarcodeFormat}_${finalBarcodeValue}`, format);
+      let svg, title, base;
+      if (isBarcode) {
+        svg = generateBarcodeSvg({
+          bcid: selectedBarcodeFormat,
+          text: finalBarcodeValue,
+          height: barcodeSettings.height,
+          includetext: barcodeSettings.showText,
+          textsize: barcodeSettings.fontSize,
+          rotate: barcodeSettings.rotate,
+          alttext: barcodeSettings.customText || undefined,
+          backgroundcolor: 'ffffff',
+          barcolor: '000000',
+        }).svg;
+        title = `${selectedBarcodeFormat} ${finalBarcodeValue}`;
+        base = `${selectedBarcodeFormat}_${finalBarcodeValue}`;
+      } else {
+        // 미리보기 WebView 가 SVG 를 보내올 때까지 잠깐 기다린다
+        const start = Date.now();
+        while (!qrSvgRef.current && Date.now() - start < 4000) await new Promise(r => setTimeout(r, 100));
+        if (!qrSvgRef.current) throw new Error('qr svg not ready');
+        svg = withPhysicalSize(qrSvgRef.current, QR_VECTOR_MM);
+        title = `QR ${String(qrData).slice(0, 40)}`;
+        base = `qr_${String(qrData).replace(/^https?:\/\//, '').slice(0, 30)}`;
+      }
+      const content = format === 'svg' ? svg : svgToEps(svg, { title }).eps;
+      const name = safeFileName(base, format);
       if (mode === 'share') {
         await shareTextFile(name, content, format);
       } else {
@@ -1300,7 +1323,7 @@ export default function GeneratorScreen() {
           Alert.alert('✓ ' + t('generator.saveSuccess'), t('generator.vectorSavedTo', { folder: r.folder, name }));
         }
       }
-      trackEvent('code_vector_exported', { format, mode, kind: 'barcode', bcid: selectedBarcodeFormat });
+      trackEvent('code_vector_exported', { format, mode, kind: isBarcode ? 'barcode' : 'qr', bcid: isBarcode ? selectedBarcodeFormat : 'qr' });
     } catch (e) {
       console.warn('[vectorExport] failed:', e?.message);
       Alert.alert(t('generator.saveError'), t('generator.vectorFailed'));
@@ -1312,7 +1335,7 @@ export default function GeneratorScreen() {
     return [
       { icon: 'image-outline', label: 'PNG', desc: mode === 'save' ? t('generator.formatPngSave') : t('generator.formatPngShare'), run: mode === 'save' ? handleSaveImage : handleShare },
       { icon: 'code-slash-outline', label: 'SVG', desc: t('generator.formatSvg'), badge: locked ? 'PRO' : undefined, run: () => exportVector('svg', mode) },
-      { icon: 'print-outline', label: 'EPS', desc: t('generator.formatEps'), badge: locked ? 'PRO' : undefined, run: () => exportVector('eps', mode) },
+      { icon: 'print-outline', label: 'EPS', desc: codeMode !== 'barcode' && qrStyle.logo ? `${t('generator.formatEps')} · ${t('generator.epsNoLogo')}` : t('generator.formatEps'), badge: locked ? 'PRO' : undefined, run: () => exportVector('eps', mode) },
     ];
   };
 
@@ -1940,7 +1963,7 @@ export default function GeneratorScreen() {
     <View style={s.buttonRow}>
       <MaterialPressable
         style={[s.actionButton, { backgroundColor: colors.primary }]}
-        onPress={codeMode === 'barcode' ? () => setFormatMenu('save') : handleSaveImage}
+        onPress={() => setFormatMenu('save')}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={t('generator.save')}
@@ -1953,7 +1976,7 @@ export default function GeneratorScreen() {
 
       <MaterialPressable
         style={[s.actionButton, s.actionButtonSecondary, { backgroundColor: colors.raised, borderColor: colors.border }]}
-        onPress={codeMode === 'barcode' ? () => setFormatMenu('share') : handleShare}
+        onPress={() => setFormatMenu('share')}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={t('generator.share')}
@@ -3250,6 +3273,7 @@ export default function GeneratorScreen() {
                                     size={200}
                                     qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
                                     onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
+                                    onSvg={isCurrentFrame ? (svg) => { qrSvgRef.current = svg; } : undefined}
                                   />
                                 ) : (
                                   <QRCode

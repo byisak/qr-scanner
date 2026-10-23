@@ -21,6 +21,8 @@ export default function StyledQRCode({
   // 저장용: 다 그려지면 결과 이미지를 WebView 위에 Image로 덮는다.
   // 실기기 Android는 WebView를 하드웨어 레이어에 그려서 react-native-view-shot 캡처에 잡히지 않는다
   snapshotAsImage = false,
+  // 벡터 저장용: 같은 설정의 SVG 문자열을 받는다 (점 모양·그라데이션·로고 그대로)
+  onSvg,
 }) {
   const webViewRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -204,6 +206,20 @@ export default function StyledQRCode({
               window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'loaded' }));
 
               // base64 이미지 캡처
+              ${onSvg ? `
+              // 같은 옵션으로 SVG 도 만든다 (화면 크기 기준, 배율 없이)
+              const svgOptions = Object.assign({}, options, {
+                type: "svg",
+                width: ${actualWidth},
+                height: ${actualHeight},
+                margin: ${Math.round(margin)}
+              });
+              if (options.imageOptions) svgOptions.imageOptions = Object.assign({}, options.imageOptions, { margin: ${Math.round(imgOpts.margin)} });
+              new QRCodeStyling(svgOptions).getRawData("svg")
+                .then(b => new Promise(res => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsText(b); }))
+                .then(text => window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'svg', data: text })))
+                .catch(() => {});
+              ` : ''}
               qrCode.getRawData("png").then(blob => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -235,6 +251,8 @@ export default function StyledQRCode({
       } else if (data.type === 'capture') {
         if (snapshotAsImage) setSnapshotUri(data.data);
         if (onCapture) onCapture(data.data);
+      } else if (data.type === 'svg') {
+        if (onSvg) onSvg(data.data);
       } else if (data.type === 'error') {
         console.error('QR Code generation error:', data.message);
         setIsLoading(false);

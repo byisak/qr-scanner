@@ -1187,6 +1187,9 @@ export default {
 
   // QR code generator screen
   generator: {
+    vectorFrameTitle: 'Framed QR codes: PNG only for now',
+    vectorFrameMessage: 'SVG and EPS for QR codes with a frame are coming in the next update. To save without a frame, set the frame to "None".',
+    epsNoLogo: 'logo not included (SVG keeps it)',
     pickFolderTitle: 'Choose a save folder',
     pickFolderMessage: 'You only do this once. On the next screen, use "Create new folder" to make a folder inside Downloads (e.g. QRScanner), then tap "Use this folder".',
     pickFolder: 'Choose folder',

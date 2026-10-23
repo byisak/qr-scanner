@@ -1171,6 +1171,9 @@ export default {
 
   // 二维码生成界面
   generator: {
+    vectorFrameTitle: '带边框的二维码暂时只能保存 PNG',
+    vectorFrameMessage: '带边框二维码的 SVG·EPS 保存将在下次更新中支持。如需不带边框保存，请将边框设为"无"。',
+    epsNoLogo: '不含徽标（SVG 中保留）',
     pickFolderTitle: '选择保存文件夹',
     pickFolderMessage: '只需选择一次。在下一个界面用"新建文件夹"在下载目录中创建文件夹（例如 QRScanner），然后点按"使用此文件夹"。',
     pickFolder: '选择文件夹',
