@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- PC 키보드 입력은 있으면 쓰는 기능: 블루투스가 없는 태블릿에도 설치되게 (권한만 두면 필수 기능이 된다) -->
+  <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
   <!-- Android 11 이하 -->
   <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
   <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
