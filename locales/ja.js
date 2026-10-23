@@ -1171,7 +1171,6 @@ export default {
 
   // QRコード生成画面
   generator: {
-    epsNoLogo: 'ロゴは含まれません（SVGには入ります）',
     pickFolderTitle: '保存先フォルダを選ぶ',
     pickFolderMessage: '最初の1回だけ保存先を選びます。次の画面で「新しいフォルダを作成」からダウンロード内にフォルダ（例：QRScanner）を作り、「このフォルダを使用」を押してください。',
     pickFolder: 'フォルダを選ぶ',

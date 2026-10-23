@@ -21,7 +21,7 @@ export default function StyledQRCode({
   // 저장용: 다 그려지면 결과 이미지를 WebView 위에 Image로 덮는다.
   // 실기기 Android는 WebView를 하드웨어 레이어에 그려서 react-native-view-shot 캡처에 잡히지 않는다
   snapshotAsImage = false,
-  // 벡터 저장용: 같은 설정의 SVG 문자열을 받는다 (점 모양·그라데이션·로고 그대로)
+  // 벡터 저장용: 같은 설정의 SVG 문자열 (점 모양·그라데이션·로고 그대로)과 로고 JPEG 목록(EPS 용)을 받는다
   onSvg,
 }) {
   const webViewRef = useRef(null);
@@ -215,9 +215,35 @@ export default function StyledQRCode({
                 margin: ${Math.round(margin)}
               });
               if (options.imageOptions) svgOptions.imageOptions = Object.assign({}, options.imageOptions, { margin: ${Math.round(imgOpts.margin)} });
+              // EPS 용: SVG 안 로고(<image>)를 배경색 위에 그린 JPEG 로도 만든다 (EPS 에는 PNG 를 넣기 어렵다)
+              const rasterizeSvgImages = async (svgText, bg) => {
+                const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+                const out = [];
+                for (const el of Array.from(doc.getElementsByTagName('image'))) {
+                  const href = el.getAttribute('href') || el.getAttribute('xlink:href');
+                  const w = parseFloat(el.getAttribute('width')), h = parseFloat(el.getAttribute('height'));
+                  if (!href || !(w > 0 && h > 0)) { out.push(null); continue; }
+                  try {
+                    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = href; });
+                    const S = Math.max(1, Math.min(12, 600 / Math.max(w, h)));
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(w * S); c.height = Math.round(h * S);
+                    const g = c.getContext('2d');
+                    g.fillStyle = bg; g.fillRect(0, 0, c.width, c.height);
+                    const k = Math.min(c.width / img.width, c.height / img.height);
+                    const dw = img.width * k, dh = img.height * k;
+                    g.drawImage(img, (c.width - dw) / 2, (c.height - dh) / 2, dw, dh);
+                    out.push({ jpeg: c.toDataURL('image/jpeg', 0.92).split(',')[1], w: c.width, h: c.height });
+                  } catch (e) { out.push(null); }
+                }
+                return out;
+              };
               new QRCodeStyling(svgOptions).getRawData("svg")
                 .then(b => new Promise(res => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsText(b); }))
-                .then(text => window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'svg', data: text })))
+                .then(async text => {
+                  const images = text.indexOf('<image') >= 0 ? await rasterizeSvgImages(text, ${JSON.stringify(/^#[0-9a-f]{3,8}$/i.test(backgroundColor) ? backgroundColor : '#ffffff')}) : [];
+                  window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'svg', data: text, images }));
+                })
                 .catch(() => {});
               ` : ''}
               qrCode.getRawData("png").then(blob => {
@@ -252,7 +278,7 @@ export default function StyledQRCode({
         if (snapshotAsImage) setSnapshotUri(data.data);
         if (onCapture) onCapture(data.data);
       } else if (data.type === 'svg') {
-        if (onSvg) onSvg(data.data);
+        if (onSvg) onSvg(data.data, data.images || []);
       } else if (data.type === 'error') {
         console.error('QR Code generation error:', data.message);
         setIsLoading(false);

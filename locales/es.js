@@ -1171,7 +1171,6 @@ export default {
 
   // Pantalla de generador de código QR
   generator: {
-    epsNoLogo: 'sin logotipo (el SVG lo conserva)',
     pickFolderTitle: 'Elige una carpeta',
     pickFolderMessage: 'Solo se hace una vez. En la siguiente pantalla, usa "Crear carpeta" para crear una carpeta dentro de Descargas (p. ej., QRScanner) y toca "Usar esta carpeta".',
     pickFolder: 'Elegir carpeta',

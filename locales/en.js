@@ -1187,7 +1187,6 @@ export default {
 
   // QR code generator screen
   generator: {
-    epsNoLogo: 'logo not included (SVG keeps it)',
     pickFolderTitle: 'Choose a save folder',
     pickFolderMessage: 'You only do this once. On the next screen, use "Create new folder" to make a folder inside Downloads (e.g. QRScanner), then tap "Use this folder".',
     pickFolder: 'Choose folder',

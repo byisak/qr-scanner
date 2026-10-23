@@ -3,7 +3,8 @@
 //   path(d: M L H V C S Q T A Z, 절대·상대) / rect / circle / ellipse / polygon / g
 //   fill·stroke(#hex, rgb()), stroke-width, fill-rule, transform(matrix·translate·scale·rotate), viewBox
 //   clip-path(url(#id)) → PostScript clip, 선형·원형 그라데이션 → shfill (LanguageLevel 3)
-// 색은 RGB 그대로. 그 밖의 요소(image·text)는 건너뛰고 skipped 로 알린다.
+//   image → opts.images[n] (문서 순서 n 번째 <image> 를 미리 JPEG 로 바꾼 것)이 있으면 DCTDecode 로 넣는다
+// 색은 RGB 그대로. 그 밖의 요소(text, JPEG 없는 image)는 건너뛰고 skipped 로 알린다.
 
 const PT_PER_MM = 72 / 25.4;
 const num = (v) => {
@@ -315,13 +316,47 @@ function bboxOf(cmds) {
   return isFinite(x0) ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : { x: 0, y: 0, w: 1, h: 1 };
 }
 
+// ===== 이미지 (JPEG → ASCII85) =====
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+export function base64ToBytes(b64) {
+  const clean = String(b64).replace(/^data:[^,]*,/, '').replace(/[^A-Za-z0-9+/]/g, '');
+  const out = new Uint8Array(Math.floor((clean.length * 3) / 4));
+  let o = 0;
+  for (let i = 0; i < clean.length; i += 4) {
+    const n = (B64.indexOf(clean[i]) << 18) | (B64.indexOf(clean[i + 1]) << 12) | ((B64.indexOf(clean[i + 2]) & 63) << 6) | (B64.indexOf(clean[i + 3]) & 63);
+    out[o++] = (n >> 16) & 255;
+    if (i + 2 < clean.length) out[o++] = (n >> 8) & 255;
+    if (i + 3 < clean.length) out[o++] = n & 255;
+  }
+  return out.subarray(0, o);
+}
+
+export function ascii85(bytes) {
+  let out = '';
+  let line = 0;
+  const push = (s) => {
+    out += s; line += s.length;
+    if (line >= 75) { out += '\n'; line = 0; }
+  };
+  for (let i = 0; i < bytes.length; i += 4) {
+    const rem = Math.min(4, bytes.length - i);
+    let n = 0;
+    for (let k = 0; k < 4; k++) n = n * 256 + (k < rem ? bytes[i + k] : 0);
+    if (n === 0 && rem === 4) { push('z'); continue; }
+    const c = [];
+    for (let k = 4; k >= 0; k--) { c[k] = String.fromCharCode(33 + (n % 85)); n = Math.floor(n / 85); }
+    push(c.slice(0, rem + 1).join(''));
+  }
+  return out + '~>';
+}
+
 /**
  * SVG 문자열 → EPS 문자열
  * @param {string} svg
- * @param {{ widthMm?: number, title?: string }} opt widthMm 를 주면 그 폭(mm)으로, 아니면 SVG width/viewBox 를 pt 로 본다
+ * @param {{ widthMm?: number, title?: string, images?: Array<{jpeg: string, w: number, h: number}> }} opt widthMm 를 주면 그 폭(mm)으로, 아니면 SVG width/viewBox 를 pt 로 본다
  * @returns {{ eps: string, widthPt: number, heightPt: number, skipped: string[] }}
  */
-export function svgToEps(svg, { widthMm, title = 'code' } = {}) {
+export function svgToEps(svg, { widthMm, title = 'code', images = [] } = {}) {
   const root = parseSvg(svg);
   const vb = (root.attrs.viewBox || '').split(/[\s,]+/).map(Number);
   const vbW = vb.length === 4 ? vb[2] : len(root.attrs.width, 100);
@@ -338,6 +373,7 @@ export function svgToEps(svg, { widthMm, title = 'code' } = {}) {
   const skipped = new Set();
   const defs = collectDefs(root);
   let usesShading = false;
+  let imageIndex = 0;
   let body = '';
 
   const walk = (node, m, inherited) => {
@@ -356,7 +392,18 @@ export function svgToEps(svg, { widthMm, title = 'code' } = {}) {
       for (const c of node.children) walk(c, mm, st);
       return;
     }
-    if (node.tag === 'image' || node.tag === 'text' || node.tag === 'use' || node.tag === 'foreignObject') { skipped.add(node.tag); return; }
+    if (node.tag === 'image') {
+      const img = images[imageIndex++];
+      const x = len(a.x), y = len(a.y), w = len(a.width), h = len(a.height);
+      if (!img || !img.jpeg || !(w > 0 && h > 0)) { skipped.add('image'); return; }
+      // 단위 정사각형(이미지 공간) → 그림 자리 (SVG 좌표, y 아래로) → 페이지
+      const A = multiply(mm, [w, 0, 0, -h, x, y + h]);
+      body += `gsave\n[${A.map(num).join(' ')}] concat\n/DeviceRGB setcolorspace\n`
+        + `<< /ImageType 1 /Width ${img.w} /Height ${img.h} /BitsPerComponent 8 /Decode [0 1 0 1 0 1] /ImageMatrix [${img.w} 0 0 -${img.h} 0 ${img.h}]`
+        + ` /DataSource currentfile /ASCII85Decode filter /DCTDecode filter >> image\n${ascii85(base64ToBytes(img.jpeg))}\ngrestore\n`;
+      return;
+    }
+    if (node.tag === 'text' || node.tag === 'use' || node.tag === 'foreignObject') { skipped.add(node.tag); return; }
     const cmds = shapeCommands(node, { x: vbX, y: vbY, w: vbW, h: vbH });
     if (!cmds.length) return;
     const path = commandsToPs(cmds, mm);

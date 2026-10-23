@@ -1171,7 +1171,6 @@ export default {
 
   // 二维码生成界面
   generator: {
-    epsNoLogo: '不含徽标（SVG 中保留）',
     pickFolderTitle: '选择保存文件夹',
     pickFolderMessage: '只需选择一次。在下一个界面用"新建文件夹"在下载目录中创建文件夹（例如 QRScanner），然后点按"使用此文件夹"。',
     pickFolder: '选择文件夹',

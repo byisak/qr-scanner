@@ -1278,6 +1278,7 @@ export default function GeneratorScreen() {
     }
     try {
       let svg, title, base;
+      let epsImages = [];
       if (isBarcode) {
         svg = generateBarcodeSvg({
           bcid: selectedBarcodeFormat,
@@ -1297,8 +1298,10 @@ export default function GeneratorScreen() {
         const start = Date.now();
         const key = selectedFrame ? selectedFrame.id : 'none';
         while (!qrSvgRef.current[key] && Date.now() - start < 4000) await new Promise(r => setTimeout(r, 100));
-        const qrSvg = qrSvgRef.current[key];
-        if (!qrSvg) throw new Error('qr svg not ready');
+        const entry = qrSvgRef.current[key];
+        if (!entry) throw new Error('qr svg not ready');
+        const qrSvg = entry.svg;
+        epsImages = entry.images || [];
         svg = selectedFrame
           ? composeFramedQrSvg({ frameId: selectedFrame.id, qrSvg, qrStyle, frameTextColor, isDark })
           : withPhysicalSize(qrSvg, QR_VECTOR_MM);
@@ -1306,7 +1309,7 @@ export default function GeneratorScreen() {
         title = `QR ${String(qrData).slice(0, 40)}`;
         base = `qr_${String(qrData).replace(/^https?:\/\//, '').slice(0, 30)}`;
       }
-      const content = format === 'svg' ? svg : svgToEps(svg, { title }).eps;
+      const content = format === 'svg' ? svg : svgToEps(svg, { title, images: epsImages }).eps;
       const name = safeFileName(base, format);
       if (mode === 'share') {
         await shareTextFile(name, content, format);
@@ -1337,7 +1340,7 @@ export default function GeneratorScreen() {
     return [
       { icon: 'image-outline', label: 'PNG', desc: mode === 'save' ? t('generator.formatPngSave') : t('generator.formatPngShare'), run: mode === 'save' ? handleSaveImage : handleShare },
       { icon: 'code-slash-outline', label: 'SVG', desc: t('generator.formatSvg'), badge: locked ? 'PRO' : undefined, run: () => exportVector('svg', mode) },
-      { icon: 'print-outline', label: 'EPS', desc: codeMode !== 'barcode' && qrStyle.logo ? `${t('generator.formatEps')} · ${t('generator.epsNoLogo')}` : t('generator.formatEps'), badge: locked ? 'PRO' : undefined, run: () => exportVector('eps', mode) },
+      { icon: 'print-outline', label: 'EPS', desc: t('generator.formatEps'), badge: locked ? 'PRO' : undefined, run: () => exportVector('eps', mode) },
     ];
   };
 
@@ -3265,7 +3268,7 @@ export default function GeneratorScreen() {
                                   frameTextColor={frameTextColor}
                                   isDark={isDark}
                                   onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
-                                  onSvg={(svg) => { qrSvgRef.current[frame.id] = svg; }}
+                                  onSvg={(svg, images) => { qrSvgRef.current[frame.id] = { svg, images }; }}
                                 />
                               </View>
                             ) : (
@@ -3276,7 +3279,7 @@ export default function GeneratorScreen() {
                                     size={200}
                                     qrStyle={{ ...qrStyle, width: undefined, height: undefined }}
                                     onCapture={isCurrentFrame ? (base64) => setCapturedQRBase64(base64) : undefined}
-                                    onSvg={(svg) => { qrSvgRef.current[frame.id] = svg; }}
+                                    onSvg={(svg, images) => { qrSvgRef.current[frame.id] = { svg, images }; }}
                                   />
                                 ) : (
                                   <QRCode
