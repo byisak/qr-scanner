@@ -1,5 +1,6 @@
 // screens/ScannerScreen.js - Expo Router 버전 (Vision Camera 적용)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { setEcLevel, getEcLevel, waitForEcLevel } from '../utils/ecLevelStore';
 import {
   View,
   Text,
@@ -2101,6 +2102,8 @@ function ScannerScreen() {
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
       const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
+      // 오류 정정 레벨은 다음 프레임에 들어올 때가 많다 → 처리 여부와 상관없이 기억해 둔다 (결과 화면이 늦게라도 받는다)
+      if (errorCorrectionLevel) setEcLevel(data, errorCorrectionLevel);
 
       // 처리 중이어도 "보였다"는 사실은 기록해야 계속 비추는 중인지 알 수 있다 → 가드보다 먼저
       const seenAt = Date.now();
@@ -2359,7 +2362,7 @@ function ScannerScreen() {
         };
 
         // EC Level 추출
-        let detectedEcLevel = errorCorrectionLevel || null;
+        let detectedEcLevel = errorCorrectionLevel || getEcLevel(data) || null;
 
         // 중복 감지가 활성화된 경우 먼저 중복 여부 확인 (수량 누적 모드에선 중복이 아니라 수량 +1)
         if (duplicateDetectionRef.current && !quantityModeRef.current) {
@@ -2772,6 +2775,10 @@ function ScannerScreen() {
             }
           }
 
+          // QR 은 오류 정정 레벨이 다음 프레임에 들어오는 일이 많아 잠깐(최대 0.3초) 기다린다
+          if (!detectedEcLevel && /^qr/i.test(normalizedType)) {
+            detectedEcLevel = await waitForEcLevel(data, 300);
+          }
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra);
 

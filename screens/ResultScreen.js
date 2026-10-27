@@ -1,5 +1,6 @@
 // screens/ResultScreen.js - Expo Router 버전
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { getEcLevel, subscribeEcLevel } from '../utils/ecLevelStore';
 import { View, Text, StyleSheet, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,7 +72,13 @@ export default function ResultScreen() {
   const hasPhoto = photoUri && photoUri.length > 0;
   const isFromHistory = fromHistory === 'true';
   const barcodeType = type || 'qr';
-  const ecLevel = errorCorrectionLevel || null;
+  // 스캔 직후 레벨이 비어 있으면, 카메라가 다음 프레임에서 읽은 값을 받아 보여 준다 (Android)
+  const [liveEcLevel, setLiveEcLevel] = useState(() => (!errorCorrectionLevel && code ? getEcLevel(code) : null));
+  useEffect(() => {
+    if (errorCorrectionLevel || !code) return undefined;
+    return subscribeEcLevel(code, setLiveEcLevel);
+  }, [code, errorCorrectionLevel]);
+  const ecLevel = errorCorrectionLevel || liveEcLevel || null;
   const ecAnalysisFailed = ecLevelAnalysisFailed === 'true';
   const isQRCode = barcodeType === 'qr' || barcodeType === 'qrcode';
   const isGeneratedCode = isGenerated === 'true';

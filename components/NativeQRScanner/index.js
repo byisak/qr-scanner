@@ -438,6 +438,21 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 개발자 옵션 "스캔 영역 판정 표시": 마지막 판정 근거(프레임 크기·방향, 코드 중심, 영역)를 화면에 글자로
   const [regionDebugText, setRegionDebugText] = useState('');
   const runOnJSSetRegionDebugText = Worklets.createRunOnJS(setRegionDebugText);
+  // 오래된 프레임 걸러내기 (고스트 스캔 방지).
+  // Android 프레임 처리기는 판독이 느리면 프레임을 줄 세워 차례로 넘긴다(최대 몇 초 전 화면).
+  // 프레임 시각과 지금 시각의 차이가 가장 작았던 값을 기준(지연 0)으로 삼아, 그보다 많이 늦은 프레임은 판독 결과를 버린다
+  const MAX_FRAME_LAG_MS = 700;
+  const lagBaseShared = useFrameSharedValue(1e15);
+  const lastLagShared = useFrameSharedValue(0);
+  const staleDroppedShared = useFrameSharedValue(0);
+  // 스캔 화면이 다시 켜진 직후 프레임 2장은 버린다 (멈추기 전에 쌓여 있던 프레임일 수 있다)
+  const resumeSkipShared = useFrameSharedValue(2);
+  useEffect(() => {
+    if (isActive) {
+      lagBaseShared.value = 1e15;
+      resumeSkipShared.value = 2;
+    }
+  }, [isActive]);
   const regionPristineShared = useFrameSharedValue(true); // 첫 프레임은 가로세로가 뒤집혀 올 수 있어 건너뛴다 (라이브러리와 같은 처리)
   const [regionHighlights, setRegionHighlights] = useState({ kept: [], dropped: [] });
 
@@ -463,6 +478,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       setTimingText(
         `${m.width}x${m.height} ${fps}fps | ML ${(acc.ml / n).toFixed(1)} inv ${(acc.inv / n).toFixed(1)} zx ${(acc.zx / n).toFixed(1)} | ` +
         `avg ${(acc.total / n).toFixed(1)} max ${acc.max.toFixed(0)}ms | codes ${acc.codes} empty ${acc.empty}` +
+        ` | lag ${Math.round(m.lag || 0)}ms stale ${m.stale || 0}` +
         (m.focus ? ` | roi ${m.focus}` : '')
       );
       timingAccRef.current = { n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: now };
@@ -482,6 +498,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     runOnJSMeta({
       ml: meta.mlkitMs, inv: meta.invertMs, zx: meta.zxingMs, total: meta.totalMs,
       codes: meta.codes, empty: meta.emptyBoxes, width: meta.width, height: meta.height, focus: meta.focus || '',
+      lag: lastLagShared.value, stale: staleDroppedShared.value,
     });
   };
   const runOnJSSetRegionHighlights = Worklets.createRunOnJS((kept, dropped) => {
@@ -690,7 +707,24 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     onBarcodeScanned: (barcodes, frame) => {
       'worklet';
 
+      // 프레임 지연 계산 (빈 프레임도 기준값을 갱신해야 해서 코드 유무보다 먼저)
+      if (frame && typeof frame.timestamp === 'number' && frame.timestamp > 0) {
+        const offset = Date.now() - frame.timestamp / 1e6;
+        if (offset < lagBaseShared.value) lagBaseShared.value = offset;
+        lastLagShared.value = offset - lagBaseShared.value;
+      }
+      if (resumeSkipShared.value > 0) {
+        resumeSkipShared.value = resumeSkipShared.value - 1;
+        return;
+      }
+
       if (barcodes.length === 0) {
+        return;
+      }
+
+      // 몇백 ms 넘게 늦은 프레임의 코드는 지금 카메라 앞에 없을 수 있다 → 버린다
+      if (lastLagShared.value > MAX_FRAME_LAG_MS) {
+        staleDroppedShared.value = staleDroppedShared.value + 1;
         return;
       }
 
