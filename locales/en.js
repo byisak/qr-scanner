@@ -2288,6 +2288,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    diagnostics: 'Diagnostics', diagPasswordTitle: 'Diagnostics', diagPasswordPlaceholder: 'Password', diagPasswordWrong: 'Wrong password',
     sectionQuick: 'Quick settings',
     sectionScan: 'Scanning',
     sectionApp: 'App',

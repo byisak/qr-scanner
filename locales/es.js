@@ -2256,6 +2256,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    diagnostics: 'Diagnóstico', diagPasswordTitle: 'Diagnóstico', diagPasswordPlaceholder: 'Contraseña', diagPasswordWrong: 'Contraseña incorrecta',
     sectionQuick: 'Ajustes rápidos',
     sectionScan: 'Escaneo',
     sectionApp: 'App',

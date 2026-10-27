@@ -2278,6 +2278,7 @@ export default {
 
   // 설정 첫 화면 묶음 · 하위 화면
   settingsHub: {
+    diagnostics: '진단', diagPasswordTitle: '진단 메뉴', diagPasswordPlaceholder: '암호', diagPasswordWrong: '암호가 맞지 않아요',
     sectionQuick: '빠른 설정',
     sectionScan: '스캔',
     sectionApp: '앱',

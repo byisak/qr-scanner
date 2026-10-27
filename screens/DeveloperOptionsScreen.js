@@ -53,6 +53,10 @@ const FEATURE_NAME_KEYS = {
   qrStyleNeon: 'developerOptions.features.qrStyleNeon',
 };
 
+// 스토어 빌드(EXPO_PUBLIC_DEV_OPTIONS 없음)에서는 정보 > 버전 7번 탭 + 암호로 들어오는 "진단" 화면:
+// 스캔 디버그 표시만 보이고, 개발 모드·잠금 해제는 보이지 않는다 (딥링크로 들어와도 같음)
+const FULL_DEV_OPTIONS = process.env.EXPO_PUBLIC_DEV_OPTIONS === '1';
+
 export default function DeveloperOptionsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -182,7 +186,7 @@ export default function DeveloperOptionsScreen() {
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </MaterialPressable>
         <Text style={[s.headerTitle, { color: colors.text, fontFamily: fonts.semiBold }]} numberOfLines={1}>
-          {t('settings.developerOptions')}
+          {FULL_DEV_OPTIONS ? t('settings.developerOptions') : t('settingsHub.diagnostics')}
         </Text>
         <View style={s.placeholder} />
       </View>
@@ -196,7 +200,8 @@ export default function DeveloperOptionsScreen() {
           </Text>
         </View>
 
-        {/* 개발 모드 마스터 토글 */}
+        {FULL_DEV_OPTIONS && (
+        /* 개발 모드 마스터 토글 */
         <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={[s.row, s.rowWithDesc]}>
             <Ionicons name="code-slash" size={20} color={colors.warning} />
@@ -215,6 +220,8 @@ export default function DeveloperOptionsScreen() {
             />
           </View>
         </View>
+
+        )}
 
         {/* 스캔 디버그 */}
         <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
@@ -254,6 +261,7 @@ export default function DeveloperOptionsScreen() {
           </View>
         </View>
 
+        {FULL_DEV_OPTIONS && (<>
         {/* 빠른 액션 버튼들 */}
         <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
           {t('developerOptions.quickActions')}
@@ -292,6 +300,7 @@ export default function DeveloperOptionsScreen() {
         {Object.entries(FEATURE_GROUPS).map(([groupKey, group]) =>
           renderFeatureGroup(groupKey, group)
         )}
+        </>)}
       </ScrollView>
     </View>
   );
