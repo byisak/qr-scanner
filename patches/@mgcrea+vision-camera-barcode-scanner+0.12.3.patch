@@ -70,7 +70,7 @@ index 54ea5ab..7c842f8 100644
  import org.jetbrains.annotations.NotNull;
  import org.jetbrains.annotations.Nullable;
  
-@@ -29,10 +45,46 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -29,10 +45,55 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
@@ -94,9 +94,18 @@ index 54ea5ab..7c842f8 100644
 +  private static final int DM_UPSCALE_EVERY_N_FRAMES = 8;
 +  private static BarcodeScanner dataMatrixScanner = null;
 +
-+  // QR 값 → 오류 정정 레벨(L/M/Q/H). ML Kit는 이 값을 주지 않아 ZXing으로 한 번 읽고 기억해 둔다
++  // QR 값 → 오류 정정 레벨(L/M/Q/H). ML Kit는 이 값을 주지 않아 ZXing으로 읽는다.
++  // 같은 내용을 레벨만 바꿔 여러 장 만드는 경우가 있어 내용만으로 오래 기억하면 다른 코드의 레벨이 붙는다.
++  // 그래서 짧게만 기억한다: 읽은 지 EC_FRESH_MS 안이면 그대로 쓰고, 지나면 다시 읽는다.
++  // 다시 읽기가 실패하면 EC_KEEP_MS 안에서만 이전 값을 쓰고, 그보다 오래됐으면 레벨을 비운다.
 +  private static final int EC_CACHE_MAX = 300;
 +  private static final int EC_MAX_ATTEMPTS = 6;
++  private static final long EC_FRESH_MS = 300;
++  private static final long EC_KEEP_MS = 1000;
++  // 코드가 이만큼 안 보였다가 다시 나타나면 새 코드로 보고 처음부터 읽는다
++  private static final long EC_GONE_MS = 1500;
++  private static final Map<String, Long> ecDecodedAt = new LinkedHashMap<>();
++  private static final Map<String, Long> ecLastSeen = new LinkedHashMap<>();
 +  private static final Map<String, String> ecLevelCache =
 +      new LinkedHashMap<String, String>(64, 0.75f, true) {
 +        @Override
@@ -117,7 +126,7 @@ index 54ea5ab..7c842f8 100644
    }
  
    @Nullable
-@@ -40,50 +92,577 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,50 +101,600 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -304,19 +313,40 @@ index 54ea5ab..7c842f8 100644
 +  @SuppressWarnings("unchecked")
 +  private static void attachErrorCorrectionLevel(Map<String, Object> barcode, @Nullable String rawValue, Image image) {
 +    if (rawValue == null) return;
++    long now = android.os.SystemClock.uptimeMillis();
 +    String cached;
++    long cachedAge;
 +    synchronized (ecLevelCache) {
++      Long seen = ecLastSeen.put(rawValue, now);
++      if (ecLastSeen.size() > EC_CACHE_MAX) ecLastSeen.clear();
++      if (seen == null || now - seen > EC_GONE_MS) {
++        // 화면에서 사라졌다가 다시 나타남: 같은 내용의 다른 코드일 수 있으니 처음부터 읽는다
++        ecLevelCache.remove(rawValue);
++        ecDecodedAt.remove(rawValue);
++        ecAttempts.remove(rawValue);
++      }
 +      cached = ecLevelCache.get(rawValue);
++      Long at = ecDecodedAt.get(rawValue);
++      cachedAge = at == null ? Long.MAX_VALUE : now - at;
++      if (cached != null && cachedAge > EC_KEEP_MS) {
++        ecLevelCache.remove(rawValue);
++        ecDecodedAt.remove(rawValue);
++        cached = null;
++      }
 +    }
-+    if (cached != null) {
++    if (cached != null && cachedAge <= EC_FRESH_MS) {
 +      barcode.put("errorCorrectionLevel", cached);
 +      return;
 +    }
++    // 다시 읽기가 실패해도 아직 EC_KEEP_MS 안이면 이전 값을 붙여 둔다 (아래에서 성공하면 덮어쓴다)
++    if (cached != null) barcode.put("errorCorrectionLevel", cached);
 +    synchronized (ecLevelCache) {
-+      Integer tried = ecAttempts.get(rawValue);
-+      if (tried != null && tried >= EC_MAX_ATTEMPTS) return;
-+      ecAttempts.put(rawValue, tried == null ? 1 : tried + 1);
-+      if (ecAttempts.size() > EC_CACHE_MAX) ecAttempts.clear();
++      if (cached == null) {
++        Integer tried = ecAttempts.get(rawValue);
++        if (tried != null && tried >= EC_MAX_ATTEMPTS) return;
++        ecAttempts.put(rawValue, tried == null ? 1 : tried + 1);
++        if (ecAttempts.size() > EC_CACHE_MAX) ecAttempts.clear();
++      }
 +    }
 +
 +    Object boxObj = barcode.get("boundingBox");
@@ -363,6 +393,8 @@ index 54ea5ab..7c842f8 100644
 +        String ec = level.toString();
 +        synchronized (ecLevelCache) {
 +          ecLevelCache.put(rawValue, ec);
++          ecDecodedAt.put(rawValue, android.os.SystemClock.uptimeMillis());
++          if (ecDecodedAt.size() > EC_CACHE_MAX) ecDecodedAt.clear();
 +          ecAttempts.remove(rawValue);
 +        }
 +        barcode.put("errorCorrectionLevel", ec);
@@ -707,7 +739,7 @@ index 54ea5ab..7c842f8 100644
    private synchronized BarcodeScanner
    getBarcodeScannerClient(@Nullable Map<String, Object> params) {
      int formatsBitmap = getFormatsBitmapFromParams(params);
-@@ -105,15 +684,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +716,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");
