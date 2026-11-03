@@ -399,6 +399,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   onFrameDumped, // 볼륨 키 등으로 요청한 프레임 덤프가 저장되면 (path) => void
   hideHighlightBoxes = false, // 테두리 네모는 숨기고 값 칩만 (단일 모드: 조준 코너가 대신 붙는다)
   onPrimaryHighlightChange, // 대표 코드의 화면 사각형 { x, y, width, height } | null
+  photoEnabled = true, // 스캔 사진 저장을 쓸 때만 사진 기능을 켠다 (끄면 카메라 세션이 가벼워진다)
 }, ref) {
   const cameraRef = useRef(null);
 
@@ -442,17 +443,52 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // Android 프레임 처리기는 판독이 느리면 프레임을 줄 세워 차례로 넘긴다(최대 몇 초 전 화면).
   // 프레임 시각과 지금 시각의 차이가 가장 작았던 값을 기준(지연 0)으로 삼아, 그보다 많이 늦은 프레임은 판독 결과를 버린다
   const MAX_FRAME_LAG_MS = 700;
+  // 모든 프레임이 이만큼 계속 늦게 나오면 기준이 틀어진 것으로 보고 다시 잡는다.
+  // 일부 기기는 카메라를 다시 열면 프레임 시각의 기준이 바뀌어, 예전 기준으로는 모든 프레임이 "늦은 프레임"이 돼 스캔이 영영 안 됐다
+  const STALE_REBASE_MS = 3000;
   const lagBaseShared = useFrameSharedValue(1e15);
   const lastLagShared = useFrameSharedValue(0);
   const staleDroppedShared = useFrameSharedValue(0);
+  const staleSinceShared = useFrameSharedValue(0);
   // 스캔 화면이 다시 켜진 직후 프레임 2장은 버린다 (멈추기 전에 쌓여 있던 프레임일 수 있다)
   const resumeSkipShared = useFrameSharedValue(2);
+  // 마지막으로 프레임이 들어온 시각 (감시용). 0이면 아직 한 장도 없음
+  const lastFrameAtShared = useFrameSharedValue(0);
+
+  // 카메라를 새로 만들 때 쓰는 key. 오류·프레임 끊김에서 되살릴 때 올린다
+  const [cameraInstance, setCameraInstance] = useState(0);
+  const restartLogRef = useRef([]); // 최근 재시작 시각 (너무 자주 되풀이하지 않게)
+  const restartCamera = useCallback((reason) => {
+    const now = Date.now();
+    const recent = restartLogRef.current.filter(t => now - t < 30000);
+    if (recent.length >= 3) {
+      console.warn(`[NativeQRScanner] restart skipped (too many): ${reason}`);
+      return;
+    }
+    restartLogRef.current = [...recent, now];
+    console.warn(`[NativeQRScanner] restarting camera: ${reason}`);
+    setCameraInstance(n => n + 1);
+  }, []);
+
+  const isActiveRef = useRef(isActive);
+  isActiveRef.current = isActive;
+  const pendingRestartRef = useRef(null); // 꺼져 있는 동안 난 카메라 오류 → 다시 켜질 때 카메라를 새로 만든다
+  useEffect(() => {
+    if (isActive && pendingRestartRef.current) {
+      const code = pendingRestartRef.current;
+      pendingRestartRef.current = null;
+      restartCamera(`resume after ${code}`);
+    }
+  }, [isActive, restartCamera]);
+
   useEffect(() => {
     if (isActive) {
       lagBaseShared.value = 1e15;
+      staleSinceShared.value = 0;
       resumeSkipShared.value = 2;
+      lastFrameAtShared.value = 0;
     }
-  }, [isActive]);
+  }, [isActive, cameraInstance]);
   const regionPristineShared = useFrameSharedValue(true); // 첫 프레임은 가로세로가 뒤집혀 올 수 있어 건너뛴다 (라이브러리와 같은 처리)
   const [regionHighlights, setRegionHighlights] = useState({ kept: [], dropped: [] });
 
@@ -515,11 +551,31 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 카메라 디바이스 선택
   const device = useCameraDevice(facing);
 
+  // 프레임 감시: 켜져 있는데 몇 초 동안 프레임이 한 장도 안 오면 카메라를 새로 만든다
+  // (다른 앱에 다녀온 뒤 검은 화면, 갤러리에 다녀온 뒤 미리보기만 나오고 스캔이 안 되는 경우)
+  const cameraReady = !!device && hasPermission;
+  useEffect(() => {
+    if (!isActive || !cameraReady) return undefined;
+    const startedAt = Date.now();
+    const timer = setInterval(() => {
+      const last = lastFrameAtShared.value;
+      const quietMs = Date.now() - (last > 0 ? last : startedAt);
+      if (quietMs > (last > 0 ? 3000 : 5000)) {
+        lastFrameAtShared.value = 0;
+        restartCamera(last > 0 ? 'frames stopped' : 'no frames after start');
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isActive, cameraReady, cameraInstance, restartCamera]);
+
   // 프레임 프로세서 해상도를 명시한다. 포맷을 안 주면 Android(CameraX)는 분석 해상도를
-  // 기본값(640x480)으로 잡아 작은 코드·먼 1D 바코드 인식이 iOS보다 크게 떨어진다
+  // 기본값(640x480)으로 잡아 작은 코드·먼 1D 바코드 인식이 iOS보다 크게 떨어진다.
+  // 사진 해상도는 낮게 고른다: 지정하지 않으면 고화소 기기(S20 울트라 1억 화소 등)에서 스캔할 때마다
+  // 최대 해상도로 찍혀 연속 스캔 중 메모리가 바닥나 앱이 죽었다
   const format = useCameraFormat(device, [
     { videoResolution: { width: 1920, height: 1080 } },
     { fps: 30 },
+    { photoResolution: { width: 1920, height: 1440 } },
   ]);
   const cameraFps = format ? Math.min(30, format.maxFps) : undefined;
 
@@ -699,20 +755,35 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     scanMode: 'continuous',
     extraOptions: extraOptionsShared,
     // 스캔 영역이 있으면 네이티브 보조 판독(반전 재시도·데이터 매트릭스 확대)이 화면 가운데 대신 영역 가운데를 보게 한다
+    // 판독 직전에 프레임마다 불린다 → 감시용 마지막 프레임 시각과 프레임 지연도 여기서 갱신한다 (코드가 없는 프레임 포함)
     getFocusRegion: (frame) => {
       'worklet';
+      const now = Date.now();
+      lastFrameAtShared.value = now;
+      if (frame && typeof frame.timestamp === 'number' && frame.timestamp > 0) {
+        const offset = now - frame.timestamp / 1e6;
+        if (offset < lagBaseShared.value) lagBaseShared.value = offset;
+        let lag = offset - lagBaseShared.value;
+        if (lag > MAX_FRAME_LAG_MS) {
+          if (staleSinceShared.value === 0) {
+            staleSinceShared.value = now;
+          } else if (now - staleSinceShared.value > STALE_REBASE_MS) {
+            lagBaseShared.value = offset;
+            staleSinceShared.value = 0;
+            lag = 0;
+          }
+        } else {
+          staleSinceShared.value = 0;
+        }
+        lastLagShared.value = lag;
+      }
       return viewRegionToSensor(scanRegionShared.value, layoutShared.value, frame, IS_IOS);
     },
     onMeta: handleMeta,
     onBarcodeScanned: (barcodes, frame) => {
       'worklet';
 
-      // 프레임 지연 계산 (빈 프레임도 기준값을 갱신해야 해서 코드 유무보다 먼저)
-      if (frame && typeof frame.timestamp === 'number' && frame.timestamp > 0) {
-        const offset = Date.now() - frame.timestamp / 1e6;
-        if (offset < lagBaseShared.value) lagBaseShared.value = offset;
-        lastLagShared.value = offset - lagBaseShared.value;
-      }
+      // 프레임 지연(lastLagShared)은 getFocusRegion에서 프레임마다 계산해 둔다
       if (resumeSkipShared.value > 0) {
         resumeSkipShared.value = resumeSkipShared.value - 1;
         return;
@@ -941,12 +1012,20 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   }, [hasPermission, requestPermission, onError]);
 
   // 카메라 에러 핸들러
+  // 장치·세션 오류(다른 앱이 카메라를 잡고 있었음, 연결 끊김 등)는 잠시 뒤 카메라를 새로 만들어 되살린다.
+  // 예전엔 로그만 남겨 다른 앱에 다녀오면 검은 화면이 그대로 남았다. 권한 오류는 되살려도 소용없어 넘긴다
   const handleCameraError = useCallback((error) => {
     console.error('[NativeQRScanner] Camera error:', error);
+    const code = String(error?.code || error?._code || '');
+    if (/^(device|session|system|unknown)\//.test(code) && !/permission/.test(code)) {
+      // 백그라운드에서 난 오류(다른 앱이 카메라를 가져감)는 돌아왔을 때 새로 만든다
+      if (isActiveRef.current) setTimeout(() => restartCamera(`error ${code}`), 800);
+      else pendingRestartRef.current = code;
+    }
     if (onError) {
       onError(error);
     }
-  }, [onError]);
+  }, [onError, restartCamera]);
 
   // ref를 통해 메서드 노출
   useImperativeHandle(ref, () => ({
@@ -1011,6 +1090,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   return (
     <View style={[StyleSheet.absoluteFill, style]}>
       <Camera
+        key={`cam-${cameraInstance}`}
         ref={cameraRef}
         style={StyleSheet.absoluteFill}
         device={device}
@@ -1020,7 +1100,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         isActive={isActive}
         torch={torch}
         exposure={exposure}
-        photo={true}
+        photo={photoEnabled}
         onError={handleCameraError}
         enableZoomGesture={true}
         onTouchEnd={handleTouchEnd}

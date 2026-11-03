@@ -1698,6 +1698,8 @@ function ScannerScreen() {
   );
 
   const capturePhoto = useCallback(async () => {
+    // 이전 촬영이 아직 끝나지 않았으면 건너뛴다. 연속 스캔 중 촬영이 겹쳐 쌓이면 구형 기기에서 메모리가 바닥나 앱이 죽었다
+    if (isCapturingPhotoRef.current) return null;
     isCapturingPhotoRef.current = true;
     setIsCapturingPhoto(true);
 
@@ -3185,6 +3187,7 @@ function ScannerScreen() {
         scanRegionDebug={scanRegionDebug}
         scanTimingDebug={scanTimingDebug}
         onFrameDumped={handleFrameDumped}
+        photoEnabled={photoSaveEnabled}
       />
 
       {/* 스캔 영역 제한 표시 (전체면 아무것도 안 그린다) */}
