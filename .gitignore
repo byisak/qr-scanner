@@ -51,3 +51,4 @@ modules/hardware-keys/android/build/
 store/play-forms.md
 store/web-migration-review.md
 store/web-security-fixes.md
+.bkit/
