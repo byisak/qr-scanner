@@ -79,7 +79,7 @@
       "config": {
         "googleMapsApiKey": "AIzaSyBbUKvaAOEmB3EReIKjqchon5pGSKIW4mQ"
       },
-      "buildNumber": "123"
+      "buildNumber": "124"
     },
     "android": {
       "splash": {
@@ -134,7 +134,7 @@
         "android.permission.ACCESS_ADSERVICES_AD_ID",
         "android.permission.ACCESS_ADSERVICES_ATTRIBUTION"
       ],
-      "versionCode": 145
+      "versionCode": 146
     },
     "web": {
       "favicon": "./assets/favicon.png",
