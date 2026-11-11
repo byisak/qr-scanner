@@ -1,6 +1,7 @@
 // utils/analytics.js - Firebase Analytics 유틸리티
 import analytics from '@react-native-firebase/analytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setCrashReportingEnabled } from './crashReporting';
 
 const ANALYTICS_CONSENT_KEY = '@analytics_consent';
 
@@ -18,9 +19,21 @@ export const getAnalyticsConsent = async () => {
 export const setAnalyticsConsent = async (enabled) => {
   try {
     await AsyncStorage.setItem(ANALYTICS_CONSENT_KEY, enabled ? 'true' : 'false');
+    setCrashReportingEnabled(enabled); // 비정상 종료 보고도 같은 동의를 따른다
     await analytics().setAnalyticsCollectionEnabled(enabled);
   } catch (error) {
     console.error('Analytics consent error:', error);
+  }
+};
+
+// 앱 시작 때: 저장된 동의를 Crashlytics에 맞춘다 (예전에 분석을 끈 사용자는 보고도 꺼진 상태로).
+// 아직 고르지 않았으면(null) 기본값(켬)을 그대로 둔다 — Android·iOS 모두 첫 실행 때 동의를 켬으로 저장한다
+export const syncCrashReportingWithConsent = async () => {
+  try {
+    const consent = await AsyncStorage.getItem(ANALYTICS_CONSENT_KEY);
+    if (consent !== null) setCrashReportingEnabled(consent === 'true');
+  } catch {
+    // 무시
   }
 };
 

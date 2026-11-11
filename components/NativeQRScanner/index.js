@@ -23,6 +23,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LABEL_COLORS } from '../../constants/Colors';
 import { viewRegionToSensor } from '../../utils/scanRegionGeometry';
+import { crashBreadcrumb, recordNonFatal } from '../../utils/crashReporting';
 
 const IS_IOS = Platform.OS === 'ios';
 
@@ -463,10 +464,12 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     const recent = restartLogRef.current.filter(t => now - t < 30000);
     if (recent.length >= 3) {
       console.warn(`[NativeQRScanner] restart skipped (too many): ${reason}`);
+      crashBreadcrumb(`camera restart skipped: ${reason}`);
       return;
     }
     restartLogRef.current = [...recent, now];
     console.warn(`[NativeQRScanner] restarting camera: ${reason}`);
+    crashBreadcrumb(`camera restart: ${reason}`);
     setCameraInstance(n => n + 1);
   }, []);
 
@@ -1017,6 +1020,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const handleCameraError = useCallback((error) => {
     console.error('[NativeQRScanner] Camera error:', error);
     const code = String(error?.code || error?._code || '');
+    crashBreadcrumb(`camera error ${code}`);
+    if (!/permission/.test(code)) {
+      recordNonFatal(new Error(`Camera error ${code}: ${error?.message || ''}`.slice(0, 300)), 'CameraError');
+    }
     if (/^(device|session|system|unknown)\//.test(code) && !/permission/.test(code)) {
       // 백그라운드에서 난 오류(다른 앱이 카메라를 가져감)는 돌아왔을 때 새로 만든다
       if (isActiveRef.current) setTimeout(() => restartCamera(`error ${code}`), 800);

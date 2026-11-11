@@ -1,0 +1,17 @@
+diff --git a/node_modules/react-native-vision-camera/android/src/main/java/com/mrousavy/camera/react/CameraView.kt b/node_modules/react-native-vision-camera/android/src/main/java/com/mrousavy/camera/react/CameraView.kt
+index 64a751e..19f45a8 100644
+--- a/node_modules/react-native-vision-camera/android/src/main/java/com/mrousavy/camera/react/CameraView.kt
++++ b/node_modules/react-native-vision-camera/android/src/main/java/com/mrousavy/camera/react/CameraView.kt
+@@ -181,7 +181,11 @@ class CameraView(context: Context) :
+         }
+ 
+         // Video
+-        if (video || enableFrameProcessor) {
++        // [qr-scanner] Only when `video` is requested. The frame processor already has its own
++        // ImageAnalysis output; adding VideoCapture too made 4 use cases → CameraX StreamSharing
++        // (OpenGL) + a MediaCodec encoder on every camera open, which ran out of GPU memory
++        // (GL error 0x505) and crashed older devices (Galaxy S20 era).
++        if (video) {
+           config.video =
+             CameraConfiguration.Output.Enabled.create(
+               CameraConfiguration.Video(isMirrored, videoHdr, videoBitRateOverride, videoBitRateMultiplier)

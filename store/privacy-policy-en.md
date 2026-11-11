@@ -39,6 +39,8 @@ To improve the App we use Google's Firebase Analytics to collect:
 
 We never send the **content** of codes you scan or create, your email or your name as analytics, and we do not collect the advertising ID. Analytics is on by default on Android; on iOS nothing is collected until you turn it on. Turning off Settings → App Info & Support → Usage Analytics stops collection from that point.
 
+**Crash reports (Firebase Crashlytics):** when the App crashes or the camera reports an error, we send the error details (stack trace), the name of the screen opened just before, device model, operating system and version, App version, memory state and a Crashlytics installation identifier to Google's Firebase Crashlytics to find the cause. We never send the content of codes you scan or create, your email or your name. This follows the Usage Analytics setting; turning it off also stops crash reports.
+
 ### 2-4. Location (optional)
 
 - **Creating a location QR code:** we ask for location permission only when you tap "current location" on the map screen, and read your device's location only while the App is in use. We never use background location. The location is used only for the map and the QR code you create, and is not sent to our server.
@@ -104,6 +106,7 @@ We use the following providers to run the Service. Data sent to them is transmit
 
 - **Google LLC (United States)**
   - Firebase Analytics: analytics data in 2-3 / app usage analysis / deleted per the configured retention period
+  - Firebase Crashlytics: crash reports in 2-3 / finding the cause of errors and improving stability / deleted 90 days after collection
   - Google Maps Platform: place search text, map center coordinates / place search and map display / per Google's policies after processing
   - Sign in with Google: Google account information in 2-1 / authentication / until account deletion
   - [Google Privacy Policy](https://policies.google.com/privacy)

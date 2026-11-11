@@ -2115,7 +2115,7 @@ export default {
     section3Title: '3. 个人信息的保留和使用期限',
     section3Content: '应用在个人信息收集和使用目的达成后立即销毁相关信息。\n\n• 扫描记录：存储在设备上直到用户删除或删除应用\n• 广告观看记录：存储在设备上（删除应用时删除）\n• 分析数据：匿名化处理后最长2年',
     section4Title: '4. 向第三方提供个人信息',
-    section4Content: '应用在以下情况下向第三方提供个人信息：\n\n• Google AdMob：用于广告投放的广告标识符\n• Firebase Analytics：应用使用分析（经同意）\n\n用户可以在设置中撤销对分析数据收集的同意。',
+    section4Content: '应用在以下情况下向第三方提供个人信息：\n\n• Firebase Analytics：应用使用分析（经同意）\n• Firebase Crashlytics：崩溃和相机错误报告（错误详情、崩溃前打开的页面名称、设备型号、系统和应用版本）。不发送扫描的码内容，90天后删除（经同意）\n\n用户可以在设置中关闭使用分析，关闭后崩溃报告也会停止。',
     section5Title: '5. 个人信息的销毁程序和方法',
     section5Content: '当个人信息保留期限届满、处理目的达成等个人信息变得不必要时，应用将立即销毁该个人信息。',
     section5Procedure: '销毁程序',

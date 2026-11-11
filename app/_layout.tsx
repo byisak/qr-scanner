@@ -17,7 +17,8 @@ import { FeedbackProvider } from '../contexts/FeedbackContext';
 import PaperThemeProvider from '../contexts/PaperThemeProvider';
 import { FontAssets } from '../constants/Fonts';
 import { useTrackingPermission } from '../hooks/useTrackingPermission';
-import { trackScreenView } from '../utils/analytics';
+import { trackScreenView, syncCrashReportingWithConsent } from '../utils/analytics';
+import { crashBreadcrumb, setCrashAttribute } from '../utils/crashReporting';
 import { loadItems } from '../utils/itemMaster';
 import { initPcKeyboard } from '../utils/pcKeyboard';
 import AppLockScreen from '../components/AppLockScreen';
@@ -36,6 +37,8 @@ export default function RootLayout() {
     if (!pathname) return;
     const name = pathname === '/' ? 'scan' : pathname.replace(/^\//, '');
     trackScreenView(name);
+    crashBreadcrumb(`screen ${name}`); // 크래시 보고에 '어느 화면에서 죽었는지'가 남는다
+    setCrashAttribute('screen', name);
   }, [pathname]);
 
   useEffect(() => {
@@ -46,6 +49,7 @@ export default function RootLayout() {
 
   // 진동 세기·패턴 설정과 품목 마스터를 미리 읽어 둔다 (첫 스캔부터 반영)
   useEffect(() => {
+    syncCrashReportingWithConsent();
     loadHapticSettings();
     loadItems().catch(() => {});
     initPcKeyboard().catch(() => {}); // PC 키보드 입력을 켜 뒀으면 키보드로 등록하고 마지막 PC에 연결

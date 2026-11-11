@@ -2168,7 +2168,7 @@ export default {
     section3Title: '3. Retention and Use Period of Personal Information',
     section3Content: 'The App destroys personal information without delay after the purpose of collection and use has been achieved.\n\n• Scan records: Stored on device until deleted by user or app deletion\n• Ad viewing records: Stored on device (deleted on app deletion)\n• Analytics data: Up to 2 years after anonymization',
     section4Title: '4. Provision of Personal Information to Third Parties',
-    section4Content: 'The App provides personal information to third parties in the following cases:\n\n• Google AdMob: Advertising identifier for ad delivery\n• Firebase Analytics: App usage analysis (with consent)\n\nUsers can withdraw consent for analytics data collection in Settings.',
+    section4Content: 'The App provides personal information to third parties in the following cases:\n\n• Firebase Analytics: App usage analysis (with consent)\n• Firebase Crashlytics: Crash and camera error reports (error details, the screen opened just before, device model, OS and app version). Scanned code content is never sent; deleted after 90 days (with consent)\n\nUsers can turn off Usage Analytics in Settings, which also stops crash reports.',
     section5Title: '5. Procedures and Methods of Personal Information Destruction',
     section5Content: 'The App destroys personal information without delay when it becomes unnecessary due to expiration of retention period or achievement of processing purpose.',
     section5Procedure: 'Destruction Procedure',
