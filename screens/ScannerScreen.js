@@ -1,6 +1,8 @@
 // screens/ScannerScreen.js - Expo Router 버전 (Vision Camera 적용)
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { setEcLevel, getEcLevel, waitForEcLevel } from '../utils/ecLevelStore';
+import { setPendingScanPhoto } from '../utils/scanPhotoStore';
+import { recordNonFatal } from '../utils/crashReporting';
 import {
   View,
   Text,
@@ -213,14 +215,10 @@ function ScannerScreen() {
   // NFC 태그 읽기
   const [nfcEnabled, setNfcEnabled] = useState(true);
   const [nfcSupported, setNfcSupported] = useState(false);
-  const [primaryHighlight, setPrimaryHighlight] = useState(null); // 대표 코드의 화면 사각형
+  // 대표 코드의 화면 사각형 → 조준 코너에 바로 넘긴다. state로 들고 있으면 코드가 움직일 때마다
+  // 이 화면 전체가 다시 그려져(구형 기기에서 수십 ms) 코너가 한 박자 늦게 따라왔다. 여러 코드 모드에선 코너가 따라가지 않는다
   const handlePrimaryHighlightChange = useCallback((rect) => {
-    setPrimaryHighlight(prev => {
-      if (!rect || !prev) return rect === prev ? prev : rect;
-      // 1px 이내 움직임은 무시 (리렌더 절약)
-      if (Math.abs(prev.x - rect.x) < 1 && Math.abs(prev.y - rect.y) < 1 && Math.abs(prev.width - rect.width) < 1 && Math.abs(prev.height - rect.height) < 1) return prev;
-      return rect;
-    });
+    reticleRef.current?.setTarget(multiCodeModeEnabledRef.current ? null : rect);
   }, []);
   const [hardwareKeyMap, setHardwareKeyMap] = useState(DEFAULT_KEY_MAP); // 볼륨 키 → 동작
   const [scanConfirmMode, setScanConfirmMode] = useState('auto'); // auto | manual (수동이면 키/버튼으로 확정)
@@ -263,6 +261,8 @@ function ScannerScreen() {
   const isProcessingRef = useRef(false); // 스캔 처리 중 플래그 (동기적 차단용)
   const scanResultModeRef = useRef('popup'); // 스캔 결과 표시 모드 ref
   const cleanupTimeoutRef = useRef(null); // cleanup 타이머 ref (경쟁 상태 방지)
+  const photoInFlightRef = useRef(null);  // 결과 화면으로 먼저 넘어간 뒤 아직 찍는 중인 사진 (끝날 때까지 카메라를 켜 둔다)
+  const deferredDeactivateRef = useRef(null); // 사진을 기다렸다가 카메라를 끄는 예약 (화면에 돌아오면 취소)
   const isProcessingMultiRef = useRef(false); // 다중 바코드 처리 중 플래그
   const multiCodeModeEnabledRef = useRef(false); // 여러 코드 인식 모드 ref
   const scannedCodesRef = useRef([]); // 스캔된 코드 목록 ref (여러 코드 인식 모드)
@@ -302,6 +302,7 @@ function ScannerScreen() {
   // multiCodeModeEnabled 상태를 ref에 동기화
   useEffect(() => {
     multiCodeModeEnabledRef.current = multiCodeModeEnabled;
+    if (multiCodeModeEnabled) reticleRef.current?.setTarget(null);
     // 모드 비활성화 시 스캔된 코드 초기화
     if (!multiCodeModeEnabled) {
       scannedCodesRef.current = [];
@@ -599,6 +600,7 @@ function ScannerScreen() {
         clearTimeout(cleanupTimeoutRef.current);
         cleanupTimeoutRef.current = null;
       }
+      deferredDeactivateRef.current = null; // 사진을 기다리던 카메라 끄기 예약 취소
 
       setIsActive(true);
       setCanScan(true); // 화면 복귀 시 스캔 허용
@@ -860,6 +862,19 @@ function ScannerScreen() {
         clearAllTimers();
         if (appStateSubRef.current) { appStateSubRef.current.remove(); appStateSubRef.current = null; }
         deactivateKeepAwake('scanner').catch(() => {});
+
+        // 결과 화면으로 먼저 넘어갔고 사진을 아직 찍는 중이면, 사진이 끝난 뒤(최대 2초) 카메라를 끈다 (중간에 끄면 사진이 취소된다)
+        const inFlight = photoInFlightRef.current;
+        if (inFlight) {
+          const token = {};
+          deferredDeactivateRef.current = token;
+          Promise.race([inFlight, new Promise(resolve => setTimeout(resolve, 2000))]).finally(() => {
+            if (deferredDeactivateRef.current !== token) return; // 그 사이 화면에 돌아왔다
+            deferredDeactivateRef.current = null;
+            setIsActive(false);
+          });
+          return;
+        }
 
         // 카메라 비활성화를 지연시켜 탭 전환 애니메이션이 먼저 실행되도록 함
         cleanupTimeoutRef.current = setTimeout(() => {
@@ -2552,20 +2567,34 @@ function ScannerScreen() {
       // 네비게이션 타이머
       navigationTimerRef.current = setTimeout(async () => {
         try {
-          // EC 레벨: 네이티브에서 받은 값 사용
-          const detectedEcLevel = errorCorrectionLevel;
+          // EC 레벨: 네이티브에서 받은 값 사용 (QR은 아래에서 늦게 들어온 값으로 채울 수 있어 let)
+          // const였을 땐 다시 넣는 순간 "read-only" 오류로 결과 화면에 못 가고 스캔 화면이 멈췄다
+          let detectedEcLevel = errorCorrectionLevel;
 
           // 사진 촬영 완료를 기다림
           let photoUri = null;
           let photoTimedOut = false;
+          // 결과 화면으로 넘어가는 경우: 사진을 기다리지 않고 바로 넘어간다 (예전엔 최대 2초 기다려서 인식 뒤 화면이 멈춰 보였다).
+          // 촬영 중에 카메라를 끄면 사진이 취소되므로, 카메라는 사진이 끝난 뒤에 끈다(화면을 떠날 때 photoInFlightRef를 본다).
+          // 사진은 끝나면 기록에 붙이고, 결과 화면은 scanPhotoStore를 구독해 늦게 보여 준다
+          const willLeaveCamera = !batchScanEnabled && !multiCodeModeEnabledRef.current && resultWindowAutoOpenRef.current;
+          if (photoPromise && willLeaveCamera) {
+            const uriPromise = photoPromise.then(result => result?.croppedUri || result || null).catch(() => null);
+            setPendingScanPhoto(data, uriPromise);
+            photoInFlightRef.current = uriPromise;
+            uriPromise.then(uri => {
+              if (uri) updateHistoryWithPhoto(data, uri);
+            }).finally(() => {
+              if (photoInFlightRef.current === uriPromise) photoInFlightRef.current = null;
+            });
+            photoPromise = null;
+          }
           if (photoPromise) {
             const waitStartTime = Date.now();
-            // 결과 화면으로 넘어가면 바로 카메라를 끈다(setIsActive(false)). 촬영 중에 끄면 사진이 취소돼 저장되지 않았다
-            // → 카메라를 떠나는 경우엔 사진이 끝날 때까지(최대 2초) 기다린다. 카메라가 계속 켜져 있는 모드는 예전처럼 0.3초만
-            const willLeaveCamera = !batchScanEnabled && !multiCodeModeEnabledRef.current && resultWindowAutoOpenRef.current;
+            // 카메라가 계속 켜져 있는 모드(연속·여러 코드·결과창 안 열림)는 0.3초만 기다리고, 늦으면 기록에 나중에 붙인다
             const timeoutPromise = new Promise(resolve => setTimeout(() => {
               resolve({ timedOut: true });
-            }, willLeaveCamera ? 2000 : 300));
+            }, 300));
             const photoResult = await Promise.race([photoPromise, timeoutPromise]);
             const waitEndTime = Date.now();
 
@@ -2703,9 +2732,9 @@ function ScannerScreen() {
 
           const enabled = await SecureStore.getItemAsync('scanLinkEnabled');
 
-          // 네비게이션 전 카메라 중지 (멈춤 현상 방지)
+          // 네비게이션 전 카메라 중지 (멈춤 현상 방지). 사진을 찍는 중이면 화면을 떠날 때 사진이 끝난 뒤 끈다
           isNavigatingRef.current = true;
-          setIsActive(false);
+          if (!photoInFlightRef.current) setIsActive(false);
 
           if (enabled === 'true') {
             const base = await SecureStore.getItemAsync('baseUrl');
@@ -2800,7 +2829,13 @@ function ScannerScreen() {
           startResetTimer(RESET_DELAYS.NORMAL);
         } catch (error) {
           console.error('Navigation error:', error);
-          await saveHistory(data, null, null, type, null, scanMeta.decision.targetGroupId, scanMeta.extra);
+          recordNonFatal(error, 'ScanNavigationError');
+          // 오류가 나도 스캔 화면이 멈춰 있지 않게: 카메라와 스캔을 다시 켠다
+          isNavigatingRef.current = false;
+          isProcessingRef.current = false;
+          setIsActive(true);
+          setCanScan(true);
+          await saveHistory(data, null, null, type, null, scanMeta.decision.targetGroupId, scanMeta.extra).catch(console.error);
           startResetTimer(RESET_DELAYS.NORMAL);
         } finally {
           navigationTimerRef.current = null;
@@ -3306,7 +3341,7 @@ function ScannerScreen() {
         )}
 
         {/* 조준 코너: 대기 땐 가운데(영역이 있으면 영역 모서리), 코드가 잡히면 코드 테두리로 */}
-        <ScanReticle ref={reticleRef} isActive={isActive} region={scanRegion} target={multiCodeModeEnabled ? null : primaryHighlight} />
+        <ScanReticle ref={reticleRef} isActive={isActive} region={scanRegion} />
       </View>
 
       {/* 배치 스캔 컨트롤 패널 */}

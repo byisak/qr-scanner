@@ -26,8 +26,11 @@ export const SCAN_THEME = {
   reticleSize: 150,         // 전체 화면 모드에서 조준 코너 네모 한 변
   // 시간 (ms)
   breathPeriod: 1600,
-  snap: { damping: 18, stiffness: 180 },
-  confirmDuration: 220,
+  // 코드에 붙기: 약 0.15초 안에 거의 붙고 살짝만 튄다 (예전 damping 18·stiffness 180은 0.5초쯤 걸려 늦게 느껴졌다)
+  snap: { damping: 30, stiffness: 450, mass: 0.8 },
+  // 코드에서 떨어져 제자리로: 붙을 때보다 부드럽게
+  release: { damping: 22, stiffness: 220 },
+  confirmDuration: 160,
   returnDuration: 300,
   cardEnter: 220,
 };

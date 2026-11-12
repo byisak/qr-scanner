@@ -1,6 +1,7 @@
 // screens/ResultScreen.js - Expo Router 버전
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { getEcLevel, subscribeEcLevel } from '../utils/ecLevelStore';
+import { getScanPhoto, isScanPhotoPending, subscribeScanPhoto } from '../utils/scanPhotoStore';
 import { View, Text, StyleSheet, ScrollView, Share, Alert, Platform, Image, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,7 +59,7 @@ export default function ResultScreen() {
   const { isBarcodeTypeLocked, getBarcodeFeatureId, showUnlockAlert } = useFeatureLock();
   const colors = isDark ? Colors.dark : Colors.light;
   const params = useLocalSearchParams();
-  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed, isGenerated, generatorData, thumbnail, location } = params;
+  const { code, url, isDuplicate, scanCount, timestamp, scanTimes, photoUri: photoUriParam, groupId, fromHistory, type, errorCorrectionLevel, ecLevelAnalysisFailed, isGenerated, generatorData, thumbnail, location } = params;
 
   // 코드 값 안전하게 처리 (빈 문자열 또는 undefined 체크)
   const safeCode = typeof code === 'string' && code.trim() ? code.trim() : '';
@@ -69,6 +70,18 @@ export default function ResultScreen() {
   const showDuplicate = isDuplicate === 'true';
   const count = parseInt(scanCount || '1', 10);
   const scanTimestamp = timestamp ? parseInt(timestamp, 10) : null;
+  // 스캔 직후엔 사진 촬영을 기다리지 않고 이 화면이 먼저 열린다 → 사진이 끝나면 받아서 보여 준다
+  const [latePhotoUri, setLatePhotoUri] = useState(() => (!photoUriParam && code ? getScanPhoto(code) : null));
+  useEffect(() => {
+    if (photoUriParam || !code || fromHistory === 'true') return undefined;
+    if (!isScanPhotoPending(code)) {
+      const done = getScanPhoto(code); // 화면이 그려지는 사이에 끝났을 수 있다
+      if (done) setLatePhotoUri(done);
+      return undefined;
+    }
+    return subscribeScanPhoto(code, (uri) => { if (uri) setLatePhotoUri(uri); });
+  }, [code, photoUriParam, fromHistory]);
+  const photoUri = photoUriParam || latePhotoUri || '';
   const hasPhoto = photoUri && photoUri.length > 0;
   const isFromHistory = fromHistory === 'true';
   const barcodeType = type || 'qr';
