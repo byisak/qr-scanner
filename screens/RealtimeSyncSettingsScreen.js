@@ -18,6 +18,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Crypto from 'expo-crypto';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, replaceHistory, updateHistory } from '../utils/historyStore';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -215,14 +216,14 @@ export default function RealtimeSyncSettingsScreen() {
         await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
 
         // scanHistoryByGroup에도 그룹 초기화
-        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-        const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+        const historyByGroup = await readHistory();
+        if (!historyByGroup.default) historyByGroup.default = [];
         for (const session of sessions) {
           if (!historyByGroup[session.id]) {
             historyByGroup[session.id] = [];
           }
         }
-        await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+        await replaceHistory(historyByGroup);
       }
     } catch (error) {
       console.error('ensureGroupsForSessions error:', error);
@@ -342,14 +343,14 @@ export default function RealtimeSyncSettingsScreen() {
       await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
 
       // scanHistoryByGroup에도 모든 세션 그룹 초기화
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      const historyByGroup = await readHistory();
+      if (!historyByGroup.default) historyByGroup.default = [];
       for (const session of allSessions) {
         if (!historyByGroup[session.id]) {
           historyByGroup[session.id] = [];
         }
       }
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      await replaceHistory(historyByGroup);
     } catch (error) {
       console.error('Failed to sync scanGroups:', error);
     }
@@ -618,10 +619,10 @@ export default function RealtimeSyncSettingsScreen() {
         const updatedGroups = [...groups, newGroup];
         await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
 
-        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-        const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+        const historyByGroup = await readHistory();
+        if (!historyByGroup.default) historyByGroup.default = [];
         historyByGroup[newSessionId] = [];
-        await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+        await replaceHistory(historyByGroup);
       } catch (error) {
         console.error('Failed to create cloud sync group:', error);
       }
@@ -821,12 +822,11 @@ export default function RealtimeSyncSettingsScreen() {
                 const updatedGroups = groups.filter(g => g.id !== sessionId);
                 await AsyncStorage.setItem('scanGroups', JSON.stringify(updatedGroups));
 
-                const historyByGroupJson = await AsyncStorage.getItem('scanHistoryByGroup');
-                if (historyByGroupJson) {
-                  const historyByGroup = JSON.parse(historyByGroupJson);
+                await updateHistory(historyByGroup => {
+                  if (!(sessionId in historyByGroup)) return false;
                   delete historyByGroup[sessionId];
-                  await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
-                }
+                  return true;
+                });
 
                 const historyJson = await AsyncStorage.getItem('scanHistory');
                 if (historyJson) {

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, hasStoredHistory } from '../utils/historyStore';
 import { labelOfItem, fieldNameAt } from '../utils/labelParser';
 import { parseGs1, formatGs1Summary } from '../utils/gs1';
 import { loadLabelSettings } from '../utils/labelCategories';
@@ -63,7 +64,7 @@ export default function ExportHistoryScreen() {
     (async () => {
       try {
         const groupsData = await AsyncStorage.getItem('scanGroups');
-        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+        const historyData = (await hasStoredHistory()) ? await readHistory() : null;
         loadLabelSettings().then(ls => setLabelCategories(ls.categories)).catch(() => {});
         loadItems().catch(() => {}); // 내보내기 때 품명 열을 동기로 찾도록 미리
 
@@ -79,8 +80,7 @@ export default function ExportHistoryScreen() {
         }
 
         if (historyData) {
-          const parsed = JSON.parse(historyData);
-          setScanHistory(parsed);
+          setScanHistory(historyData);
         }
       } catch (error) {
         console.error('Load export data error:', error);

@@ -36,8 +36,10 @@ import { LotteryIcon } from '../components/LotteryIcons';
 import { LOTTERY_FEATURE_ENABLED } from '../utils/lotteryFeature';
 import MaterialPressable from '../components/MaterialPressable';
 import { loadItems, lookupItemSync, subscribeItems } from '../utils/itemMaster';
+import { readHistory, hasStoredHistory, updateHistory, replaceHistory, deletePhotosOf } from '../utils/historyStore';
 
 const DEFAULT_GROUP_ID = 'default';
+const PHOTO_DELETE_DELAY_MS = 10000;
 const HISTORY_VIEW_GROUP_KEY = 'historyViewGroupId';
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -103,7 +105,7 @@ export default function HistoryScreen() {
   const loadGroups = async () => {
     try {
       const groupsData = await AsyncStorage.getItem('scanGroups');
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
+      const storedHistory = (await hasStoredHistory()) ? await readHistory() : null;
       // 히스토리에서 보고 있는 그룹은 스캐너의 저장 그룹(selectedGroupId)과 따로 기억한다.
       // 같은 키를 쓰면 B그룹 기록을 보기만 해도 이후 스캔이 B그룹에 저장됐다
       const viewedId = await AsyncStorage.getItem(HISTORY_VIEW_GROUP_KEY);
@@ -138,14 +140,13 @@ export default function HistoryScreen() {
         // 보던 그룹이 삭제됐거나 숨겨졌으면 기본 그룹으로
         if (selectedId && !localizedGroups.some(g => g.id === selectedId)) {
           setSelectedGroupId(DEFAULT_GROUP_ID);
-          if (historyData) setScanHistory(JSON.parse(historyData));
+          if (storedHistory) setScanHistory(storedHistory);
           return;
         }
       }
 
-      if (historyData) {
-        const parsed = JSON.parse(historyData);
-        setScanHistory(parsed);
+      if (storedHistory) {
+        setScanHistory(storedHistory);
       } else {
         // 기존 히스토리 데이터 마이그레이션
         const oldHistory = await AsyncStorage.getItem('scanHistory');
@@ -153,7 +154,7 @@ export default function HistoryScreen() {
           const parsed = JSON.parse(oldHistory);
           const migrated = { [DEFAULT_GROUP_ID]: parsed };
           setScanHistory(migrated);
-          await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(migrated));
+          await replaceHistory(migrated);
           triggerSync();
         }
       }
@@ -213,9 +214,14 @@ export default function HistoryScreen() {
         text: t('common.delete'),
         style: 'destructive',
         onPress: async () => {
-          const updatedHistory = { ...scanHistory, [selectedGroupId]: [] };
-          setScanHistory(updatedHistory);
-          await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(updatedHistory));
+          const groupId = selectedGroupId;
+          setScanHistory(prev => ({ ...prev, [groupId]: [] }));
+          const removed = [];
+          await updateHistory(byGroup => {
+            removed.push(...(byGroup[groupId] || []));
+            byGroup[groupId] = [];
+          });
+          deletePhotosOf(removed); // 지운 기록의 사진 파일도 정리
           triggerSync();
           setQuery('');
         },
@@ -226,27 +232,29 @@ export default function HistoryScreen() {
   // 개별 항목 삭제. 확인 창 대신 "실행 취소" 토스트로 되돌릴 수 있게 한다
   const deleteHistoryItem = async (item) => {
     const groupId = selectedGroupId;
-    const currentHistory = scanHistory[groupId] || [];
-    const updatedHistory = currentHistory.filter(h => h.timestamp !== item.timestamp);
-    const newScanHistory = { ...scanHistory, [groupId]: updatedHistory };
-    setScanHistory(newScanHistory);
-    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(newScanHistory));
+    setScanHistory(prev => ({ ...prev, [groupId]: (prev[groupId] || []).filter(h => h.timestamp !== item.timestamp) }));
+    await updateHistory(byGroup => {
+      byGroup[groupId] = (byGroup[groupId] || []).filter(h => h.timestamp !== item.timestamp);
+    });
     triggerSync();
+    // 사진 파일은 "실행 취소"를 누를 시간이 지난 뒤에 지운다 (되살렸으면 기록에 남아 있어 지워지지 않는다)
+    setTimeout(() => deletePhotosOf(item), PHOTO_DELETE_DELAY_MS);
 
     feedback.warning(t('history.itemDeleted'), {
       actionLabel: t('common.undo'),
       onAction: async () => {
-        let restored;
         setScanHistory(prev => {
           const list = prev[groupId] || [];
           if (list.some(h => h.timestamp === item.timestamp)) return prev;
-          restored = { ...prev, [groupId]: [...list, item] };
-          return restored;
+          return { ...prev, [groupId]: [...list, item] };
         });
-        if (restored) {
-          await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(restored));
-          triggerSync();
-        }
+        const restored = await updateHistory(byGroup => {
+          const list = byGroup[groupId] || [];
+          if (list.some(h => h.timestamp === item.timestamp)) return false;
+          byGroup[groupId] = [...list, item];
+          return true;
+        });
+        if (restored) triggerSync();
       },
     });
   };
@@ -311,20 +319,20 @@ export default function HistoryScreen() {
       // 결과 확인 시 isChecked를 true로 업데이트
       if (!item.lotteryData.isChecked) {
         try {
-          const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-          if (historyData) {
-            const historyByGroup = JSON.parse(historyData);
+          const marked = await updateHistory(historyByGroup => {
             const currentHistory = historyByGroup[selectedGroupId] || [];
             const index = currentHistory.findIndex(h => h.code === item.code);
-            if (index !== -1) {
-              currentHistory[index].lotteryData.isChecked = true;
-              currentHistory[index].lotteryData.checkedAt = Date.now();
-              historyByGroup[selectedGroupId] = currentHistory;
-              await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
-              triggerSync();
-              // 알림 업데이트 (미확인 복권 없으면 취소)
-              updateLotteryNotificationOnCheck();
-            }
+            if (index === -1 || !currentHistory[index].lotteryData) return false;
+            currentHistory[index] = {
+              ...currentHistory[index],
+              lotteryData: { ...currentHistory[index].lotteryData, isChecked: true, checkedAt: Date.now() },
+            };
+            return true;
+          });
+          if (marked) {
+            triggerSync();
+            // 알림 업데이트 (미확인 복권 없으면 취소)
+            updateLotteryNotificationOnCheck();
           }
         } catch (error) {
           console.error('Failed to mark lottery as checked:', error);

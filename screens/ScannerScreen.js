@@ -28,6 +28,7 @@ import { createAudioPlayer } from 'expo-audio';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
+import { readHistory, updateHistory, prependCapped, deletePhotosOf } from '../utils/historyStore';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -617,7 +618,6 @@ function ScannerScreen() {
         }
       });
       appStateSubRef.current = appStateSub;
-      historyCacheDirtyRef.current = true; // 히스토리 캐시 무효화 (다른 화면에서 변경 가능)
       sessionSavedCodesRef.current.clear(); // 다른 화면에서 기록을 지웠을 수 있다. 이후 중복은 히스토리로 판정
       isNavigatingRef.current = false; // 네비게이션 플래그 리셋
       isProcessingRef.current = false; // 처리 중 플래그 리셋
@@ -885,25 +885,8 @@ function ScannerScreen() {
     }, [resetAll, clearAllTimers]),
   );
 
-  // 히스토리 인메모리 캐시 (매 스캔마다 전체 JSON 파싱 방지)
-  const historyCacheRef = useRef(null);
-  const historyCacheDirtyRef = useRef(false);
-
-  const getHistoryCache = useCallback(async () => {
-    if (historyCacheRef.current && !historyCacheDirtyRef.current) {
-      return historyCacheRef.current;
-    }
-    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-    historyCacheRef.current = historyData ? JSON.parse(historyData) : { default: [] };
-    historyCacheDirtyRef.current = false;
-    return historyCacheRef.current;
-  }, []);
-
-  const saveHistoryCache = useCallback(async (historyByGroup) => {
-    historyCacheRef.current = historyByGroup;
-    historyCacheDirtyRef.current = false;
-    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
-  }, []);
+  // 기록 읽기·쓰기는 utils/historyStore.js가 메모리에 한 벌만 들고 순서대로 저장한다
+  // (예전에는 이 화면이 따로 캐시를 들어서, 다른 화면이 고친 내용을 늦게 끝난 사진 저장이 덮어쓸 수 있었다)
 
   // 이번 세션에서 저장하기로 한 코드 (그룹ID::코드). 연속 스캔은 같은 코드를 0.5초마다 다시 인식하는데,
   // 첫 저장이 끝나기 전에 두 번째 인식이 오면 히스토리에 아직 없어 중복으로 안 잡혔다
@@ -964,7 +947,7 @@ function ScannerScreen() {
     const selectedGroupId = currentGroupId || 'default';
     const pendingDuplicate = sessionSavedCodesRef.current.has(`${selectedGroupId}::${code}`);
     try {
-      const historyByGroup = await getHistoryCache();
+      const historyByGroup = await readHistory();
       const currentHistory = historyByGroup[selectedGroupId] || [];
 
       const existingItem = currentHistory.find(item => item.code === code);
@@ -976,7 +959,7 @@ function ScannerScreen() {
       console.error('Check duplicate error:', e);
       return { isDuplicate: pendingDuplicate, existingCount: pendingDuplicate ? 1 : 0 };
     }
-  }, [currentGroupId, getHistoryCache]);
+  }, [currentGroupId]);
 
   // Android는 EC 레벨을 ZXing으로 따로 읽어서, 첫 프레임에는 없고 다음 프레임에 들어올 수 있다.
   // 이미 저장한 기록에 EC 레벨이 비어 있으면 채운다 (코드당 한 번)
@@ -985,19 +968,20 @@ function ScannerScreen() {
     const key = `${currentGroupIdRef.current}::${code}`;
     if (ecFilledRef.current.has(key)) return;
     try {
-      const historyByGroup = await getHistoryCache();
-      const list = historyByGroup[currentGroupIdRef.current] || [];
-      const index = list.findIndex(item => item.code === code);
-      if (index === -1) return; // 아직 저장 전이면 다음 프레임에 다시
-      ecFilledRef.current.add(key);
-      if (list[index].errorCorrectionLevel) return;
-      list[index] = { ...list[index], errorCorrectionLevel: ecLevel };
-      historyByGroup[currentGroupIdRef.current] = list;
-      await saveHistoryCache(historyByGroup);
+      const groupId = currentGroupIdRef.current;
+      await updateHistory(historyByGroup => {
+        const list = historyByGroup[groupId] || [];
+        const index = list.findIndex(item => item.code === code);
+        if (index === -1) return false; // 아직 저장 전이면 다음 프레임에 다시
+        ecFilledRef.current.add(key);
+        if (list[index].errorCorrectionLevel) return false;
+        list[index] = { ...list[index], errorCorrectionLevel: ecLevel };
+        return true;
+      });
     } catch (e) {
       console.error('Fill EC level error:', e);
     }
-  }, [getHistoryCache, saveHistoryCache]);
+  }, []);
 
   // 스캔 파이프라인의 "결정" 단계. 코드가 어떤 것인지 보고(라벨 카테고리·필드 값) 어떻게 처리할지(건너뜀·저장 그룹·부가 동작)를 정한다.
   // 모드별 저장 분기들은 이 결과만 보고 움직인다. 지금은 기본값만 돌려주고, 라벨 분리·자동 규칙이 여기에 들어온다.
@@ -1169,18 +1153,18 @@ function ScannerScreen() {
   // 방금 저장한 기록에 카테고리·필드 값을 채운다 (모달에서 카테고리를 만든 직후)
   const applyCategoryToHistory = useCallback(async (code, category) => {
     try {
-      const historyByGroup = await getHistoryCache();
       const groupId = currentGroupIdRef.current;
-      const list = historyByGroup[groupId] || [];
-      const index = list.findIndex(item => item.code === code);
-      if (index === -1) return;
-      list[index] = { ...list[index], categoryId: category.id, values: splitLabel(code, category.delimiter) };
-      historyByGroup[groupId] = list;
-      await saveHistoryCache(historyByGroup);
+      await updateHistory(historyByGroup => {
+        const list = historyByGroup[groupId] || [];
+        const index = list.findIndex(item => item.code === code);
+        if (index === -1) return false;
+        list[index] = { ...list[index], categoryId: category.id, values: splitLabel(code, category.delimiter) };
+        return true;
+      });
     } catch (e) {
       console.error('Apply category error:', e);
     }
-  }, [getHistoryCache, saveHistoryCache]);
+  }, []);
 
   const handleCreateCategory = useCallback(async (name) => {
     const pattern = newPatternPrompt;
@@ -1225,21 +1209,16 @@ function ScannerScreen() {
       // targetGroupId가 있으면 해당 그룹에, 없으면 현재 선택된 그룹에 저장
       let selectedGroupId = targetGroupId || currentGroupId;
 
-      // 그룹별 히스토리 가져오기 (캐시 사용)
-      let historyByGroup = await getHistoryCache();
+      let isDuplicate = false;
+      let saved = null;
+      const now = Date.now();
 
-      // 선택된 그룹이 없으면 기본 그룹 사용
-      if (!historyByGroup[selectedGroupId]) {
-        historyByGroup[selectedGroupId] = [];
-      }
-
-      const currentHistory = historyByGroup[selectedGroupId];
+      // 읽기부터 고치기까지 한 번에 (다른 화면의 변경과 섞이지 않게 historyStore가 순서를 지킨다)
+      await updateHistory(historyByGroup => {
+      const currentHistory = [...(historyByGroup[selectedGroupId] || [])];
 
       // 중복 체크 (같은 그룹 내에서 같은 코드 찾기)
       const existingIndex = currentHistory.findIndex(item => item.code === code);
-
-      let isDuplicate = false;
-      const now = Date.now();
 
       if (existingIndex !== -1) {
         // 중복 스캔 - 기존 항목 업데이트
@@ -1247,14 +1226,14 @@ function ScannerScreen() {
         const existingItem = currentHistory[existingIndex];
 
         // 기존 스캔 시간 배열에 새 시간 추가
-        const scanTimes = existingItem.scanTimes || [existingItem.timestamp];
-        scanTimes.push(now);
+        const scanTimes = [...(existingItem.scanTimes || [existingItem.timestamp]), now];
 
-        // 기존 사진 배열에 새 사진 추가 (최대 10개까지 저장)
-        const photos = existingItem.photos || [];
-        if (photoUri) {
-          photos.unshift(photoUri); // 최신 사진을 앞에 추가
-          if (photos.length > 10) photos.pop(); // 10개 초과시 가장 오래된 사진 제거
+        // 기존 사진 배열에 새 사진 추가 (최대 10개까지 저장, 최신이 앞)
+        const photos = photoUri ? [photoUri, ...(existingItem.photos || [])] : (existingItem.photos || []);
+        const droppedPhotos = photos.slice(10); // 10개 초과분은 파일도 지운다
+        if (droppedPhotos.length) {
+          photos.length = 10;
+          deletePhotosOf({ photos: droppedPhotos }, [{ photos }]);
         }
 
         const addQty = (extra && extra.gs1 && extra.gs1.qty) || 1;
@@ -1273,7 +1252,8 @@ function ScannerScreen() {
 
         // 기존 항목 제거하고 맨 앞에 추가 (최신순으로)
         currentHistory.splice(existingIndex, 1);
-        historyByGroup[selectedGroupId] = [updatedItem, ...currentHistory].slice(0, 1000);
+        historyByGroup[selectedGroupId] = currentHistory;
+        prependCapped(historyByGroup, selectedGroupId, updatedItem);
       } else {
         // 새로운 스캔
         const record = {
@@ -1288,15 +1268,13 @@ function ScannerScreen() {
           ...(ecLevel && { errorCorrectionLevel: ecLevel }), // QR 오류 검증 레벨
           ...(extra || {}),
         };
-        historyByGroup[selectedGroupId] = [record, ...currentHistory].slice(0, 1000);
+        prependCapped(historyByGroup, selectedGroupId, record);
       }
-
-      // 저장 (캐시 + AsyncStorage)
-      await saveHistoryCache(historyByGroup);
+      saved = historyByGroup[selectedGroupId][0];
+      });
       triggerSync();
 
       // 중복 여부 반환 (ResultScreen에서 사용)
-      const saved = historyByGroup[selectedGroupId][0];
       return { isDuplicate, count: isDuplicate ? saved.count : 1, quantity: saved.quantity, errorCorrectionLevel: ecLevel };
     } catch (e) {
       console.error('Save history error:', e);
@@ -1369,40 +1347,36 @@ function ScannerScreen() {
 
     try {
       const selectedGroupId = currentGroupId || 'default';
-      // 캐시를 거치지 않고 저장소에 직접 쓰면 다음 saveHistory가 오래된 캐시로 덮어쓴다
-      const historyByGroup = await getHistoryCache();
-      const currentHistory = historyByGroup[selectedGroupId] || [];
-
-      // 해당 코드의 가장 최근 항목 찾기
-      const existingIndex = currentHistory.findIndex(item => item.code === code);
-
-      if (existingIndex !== -1) {
+      let found = false;
+      const added = await updateHistory(historyByGroup => {
+        const currentHistory = historyByGroup[selectedGroupId] || [];
+        // 해당 코드의 가장 최근 항목 찾기
+        const existingIndex = currentHistory.findIndex(item => item.code === code);
+        if (existingIndex === -1) return false;
+        found = true;
         const existingItem = currentHistory[existingIndex];
-        const photos = existingItem.photos || [];
-
-        // 이미 같은 사진이 있는지 확인
-        if (!photos.includes(photoUri)) {
-          photos.unshift(photoUri);
-          if (photos.length > 10) photos.pop();
-
-          currentHistory[existingIndex] = {
-            ...existingItem,
-            photos: photos,
-          };
-
-          historyByGroup[selectedGroupId] = currentHistory;
-          await saveHistoryCache(historyByGroup);
-          triggerSync();
-          console.log('[updateHistoryWithPhoto] Photo added to history:', photoUri);
+        const oldPhotos = existingItem.photos || [];
+        if (oldPhotos.includes(photoUri)) return false; // 이미 같은 사진이 있다
+        const photos = [photoUri, ...oldPhotos];
+        const droppedPhotos = photos.slice(10);
+        if (droppedPhotos.length) {
+          photos.length = 10;
+          deletePhotosOf({ photos: droppedPhotos }, [{ photos }]);
         }
-      } else if (attempt < 5) {
+        currentHistory[existingIndex] = { ...existingItem, photos };
+        return true;
+      });
+
+      if (added) {
+        triggerSync();
+      } else if (!found && attempt < 5) {
         // 사진이 기록 저장(saveHistory)보다 먼저 끝나면 항목이 아직 없다 → 조금 뒤 다시 붙인다
         setTimeout(() => updateHistoryWithPhoto(code, photoUri, attempt + 1), 400);
       }
     } catch (e) {
       console.error('Update history with photo error:', e);
     }
-  }, [currentGroupId, getHistoryCache, saveHistoryCache]);
+  }, [currentGroupId, triggerSync]);
 
   // 현재 그룹이 복권 그룹인지 확인
   const isCurrentGroupLottery = useCallback(() => {
@@ -1498,28 +1472,8 @@ function ScannerScreen() {
         return null;
       }
 
-      // 그룹별 히스토리 가져오기 (캐시 경유 — 직접 쓰면 다음 saveHistory가 덮어쓴다)
-      let historyByGroup = await getHistoryCache();
-
-      if (!historyByGroup[groupId]) {
-        historyByGroup[groupId] = [];
-      }
-
-      const currentHistory = historyByGroup[groupId];
       const now = Date.now();
-
-      // 중복 체크 (같은 복권 코드)
-      const existingIndex = currentHistory.findIndex(item => item.code === code);
-
-      if (existingIndex !== -1) {
-        // 중복 - 이미 스캔된 복권
-        console.log('[ScannerScreen] Lottery already scanned:', code);
-        return {
-          isDuplicate: true,
-          record: currentHistory[existingIndex],
-          groupId,
-        };
-      }
+      let existing = null;
 
       // 새 복권 기록
       const record = {
@@ -1536,8 +1490,17 @@ function ScannerScreen() {
         },
       };
 
-      historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
-      await saveHistoryCache(historyByGroup);
+      await updateHistory(historyByGroup => {
+        // 중복 체크 (같은 복권 코드)
+        existing = (historyByGroup[groupId] || []).find(item => item.code === code) || null;
+        if (existing) return false;
+        prependCapped(historyByGroup, groupId, record);
+        return true;
+      });
+      if (existing) {
+        // 중복 - 이미 스캔된 복권
+        return { isDuplicate: true, record: existing, groupId };
+      }
       triggerSync();
 
       console.log('[ScannerScreen] Saved lottery record:', lotteryData.typeName, lotteryData.round);
@@ -1550,7 +1513,7 @@ function ScannerScreen() {
       console.error('Save lottery record error:', error);
       return null;
     }
-  }, [ensureLotteryGroup, triggerSync, getHistoryCache, saveHistoryCache]);
+  }, [ensureLotteryGroup, triggerSync]);
 
   // cornerPoints에서 bounds 생성
   const boundsFromCornerPoints = useCallback(

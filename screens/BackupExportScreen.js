@@ -21,6 +21,7 @@ import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import LockIcon from '../components/LockIcon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { flushHistory } from '../utils/historyStore';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import MaterialPressable from '../components/MaterialPressable';
@@ -154,6 +155,7 @@ export default function BackupExportScreen() {
 
   const createBackupData = async () => {
     try {
+      await flushHistory(); // 밀린 기록 저장이 끝난 뒤에 읽는다
       const allKeys = await AsyncStorage.getAllKeys();
       const allData = await AsyncStorage.multiGet(allKeys);
 

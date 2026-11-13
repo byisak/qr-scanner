@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, replaceHistory } from '../utils/historyStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -258,10 +259,9 @@ export default function ScanUrlSettingsScreen() {
         await AsyncStorage.setItem('scanGroups', JSON.stringify(groups));
 
         // 히스토리 초기화
-        const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-        let historyByGroup = historyData ? JSON.parse(historyData) : {};
+        let historyByGroup = await readHistory();
         historyByGroup[newGroup.id] = [];
-        await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+        await replaceHistory(historyByGroup);
 
         console.log('[ScanUrlSettings] Created new scan URL group:', newGroup.id);
       } else {

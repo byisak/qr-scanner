@@ -19,6 +19,7 @@ import { Colors } from '../constants/Colors';
 import { RADIUS, SPACE, SIZE, TYPE } from '../constants/Design';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { flushHistory, invalidateHistory } from '../utils/historyStore';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { loadFromICloud, restoreFromBackup, getICloudBackupInfo } from '../services/iCloudService';
@@ -154,10 +155,12 @@ export default function BackupImportScreen() {
       }
 
       const entries = Object.entries(backupData.data);
+      await flushHistory();
       for (const [key, value] of entries) {
         const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
         await AsyncStorage.setItem(key, stringValue);
       }
+      await invalidateHistory(); // 기록을 저장소에 직접 덮어썼으니 메모리의 기록을 다시 읽게 한다
       if (backupData.itemMaster) await restoreItemsFromBackup(backupData.itemMaster);
 
       return true;

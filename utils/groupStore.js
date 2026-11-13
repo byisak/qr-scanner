@@ -2,6 +2,7 @@
 // 그룹·기록·세션 정보를 한 번에 읽고 한 번에 써서(multiGet/multiSet), 중간에 앱이 꺼져도
 // "그룹은 지워졌는데 기록은 남는" 식으로 어긋나지 않게 한다.
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, flushHistory, invalidateHistory, deletePhotosOf } from './historyStore';
 
 export const DEFAULT_GROUP_ID = 'default';
 
@@ -16,8 +17,7 @@ const parse = (json, fallback) => {
 
 /** 그룹별 스캔 기록 수 { [groupId]: number } */
 export async function countRecordsByGroup() {
-  const json = await AsyncStorage.getItem('scanHistoryByGroup');
-  const byGroup = parse(json, {});
+  const byGroup = await readHistory();
   const counts = {};
   for (const id of Object.keys(byGroup)) counts[id] = Array.isArray(byGroup[id]) ? byGroup[id].length : 0;
   return counts;
@@ -33,6 +33,7 @@ export async function deleteGroups(ids) {
   if (targets.size === 0) return [];
 
   const keys = ['scanGroups', 'scanHistoryByGroup', 'scanHistory', 'sessionUrls', 'activeSessionId', 'selectedGroupId'];
+  await flushHistory(); // 밀린 기록 저장이 끝난 뒤의 값을 읽는다
   const entries = Object.fromEntries(await AsyncStorage.multiGet(keys));
 
   const groups = parse(entries.scanGroups, []);
@@ -40,7 +41,11 @@ export async function deleteGroups(ids) {
   const nextGroups = groups.filter((g) => !targets.has(g.id));
 
   const byGroup = parse(entries.scanHistoryByGroup, {});
-  for (const id of targets) delete byGroup[id];
+  const removedItems = [];
+  for (const id of targets) {
+    if (Array.isArray(byGroup[id])) removedItems.push(...byGroup[id]);
+    delete byGroup[id];
+  }
 
   const history = parse(entries.scanHistory, null);
   const nextHistory = Array.isArray(history) ? history.filter((item) => !targets.has(item.groupId)) : null;
@@ -67,5 +72,7 @@ export async function deleteGroups(ids) {
 
   await AsyncStorage.multiSet(writes);
   if (removes.length) await AsyncStorage.multiRemove(removes);
+  await invalidateHistory(); // 저장소에 직접 썼으니 메모리의 기록을 다시 읽게 한다
+  deletePhotosOf(removedItems, Object.values(byGroup).flat()); // 지운 그룹의 사진 파일 정리
   return [...targets];
 }

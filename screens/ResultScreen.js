@@ -26,6 +26,7 @@ import NewLabelPatternModal from '../components/NewLabelPatternModal';
 import { labelOfItem, signatureOf, fieldNameAt } from '../utils/labelParser';
 import { parseGs1, gs1AiLabel, gs1DisplayValue } from '../utils/gs1';
 import { findHistoryItem, updateHistoryItem } from '../utils/historyItem';
+import { updateHistory, deletePhotosOf } from '../utils/historyStore';
 import { loadLabelSettings, createCategoryFromCode, ignorePattern } from '../utils/labelCategories';
 import { parseWifiQr } from '../utils/wifiQr';
 import { lookupItem, getItemCount } from '../utils/itemMaster';
@@ -472,31 +473,20 @@ export default function ResultScreen() {
     }
 
     try {
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      if (!historyData) {
-        Alert.alert(t('result.error'), t('result.errorNotFound'));
-        return;
-      }
+      const saved = await updateHistory(historyByGroup => {
+        const groupHistory = historyByGroup[groupId] || [];
+        const itemIndex = groupHistory.findIndex(item =>
+          item.code === displayText && item.timestamp === scanTimestamp
+        );
+        if (itemIndex === -1) return false;
+        groupHistory[itemIndex] = { ...groupHistory[itemIndex], code: editedText };
+        return true;
+      });
 
-      const historyByGroup = JSON.parse(historyData);
-      const groupHistory = historyByGroup[groupId] || [];
-
-      const itemIndex = groupHistory.findIndex(item =>
-        item.code === displayText && item.timestamp === scanTimestamp
-      );
-
-      if (itemIndex === -1) {
+      if (!saved) {
         Alert.alert(t('result.error'), t('result.errorItemNotFound'));
         return;
       }
-
-      groupHistory[itemIndex] = {
-        ...groupHistory[itemIndex],
-        code: editedText,
-      };
-
-      historyByGroup[groupId] = groupHistory;
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
       triggerSync();
 
       feedback.success(t('result.editSuccessMessage'));
@@ -525,21 +515,16 @@ export default function ResultScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-              if (!historyData) {
-                Alert.alert(t('result.error'), t('result.errorNotFound'));
-                return;
-              }
-
-              const historyByGroup = JSON.parse(historyData);
-              const groupHistory = historyByGroup[groupId] || [];
-
-              const filteredHistory = groupHistory.filter(item =>
-                !(item.code === displayText && item.timestamp === scanTimestamp)
-              );
-
-              historyByGroup[groupId] = filteredHistory;
-              await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+              const removed = [];
+              await updateHistory(historyByGroup => {
+                const groupHistory = historyByGroup[groupId] || [];
+                const isTarget = item => item.code === displayText && item.timestamp === scanTimestamp;
+                removed.push(...groupHistory.filter(isTarget));
+                if (!removed.length) return false;
+                historyByGroup[groupId] = groupHistory.filter(item => !isTarget(item));
+                return true;
+              });
+              deletePhotosOf(removed); // 지운 기록의 사진 파일도 정리
               triggerSync();
 
               feedback.success(t('result.deleteSuccessMessage'));

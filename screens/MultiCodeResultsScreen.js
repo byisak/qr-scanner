@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, replaceHistory } from '../utils/historyStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
@@ -68,8 +69,8 @@ export default function MultiCodeResultsScreen() {
   // 히스토리에 코드 저장 (스캐너에서 선택한 그룹으로)
   const saveCodeToHistory = useCallback(async (codeValue, barcodeType = 'qr') => {
     try {
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+      let historyByGroup = await readHistory();
+      if (!historyByGroup.default) historyByGroup.default = [];
 
       if (!historyByGroup[groupId]) {
         historyByGroup[groupId] = [];
@@ -111,7 +112,7 @@ export default function MultiCodeResultsScreen() {
         historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
       }
 
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      await replaceHistory(historyByGroup);
     } catch (error) {
       console.error('Failed to save to history:', error);
       throw error;

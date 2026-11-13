@@ -31,6 +31,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, replaceHistory } from '../utils/historyStore';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
@@ -980,8 +981,7 @@ function ImageAnalysisScreen() {
       }
 
       // 그룹별 히스토리 가져오기
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : {};
+      let historyByGroup = await readHistory();
 
       // 대상 그룹 초기화
       if (!historyByGroup[targetGroupId]) {
@@ -1025,7 +1025,7 @@ function ImageAnalysisScreen() {
         historyByGroup[targetGroupId] = historyByGroup[targetGroupId].slice(0, 1000);
       }
 
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      await replaceHistory(historyByGroup);
 
       // 복권 저장 후 알림 스케줄링
       if (isLotteryCode) {
@@ -1051,8 +1051,7 @@ function ImageAnalysisScreen() {
   // 특정 그룹에 개별 바코드 저장 (그룹 선택 모달에서 호출)
   const handleSaveToHistoryWithGroup = async (result, index, targetGroupId) => {
     try {
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : {};
+      let historyByGroup = await readHistory();
 
       if (!historyByGroup[targetGroupId]) {
         historyByGroup[targetGroupId] = [];
@@ -1077,7 +1076,7 @@ function ImageAnalysisScreen() {
         historyByGroup[targetGroupId] = historyByGroup[targetGroupId].slice(0, 1000);
       }
 
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      await replaceHistory(historyByGroup);
 
       if (Platform.OS === 'ios') {
         haptics.success();
@@ -1102,8 +1101,7 @@ function ImageAnalysisScreen() {
     try {
       setIsSavingHistory(true);
 
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : {};
+      let historyByGroup = await readHistory();
 
       if (!historyByGroup[targetGroupId]) {
         historyByGroup[targetGroupId] = [];
@@ -1136,7 +1134,7 @@ function ImageAnalysisScreen() {
         historyByGroup[targetGroupId] = historyByGroup[targetGroupId].slice(0, 1000);
       }
 
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      await replaceHistory(historyByGroup);
 
       setIsSavingHistory(false);
 
@@ -1189,8 +1187,7 @@ function ImageAnalysisScreen() {
       setIsSavingHistory(true);
 
       // 그룹별 히스토리 가져오기
-      const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-      let historyByGroup = historyData ? JSON.parse(historyData) : {};
+      let historyByGroup = await readHistory();
 
       // 기본 그룹 초기화
       if (!historyByGroup.default) {
@@ -1265,7 +1262,7 @@ function ImageAnalysisScreen() {
         }
       }
 
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+      await replaceHistory(historyByGroup);
 
       // 복권 저장 후 알림 스케줄링
       if (lotteryCount > 0) {

@@ -1,5 +1,6 @@
 // utils/generatedHistoryStorage.js - 생성된 코드 히스토리 저장 유틸리티
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, replaceHistory, updateHistory } from './historyStore';
 import * as FileSystem from 'expo-file-system/legacy';
 
 // 생성 그룹 ID (고정)
@@ -110,8 +111,7 @@ export const saveGeneratedCodeToHistory = async ({
     const thumbnailUri = imageUri ? await saveThumbnail(imageUri, now) : null;
 
     // 3. 히스토리 데이터 로드
-    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-    const historyByGroup = historyData ? JSON.parse(historyData) : {};
+    const historyByGroup = await readHistory();
 
     // 4. 생성 그룹 히스토리 가져오기
     const generatedHistory = historyByGroup[GENERATED_GROUP_ID] || [];
@@ -151,7 +151,7 @@ export const saveGeneratedCodeToHistory = async ({
     historyByGroup[GENERATED_GROUP_ID] = [record, ...generatedHistory].slice(0, 500);
 
     // 8. 저장
-    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+    await replaceHistory(historyByGroup);
 
     return { success: true, record };
   } catch (error) {
@@ -163,29 +163,23 @@ export const saveGeneratedCodeToHistory = async ({
 // 생성 히스토리 항목 삭제
 export const deleteGeneratedHistoryItem = async (timestamp) => {
   try {
-    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-    const historyByGroup = historyData ? JSON.parse(historyData) : {};
+    // 히스토리에서 제거 (읽기~쓰기를 한 번에)
+    let item = null;
+    await updateHistory(historyByGroup => {
+      const generatedHistory = historyByGroup[GENERATED_GROUP_ID] || [];
+      item = generatedHistory.find(entry => entry.timestamp === timestamp) || null;
+      if (!item) return false;
+      historyByGroup[GENERATED_GROUP_ID] = generatedHistory.filter(entry => entry !== item);
+      return true;
+    });
 
-    const generatedHistory = historyByGroup[GENERATED_GROUP_ID] || [];
-    const itemIndex = generatedHistory.findIndex(item => item.timestamp === timestamp);
-
-    if (itemIndex !== -1) {
-      const item = generatedHistory[itemIndex];
-
-      // 썸네일 파일 삭제
-      if (item.thumbnail) {
-        try {
-          await FileSystem.deleteAsync(item.thumbnail, { idempotent: true });
-        } catch (e) {
-          console.warn('Failed to delete thumbnail:', e);
-        }
+    // 썸네일 파일 삭제
+    if (item && item.thumbnail) {
+      try {
+        await FileSystem.deleteAsync(item.thumbnail, { idempotent: true });
+      } catch (e) {
+        console.warn('Failed to delete thumbnail:', e);
       }
-
-      // 히스토리에서 제거
-      generatedHistory.splice(itemIndex, 1);
-      historyByGroup[GENERATED_GROUP_ID] = generatedHistory;
-
-      await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
     }
 
     return true;
@@ -198,8 +192,7 @@ export const deleteGeneratedHistoryItem = async (timestamp) => {
 // 생성 히스토리 전체 조회
 export const getGeneratedHistory = async () => {
   try {
-    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-    const historyByGroup = historyData ? JSON.parse(historyData) : {};
+    const historyByGroup = await readHistory();
 
     return historyByGroup[GENERATED_GROUP_ID] || [];
   } catch (error) {

@@ -1,6 +1,7 @@
 // services/iCloudService.js - iCloud 자동 동기화 서비스
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { flushHistory, invalidateHistory } from '../utils/historyStore';
 
 // iCloud 관련 함수들
 let CloudStore = null;
@@ -328,10 +329,12 @@ export const restoreFromBackup = async (backupData) => {
     }
 
     const entries = Object.entries(backupData.data);
+    await flushHistory();
     for (const [key, value] of entries) {
       const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
       await AsyncStorage.setItem(key, stringValue);
     }
+    await invalidateHistory(); // 기록을 저장소에 직접 덮어썼으니 메모리의 기록을 다시 읽게 한다
 
     return true;
   } catch (error) {

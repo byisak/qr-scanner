@@ -2,6 +2,7 @@
 
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory } from './historyStore';
 import { Platform } from 'react-native';
 import { LOTTERY_FEATURE_ENABLED } from '../config/features';
 
@@ -145,10 +146,7 @@ async function getNextThursdayNotificationTime() {
  */
 export async function hasUncheckedLotteries(type = 'all') {
   try {
-    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-    if (!historyData) return false;
-
-    const historyByGroup = JSON.parse(historyData);
+    const historyByGroup = await readHistory();
 
     // 복권 타입별 그룹 확인
     let lotteryGroups;
@@ -181,10 +179,7 @@ export async function hasUncheckedLotteries(type = 'all') {
  */
 export async function getUncheckedLotteryCount(type = 'all') {
   try {
-    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-    if (!historyData) return 0;
-
-    const historyByGroup = JSON.parse(historyData);
+    const historyByGroup = await readHistory();
 
     let lotteryGroups;
     if (type === 'lotto') {

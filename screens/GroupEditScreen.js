@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readHistory, replaceHistory } from '../utils/historyStore';
 // 순서 바꾸기: New Architecture 에서 드래그 중 행 내용이 사라지던 draggable-flatlist 대신 reorderable-list
 import ReorderableList, { reorderItems, useReorderableDrag, useIsActive } from 'react-native-reorderable-list';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -240,10 +241,10 @@ export default function GroupEditScreen() {
     await saveGroups(updatedGroups);
 
     // 새 그룹의 빈 히스토리 초기화
-    const historyData = await AsyncStorage.getItem('scanHistoryByGroup');
-    const historyByGroup = historyData ? JSON.parse(historyData) : { default: [] };
+    const historyByGroup = await readHistory();
+    if (!historyByGroup.default) historyByGroup.default = [];
     historyByGroup[newGroup.id] = [];
-    await AsyncStorage.setItem('scanHistoryByGroup', JSON.stringify(historyByGroup));
+    await replaceHistory(historyByGroup);
 
     setNewGroupName('');
     setShowAddModal(false);

@@ -23,6 +23,9 @@ import { loadItems } from '../utils/itemMaster';
 import { initPcKeyboard } from '../utils/pcKeyboard';
 import AppLockScreen from '../components/AppLockScreen';
 
+// 화면을 그리다 오류가 나면 하얀 화면 대신 '다시 시도' 화면을 띄우고 Crashlytics에 보고한다
+export { ErrorBoundary } from '../components/AppErrorScreen';
+
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
