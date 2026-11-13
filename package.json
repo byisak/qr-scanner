@@ -83,7 +83,7 @@
     "react-native-wifi-reborn": "^4.13.6",
     "react-native-worklets-core": "^1.6.2",
     "reanimated-color-picker": "^4.1.1",
-    "xlsx": "^0.18.5",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zxing-wasm": "^2.2.4"
   },
   "private": true,
