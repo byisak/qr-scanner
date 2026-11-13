@@ -75,7 +75,6 @@ export default {
     loginSubtitle: '登录以开始实时同步',
     realtimeSyncLogin: '实时传输',
     secureConnection: '安全加密连接',
-    orContinueWith: '使用社交账号继续',
     loginWithKakao: '使用Kakao登录',
     loginWithGoogle: '使用Google登录',
     loginWithApple: '使用Apple登录',

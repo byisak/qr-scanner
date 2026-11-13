@@ -59,7 +59,6 @@ export default {
     loginSubtitle: 'Sign in to start real-time sync',
     realtimeSyncLogin: 'Real-time Sync',
     secureConnection: 'Secure encrypted connection',
-    orContinueWith: 'Or continue with',
     loginWithKakao: 'Login with Kakao',
     loginWithGoogle: 'Login with Google',
     loginWithApple: 'Login with Apple',

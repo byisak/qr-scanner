@@ -346,6 +346,7 @@ export const PinKeypadWithRef = React.forwardRef(({
     />
   );
 });
+PinKeypadWithRef.displayName = 'PinKeypadWithRef';
 
 const styles = StyleSheet.create({
   container: {

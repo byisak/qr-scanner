@@ -177,7 +177,8 @@ const parseVCard = (data) => {
   const fnMatch = data.match(/FN:(.+)/i);
   if (fnMatch) result.fullName = fnMatch[1].trim();
 
-  const nMatch = data.match(/N:([^;]*);([^;]*)/i);
+  // 줄 맨 앞의 N만 본다 (BEGIN:VCARD, VERSION:, FN: 안의 'N:'에 걸리면 이름에 다른 줄이 섞인다)
+  const nMatch = data.match(/^N(?:;[^:\r\n]*)?:([^;\r\n]*);?([^;\r\n]*)/im);
   if (nMatch) {
     result.lastName = nMatch[1].trim();
     result.firstName = nMatch[2].trim();

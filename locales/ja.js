@@ -75,7 +75,6 @@ export default {
     loginSubtitle: 'ログインしてリアルタイム同期を開始',
     realtimeSyncLogin: 'リアルタイム転送',
     secureConnection: '安全な暗号化接続',
-    orContinueWith: 'SNSアカウントで続ける',
     loginWithKakao: 'カカオでログイン',
     loginWithGoogle: 'Googleでログイン',
     loginWithApple: 'Appleでログイン',

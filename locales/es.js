@@ -75,7 +75,6 @@ export default {
     loginSubtitle: 'Inicia sesión para sincronizar en tiempo real',
     realtimeSyncLogin: 'Envío en vivo al PC',
     secureConnection: 'Conexión segura encriptada',
-    orContinueWith: 'O continuar con',
     loginWithKakao: 'Iniciar sesión con Kakao',
     loginWithGoogle: 'Iniciar sesión con Google',
     loginWithApple: 'Iniciar sesión con Apple',

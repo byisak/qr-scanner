@@ -256,7 +256,23 @@ export default function QRFrameRenderer({
   // 벡터 저장용: 프레임 안 QR 의 SVG (배경 투명, 여백 0)
   onSvg,
 }) {
-  if (!frame || !frame.id || frame.id === 'none') {
+  // 훅은 아래의 이른 return보다 먼저 불러야 한다 (프레임을 켜고 끌 때 훅 개수가 달라지면 React가 오류를 낸다)
+  const hasFrame = !!frame && !!frame.id && frame.id !== 'none';
+  const frameSvg = hasFrame ? FRAME_SVG_DATA[frame.id] : undefined;
+  const qrPosition = hasFrame ? FRAME_QR_POSITIONS[frame.id] : undefined;
+
+  // 배경색 기반으로 프레임 색상 생성 (사용자 지정 텍스트 색상 적용, 다크모드 지원)
+  const frameColors = useMemo(() => {
+    return generateFrameColors(qrStyle?.backgroundColor, frameTextColor, isDark);
+  }, [qrStyle?.backgroundColor, frameTextColor, isDark]);
+
+  // 프레임 SVG 색상 적용
+  const coloredFrameSvg = useMemo(() => {
+    if (!frameSvg) return frameSvg;
+    return recolorSvg(frameSvg, frameColors);
+  }, [frameSvg, frameColors]);
+
+  if (!hasFrame) {
     // 프레임이 없으면 QR 코드만 렌더링
     return (
       <View style={[styles.container, { width: size, height: size }]} onLayout={onLayout}>
@@ -273,20 +289,6 @@ export default function QRFrameRenderer({
       </View>
     );
   }
-
-  const frameSvg = FRAME_SVG_DATA[frame.id];
-  const qrPosition = FRAME_QR_POSITIONS[frame.id];
-
-  // 배경색 기반으로 프레임 색상 생성 (사용자 지정 텍스트 색상 적용, 다크모드 지원)
-  const frameColors = useMemo(() => {
-    return generateFrameColors(qrStyle?.backgroundColor, frameTextColor, isDark);
-  }, [qrStyle?.backgroundColor, frameTextColor, isDark]);
-
-  // 프레임 SVG 색상 적용
-  const coloredFrameSvg = useMemo(() => {
-    if (!frameSvg) return frameSvg;
-    return recolorSvg(frameSvg, frameColors);
-  }, [frameSvg, frameColors]);
 
   if (!frameSvg || !qrPosition) {
     // 프레임 데이터가 없으면 QR 코드만 렌더링
