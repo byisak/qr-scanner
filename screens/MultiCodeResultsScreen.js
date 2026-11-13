@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { readHistory, replaceHistory } from '../utils/historyStore';
+import { readHistory, replaceHistory, trimGroup } from '../utils/historyStore';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFeedback } from '../contexts/FeedbackContext';
@@ -95,7 +95,8 @@ export default function MultiCodeResultsScreen() {
         };
 
         currentHistory.splice(existingIndex, 1);
-        historyByGroup[groupId] = [updatedItem, ...currentHistory].slice(0, 1000);
+        historyByGroup[groupId] = [updatedItem, ...currentHistory];
+        trimGroup(historyByGroup, groupId);
       } else {
         // 새 항목 추가
         // 라벨 카테고리에 맞으면 필드 값도 같이 저장. 처음 보는 패턴은 설정의 "발견된 형식"에 쌓는다
@@ -109,7 +110,8 @@ export default function MultiCodeResultsScreen() {
           type: barcodeType,
           ...(label ? { categoryId: label.categoryId, values: label.values } : {}),
         };
-        historyByGroup[groupId] = [record, ...currentHistory].slice(0, 1000);
+        historyByGroup[groupId] = [record, ...currentHistory];
+        trimGroup(historyByGroup, groupId);
       }
 
       await replaceHistory(historyByGroup);

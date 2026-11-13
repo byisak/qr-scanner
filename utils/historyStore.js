@@ -107,12 +107,36 @@ export function flushHistory() {
   return writeChain;
 }
 
+/**
+ * 보관 개수를 넘으면 뒤(오래된 쪽)에서부터 잘라 낸다. 고정(pinned)한 항목은 남기고,
+ * 고정한 것만으로 한도를 넘을 때에만 고정 항목도 뒤에서부터 자른다. 순서는 그대로.
+ * 돌려주는 값: { kept, dropped }
+ */
+export function capItems(list, limit = HISTORY_LIMIT) {
+  if (!Array.isArray(list) || list.length <= limit) return { kept: list || [], dropped: [] };
+  let excess = list.length - limit;
+  const drop = new Set();
+  for (let i = list.length - 1; i >= 0 && excess > 0; i--) {
+    if (!list[i] || !list[i].pinned) { drop.add(i); excess--; }
+  }
+  for (let i = list.length - 1; i >= 0 && excess > 0; i--) {
+    if (!drop.has(i)) { drop.add(i); excess--; }
+  }
+  return { kept: list.filter((_, i) => !drop.has(i)), dropped: list.filter((_, i) => drop.has(i)) };
+}
+
+/** 그룹 하나를 보관 개수에 맞춘다 (고정 항목 보존). 잘린 항목의 사진도 지운다 */
+export function trimGroup(byGroup, groupId, limit = HISTORY_LIMIT) {
+  const { kept, dropped } = capItems(byGroup[groupId] || [], limit);
+  byGroup[groupId] = kept;
+  if (dropped.length) deletePhotosOf(dropped, Object.values(byGroup).flat());
+  return kept;
+}
+
 /** 새 항목을 그룹 맨 앞에 넣고 보관 개수를 넘는 오래된 항목은 잘라 낸다. 잘린 항목의 사진도 지운다 */
 export function prependCapped(byGroup, groupId, items) {
-  const list = [...(Array.isArray(items) ? items : [items]), ...(byGroup[groupId] || [])];
-  byGroup[groupId] = list.slice(0, HISTORY_LIMIT);
-  if (list.length > HISTORY_LIMIT) deletePhotosOf(list.slice(HISTORY_LIMIT), Object.values(byGroup).flat());
-  return byGroup[groupId];
+  byGroup[groupId] = [...(Array.isArray(items) ? items : [items]), ...(byGroup[groupId] || [])];
+  return trimGroup(byGroup, groupId);
 }
 
 const PHOTO_DIR = 'scan_photos/';

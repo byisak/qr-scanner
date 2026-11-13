@@ -1,7 +1,7 @@
 // 기록 저장소: AsyncStorage와 파일 삭제를 가짜로 바꿔, 겹치는 변경이 사라지지 않는지 본다
 import {
   HISTORY_KEY, HISTORY_LIMIT, hasStoredHistory, readHistory, updateHistory, replaceHistory,
-  invalidateHistory, flushHistory, prependCapped, deletePhotosOf,
+  invalidateHistory, flushHistory, prependCapped, deletePhotosOf, capItems, trimGroup,
 } from '../utils/historyStore';
 
 const mockData = new Map();
@@ -160,5 +160,50 @@ describe('historyStore', () => {
     await seed({});
     deletePhotosOf([{ code: 'a' }, null, { photos: 'not-array' }]);
     expect(mockDeleted).toEqual([]);
+  });
+
+  test('capItems: 한도 안이면 그대로, 넘으면 오래된 것부터', () => {
+    const list = [{ code: 'a' }, { code: 'b' }, { code: 'c' }];
+    expect(capItems(list, 3)).toEqual({ kept: list, dropped: [] });
+    expect(capItems(list, 2)).toEqual({ kept: [{ code: 'a' }, { code: 'b' }], dropped: [{ code: 'c' }] });
+    expect(capItems(undefined, 2)).toEqual({ kept: [], dropped: [] });
+  });
+
+  test('capItems: 고정한 항목은 남기고 고정 안 한 오래된 항목을 자른다', () => {
+    const list = [{ code: 'a' }, { code: 'b' }, { code: 'c' }, { code: 'old', pinned: true }];
+    const { kept, dropped } = capItems(list, 2);
+    expect(kept.map(i => i.code)).toEqual(['a', 'old']);
+    expect(dropped.map(i => i.code)).toEqual(['b', 'c']);
+  });
+
+  test('capItems: 고정한 것만으로 한도를 넘으면 고정 항목도 뒤에서부터 자른다', () => {
+    const list = [{ code: 'n' }, { code: 'p1', pinned: true }, { code: 'p2', pinned: true }, { code: 'p3', pinned: true }];
+    const { kept, dropped } = capItems(list, 2);
+    expect(kept.map(i => i.code)).toEqual(['p1', 'p2']);
+    expect(dropped.map(i => i.code)).toEqual(['n', 'p3']);
+  });
+
+  test('prependCapped: 가득 찬 그룹에서도 고정한 옛 기록은 남고 사진도 지워지지 않는다', async () => {
+    await seed({
+      default: Array.from({ length: HISTORY_LIMIT }, (_, i) => ({
+        code: 'c' + i, timestamp: HISTORY_LIMIT - i,
+        photos: i >= HISTORY_LIMIT - 2 ? ['file:///doc/scan_photos/p' + i + '.jpg'] : [],
+        ...(i === HISTORY_LIMIT - 1 ? { pinned: true } : {}),
+      })),
+    });
+    await updateHistory(h => { prependCapped(h, 'default', { code: 'new', timestamp: 99999, photos: [] }); });
+    const list = stored().default;
+    expect(list).toHaveLength(HISTORY_LIMIT);
+    expect(list[0].code).toBe('new');
+    expect(list[list.length - 1]).toMatchObject({ code: 'c' + (HISTORY_LIMIT - 1), pinned: true });
+    expect(list.some(i => i.code === 'c' + (HISTORY_LIMIT - 2))).toBe(false);
+    expect(mockDeleted).toEqual(['file:///doc/scan_photos/p' + (HISTORY_LIMIT - 2) + '.jpg']);
+  });
+
+  test('trimGroup: 한도를 따로 줄 수 있다 (생성 그룹 500)', () => {
+    const byGroup = { generated: Array.from({ length: 6 }, (_, i) => ({ code: 'g' + i })) };
+    expect(trimGroup(byGroup, 'generated', 4)).toHaveLength(4);
+    expect(byGroup.generated.map(i => i.code)).toEqual(['g0', 'g1', 'g2', 'g3']);
+    expect(trimGroup(byGroup, 'none')).toEqual([]);
   });
 });

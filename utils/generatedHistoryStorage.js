@@ -1,6 +1,6 @@
 // utils/generatedHistoryStorage.js - 생성된 코드 히스토리 저장 유틸리티
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { readHistory, replaceHistory, updateHistory } from './historyStore';
+import { readHistory, replaceHistory, updateHistory, trimGroup } from './historyStore';
 import * as FileSystem from 'expo-file-system/legacy';
 
 // 생성 그룹 ID (고정)
@@ -148,7 +148,8 @@ export const saveGeneratedCodeToHistory = async ({
     }
 
     // 7. 맨 앞에 추가 (최대 500개)
-    historyByGroup[GENERATED_GROUP_ID] = [record, ...generatedHistory].slice(0, 500);
+    historyByGroup[GENERATED_GROUP_ID] = [record, ...generatedHistory];
+    trimGroup(historyByGroup, GENERATED_GROUP_ID, 500); // 고정한 항목은 남긴다
 
     // 8. 저장
     await replaceHistory(historyByGroup);

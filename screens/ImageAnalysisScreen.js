@@ -31,7 +31,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { readHistory, replaceHistory } from '../utils/historyStore';
+import { readHistory, replaceHistory, trimGroup } from '../utils/historyStore';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import { isLotteryQR, parseLotteryQR, LOTTERY_GROUPS } from '../utils/lotteryParser';
@@ -1020,10 +1020,8 @@ function ImageAnalysisScreen() {
 
       historyByGroup[targetGroupId].unshift(historyItem);
 
-      // 최대 1000개까지만 저장
-      if (historyByGroup[targetGroupId].length > 1000) {
-        historyByGroup[targetGroupId] = historyByGroup[targetGroupId].slice(0, 1000);
-      }
+      // 최대 1000개까지만 저장 (고정한 항목은 남긴다)
+      trimGroup(historyByGroup, targetGroupId);
 
       await replaceHistory(historyByGroup);
 
@@ -1072,9 +1070,7 @@ function ImageAnalysisScreen() {
 
       historyByGroup[targetGroupId].unshift(historyItem);
 
-      if (historyByGroup[targetGroupId].length > 1000) {
-        historyByGroup[targetGroupId] = historyByGroup[targetGroupId].slice(0, 1000);
-      }
+      trimGroup(historyByGroup, targetGroupId);
 
       await replaceHistory(historyByGroup);
 
@@ -1130,9 +1126,7 @@ function ImageAnalysisScreen() {
         successCount++;
       }
 
-      if (historyByGroup[targetGroupId].length > 1000) {
-        historyByGroup[targetGroupId] = historyByGroup[targetGroupId].slice(0, 1000);
-      }
+      trimGroup(historyByGroup, targetGroupId);
 
       await replaceHistory(historyByGroup);
 
@@ -1257,9 +1251,7 @@ function ImageAnalysisScreen() {
 
       // 각 그룹별 최대 1000개까지만 저장
       for (const groupId in historyByGroup) {
-        if (historyByGroup[groupId].length > 1000) {
-          historyByGroup[groupId] = historyByGroup[groupId].slice(0, 1000);
-        }
+        if (Array.isArray(historyByGroup[groupId])) trimGroup(historyByGroup, groupId);
       }
 
       await replaceHistory(historyByGroup);

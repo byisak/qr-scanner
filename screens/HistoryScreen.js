@@ -37,6 +37,7 @@ import { LOTTERY_FEATURE_ENABLED } from '../utils/lotteryFeature';
 import MaterialPressable from '../components/MaterialPressable';
 import { loadItems, lookupItemSync, subscribeItems } from '../utils/itemMaster';
 import { readHistory, hasStoredHistory, updateHistory, replaceHistory, deletePhotosOf } from '../utils/historyStore';
+import { searchHistory, hasActiveFilter, splitPinned } from '../utils/historySearch';
 
 const DEFAULT_GROUP_ID = 'default';
 const PHOTO_DELETE_DELAY_MS = 10000;
@@ -47,6 +48,15 @@ const formatDay = (timestamp) => {
   const d = new Date(timestamp);
   return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())}`;
 };
+
+// 검색 필터 칩 (QR·바코드는 번역하지 않는 말)
+const FILTER_CHIPS = [
+  { key: 'pinned', icon: 'pin', labelKey: 'history.pinned' },
+  { key: 'qr', icon: 'qr-code-outline', label: 'QR' },
+  { key: 'barcode', icon: 'barcode-outline', labelKey: 'history.filterBarcode' },
+  { key: 'memo', icon: 'document-text-outline', labelKey: 'history.filterMemo' },
+  { key: 'photo', icon: 'image-outline', labelKey: 'history.filterPhoto' },
+];
 
 // 왼쪽 40x40 종류 배지: URL은 강조, 2D(DataMatrix 등)는 성공, 1D 바코드는 주의, 그 밖의 QR은 중립
 const TWO_D_LABELS = { datamatrix: 'DM', pdf417: 'PDF', aztec: 'AZ', maxicode: 'MAXI', microqr: 'MQR' };
@@ -94,7 +104,9 @@ export default function HistoryScreen() {
     loadItems().then(() => setItemsVersion(v => v + 1)).catch(() => {});
     return subscribeItems(() => setItemsVersion(v => v + 1));
   }, []);
-  const [filteredList, setFilteredList] = useState([]);
+  const [filters, setFilters] = useState({}); // { pinned, qr, barcode, memo, photo }
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchAll, setSearchAll] = useState(false); // 검색 결과를 모든 그룹에서 볼지
   const [realtimeSyncEnabled, setRealtimeSyncEnabled] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
   const [isLoading, setIsLoading] = useState(true); // 저장소를 읽는 동안 "기록 없음"이 잠깐 보이는 것 방지
@@ -183,24 +195,52 @@ export default function HistoryScreen() {
     return [...history].sort((a, b) => b.timestamp - a.timestamp);
   }, [scanHistory, selectedGroupId]);
 
-  // 검색 필터
+  const filterActive = hasActiveFilter(filters);
+  const isSearching = !!query.trim() || filterActive;
+
+  // 항목이 속한 그룹 (모든 그룹 검색에서 삭제·고정·열기가 제 그룹에 적용되게)
+  const groupOfItem = useMemo(() => {
+    const map = new Map();
+    Object.keys(scanHistory).forEach((gid) => {
+      if (Array.isArray(scanHistory[gid])) scanHistory[gid].forEach(item => map.set(item, gid));
+    });
+    return map;
+  }, [scanHistory]);
+  const groupIdOf = (item) => groupOfItem.get(item) || selectedGroupId;
+  const keyOf = (item) => `${groupIdOf(item)}_${item.timestamp}_${item.code || ''}`;
+
+  // 검색·필터: 코드·URL·메모·위치·종류·라벨 값·품명. 기본은 보고 있는 그룹, 다른 그룹의 결과는 개수만 센다
+  const { filteredList, otherGroupMatches } = useMemo(() => {
+    const opts = { query, filters, lookup: lookupItemSync };
+    const current = searchHistory(currentHistory, opts);
+    if (!isSearching) return { filteredList: current, otherGroupMatches: 0 };
+    const others = groups
+      .filter(g => g.id !== selectedGroupId && Array.isArray(scanHistory[g.id]))
+      .flatMap(g => searchHistory(scanHistory[g.id], opts));
+    if (!searchAll) return { filteredList: current, otherGroupMatches: others.length };
+    return {
+      filteredList: [...current, ...others].sort((a, b) => b.timestamp - a.timestamp),
+      otherGroupMatches: others.length,
+    };
+    // itemsVersion: 품목 마스터가 바뀌면 품명 검색 결과도 달라진다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, filters, currentHistory, scanHistory, groups, selectedGroupId, searchAll, isSearching, itemsVersion]);
+
+  // 검색을 끝내면 다시 보고 있는 그룹만
   useEffect(() => {
-    if (!query) {
-      setFilteredList(currentHistory);
-      return;
-    }
-    const q = query.toLowerCase();
-    setFilteredList(
-      currentHistory.filter(
-        (i) => (i.code && i.code.toLowerCase().includes(q)) || (i.url && i.url.toLowerCase().includes(q))
-          || (lookupItemSync(i.code)?.name || '').toLowerCase().includes(q),
-      ),
-    );
-  }, [query, currentHistory, itemsVersion]);
+    if (!isSearching) setSearchAll(false);
+  }, [isSearching]);
+
+  const groupLabel = (group) => (
+    group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') :
+    group.id === 'lottery-lotto' ? t('history.lottoGroup') :
+    group.id === 'lottery-pension' ? t('history.pensionGroup') : group.name
+  );
 
   // 그룹 선택
   const selectGroup = async (groupId) => {
     setSelectedGroupId(groupId);
+    setSearchAll(false);
     await AsyncStorage.setItem(HISTORY_VIEW_GROUP_KEY, groupId);
     setQuery('');
   };
@@ -231,7 +271,7 @@ export default function HistoryScreen() {
 
   // 개별 항목 삭제. 확인 창 대신 "실행 취소" 토스트로 되돌릴 수 있게 한다
   const deleteHistoryItem = async (item) => {
-    const groupId = selectedGroupId;
+    const groupId = groupIdOf(item);
     setScanHistory(prev => ({ ...prev, [groupId]: (prev[groupId] || []).filter(h => h.timestamp !== item.timestamp) }));
     await updateHistory(byGroup => {
       byGroup[groupId] = (byGroup[groupId] || []).filter(h => h.timestamp !== item.timestamp);
@@ -259,10 +299,35 @@ export default function HistoryScreen() {
     });
   };
 
-  // 스크린리더로도 삭제할 수 있게 행에 붙이는 접근성 액션
-  const rowAccessibilityActions = [{ name: 'delete', label: t('common.delete') }];
+  // 고정/해제: 고정한 기록은 목록 맨 위 "고정" 묶음에 모이고, 보관 개수를 넘어도 밀려나지 않는다
+  const togglePin = async (item) => {
+    const groupId = groupIdOf(item);
+    const next = !item.pinned;
+    const apply = (h) => {
+      if (h.timestamp !== item.timestamp || h.code !== item.code) return h;
+      const copy = { ...h };
+      if (next) copy.pinned = true;
+      else delete copy.pinned;
+      return copy;
+    };
+    setScanHistory(prev => ({ ...prev, [groupId]: (prev[groupId] || []).map(apply) }));
+    try {
+      await updateHistory(byGroup => { byGroup[groupId] = (byGroup[groupId] || []).map(apply); });
+      triggerSync();
+    } catch (error) {
+      console.error('Toggle pin error:', error);
+      loadGroups(); // 저장하지 못했으면 화면을 저장된 상태로 되돌린다
+    }
+  };
+
+  // 스크린리더로도 삭제·고정할 수 있게 행에 붙이는 접근성 액션
+  const rowAccessibilityActionsOf = (item) => [
+    { name: 'pin', label: item.pinned ? t('history.unpin') : t('history.pin') },
+    { name: 'delete', label: t('common.delete') },
+  ];
   const handleRowAccessibilityAction = (item) => (event) => {
     if (event.nativeEvent.actionName === 'delete') deleteHistoryItem(item);
+    else if (event.nativeEvent.actionName === 'pin') togglePin(item);
   };
 
   // 날짜 섹션 하나가 둥근 묶음 카드 하나: 첫 행은 위 모서리, 마지막 행은 아래 모서리, 사이는 가는 구분선
@@ -272,18 +337,31 @@ export default function HistoryScreen() {
     index === count - 1 && s.rowLast,
   ];
 
-  // SwipeListView에서 숨겨진 삭제 버튼 렌더링 (항상 44pt 이상)
+  // SwipeListView에서 숨겨진 고정·삭제 버튼 렌더링 (항상 44pt 이상)
   const renderHiddenItem = (data, rowMap) => {
     const item = data.item;
     const rowCount = data.section ? data.section.data.length : 1;
+    const closeRow = () => {
+      const row = rowMap[keyOf(item)];
+      if (row) row.closeRow();
+    };
     return (
       <View style={[s.rowBack, rowEdgeStyle(data.index, rowCount)]}>
         <MaterialPressable
+          style={[s.deleteBtn, { backgroundColor: colors.primarySoft }, Platform.OS === 'android' && s.androidClip]}
+          onPress={() => {
+            closeRow();
+            togglePin(item);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={item.pinned ? t('history.unpin') : t('history.pin')}
+        >
+          <Ionicons name={item.pinned ? 'pin' : 'pin-outline'} size={22} color={colors.primaryText} />
+        </MaterialPressable>
+        <MaterialPressable
           style={[s.deleteBtn, { backgroundColor: colors.errorSoft }, Platform.OS === 'android' && s.androidClip]}
           onPress={() => {
-            if (rowMap[item.timestamp]) {
-              rowMap[item.timestamp].closeRow();
-            }
+            closeRow();
             deleteHistoryItem(item);
           }}
           accessibilityRole="button"
@@ -301,26 +379,39 @@ export default function HistoryScreen() {
     return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   };
 
-  // 날짜별 섹션 (filteredList는 최신순이라 같은 날 항목이 붙어 있다)
+  // 맨 위에 "고정" 묶음, 그 아래 날짜별 섹션 (filteredList는 최신순이라 같은 날 항목이 붙어 있다)
   const sections = useMemo(() => {
+    const { pinned, rest } = splitPinned(filteredList);
     const out = [];
-    filteredList.forEach((item) => {
+    rest.forEach((item) => {
       const day = formatDay(item.timestamp);
       const last = out[out.length - 1];
       if (last && last.title === day) last.data.push(item);
       else out.push({ title: day, data: [item] });
     });
+    if (pinned.length) out.unshift({ title: t('history.pinned'), pinned: true, data: pinned });
     return out;
-  }, [filteredList]);
+  }, [filteredList, t]);
+
+  // 행 오른쪽: 고정 표시 + 시각 (고정 묶음은 날짜 머리글이 없으니 날짜도 같이)
+  const renderTrail = (item, section) => (
+    <View style={s.trail}>
+      {item.pinned ? <Ionicons name="pin" size={12} color={colors.primaryText} /> : null}
+      <Text style={[s.time, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
+        {section && section.pinned ? `${formatDay(item.timestamp).slice(5)} ${formatTime(item.timestamp)}` : formatTime(item.timestamp)}
+      </Text>
+    </View>
+  );
 
   const handleItemPress = async (item) => {
+    const itemGroupId = groupIdOf(item);
     // 복권 아이템인 경우 복권 결과 화면으로 이동 (기능을 꺼 두면 일반 결과 화면으로, lotteryData는 그대로)
     if (LOTTERY_FEATURE_ENABLED && item.lotteryData) {
       // 결과 확인 시 isChecked를 true로 업데이트
       if (!item.lotteryData.isChecked) {
         try {
           const marked = await updateHistory(historyByGroup => {
-            const currentHistory = historyByGroup[selectedGroupId] || [];
+            const currentHistory = historyByGroup[itemGroupId] || [];
             const index = currentHistory.findIndex(h => h.code === item.code);
             if (index === -1 || !currentHistory[index].lotteryData) return false;
             currentHistory[index] = {
@@ -357,7 +448,7 @@ export default function HistoryScreen() {
         timestamp: item.timestamp.toString(),
         scanTimes: item.scanTimes ? JSON.stringify(item.scanTimes) : JSON.stringify([item.timestamp]),
         photoUri: item.photos && item.photos.length > 0 ? item.photos[0] : '',
-        groupId: selectedGroupId, // 그룹 ID 전달
+        groupId: itemGroupId, // 그룹 ID 전달 (모든 그룹 검색에서는 항목이 속한 그룹)
         fromHistory: 'true', // 히스토리에서 왔음을 표시
         type: item.type || 'qr', // 바코드 타입 전달
         errorCorrectionLevel: item.errorCorrectionLevel || '', // EC 레벨 전달
@@ -368,6 +459,11 @@ export default function HistoryScreen() {
         thumbnail: item.thumbnail || '',
       }
     });
+  };
+
+  const itemGroupName = (item) => {
+    const group = groups.find(g => g.id === groupIdOf(item));
+    return group ? groupLabel(group) : '';
   };
 
   // 각 그룹의 스캔 개수 계산
@@ -413,6 +509,15 @@ export default function HistoryScreen() {
               <Ionicons name="close-circle" size={20} color={colors.textTertiary} />
             </MaterialPressable>
           ) : null}
+          <MaterialPressable
+            onPress={() => setShowFilters(v => !v)}
+            accessibilityLabel={t('history.filters')}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showFilters || filterActive }}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 12 }}
+          >
+            <Ionicons name={filterActive ? 'funnel' : 'funnel-outline'} size={18} color={filterActive ? colors.primaryText : colors.textSecondary} />
+          </MaterialPressable>
         </View>
       </View>
 
@@ -444,9 +549,7 @@ export default function HistoryScreen() {
                   <Ionicons name="link" size={14} color={isActive ? colors.background : colors.success} />
                 )}
                 <Text style={[s.chipText, { color: labelColor, fontFamily: isActive ? fonts.semiBold : fonts.regular, fontWeight: isActive ? '600' : '500' }]} numberOfLines={1}>
-                  {group.id === DEFAULT_GROUP_ID ? t('groupEdit.defaultGroup') :
-                   group.id === 'lottery-lotto' ? t('history.lottoGroup') :
-                   group.id === 'lottery-pension' ? t('history.pensionGroup') : group.name}
+                  {groupLabel(group)}
                 </Text>
                 {scanCount > 0 && (
                   <Text style={[s.chipCount, isActive ? { color: colors.background, opacity: 0.7 } : { color: colors.textTertiary }, { fontFamily: fonts.regular }]}>
@@ -462,6 +565,55 @@ export default function HistoryScreen() {
         </ScrollView>
       </View>
 
+      {/* 검색 필터 칩: 필터 버튼을 눌렀거나 켜 둔 필터가 있을 때 */}
+      {(showFilters || filterActive) && (
+        <View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[s.chips, s.filterChips]}>
+            {FILTER_CHIPS.map((chip) => {
+              const isOn = !!filters[chip.key];
+              const fg = isOn ? colors.primaryText : colors.textSecondary;
+              return (
+                <MaterialPressable
+                  key={chip.key}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: isOn }}
+                  style={[
+                    s.chip,
+                    isOn
+                      ? { backgroundColor: colors.primarySoft, borderColor: colors.primarySoft }
+                      : { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                  hitSlop={{ top: 4, bottom: 4 }}
+                  onPress={() => setFilters(prev => ({ ...prev, [chip.key]: !prev[chip.key] }))}
+                >
+                  <Ionicons name={chip.icon} size={14} color={fg} />
+                  <Text style={[s.chipText, { color: fg, fontFamily: isOn ? fonts.semiBold : fonts.regular, fontWeight: isOn ? '600' : '500' }]} numberOfLines={1}>
+                    {chip.label || t(chip.labelKey)}
+                  </Text>
+                </MaterialPressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* 다른 그룹에도 맞는 기록이 있으면 알려 주고, 누르면 모든 그룹의 결과를 한 목록으로 */}
+      {isSearching && otherGroupMatches > 0 && (
+        <MaterialPressable
+          style={[s.scopeBar, { backgroundColor: colors.raised }]}
+          onPress={() => setSearchAll(v => !v)}
+          accessibilityRole="button"
+        >
+          <Ionicons name="albums-outline" size={16} color={colors.textSecondary} />
+          <Text style={[s.scopeText, { color: colors.textSecondary, fontFamily: fonts.regular }]} numberOfLines={1}>
+            {searchAll ? t('history.searchingAllGroups') : t('history.moreInOtherGroups', { count: otherGroupMatches })}
+          </Text>
+          <Text style={[s.scopeAction, { color: colors.primaryText, fontFamily: fonts.semiBold }]} numberOfLines={1}>
+            {searchAll ? t('history.currentGroupOnly') : t('history.showAllGroups')}
+          </Text>
+        </MaterialPressable>
+      )}
+
       {/* 히스토리 목록 */}
       {isLoading && filteredList.length === 0 ? (
         <View style={s.empty}>
@@ -470,7 +622,7 @@ export default function HistoryScreen() {
       ) : filteredList.length === 0 ? (
         <View style={s.empty}>
           <Ionicons name="file-tray-outline" size={48} color={colors.textTertiary} />
-          <Text style={[s.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{query ? t('history.noSearchResults') : t('history.emptyList')}</Text>
+          <Text style={[s.emptyText, { color: colors.textSecondary, fontFamily: fonts.regular }]}>{isSearching ? t('history.noSearchResults') : t('history.emptyList')}</Text>
         </View>
       ) : (
         <SwipeListView
@@ -480,7 +632,7 @@ export default function HistoryScreen() {
           renderSectionHeader={({ section }) => (
             <Text style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>{section.title}</Text>
           )}
-          keyExtractor={(item) => `${item.timestamp}_${item.code || ''}`}
+          keyExtractor={keyOf}
           renderItem={({ item, index, section }) => {
             const rowCount = section.data.length;
             const hasPhoto = item.photos && item.photos.length > 0;
@@ -504,7 +656,7 @@ export default function HistoryScreen() {
                   activeOpacity={0.7}
                   accessibilityLabel={`${lotteryInfo.typeName} ${t('history.roundLabel', { round: lotteryInfo.round })}`}
                   accessibilityRole="button"
-                  accessibilityActions={rowAccessibilityActions}
+                  accessibilityActions={rowAccessibilityActionsOf(item)}
                   onAccessibilityAction={handleRowAccessibilityAction(item)}
                 >
                   {/* 복권 아이콘 (복주머니만) */}
@@ -547,10 +699,8 @@ export default function HistoryScreen() {
                       })()}
                     </View>
                   </View>
-                  {/* 스캔 시각 */}
-                  <Text style={[s.time, { color: colors.textTertiary, fontFamily: fonts.regular }]}>
-                    {formatTime(item.timestamp)}
-                  </Text>
+                  {/* 고정 표시 · 스캔 시각 */}
+                  {renderTrail(item, section)}
                 </MaterialPressable>
               );
             }
@@ -581,6 +731,7 @@ export default function HistoryScreen() {
               typeof item.quantity === 'number' ? t('scanner.quantityBadge', { count: item.quantity }) : '',
               labelSummary || formatGs1Summary(item.gs1 || parseGs1(item.code), t),
               item.location ? `${t('result.location')} ${item.location}` : '',
+              searchAll ? itemGroupName(item) : '', // 모든 그룹 검색에서는 어느 그룹의 기록인지
             ].filter(Boolean).join(' · ');
 
             const showContentType = parsedContent && parsedContent.type !== QR_CONTENT_TYPES.TEXT;
@@ -595,7 +746,7 @@ export default function HistoryScreen() {
                 activeOpacity={0.7}
                 accessibilityLabel={`${t('history.scanRecord')}: ${item.code}`}
                 accessibilityRole="button"
-                accessibilityActions={rowAccessibilityActions}
+                accessibilityActions={rowAccessibilityActionsOf(item)}
                 onAccessibilityAction={handleRowAccessibilityAction(item)}
               >
                 {/* 왼쪽: 사진(누르면 이미지 분석) · 생성 QR 썸네일 · 종류 배지 */}
@@ -687,13 +838,13 @@ export default function HistoryScreen() {
                   )}
                 </View>
 
-                {/* 스캔 시각 */}
-                <Text style={[s.time, { color: colors.textTertiary, fontFamily: fonts.regular }]}>{formatTime(item.timestamp)}</Text>
+                {/* 고정 표시 · 스캔 시각 */}
+                {renderTrail(item, section)}
               </MaterialPressable>
             );
           }}
           renderHiddenItem={renderHiddenItem}
-          rightOpenValue={-90}
+          rightOpenValue={-142}
           disableRightSwipe
           closeOnRowPress
           closeOnRowOpen
@@ -876,6 +1027,33 @@ const s = StyleSheet.create({
   time: {
     ...TYPE.caption,
   },
+  trail: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  filterChips: {
+    paddingTop: SPACE.gap,
+  },
+  scopeBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: SIZE.touch,
+    marginHorizontal: SPACE.screen,
+    marginTop: SPACE.gap,
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.control,
+    overflow: 'hidden',
+  },
+  scopeText: {
+    ...TYPE.caption,
+    flex: 1,
+    minWidth: 0,
+  },
+  scopeAction: {
+    ...TYPE.caption,
+    fontWeight: '600',
+  },
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -903,6 +1081,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    gap: 8,
     marginHorizontal: SPACE.screen,
     paddingRight: 14,
     borderLeftWidth: 1,
