@@ -25,6 +25,7 @@ import { LABEL_COLORS } from '../../constants/Colors';
 import { viewRegionToSensor } from '../../utils/scanRegionGeometry';
 import { crashBreadcrumb, recordNonFatal } from '../../utils/crashReporting';
 
+const IS_DEV_BUILD = __DEV__;
 const IS_IOS = Platform.OS === 'ios';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -397,7 +398,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   scanRegion = null, // 스캔 영역 제한 { x, y, width, height } (카메라 뷰 기준 dp). null이면 전체
   scanRegionDebug = false, // 영역 밖으로 판정된 코드를 빨간 테두리로 표시 (개발자 옵션)
   scanTimingDebug = false, // 네이티브 단계별 처리 시간을 화면 구석에 표시 (개발자 옵션, Android)
+  onTimingStats, // 고속 모드: 1초마다 판독 통계 ({ fps, avgMs, maxMs, lagMs }) => void (Android)
   onFrameDumped, // 볼륨 키 등으로 요청한 프레임 덤프가 저장되면 (path) => void
+  fastMode = false, // 고속 스캔 모드: 판독 30회/초, 보조 판독·하이라이트·값 표시 생략, 1D 확인 프레임 축소
+  fastBarcodeTypes, // 고속 모드에서만 읽을 바코드 종류 (앱 형식, 예: ['code128','qr']). 카메라를 다시 만들지 않고 프레임 옵션으로 바꾼다
+  fastStrictConfirm = false, // 고속 모드에서도 1D를 3프레임 확인 (오인식 방지 강화)
   hideHighlightBoxes = false, // 테두리 네모는 숨기고 값 칩만 (단일 모드: 조준 코너가 대신 붙는다)
   onPrimaryHighlightChange, // 대표 코드의 화면 사각형 { x, y, width, height } | null
   photoEnabled = true, // 스캔 사진 저장을 쓸 때만 사진 기능을 켠다 (끄면 카메라 세션이 가벼워진다)
@@ -498,11 +503,34 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   // 개발자 옵션: 네이티브에 매 프레임 같이 넘길 값. dumpFrame은 한 프레임만 켜고 바로 끈다
   const extraOptionsShared = useFrameSharedValue(null);
   useEffect(() => {
-    extraOptionsShared.value = scanTimingDebug ? { debugTiming: true } : null;
+    const { debugTiming, ...rest } = extraOptionsShared.value || {};
+    if (scanTimingDebug) rest.debugTiming = true;
+    extraOptionsShared.value = Object.keys(rest).length > 0 ? rest : null;
   }, [scanTimingDebug]);
+  // 고속 스캔 모드: 네이티브 보조 판독을 끄고(fast) 판독 주기를 카메라 프레임마다로 올린다(targetFps)
+  const fastModeRef = useRef(fastMode);
+  const fastModeShared = useFrameSharedValue(fastMode);
+  const fastStrictRef = useRef(fastStrictConfirm);
+  fastStrictRef.current = fastStrictConfirm;
+  const fastTypesKey = fastMode && Array.isArray(fastBarcodeTypes) ? [...fastBarcodeTypes].sort().join(',') : '';
+  useEffect(() => {
+    fastModeRef.current = fastMode;
+    fastModeShared.value = fastMode;
+    const { fast, targetFps, barcodeTypes: _types, ...rest } = extraOptionsShared.value || {};
+    // 카메라는 30fps. 30으로 맞추면 프레임 간격이 조금만 흔들려도 한 장씩 건너뛰어 초당 19회쯤으로 떨어진다
+    if (fastMode) { rest.fast = true; rest.targetFps = 60; }
+    // 라이브러리가 extraOptions를 barcodeTypes 뒤에 덮어쓰고, 네이티브는 프레임마다 종류를 읽는다 → 다시 마운트하지 않아도 바뀐다
+    if (fastTypesKey) {
+      const mapped = fastTypesKey.split(',').map((type) => BARCODE_TYPE_MAP[type]).filter(Boolean);
+      if (mapped.length > 0) rest.barcodeTypes = mapped;
+    }
+    extraOptionsShared.value = Object.keys(rest).length > 0 ? rest : null;
+  }, [fastMode, fastTypesKey]);
   const [timingText, setTimingText] = useState('');
   // 1초 평균은 JS 쪽(ref)에서 낸다. worklet 안 공유값 객체로 누적하면 값이 남지 않아 표시가 한 번도 안 떴다
   const timingAccRef = useRef({ n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: 0 });
+  const onTimingStatsRef = useRef(onTimingStats);
+  useEffect(() => { onTimingStatsRef.current = onTimingStats; }, [onTimingStats]);
   const handleMetaJS = useCallback((m) => {
     const acc = timingAccRef.current;
     const now = Date.now();
@@ -520,18 +548,42 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         ` | lag ${Math.round(m.lag || 0)}ms stale ${m.stale || 0}` +
         (m.focus ? ` | roi ${m.focus}` : '')
       );
+      if (onTimingStatsRef.current) {
+        onTimingStatsRef.current({ fps, avgMs: acc.total / n, maxMs: acc.max, lagMs: Math.round(m.lag || 0) });
+      }
       timingAccRef.current = { n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: now };
     }
   }, []);
   const runOnJSMeta = Worklets.createRunOnJS(handleMetaJS);
   const runOnJSFrameDumped = Worklets.createRunOnJS((path) => {
-    extraOptionsShared.value = scanTimingDebug ? { debugTiming: true } : null;
+    const { dumpFrame, ...rest } = extraOptionsShared.value || {};
+    extraOptionsShared.value = Object.keys(rest).length > 0 ? rest : null;
     if (onFrameDumped) onFrameDumped(path);
   });
+  // 스캔 사진: 사진을 따로 찍지 않고, 판독하던 프레임 하나를 네이티브가 JPEG로 저장한다 (captureFrame)
+  const frameSaveRef = useRef(null); // { id, resolve, timer }
+  const frameSaveSeqRef = useRef(0);
+  const finishFrameSave = useCallback((id, path) => {
+    const pending = frameSaveRef.current;
+    if (!pending || pending.id !== id) return;
+    frameSaveRef.current = null;
+    clearTimeout(pending.timer);
+    const { saveFrame, ...rest } = extraOptionsShared.value || {};
+    extraOptionsShared.value = Object.keys(rest).length > 0 ? rest : null;
+    pending.resolve(path ? { uri: `file://${path}`, path } : null);
+  }, []);
+  const runOnJSFrameSaved = Worklets.createRunOnJS(finishFrameSave);
+  useEffect(() => () => {
+    const pending = frameSaveRef.current;
+    if (pending) finishFrameSave(pending.id, null);
+  }, [finishFrameSave]);
   const handleMeta = (meta) => {
     'worklet';
     if (meta.dumpPath) {
       runOnJSFrameDumped(meta.dumpPath);
+    }
+    if (meta.saveId !== undefined) {
+      runOnJSFrameSaved(meta.saveId, meta.savedPath || '');
     }
     if (meta.totalMs === undefined) return;
     runOnJSMeta({
@@ -647,7 +699,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       st.type = normalizedType;
       st.count = same ? st.count + 1 : 1;
       st.lastAt = now;
-      if (st.count < ONE_D_STABLE_FRAMES) return;
+      // 고속 모드: 체크 디지트가 있는 EAN/UPC는 첫 프레임, 나머지 1D는 2프레임 연속이면 넘긴다
+      const needed = fastModeRef.current && !fastStrictRef.current
+        ? (/^(ean-?13|ean-?8|upc-?e|upc-?a)$/i.test(normalizedType) ? 1 : 2)
+        : ONE_D_STABLE_FRAMES;
+      if (st.count < needed) return;
     }
 
     // cornerPoints를 bounds 형식으로 변환
@@ -683,6 +739,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       frameDimensions: barcodeData.frameDimensions,
       // EC level: native에서 직접 가져옴
       errorCorrectionLevel: barcodeData.errorCorrectionLevel,
+      detectedAt: barcodeData.detectedAt, // 프레임에서 코드를 찾은 시각 (고속 모드의 인식→처리 지연 표시용)
     });
   }, []);
 
@@ -754,6 +811,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   const { props: cameraProps, highlights } = useBarcodeScanner({
     // 30이면 카메라 프레임마다 판독이 돌아 Android에서 프리뷰가 끊겼다 (판독은 카메라 스레드에서 동기로 돈다)
     fps: 15,
+    // 고속 모드는 하이라이트를 그리지 않는다 (프레임마다 화면을 다시 그리지 않게)
+    disableHighlighting: fastMode,
     barcodeTypes: visionCameraCodeTypes,
     scanMode: 'continuous',
     extraOptions: extraOptionsShared,
@@ -889,15 +948,18 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         }
 
         // 디버그 로그: 필터링 전후 개수와 각 바코드의 값
-        runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails.join(' | '), validBarcodesData.length);
+        // 개발 빌드에서만. 배포 빌드에서는 프레임마다 JS 스레드로 넘어가 스캔 처리를 늦췄다
+        if (IS_DEV_BUILD) {
+          runOnJSLogCallback(barcodes.length, selectCenterBarcodeShared.value, barcodeDetails.join(' | '), validBarcodesData.length);
+        }
 
         // 바코드가 없으면 무시
         if (allBarcodesData.length === 0) {
           return;
         }
 
-        // 하이라이트에 값 표시를 위해 모든 바코드 상태 업데이트
-        runOnJSUpdateBarcodes(allBarcodesData);
+        // 하이라이트에 값 표시를 위해 모든 바코드 상태 업데이트 (고속 모드는 값 표시가 없어 건너뛴다)
+        if (!fastModeShared.value) runOnJSUpdateBarcodes(allBarcodesData);
 
         // selectCenterBarcode가 true이면 중앙에 가장 가까운 코드만 선택 (여러 코드 인식 모드 OFF)
         if (selectCenterBarcodeShared.value) {
@@ -949,6 +1011,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
             cornerPoints: closestOriginalBarcode.cornerPoints,
             frameDimensions: frameDimensions,
             errorCorrectionLevel: ecLevel,
+            detectedAt: Date.now(),
           });
           return;
         }
@@ -961,7 +1024,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
 
       // 코드가 1개일 때도 하이라이트 아래 값 표시용 목록을 넘긴다.
       // 예전엔 2개 이상일 때만 넘겨서, "인식된 코드 값 표시"를 켜도 1개면 값이 안 보였다
-      if (barcodes.length === 1) {
+      if (barcodes.length === 1 && !fastModeShared.value) {
         const only = barcodes[0];
         const onlyRaw = only.value || only.displayValue || only.rawValue || only.data || '';
         const onlyValue = String(onlyRaw).trim();
@@ -998,6 +1061,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         cornerPoints: barcode.cornerPoints,
         frameDimensions: frameDimensions,
         errorCorrectionLevel: ecLevel,
+        detectedAt: Date.now(),
       });
     },
   });
@@ -1084,6 +1148,19 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         return null;
       }
     },
+    // 다음 판독 프레임을 dir 아래 JPEG로 저장한다. mode 'code'면 코드 주변(margin = 코드 긴 변 대비 여백 비율)만 남긴다.
+    // value가 없으면 그 프레임에 보이는 코드 전부를 감싼다. 실패하거나 1초 안에 프레임이 안 오면 null
+    captureFrame: ({ dir, mode = 'full', margin = 0.5, quality = 0.8, value = null } = {}) => {
+      if (!dir || frameSaveRef.current) return Promise.resolve(null);
+      return new Promise((resolve) => {
+        const id = ++frameSaveSeqRef.current;
+        const timer = setTimeout(() => finishFrameSave(id, null), 1000);
+        frameSaveRef.current = { id, resolve, timer };
+        const request = { id, dir, mode, margin, quality };
+        if (value) request.value = value;
+        extraOptionsShared.value = { ...(extraOptionsShared.value || {}), saveFrame: request };
+      });
+    },
     // 다음 프레임의 밝기 평면을 네이티브가 PGM으로 저장한다 (개발자 옵션). 저장되면 onFrameDumped(path)
     requestFrameDump: () => {
       extraOptionsShared.value = { ...(extraOptionsShared.value || {}), dumpFrame: true };
@@ -1121,7 +1198,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       {showHighlights && (
         <CustomHighlights
           // 영역 제한 중에는 영역 안 코드의 테두리만. 라이브러리 highlights가 비면(코드 없음) 같이 비운다
-          highlights={scanRegion ? (highlights.length ? regionHighlights.kept : []) : highlights}
+          highlights={fastMode ? [] : (scanRegion ? (highlights.length ? regionHighlights.kept : []) : highlights)}
           barcodes={detectedBarcodes}
           borderColor={highlightColor}
           fillColor={highlightFillColor}

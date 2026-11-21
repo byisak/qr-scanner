@@ -56,6 +56,11 @@ export async function initPcKeyboard() {
 const SUFFIX = { enter: '\n', tab: '\t', none: '' };
 
 // 스캔 저장 때 호출. 연결돼 있지 않으면 아무것도 하지 않는다
+// 설정에서 켜져 있고 이 기기가 지원하는지 (연결 여부와는 별개)
+export function isPcKeyboardEnabled() {
+  return !!(enabled && isPcKeyboardAvailable);
+}
+
 let sentThisSession = false;
 export async function sendScanToPc(code) {
   if (!enabled || !isPcKeyboardAvailable || !code) return;

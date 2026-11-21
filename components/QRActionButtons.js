@@ -493,6 +493,8 @@ export default function QRActionButtons({
   })();
 
   const tiles = [...plan.secondary, ...extraActions.map((a, i) => act(`extra-${i}`, a.icon, a.label, a.onPress))];
+  // 3열에 4개면 한 칸이 혼자 남는다 → 2열로
+  const cols = tiles.length === 4 ? 2 : 3;
 
   return (
     <View style={styles.container}>
@@ -516,7 +518,7 @@ export default function QRActionButtons({
         {tiles.map((a) => (
           <MaterialPressable
             key={a.key}
-            style={[styles.tile, { backgroundColor: colors.raised, borderColor: colors.border }]}
+            style={[styles.tile, cols === 2 && styles.tileHalf, { backgroundColor: colors.raised, borderColor: colors.border }]}
             onPress={a.onPress}
             accessibilityRole="button"
             accessibilityLabel={a.label}
@@ -525,9 +527,9 @@ export default function QRActionButtons({
             <Text style={[styles.tileLabel, { color: colors.text, fontFamily: fonts.medium }]} numberOfLines={1}>{a.label}</Text>
           </MaterialPressable>
         ))}
-        {/* 마지막 줄이 늘어나지 않게 빈 칸으로 3열을 채운다 */}
-        {Array.from({ length: (3 - (tiles.length % 3)) % 3 }, (_, i) => (
-          <View key={`spacer-${i}`} style={[styles.tile, styles.tileSpacer]} />
+        {/* 마지막 줄이 늘어나지 않게 빈 칸으로 열을 채운다 (4개면 2×2) */}
+        {Array.from({ length: (cols - (tiles.length % cols)) % cols }, (_, i) => (
+          <View key={`spacer-${i}`} style={[styles.tile, cols === 2 && styles.tileHalf, styles.tileSpacer]} />
         ))}
       </View>
     </View>
@@ -569,6 +571,12 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 6,
     overflow: 'hidden',
+  },
+  tileHalf: {
+    flexBasis: '48%',
+    height: 56,
+    flexDirection: 'row',
+    gap: 8,
   },
   tileSpacer: {
     borderWidth: 0,

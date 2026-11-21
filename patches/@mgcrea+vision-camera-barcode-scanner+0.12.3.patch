@@ -33,7 +33,7 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..7c842f8 100644
+index 54ea5ab..cf43bf5 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 @@ -10,16 +10,32 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
@@ -70,7 +70,7 @@ index 54ea5ab..7c842f8 100644
  import org.jetbrains.annotations.NotNull;
  import org.jetbrains.annotations.Nullable;
  
-@@ -29,10 +45,72 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -29,10 +45,74 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
@@ -98,6 +98,8 @@ index 54ea5ab..7c842f8 100644
 +  private static final long ML_TIMEOUT_MS = 1500;
 +  // 평균 판독 시간이 이보다 길면 한 프레임씩 건너뛴다 (구형 기기 부하 줄이기)
 +  private static final double SLOW_FRAME_MS = 50;
++  // 고속 모드: 이만큼(초당 30프레임에서 약 0.3초) 연속으로 못 읽었을 때부터 보조 판독을 돌린다
++  private static final int FAST_FALLBACK_AFTER_FAILED_FRAMES = 10;
 +  private double avgFrameMs = 0;
 +  private long callCount = 0;
 +  private List<Object> lastResult = new ArrayList<>();
@@ -143,7 +145,7 @@ index 54ea5ab..7c842f8 100644
    }
  
    @Nullable
-@@ -40,50 +118,625 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,50 +120,799 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -187,6 +189,12 @@ index 54ea5ab..7c842f8 100644
 +    // 스캔 영역(센서 좌표 비율 [x, y, w, h]). 있으면 보조 판독 크롭의 중심·크기를 영역에 맞춘다
 +    double[] focus = parseFocusRegion(params);
 +    boolean dumpFrame = params != null && Boolean.TRUE.equals(params.get("dumpFrame"));
++    // 고속 스캔 모드: 평소엔 ML Kit 한 번만 돈다. 보조 판독(반전 재시도·데이터 매트릭스 보조)은
++    // 아무것도 못 읽은 프레임이 FAST_FALLBACK_AFTER_FAILED_FRAMES번 이어질 때만 켠다 (각인·반전·작은 데이터 매트릭스용)
++    boolean fast = params != null && Boolean.TRUE.equals(params.get("fast"));
++    // 스캔 사진: 사진을 따로 찍지 않고 판독한 이 프레임을 JPEG로 저장한다 (JS가 한 프레임만 켠다)
++    Object saveFrameObj = params != null ? params.get("saveFrame") : null;
++    Map<String, Object> saveFrame = saveFrameObj instanceof Map ? (Map<String, Object>) saveFrameObj : null;
 +    long tStart = System.nanoTime();
 +    long tMlKit = 0, tInvert = 0, tZxing = 0;
 +    int emptyBoxes = 0;
@@ -194,24 +202,22 @@ index 54ea5ab..7c842f8 100644
 +    // 구형 기기: 판독이 오래 걸리면 한 프레임씩 건너뛰고 직전 결과를 그대로 돌려준다.
 +    // (빈 목록을 돌려주면 하이라이트가 깜빡인다.) 판독이 밀리면 프레임이 쌓이고 메모리·발열이 커졌다
 +    callCount++;
-+    if (avgFrameMs > SLOW_FRAME_MS && callCount % 2 == 0 && !debugTiming && !dumpFrame) {
++    if (avgFrameMs > SLOW_FRAME_MS && callCount % 2 == 0 && !debugTiming && !dumpFrame && saveFrame == null) {
 +      return new ArrayList<>(lastResult);
 +    }
 +
--    List<Object> barcodes = new ArrayList<>();
--    try {
+     List<Object> barcodes = new ArrayList<>();
+     try {
 -      List<Barcode> barcodeList = Tasks.await(scanner.process(inputImage));
-+    List<Object> barcodes = new ArrayList<>();
-+    try {
-+      List<Barcode> barcodeList = awaitMl(scanner.process(inputImage));
 -      barcodeList.forEach(
 -          barcode -> barcodes.add(BarcodeConverter.convertBarcode(barcode)));
++      List<Barcode> barcodeList = awaitMl(scanner.process(inputImage));
 +      tMlKit = System.nanoTime() - tStart;
 +      for (Barcode barcode : barcodeList) {
 +        if (barcode.getRawValue() == null || barcode.getRawValue().isEmpty()) emptyBoxes++;
 +        Map<String, Object> converted =
 +            toSensorSpace(BarcodeConverter.convertBarcode(barcode), rotation, sensorWidth, sensorHeight);
-+        if (barcode.getFormat() == Barcode.FORMAT_QR_CODE) {
++        if (!fast && barcode.getFormat() == Barcode.FORMAT_QR_CODE) {
 +          attachErrorCorrectionLevel(converted, barcode.getRawValue(), mediaImage);
 +        }
 +        barcodes.add(converted);
@@ -227,6 +233,8 @@ index 54ea5ab..7c842f8 100644
 +        retryInverted = frameCount % INVERT_RETRY_EVERY_N_FRAMES_WITH_RESULTS == 0;
 +      }
 +      // 어두운 배경 + 밝은 코드용 반전 재시도. Y 평면만 뒤집은 NV21로 만들어 비용을 줄인다
++      boolean fastIdle = fast && failedFrameCount < FAST_FALLBACK_AFTER_FAILED_FRAMES;
++      if (fastIdle) retryInverted = false;
 +      if (retryInverted) {
 +        long t0 = System.nanoTime();
 +        // 짝수로 맞춘다 (NV21 색차 평면 크기)
@@ -250,7 +258,7 @@ index 54ea5ab..7c842f8 100644
 +      // 반전 재시도를 한 프레임은 건너뛴다 — 한 프레임에 판독이 셋 겹치면 프리뷰가 끊겼다
 +      int formats = getFormatsBitmapFromParams(params);
 +      boolean wantsDataMatrix = formats == Barcode.FORMAT_ALL_FORMATS || (formats & Barcode.FORMAT_DATA_MATRIX) != 0;
-+      boolean dmMissing = wantsDataMatrix && !retryInverted && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX);
++      boolean dmMissing = !fastIdle && wantsDataMatrix && !retryInverted && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX);
 +      if (dmMissing && frameCount % DM_UPSCALE_EVERY_N_FRAMES == 0) {
 +        // 0, 16, 32… 프레임은 정상, 8, 24, 40…은 반전
 +        long t0 = System.nanoTime();
@@ -268,7 +276,6 @@ index 54ea5ab..7c842f8 100644
 +        }
 +        tZxing = System.nanoTime() - t0;
 +      }
--    } catch (ExecutionException | InterruptedException e) {
 +    } catch (java.util.concurrent.TimeoutException e) {
 +      // ML Kit가 응답하지 않으면 다음 프레임에서 새 클라이언트로 다시 시도한다.
 +      // 아직 판독 중일 수 있는 버퍼는 버리고 새로 만든다 (재사용하면 판독 중에 덮어쓴다)
@@ -279,16 +286,19 @@ index 54ea5ab..7c842f8 100644
 +      dmSrcBuf = null;
 +      dmBuf = null;
 +      return null;
-+    } catch (ExecutionException | InterruptedException e) {
+     } catch (ExecutionException | InterruptedException e) {
        Log.e(TAG, "Error processing image for barcodes: " + e.getMessage());
        return null;
      }
-
+ 
 +    double frameMs = (System.nanoTime() - tStart) / 1e6;
 +    avgFrameMs = avgFrameMs * 0.8 + frameMs * 0.2;
 +    lastResult = new ArrayList<>(barcodes);
 +
-+    if (debugTiming || dumpFrame) {
++    rememberBoxes(barcodes);
++
++    // 고속 모드는 HUD에 판독 시간을 보여 주려고 처리 시간을 같이 보낸다
++    if (debugTiming || fast || dumpFrame || saveFrame != null) {
 +      Map<String, Object> meta = new java.util.HashMap<>();
 +      meta.put("_meta", Boolean.TRUE);
 +      meta.put("width", sensorWidth);
@@ -306,24 +316,187 @@ index 54ea5ab..7c842f8 100644
 +        String path = dumpLuminance(mediaImage);
 +        if (path != null) meta.put("dumpPath", path);
 +      }
++      if (saveFrame != null) {
++        long t0 = System.nanoTime();
++        String path = saveFrameJpeg(mediaImage, rotation, saveFrame, barcodes);
++        meta.put("saveId", saveFrame.get("id"));
++        meta.put("savedPath", path != null ? path : "");
++        meta.put("saveMs", (System.nanoTime() - t0) / 1e6);
++      }
 +      barcodes.add(meta);
 +    }
 +
      return barcodes;
    }
  
-+  /**
-+   * 현재 프레임의 밝기(Y) 평면을 PGM(P5)으로 cacheDir/frame-dumps/ 에 저장한다 (센서 좌표, 회전 전).
-+   * 사진 대신 실제 분석 프레임으로 scripts/dm-bench 를 돌리기 위한 것. 저장한 경로를 돌려준다
-+   */
++  // 최근에 본 코드의 위치(센서 좌표 left, top, right, bottom). 저장 요청이 온 프레임에 그 코드가 안 잡혔을 때 쓴다
++  private static final long BOX_KEEP_MS = 1500;
++  private final Map<String, int[]> recentBoxes = new java.util.HashMap<>();
++  private final Map<String, Long> recentBoxAt = new java.util.HashMap<>();
++  private byte[] saveBuf = null;
++
++  @SuppressWarnings("unchecked")
    @Nullable
 -  private InputImage getInputImageFromFrame(@NotNull Frame frame) {
-+  private String dumpLuminance(Image image) {
++  private static int[] boxOf(Object barcodeObj) {
++    if (!(barcodeObj instanceof Map)) return null;
++    Object boxObj = ((Map<String, Object>) barcodeObj).get("boundingBox");
++    if (!(boxObj instanceof Map)) return null;
++    Map<String, Object> box = (Map<String, Object>) boxObj;
      try {
 -      Image mediaImage = frame.getImage();
 -      return InputImage.fromMediaImage(mediaImage, 0);
 -    } catch (FrameInvalidError e) {
 -      Log.e(TAG, "Received an invalid frame.");
++      int l = ((Number) box.get("left")).intValue(), t = ((Number) box.get("top")).intValue();
++      int r = ((Number) box.get("right")).intValue(), b = ((Number) box.get("bottom")).intValue();
++      if (r <= l || b <= t) return null;
++      return new int[] { l, t, r, b };
++    } catch (Exception e) {
++      return null;
++    }
++  }
++
++  @SuppressWarnings("unchecked")
++  private void rememberBoxes(List<Object> barcodes) {
++    if (barcodes.isEmpty()) return;
++    long now = android.os.SystemClock.uptimeMillis();
++    if (recentBoxes.size() > 60) { recentBoxes.clear(); recentBoxAt.clear(); }
++    for (Object o : barcodes) {
++      if (!(o instanceof Map)) continue;
++      Object value = ((Map<String, Object>) o).get("rawValue");
++      int[] box = boxOf(o);
++      if (value instanceof String && box != null) {
++        recentBoxes.put((String) value, box);
++        recentBoxAt.put((String) value, now);
++      }
++    }
++  }
++
++  /**
++   * 저장할 영역(센서 좌표, 짝수 정렬) { left, top, width, height }.
++   * mode가 "code"면 코드 위치에 여백을 붙인 사각형, 아니면(또는 코드 위치를 모르면) 프레임 전체.
++   * value가 있으면 그 코드만, 없으면 이 프레임의 모든 코드를 감싼다
++   */
++  @SuppressWarnings("unchecked")
++  private int[] saveCrop(int width, int height, Map<String, Object> request, List<Object> barcodes) {
++    int[] full = new int[] { 0, 0, width & ~1, height & ~1 };
++    if (!"code".equals(request.get("mode"))) return full;
++    Object valueObj = request.get("value");
++    String value = valueObj instanceof String && !((String) valueObj).isEmpty() ? (String) valueObj : null;
++    int l = Integer.MAX_VALUE, t = Integer.MAX_VALUE, r = Integer.MIN_VALUE, b = Integer.MIN_VALUE;
++    for (Object o : barcodes) {
++      if (!(o instanceof Map)) continue;
++      if (value != null && !value.equals(((Map<String, Object>) o).get("rawValue"))) continue;
++      int[] box = boxOf(o);
++      if (box == null) continue;
++      l = Math.min(l, box[0]); t = Math.min(t, box[1]); r = Math.max(r, box[2]); b = Math.max(b, box[3]);
++    }
++    if (r <= l && value != null) {
++      Long at = recentBoxAt.get(value);
++      int[] box = recentBoxes.get(value);
++      if (box != null && at != null && android.os.SystemClock.uptimeMillis() - at < BOX_KEEP_MS) {
++        l = box[0]; t = box[1]; r = box[2]; b = box[3];
++      }
++    }
++    if (r <= l || b <= t) return full;
++    double margin = request.get("margin") instanceof Number ? ((Number) request.get("margin")).doubleValue() : 0.5;
++    double w = r - l, h = b - t;
++    double pad = Math.max(w, h) * Math.max(0, margin);
++    double cx = (l + r) / 2.0, cy = (t + b) / 2.0;
++    w += pad * 2; h += pad * 2;
++    // 1D 바코드처럼 한쪽이 얇으면 알아보기 어렵다 → 짧은 쪽을 긴 쪽의 60%까지 늘린다
++    double minSide = Math.max(w, h) * 0.6;
++    w = Math.max(w, minSide); h = Math.max(h, minSide);
++    int left = (int) Math.max(0, Math.floor(cx - w / 2)) & ~1;
++    int top = (int) Math.max(0, Math.floor(cy - h / 2)) & ~1;
++    int right = (int) Math.min(width, Math.ceil(cx + w / 2)) & ~1;
++    int bottom = (int) Math.min(height, Math.ceil(cy + h / 2)) & ~1;
++    if (right - left < 16 || bottom - top < 16) return full;
++    return new int[] { left, top, right - left, bottom - top };
++  }
++
++  /**
++   * 현재 프레임(또는 그 일부)을 JPEG로 저장하고 경로를 돌려준다. 실패하면 null.
++   * 픽셀은 돌리지 않고 센서 방향 그대로 저장한 뒤 EXIF 방향만 적는다 (2MP를 돌려 다시 압축하면 카메라 스레드가 밀린다)
++   */
++  @Nullable
++  private String saveFrameJpeg(Image image, int rotationDegrees, Map<String, Object> request, List<Object> barcodes) {
++    try {
++      Object dirObj = request.get("dir");
++      if (!(dirObj instanceof String)) return null;
++      java.io.File dir = new java.io.File(((String) dirObj).replaceFirst("^file://", ""));
++      if (!dir.exists() && !dir.mkdirs()) return null;
++      double q = request.get("quality") instanceof Number ? ((Number) request.get("quality")).doubleValue() : 0.8;
++      int quality = (int) Math.max(10, Math.min(95, Math.round(q * 100)));
++
++      int[] crop = saveCrop(image.getWidth(), image.getHeight(), request, barcodes);
++      int left = crop[0], top = crop[1], w = crop[2], h = crop[3];
++      int ySize = w * h;
++      if (saveBuf == null || saveBuf.length != ySize + ySize / 2) saveBuf = new byte[ySize + ySize / 2];
++      byte[] nv21 = saveBuf;
++
++      Image.Plane[] planes = image.getPlanes();
++      ByteBuffer yBuffer = planes[0].getBuffer();
++      int yRowStride = planes[0].getRowStride();
++      for (int row = 0; row < h; row++) {
++        yBuffer.position((top + row) * yRowStride + left);
++        yBuffer.get(nv21, row * w, w);
++      }
++      ByteBuffer uBuffer = planes[1].getBuffer();
++      ByteBuffer vBuffer = planes[2].getBuffer();
++      int uvRowStride = planes[2].getRowStride();
++      int uvPixelStride = planes[2].getPixelStride();
++      int uRowStride = planes[1].getRowStride();
++      int uPixelStride = planes[1].getPixelStride();
++      int cw = w / 2, ch = h / 2, cLeft = left / 2, cTop = top / 2;
++      for (int row = 0; row < ch; row++) {
++        int out = ySize + row * w;
++        int vPos = (cTop + row) * uvRowStride + cLeft * uvPixelStride;
++        if (uvPixelStride == 2 && uPixelStride == 2) {
++          // 반평면(V U V U …): V 평면에서 줄째로 복사한다. 평면 끝은 마지막 U 한 바이트가 모자랄 수 있어 따로 채운다
++          int n = Math.min(w, vBuffer.limit() - vPos);
++          vBuffer.position(vPos);
++          vBuffer.get(nv21, out, n);
++          if (n < w) {
++            nv21[out + w - 1] = uBuffer.get((cTop + row) * uRowStride + (cLeft + cw - 1) * uPixelStride);
++          }
++        } else {
++          int uPos = (cTop + row) * uRowStride + cLeft * uPixelStride;
++          for (int col = 0; col < cw; col++) {
++            nv21[out + col * 2] = vBuffer.get(vPos + col * uvPixelStride);
++            nv21[out + col * 2 + 1] = uBuffer.get(uPos + col * uPixelStride);
++          }
++        }
++      }
++
++      java.io.File out = new java.io.File(dir, "scan_" + System.currentTimeMillis() + ".jpg");
++      android.graphics.YuvImage yuv = new android.graphics.YuvImage(nv21, ImageFormat.NV21, w, h, null);
++      try (java.io.BufferedOutputStream os = new java.io.BufferedOutputStream(new java.io.FileOutputStream(out))) {
++        if (!yuv.compressToJpeg(new android.graphics.Rect(0, 0, w, h), quality, os)) return null;
++      }
++      if (rotationDegrees != 0) {
++        android.media.ExifInterface exif = new android.media.ExifInterface(out.getAbsolutePath());
++        int orientation = rotationDegrees == 90 ? android.media.ExifInterface.ORIENTATION_ROTATE_90
++            : rotationDegrees == 180 ? android.media.ExifInterface.ORIENTATION_ROTATE_180
++            : android.media.ExifInterface.ORIENTATION_ROTATE_270;
++        exif.setAttribute(android.media.ExifInterface.TAG_ORIENTATION, String.valueOf(orientation));
++        exif.saveAttributes();
++      }
++      return out.getAbsolutePath();
++    } catch (Exception e) {
++      Log.e(TAG, "Failed to save frame: " + e.getMessage());
++      return null;
++    }
++  }
++
++  /**
++   * 현재 프레임의 밝기(Y) 평면을 PGM(P5)으로 cacheDir/frame-dumps/ 에 저장한다 (센서 좌표, 회전 전).
++   * 사진 대신 실제 분석 프레임으로 scripts/dm-bench 를 돌리기 위한 것. 저장한 경로를 돌려준다
++   */
++  @Nullable
++  private String dumpLuminance(Image image) {
++    try {
 +      int width = image.getWidth();
 +      int height = image.getHeight();
 +      Image.Plane yPlane = image.getPlanes()[0];
@@ -344,10 +517,10 @@ index 54ea5ab..7c842f8 100644
 +      return out.getAbsolutePath();
 +    } catch (Exception e) {
 +      Log.e(TAG, "Failed to dump frame: " + e.getMessage());
-       return null;
-     }
-   }
- 
++      return null;
++    }
++  }
++
 +  /**
 +   * QR 오류 정정 레벨을 결과에 붙인다. 같은 값은 캐시를 쓰고, 처음 보는 값만
 +   * 바운딩 박스 주변의 밝기(Y) 평면을 잘라 ZXing으로 디코드한다 (센서 좌표 기준, 회전 무관).
@@ -623,10 +796,10 @@ index 54ea5ab..7c842f8 100644
 +      }
 +      return map;
 +    } catch (Exception e) {
-+      return null;
-+    }
-+  }
-+
+       return null;
+     }
+   }
+ 
 +  /**
 +   * 센서 좌표 (left, top)부터 side×side 영역을 잘라 밝기(Y)만 반전한 NV21 이미지.
 +   * 색차(UV)는 중립값으로 채워 회색조로 만든다. 회전값을 같이 넘기므로 결과는 크롭 영역 기준
@@ -785,7 +958,7 @@ index 54ea5ab..7c842f8 100644
    private synchronized BarcodeScanner
    getBarcodeScannerClient(@Nullable Map<String, Object> params) {
      int formatsBitmap = getFormatsBitmapFromParams(params);
-@@ -105,15 +758,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +934,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");
@@ -812,7 +985,7 @@ index 54ea5ab..7c842f8 100644
      return barcodeFormats.isEmpty() ? Barcode.FORMAT_ALL_FORMATS
                                      : barcodeFormatsToBitmap(barcodeFormats);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
-index 121a08f..65eff6f 100644
+index 121a08f..1d96b50 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.cjs
 @@ -354,7 +354,7 @@ var visionCameraProcessorPlugin = import_react_native_vision_camera.VisionCamera
@@ -856,6 +1029,15 @@ index 121a08f..65eff6f 100644
  }) => {
    const layoutRef = (0, import_react_native_worklets_core2.useSharedValue)({ width: 0, height: 0 });
    const onLayout = (event) => {
+@@ -414,7 +425,7 @@ var useBarcodeScanner = ({
+       if (isMountedRef && isMountedRef.value === false) {
+         return;
+       }
+-      (0, import_react_native_vision_camera2.runAtTargetFps)(fps, () => {
++      (0, import_react_native_vision_camera2.runAtTargetFps)(extraOptions !== undefined && extraOptions.value && typeof extraOptions.value.targetFps === "number" ? extraOptions.value.targetFps : fps, () => {
+         "worklet";
+         const { value: layout } = layoutRef;
+         const { value: prevBarcodes } = barcodesRef;
 @@ -428,7 +439,21 @@ var useBarcodeScanner = ({
            const { x, y, width: width2, height: height2 } = regionOfInterest;
            options.regionOfInterest = [x, y, width2, height2];
@@ -880,7 +1062,7 @@ index 121a08f..65eff6f 100644
            if (scanMode === "continuous") {
              onBarcodeScanned(barcodes, frame);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
-index 940e7d4..621c775 100644
+index 940e7d4..872927b 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/dist/index.js
 @@ -293,7 +293,7 @@ var visionCameraProcessorPlugin = VisionCameraProxy.initFrameProcessorPlugin(
@@ -924,6 +1106,15 @@ index 940e7d4..621c775 100644
  }) => {
    const layoutRef = useSharedValue2({ width: 0, height: 0 });
    const onLayout = (event) => {
+@@ -353,7 +364,7 @@ var useBarcodeScanner = ({
+       if (isMountedRef && isMountedRef.value === false) {
+         return;
+       }
+-      runAtTargetFps(fps, () => {
++      runAtTargetFps(extraOptions !== undefined && extraOptions.value && typeof extraOptions.value.targetFps === "number" ? extraOptions.value.targetFps : fps, () => {
+         "worklet";
+         const { value: layout } = layoutRef;
+         const { value: prevBarcodes } = barcodesRef;
 @@ -367,7 +378,21 @@ var useBarcodeScanner = ({
            const { x, y, width: width2, height: height2 } = regionOfInterest;
            options.regionOfInterest = [x, y, width2, height2];
@@ -948,14 +1139,15 @@ index 940e7d4..621c775 100644
            if (scanMode === "continuous") {
              onBarcodeScanned(barcodes, frame);
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-index 28f1634..21f6db8 100644
+index 28f1634..89a3026 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/ios/CodeScannerProcessorPlugin.m
-@@ -1,9 +1,22 @@
+@@ -1,9 +1,26 @@
  #import "CodeScannerProcessorPlugin.h"
  #include <Foundation/Foundation.h>
  #import <React/RCTLog.h>
 +#import <CoreImage/CoreImage.h>
++#import <ImageIO/ImageIO.h>
  
  static RCTEventEmitter* eventEmitter = nil;
  
@@ -969,12 +1161,15 @@ index 28f1634..21f6db8 100644
 +@interface CodeScannerProcessorPlugin ()
 +@property (nonatomic) NSUInteger frameCount;
 +@property (nonatomic) NSUInteger failedFrameCount;
++@property (nonatomic) NSUInteger emptyFrameStreak; // 아무것도 못 읽은 프레임이 이어진 횟수 (고속 모드 보조 판독 기준)
++// 최근에 본 코드의 위치(payload → @[boundingBox(NSValue), 본 시각]). 저장 요청이 온 프레임에 그 코드가 안 잡혔을 때 쓴다
++@property (nonatomic, strong) NSMutableDictionary<NSString*, NSArray*>* recentBoxes;
 +@end
 +
  @implementation CodeScannerProcessorPlugin
  
  - (instancetype) initWithProxy:(VisionCameraProxyHolder*)proxy
-@@ -23,9 +36,8 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
+@@ -23,9 +40,8 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
    // UIImageOrientation orientation = frame.orientation;
  
    CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(buffer);
@@ -986,7 +1181,7 @@ index 28f1634..21f6db8 100644
  
    // Parse the barcode types to be detected
    NSArray* barcodeTypes = arguments[@"barcodeTypes"];
-@@ -61,7 +73,6 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
+@@ -61,7 +77,6 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
             regionOfInterest:regionOfInterest
                   completion:^(NSArray* observations) {
                     for (VNBarcodeObservation* observation in observations) {
@@ -994,7 +1189,7 @@ index 28f1634..21f6db8 100644
                       NSDictionary* observationResult = [self dictionaryFromObservation:observation];
                       // [observationResult setValue:[NSNumber numberWithInt:orientation] forKey:@"orientation"];
                       [eventEmitter sendEventWithName:@"onBarcodeDetected" body:observationResult];
-@@ -72,9 +83,82 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
+@@ -72,9 +87,205 @@ - (id)callback:(Frame*)frame withArguments:(NSDictionary*)arguments {
  
    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
  
@@ -1004,7 +1199,11 @@ index 28f1634..21f6db8 100644
 +  for (NSDictionary* r in result) {
 +    if ([r[@"symbology"] isEqualToString:VNBarcodeSymbologyDataMatrix]) { hasDataMatrix = YES; break; }
 +  }
-+  if (wantsDataMatrix && !hasDataMatrix && self.frameCount % kDataMatrixFallbackEveryNFrames == 0) {
++  // 고속 스캔 모드(fast): 평소엔 보조 판독을 건너뛰고, 10프레임(약 0.3초) 연속으로 아무것도 못 읽었을 때만 돌린다
++  BOOL fastMode = [arguments[@"fast"] isKindOfClass:[NSNumber class]] && [arguments[@"fast"] boolValue];
++  self.emptyFrameStreak = result.count == 0 ? self.emptyFrameStreak + 1 : 0;
++  BOOL fastIdle = fastMode && self.emptyFrameStreak < 10;
++  if (!fastIdle && wantsDataMatrix && !hasDataMatrix && self.frameCount % kDataMatrixFallbackEveryNFrames == 0) {
 +    NSDictionary* dm = [self detectDataMatrixInCenterOf:pixelBuffer focus:arguments[@"focusRegion"]];
 +    if (dm) {
 +      BOOL dup = NO;
@@ -1018,9 +1217,128 @@ index 28f1634..21f6db8 100644
 +    }
 +  }
 +
++  [self rememberBoxes:result];
++
++  // 스캔 사진: 사진을 따로 찍지 않고 판독한 이 프레임을 JPEG로 저장한다 (JS가 한 프레임만 켠다).
++  // 결과는 끝에 _meta 항목으로 실어 보낸다 (JS가 떼어 onMeta로 넘긴다 — Android와 같은 방식)
++  NSDictionary* saveFrame = arguments[@"saveFrame"];
++  if ([saveFrame isKindOfClass:[NSDictionary class]]) {
++    NSString* path = [self saveFrame:pixelBuffer orientation:frame.orientation request:saveFrame barcodes:result];
++    [result addObject:@{
++      @"_meta" : @YES,
++      @"saveId" : saveFrame[@"id"] ?: @0,
++      @"savedPath" : path ?: @"",
++    }];
++  }
++
    return result;
  }
  
++static CGRect rectFromBoundingBox(NSDictionary* barcode) {
++  NSDictionary* bb = barcode[@"boundingBox"];
++  if (![bb isKindOfClass:[NSDictionary class]]) return CGRectNull;
++  CGRect r = CGRectMake([bb[@"origin"][@"x"] doubleValue], [bb[@"origin"][@"y"] doubleValue],
++                        [bb[@"size"][@"width"] doubleValue], [bb[@"size"][@"height"] doubleValue]);
++  return (r.size.width > 0 || r.size.height > 0) ? r : CGRectNull;
++}
++
++- (void)rememberBoxes:(NSArray*)barcodes {
++  if (barcodes.count == 0) return;
++  if (!self.recentBoxes) self.recentBoxes = [NSMutableDictionary new];
++  if (self.recentBoxes.count > 60) [self.recentBoxes removeAllObjects];
++  NSNumber* now = @(CACurrentMediaTime());
++  for (NSDictionary* b in barcodes) {
++    NSString* payload = b[@"payload"];
++    CGRect r = rectFromBoundingBox(b);
++    if ([payload isKindOfClass:[NSString class]] && !CGRectIsNull(r)) {
++      self.recentBoxes[payload] = @[ [NSValue valueWithCGRect:r], now ];
++    }
++  }
++}
++
++/**
++ * 현재 프레임(또는 그 일부)을 JPEG로 저장하고 경로를 돌려준다. 실패하면 nil.
++ * mode가 "code"면 코드 위치에 여백을 붙인 사각형만, 아니면(또는 코드 위치를 모르면) 프레임 전체.
++ * value가 있으면 그 코드만, 없으면 이 프레임의 모든 코드를 감싼다.
++ * 좌표는 Vision·CIImage 모두 왼쪽 아래 원점이라 그대로 맞는다
++ */
++- (NSString* _Nullable)saveFrame:(CVPixelBufferRef)pixelBuffer
++                     orientation:(UIImageOrientation)orientation
++                         request:(NSDictionary*)request
++                        barcodes:(NSArray*)barcodes {
++  NSString* dir = request[@"dir"];
++  if (![dir isKindOfClass:[NSString class]] || dir.length == 0) return nil;
++  if ([dir hasPrefix:@"file://"]) dir = [dir substringFromIndex:7];
++  NSFileManager* fm = [NSFileManager defaultManager];
++  if (![fm fileExistsAtPath:dir] &&
++      ![fm createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:nil]) {
++    return nil;
++  }
++
++  CGFloat w = CVPixelBufferGetWidth(pixelBuffer);
++  CGFloat h = CVPixelBufferGetHeight(pixelBuffer);
++  CGRect full = CGRectMake(0, 0, w, h);
++  CGRect crop = full;
++
++  if ([request[@"mode"] isEqual:@"code"]) {
++    NSString* value = [request[@"value"] isKindOfClass:[NSString class]] && [request[@"value"] length] > 0 ? request[@"value"] : nil;
++    CGRect box = CGRectNull;
++    for (NSDictionary* b in barcodes) {
++      if (value && ![b[@"payload"] isEqual:value]) continue;
++      CGRect r = rectFromBoundingBox(b);
++      if (!CGRectIsNull(r)) box = CGRectIsNull(box) ? r : CGRectUnion(box, r);
++    }
++    if (CGRectIsNull(box) && value) {
++      NSArray* recent = self.recentBoxes[value];
++      if (recent && CACurrentMediaTime() - [recent[1] doubleValue] < 1.5) box = [recent[0] CGRectValue];
++    }
++    if (!CGRectIsNull(box)) {
++      CGFloat bw = box.size.width * w, bh = box.size.height * h;
++      CGFloat cx = (box.origin.x + box.size.width / 2) * w, cy = (box.origin.y + box.size.height / 2) * h;
++      CGFloat margin = [request[@"margin"] isKindOfClass:[NSNumber class]] ? MAX(0, [request[@"margin"] doubleValue]) : 0.5;
++      CGFloat pad = MAX(bw, bh) * margin;
++      bw += pad * 2; bh += pad * 2;
++      // 1D 바코드는 Vision이 가는 선으로 돌려줄 때가 있다 → 짧은 쪽을 긴 쪽의 60%까지 늘린다
++      CGFloat minSide = MAX(bw, bh) * 0.6;
++      bw = MAX(bw, minSide); bh = MAX(bh, minSide);
++      CGRect r = CGRectIntegral(CGRectIntersection(CGRectMake(cx - bw / 2, cy - bh / 2, bw, bh), full));
++      if (!CGRectIsNull(r) && r.size.width >= 16 && r.size.height >= 16) crop = r;
++    }
++  }
++
++  CGImagePropertyOrientation cgOrientation = kCGImagePropertyOrientationUp;
++  switch (orientation) {
++    case UIImageOrientationUp: cgOrientation = kCGImagePropertyOrientationUp; break;
++    case UIImageOrientationDown: cgOrientation = kCGImagePropertyOrientationDown; break;
++    case UIImageOrientationLeft: cgOrientation = kCGImagePropertyOrientationLeft; break;
++    case UIImageOrientationRight: cgOrientation = kCGImagePropertyOrientationRight; break;
++    case UIImageOrientationUpMirrored: cgOrientation = kCGImagePropertyOrientationUpMirrored; break;
++    case UIImageOrientationDownMirrored: cgOrientation = kCGImagePropertyOrientationDownMirrored; break;
++    case UIImageOrientationLeftMirrored: cgOrientation = kCGImagePropertyOrientationLeftMirrored; break;
++    case UIImageOrientationRightMirrored: cgOrientation = kCGImagePropertyOrientationRightMirrored; break;
++  }
++
++  CIImage* image = [[CIImage imageWithCVPixelBuffer:pixelBuffer] imageByCroppingToRect:crop];
++  image = [image imageByApplyingCGOrientation:cgOrientation];
++
++  static CIContext* context = nil;
++  static dispatch_once_t onceToken;
++  dispatch_once(&onceToken, ^{ context = [CIContext contextWithOptions:nil]; });
++
++  CGFloat quality = [request[@"quality"] isKindOfClass:[NSNumber class]] ? [request[@"quality"] doubleValue] : 0.8;
++  quality = MAX(0.1, MIN(0.95, quality));
++  CGColorSpaceRef colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
++  NSData* data = [context JPEGRepresentationOfImage:image
++                                         colorSpace:colorSpace
++                                            options:@{ (id)kCGImageDestinationLossyCompressionQuality : @(quality) }];
++  CGColorSpaceRelease(colorSpace);
++  if (data.length == 0) return nil;
++
++  NSString* name = [NSString stringWithFormat:@"scan_%lld.jpg", (long long)([[NSDate date] timeIntervalSince1970] * 1000)];
++  NSString* path = [dir stringByAppendingPathComponent:name];
++  return [data writeToFile:path atomically:YES] ? path : nil;
++}
++
 +/**
 + * 가운데 정사각(짧은 변 60%)을 잘라 2배로 키운 뒤 데이터 매트릭스만 찾는다. 정상 → 반전 순.
 + * Vision은 작은 코드에 픽셀이 모자라면 못 찾는데, 키우면 모듈이 커져 찾는 경우가 있다.
@@ -1077,7 +1395,7 @@ index 28f1634..21f6db8 100644
  /**
   * Detects barcodes in the given pixel buffer and calls the completion handler
   * with the results.
-@@ -98,19 +182,65 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -98,19 +309,65 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
            return;
          }
  
@@ -1146,7 +1464,7 @@ index 28f1634..21f6db8 100644
    }
  
    NSError* error;
-@@ -121,6 +251,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -121,6 +378,55 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
    }
  }
  
@@ -1202,7 +1520,7 @@ index 28f1634..21f6db8 100644
  /**
   * Converts a barcode observation to a dictionary representation.
   *
-@@ -128,36 +307,51 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
+@@ -128,36 +434,51 @@ - (void)detectBarcodeInBuffer:(CVPixelBufferRef)pixelBuffer
   * @return A dictionary representation of the observation.
   */
  - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
@@ -1266,7 +1584,7 @@ index 28f1634..21f6db8 100644
        }
      },
      @"confidence" : @(observation.confidence)
-@@ -174,6 +368,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
+@@ -174,6 +495,25 @@ - (NSDictionary*)dictionaryFromObservation:(VNBarcodeObservation*)observation {
      observationRepresentation[@"supplementalPayload"] = observation.supplementalPayloadString ?: [NSNull null];
    }
  
@@ -1293,7 +1611,7 @@ index 28f1634..21f6db8 100644
  }
  
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
-index b2e706a..ee42220 100644
+index b2e706a..0093f20 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/src/hooks/useBarcodeScanner.ts
 @@ -7,7 +7,7 @@ import {
@@ -1328,6 +1646,15 @@ index b2e706a..ee42220 100644
  }: UseBarcodeScannerOptions) => {
    // Layout of the <Camera /> component
    const layoutRef = useSharedValue<Size>({ width: 0, height: 0 });
+@@ -59,7 +68,7 @@ export const useBarcodeScanner = ({
+       if (isMountedRef && isMountedRef.value === false) {
+         return;
+       }
+-      runAtTargetFps(fps, () => {
++      runAtTargetFps((extraOptions?.value?.targetFps as number | undefined) ?? fps, () => {
+         "worklet";
+         const { value: layout } = layoutRef;
+         const { value: prevBarcodes } = barcodesRef;
 @@ -75,7 +84,19 @@ export const useBarcodeScanner = ({
            const { x, y, width, height } = regionOfInterest;
            options.regionOfInterest = [x, y, width, height];

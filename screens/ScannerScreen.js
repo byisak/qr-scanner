@@ -92,7 +92,18 @@ import BatchScanControls from '../components/BatchScanControls';
 import ScanToast from '../components/ScanToast';
 import DuplicateConfirmToast from '../components/DuplicateConfirmToast';
 import AdBanner from '../components/AdBanner';
-import { sendScanToPc } from '../utils/pcKeyboard';
+import { sendScanToPc, isPcKeyboardEnabled } from '../utils/pcKeyboard';
+import FastScanHud from '../components/FastScanHud';
+import FastScanSheet from '../components/FastScanSheet';
+import {
+  DEFAULT_FAST_REPEAT, FAST_REPEAT_RULES, FAST_TRIGGER_RECENT_MS, FAST_TRIGGER_ARM_MS,
+  parseFastRepeat, shouldAcceptFastScan, applyFastEntries, createSendQueue,
+  DEFAULT_FAST_PROFILE, parseFastProfile, fastProfileBarcodes, fastStatsKey, summarizeFastSession, mergeFastStats,
+} from '../utils/fastScan';
+
+const EMPTY_FAST_STATS = { lastCode: null, lastQty: 0, total: 0, kinds: 0, intervalMs: 0, delayMs: -1 };
+// 고속 스캔 트리거 방식: 볼륨 키 둘 다 "한 번 읽기"로 쓴다
+const FAST_TRIGGER_KEY_MAP = { volumeUp: 'fastTrigger', volumeDown: 'fastTrigger' };
 import { enqueueShareEvent } from '../utils/stocktakeShare';
 
 function ScannerScreen() {
@@ -1647,17 +1658,21 @@ function ScannerScreen() {
   // 사진 압축률 설정 (AsyncStorage에서 로드)
   const [photoQuality, setPhotoQuality] = useState(0.8);
   const photoQualityRef = useRef(0.8);
+  const photoScopeRef = useRef('full'); // 'full' 화면 전체 | 'code' 코드 주변만
+  const photoMarginRef = useRef(0.5);   // 코드 주변만 남길 때 여백 (코드 긴 변 대비 비율)
 
   // 사진 압축률 로드 함수
   const loadPhotoQuality = useCallback(async () => {
     try {
-      const quality = await AsyncStorage.getItem('photoQuality');
+      const [[, quality], [, scope], [, margin]] = await AsyncStorage.multiGet(['photoQuality', 'photoSaveScope', 'photoCropMargin']);
       if (quality !== null) {
         const parsedQuality = parseFloat(quality);
         setPhotoQuality(parsedQuality);
         photoQualityRef.current = parsedQuality;
-        console.log('[ScannerScreen] Photo quality loaded:', parsedQuality);
       }
+      photoScopeRef.current = scope === 'code' ? 'code' : 'full';
+      const parsedMargin = parseFloat(margin);
+      photoMarginRef.current = Number.isFinite(parsedMargin) ? parsedMargin : 0.5;
     } catch (error) {
       console.log('Failed to load photo quality setting');
     }
@@ -1675,57 +1690,28 @@ function ScannerScreen() {
     }, [loadPhotoQuality])
   );
 
-  const capturePhoto = useCallback(async () => {
-    // 이전 촬영이 아직 끝나지 않았으면 건너뛴다. 연속 스캔 중 촬영이 겹쳐 쌓이면 구형 기기에서 메모리가 바닥나 앱이 죽었다
+  // 스캔 사진. 사진을 따로 찍지 않고 판독하던 카메라 프레임을 네이티브가 바로 저장한다 (한 프레임이면 끝나서 스캔을 막지 않는다).
+  // value: 그 코드 주변만 남길 때 기준이 되는 코드 값. 없으면 프레임에 보이는 코드 전부를 감싼다
+  const capturePhoto = useCallback(async (value = null) => {
+    // 앞선 저장이 아직 안 끝났으면 건너뛴다
     if (isCapturingPhotoRef.current) return null;
+    if (!cameraRef.current?.captureFrame) return null;
     isCapturingPhotoRef.current = true;
-    setIsCapturingPhoto(true);
-
     try {
-      // 카메라 ref 체크
-      if (!cameraRef.current) {
-        console.log('Camera not ready');
-        return null;
-      }
-
-      // 사진 디렉토리 생성 (첫 실행 시에만 시간 소요)
-      const photoDir = `${FileSystem.documentDirectory}scan_photos/`;
-      const dirInfo = await FileSystem.getInfoAsync(photoDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(photoDir, { intermediates: true });
-      }
-
-      // Vision Camera 사진 촬영 (설정된 압축률 적용)
-      const currentQuality = photoQualityRef.current;
-      console.log('[capturePhoto] Using quality:', currentQuality);
-      const photo = await cameraRef.current.takePictureAsync({
-        quality: currentQuality,
-        shutterSound: false,
+      const saved = await cameraRef.current.captureFrame({
+        dir: `${FileSystem.documentDirectory}scan_photos/`,
+        mode: photoScopeRef.current,
+        margin: photoMarginRef.current,
+        quality: photoQualityRef.current,
+        value,
       });
-
-      if (!photo || !photo.uri) {
-        console.log('Photo capture failed');
-        return null;
-      }
-
-      const timestamp = Date.now();
-      const fileName = `scan_${timestamp}.jpg`;
-      const newPath = photoDir + fileName;
-
-      // 사진 저장
-      await FileSystem.copyAsync({
-        from: photo.uri,
-        to: newPath,
-      });
-
-      console.log('[capturePhoto] Photo saved:', newPath);
-      return { croppedUri: newPath, originalUri: newPath };
+      if (!saved?.uri) return null;
+      return { croppedUri: saved.uri, originalUri: saved.uri };
     } catch (error) {
       console.error('Photo capture error:', error);
       return null;
     } finally {
       isCapturingPhotoRef.current = false;
-      setIsCapturingPhoto(false);
     }
   }, []);
 
@@ -1757,7 +1743,7 @@ function ScannerScreen() {
       const isDuplicateInBatch = batchScannedItems.some(item => item.code === data);
       if (!isDuplicateInBatch) {
         try {
-          const photoResult = await capturePhoto();
+          const photoResult = await capturePhoto(data);
           photoUri = photoResult?.croppedUri || photoResult;
         } catch (error) {
           console.log('Photo capture error:', error);
@@ -1790,7 +1776,7 @@ function ScannerScreen() {
     safeTimeout(() => {
       isProcessingRef.current = false;
       setCanScan(true);
-    }, 500);
+    }, TIMEOUT_VALUES.SCAN_REACTIVATE_CONTINUOUS);
     startResetTimer(RESET_DELAYS.NORMAL);
   }, [realtimeSyncEnabled, activeSessionId, capturePhoto, startResetTimer]);
 
@@ -2079,8 +2065,362 @@ function ScannerScreen() {
   }, [pendingMultiScanData, feedback, t]);
 
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // 고속 스캔 모드: 저장된 설정은 그대로 두고, 켜져 있는 동안만 결과창·사진·중복 알림·규칙·자동 검색을 건너뛴다.
+  // 인식 → 삑/진동 → 수량 +1까지만 바로 하고, 기록 저장과 전송(실시간 PC·스캔 URL)은 뒤에서 모아서 한다.
+  // ───────────────────────────────────────────────────────────────────────────
+  const [fastMode, setFastMode] = useState(false);
+  const fastModeRef = useRef(false);
+  const [fastRepeat, setFastRepeat] = useState(DEFAULT_FAST_REPEAT);
+  const fastRepeatRef = useRef(DEFAULT_FAST_REPEAT);
+  const [fastStats, setFastStats] = useState(EMPTY_FAST_STATS);
+  const [fastSendStats, setFastSendStats] = useState({ pending: 0, failed: 0 });
+  const [fastTiming, setFastTiming] = useState(null); // { fps, avgMs, maxMs, lagMs } 1초마다 (Android)
+  const fastSessionRef = useRef({ counts: new Map(), total: 0 });
+  const fastLastAcceptRef = useRef(null); // { code, at, type, groupId }
+  const fastSeenRef = useRef({ code: null, at: 0, type: null });
+  const fastTriggerArmedUntilRef = useRef(0);
+  const fastEntriesRef = useRef([]); // 아직 기록에 반영하지 않은 스캔·정정
+  const fastFlushTimerRef = useRef(null);
+  const fastTargetRef = useRef({ sessionId: null, scanUrl: null, baseUrl: null });
+
+  // 고속 모드 구성(읽을 바코드·켜 둘 기능)과 이 폰에서 잰 세션별 속도
+  const [fastProfile, setFastProfile] = useState(DEFAULT_FAST_PROFILE);
+  const fastProfileRef = useRef(DEFAULT_FAST_PROFILE);
+  const [fastStatsStore, setFastStatsStore] = useState({});
+  const fastStatsStoreRef = useRef({});
+  const [fastSheet, setFastSheet] = useState(null); // null | { offFeatures, available }
+  const fastSheetOpenRef = useRef(false);
+  const fastMeasureRef = useRef({ key: null, samples: [], gaps: [] });
+
+  useEffect(() => {
+    AsyncStorage.multiGet(['fastScanRepeat', 'fastScanProfile', 'fastScanStats']).then(([[, repeat], [, profileRaw], [, statsRaw]]) => {
+      const rule = parseFastRepeat(repeat);
+      fastRepeatRef.current = rule;
+      setFastRepeat(rule);
+      const profile = parseFastProfile(profileRaw);
+      fastProfileRef.current = profile;
+      setFastProfile(profile);
+      try {
+        const store = statsRaw ? JSON.parse(statsRaw) : {};
+        if (store && typeof store === 'object') {
+          fastStatsStoreRef.current = store;
+          setFastStatsStore(store);
+        }
+      } catch (e) { /* 깨진 측정값은 버린다 */ }
+    }).catch(() => {});
+  }, []);
+
+  const barcodeTypesRef = useRef(barcodeTypes);
+  barcodeTypesRef.current = barcodeTypes;
+  const fastBarcodeTypes = useMemo(() => fastProfileBarcodes(fastProfile, barcodeTypes), [fastProfile, barcodeTypes]);
+
+  // 지금까지 잰 세션을 요약해 저장하고 새로 잰다 (모드 종료·구성 변경·앱 이탈 때)
+  const commitFastMeasure = useCallback(() => {
+    const measure = fastMeasureRef.current;
+    fastMeasureRef.current = { key: measure.key, samples: [], gaps: [] };
+    if (!measure.key) return;
+    const summary = summarizeFastSession(measure);
+    if (!summary) return;
+    const next = mergeFastStats(fastStatsStoreRef.current, measure.key, summary);
+    fastStatsStoreRef.current = next;
+    setFastStatsStore(next);
+    AsyncStorage.setItem('fastScanStats', JSON.stringify(next)).catch(() => {});
+  }, []);
+
+  const startFastMeasure = useCallback((profile) => {
+    fastMeasureRef.current = {
+      key: fastStatsKey(fastProfileBarcodes(profile, barcodeTypesRef.current), profile.strictConfirm),
+      samples: [],
+      gaps: [],
+    };
+  }, []);
+
+  const handleFastTiming = useCallback((stats) => {
+    setFastTiming(stats);
+    if (stats && stats.fps > 0 && Number.isFinite(stats.avgMs)) {
+      fastMeasureRef.current.samples.push({ fps: stats.fps, avgMs: stats.avgMs });
+    }
+  }, []);
+
+  // 전송 대상 (켜져 있는 기능만). 스캔 URL 주소는 일반 모드와 같은 저장값을 쓴다
+  useEffect(() => {
+    fastTargetRef.current = {
+      ...fastTargetRef.current,
+      sessionId: realtimeSyncEnabled && activeSessionId ? activeSessionId : null,
+      scanUrl: scanUrlEnabled ? (activeScanUrl || { id: 'default' }) : null,
+    };
+    if (!scanUrlEnabled) return;
+    SecureStore.getItemAsync('baseUrl').then((base) => {
+      fastTargetRef.current = { ...fastTargetRef.current, baseUrl: base || (activeScanUrl && activeScanUrl.url) || null };
+    }).catch(() => {});
+  }, [realtimeSyncEnabled, activeSessionId, scanUrlEnabled, activeScanUrl, fastMode]);
+
+  // 전송 대기열 (순서 유지, 실패하면 다시 시도). 화면은 기다리지 않는다
+  const fastQueuesRef = useRef(null);
+  if (!fastQueuesRef.current) {
+    const report = () => {
+      const queues = fastQueuesRef.current;
+      if (!queues) return;
+      const a = queues.realtime.stats();
+      const b = queues.url.stats();
+      setFastSendStats({ pending: a.pending + b.pending, failed: a.failed + b.failed });
+    };
+    fastQueuesRef.current = {
+      realtime: createSendQueue({
+        send: (item) => websocketClient.uploadScan(item.sessionId, item.payload),
+        // 서버가 거절한 요청(4xx)은 다시 보내도 같다. 네트워크 오류·시간 초과는 계속 다시 보낸다
+        isPermanent: (e) => !!e && e.name === 'RealtimeHttpError' && ![401, 408, 429].includes(e.status),
+        onChange: report,
+      }),
+      url: createSendQueue({
+        send: async (item) => {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 10000);
+          try {
+            const response = await fetch(item.url, { signal: controller.signal });
+            if (response.status >= 400) throw Object.assign(new Error(`HTTP ${response.status}`), { permanent: true });
+          } finally {
+            clearTimeout(timer);
+          }
+        },
+        isPermanent: (e) => !!(e && e.permanent),
+        onChange: report,
+      }),
+    };
+  }
+
+  // 모아 둔 스캔을 기록에 한 번에 쓴다 (스캔마다 쓰면 기록 전체를 매번 다시 저장하게 된다)
+  const flushFastEntries = useCallback(() => {
+    if (fastFlushTimerRef.current) {
+      clearTimeout(fastFlushTimerRef.current);
+      fastFlushTimerRef.current = null;
+    }
+    const entries = fastEntriesRef.current;
+    if (entries.length === 0) return;
+    fastEntriesRef.current = [];
+    updateHistory((historyByGroup) => {
+      applyFastEntries(historyByGroup, entries, prependCapped);
+      return true;
+    }).then(() => triggerSync()).catch((e) => console.error('Fast scan history flush error:', e));
+  }, [triggerSync]);
+
+  const queueFastEntry = useCallback((entry) => {
+    fastEntriesRef.current.push(entry);
+    if (!fastFlushTimerRef.current) fastFlushTimerRef.current = setTimeout(flushFastEntries, 1000);
+  }, [flushFastEntries]);
+
+  const resetFastSession = useCallback(() => {
+    fastSessionRef.current = { counts: new Map(), total: 0 };
+    fastLastAcceptRef.current = null;
+    fastTriggerArmedUntilRef.current = 0;
+    setFastStats(EMPTY_FAST_STATS);
+  }, []);
+
+  const changeFastMode = useCallback((on) => {
+    fastModeRef.current = on;
+    setFastMode(on);
+    if (on) {
+      resetFastSession();
+      startFastMeasure(fastProfileRef.current);
+    } else {
+      flushFastEntries();
+      commitFastMeasure();
+      setFastTiming(null);
+    }
+  }, [resetFastSession, flushFastEntries, startFastMeasure, commitFastMeasure]);
+
+  // 구성 시트 열기: 일반 설정에서 켜져 있는 기능만 보여 준다
+  const openFastSheet = useCallback(async () => {
+    let productAutoSearch = false;
+    try { productAutoSearch = (await AsyncStorage.getItem('productAutoSearch')) === 'true'; } catch (e) { /* 무시 */ }
+    const offFeatures = [
+      photoSaveEnabled && { key: 'photo', icon: 'image-outline' },
+      productAutoSearch && { key: 'productSearch', icon: 'search-outline' },
+      lotteryScanEnabled && { key: 'lottery', icon: 'ticket-outline' },
+    ].filter(Boolean);
+    fastSheetOpenRef.current = true;
+    setFastSheet({
+      offFeatures,
+      available: {
+        sound: scanSoundEnabled,
+        haptic: hapticEnabled,
+        realtime: !!realtimeSyncEnabled,
+        scanUrl: !!scanUrlEnabled,
+        pcKeyboard: isPcKeyboardEnabled(),
+      },
+    });
+  }, [photoSaveEnabled, lotteryScanEnabled, scanSoundEnabled, hapticEnabled, realtimeSyncEnabled, scanUrlEnabled]);
+
+  const closeFastSheet = useCallback(() => {
+    fastSheetOpenRef.current = false;
+    setFastSheet(null);
+  }, []);
+
+  const startFastFromSheet = useCallback((draft, rule) => {
+    const profile = { ...draft, sheetSeen: true };
+    fastProfileRef.current = profile;
+    setFastProfile(profile);
+    AsyncStorage.setItem('fastScanProfile', JSON.stringify(profile)).catch(() => {});
+    if (rule !== fastRepeatRef.current) {
+      fastRepeatRef.current = rule;
+      fastTriggerArmedUntilRef.current = 0;
+      setFastRepeat(rule);
+      AsyncStorage.setItem('fastScanRepeat', rule).catch(() => {});
+    }
+    fastSheetOpenRef.current = false;
+    setFastSheet(null);
+    if (fastModeRef.current) {
+      // 이미 고속 모드: 지금까지 잰 값은 이전 구성으로 저장하고 새 구성으로 다시 잰다
+      commitFastMeasure();
+      startFastMeasure(profile);
+    } else {
+      changeFastMode(true);
+    }
+  }, [changeFastMode, commitFastMeasure, startFastMeasure]);
+
+  // 앱이 뒤로 가거나 화면이 사라질 때 남은 스캔을 바로 기록한다
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') {
+        flushFastEntries();
+        if (fastModeRef.current) commitFastMeasure();
+      }
+    });
+    return () => {
+      sub.remove();
+      flushFastEntries();
+      if (fastModeRef.current) commitFastMeasure();
+    };
+  }, [flushFastEntries, commitFastMeasure]);
+
+  // 한 건 확정: 소리·진동 먼저, 나머지는 기다리지 않는다
+  const acceptFastScan = useCallback((code, type, now, detectedAt) => {
+    const delayMs = detectedAt ? Math.max(0, Date.now() - detectedAt) : -1;
+    const profile = fastProfileRef.current;
+    if (profile.sound) playScanBeep();
+    if (profile.haptic && hapticEnabledRef.current) {
+      if (Platform.OS === 'android') haptics.scan();
+      else haptics.success();
+    }
+
+    const session = fastSessionRef.current;
+    const qty = (session.counts.get(code) || 0) + 1;
+    session.counts.set(code, qty);
+    session.total += 1;
+
+    const target = fastTargetRef.current;
+    const groupId = target.scanUrl && target.scanUrl.id !== 'default' ? `scan-url-${target.scanUrl.id}` : currentGroupIdRef.current;
+    const previous = fastLastAcceptRef.current;
+    fastLastAcceptRef.current = { code, at: now, type, groupId };
+    // 속도 측정: 서로 다른 코드 사이 간격만 (같은 코드 반복은 규칙 간격이라 속도가 아니다)
+    if (previous && previous.code !== code && now - previous.at < 5000) fastMeasureRef.current.gaps.push(now - previous.at);
+    setFastStats({
+      lastCode: code,
+      lastQty: qty,
+      total: session.total,
+      kinds: session.counts.size,
+      intervalMs: previous ? Math.min(now - previous.at, 99999) : 0,
+      delayMs,
+    });
+
+    if (profile.pcKeyboard) sendScanToPc(code); // PC 키보드 입력 (켜져 있고 연결돼 있을 때만, 기다리지 않음)
+    if (profile.saveHistory) queueFastEntry({ code, type, at: now, delta: 1, scan: true, groupId });
+    if (target.sessionId && profile.realtime) {
+      fastQueuesRef.current.realtime.push({ sessionId: target.sessionId, payload: { code, timestamp: now } });
+    }
+    if (target.scanUrl && target.baseUrl && profile.scanUrl) {
+      const encoded = encodeURIComponent(code);
+      const url = target.baseUrl.includes('{code}') ? target.baseUrl.replace('{code}', encoded) : target.baseUrl + encoded;
+      fastQueuesRef.current.url.push({ url });
+    }
+  }, [playScanBeep, queueFastEntry]);
+
+  const handleFastScan = useCallback((scanResult) => {
+    const { data, type, detectedAt } = scanResult;
+    if (!data) return;
+    const now = Date.now();
+    const normalizedType = String(type || 'qr').toLowerCase().replace(/^org\.(iso|gs1)\./, '');
+    const seen = fastSeenRef.current;
+    const prevSeenAt = seen.code === data ? seen.at : 0;
+    fastSeenRef.current = { code: data, at: now, type: normalizedType };
+
+    const rule = fastRepeatRef.current;
+    if (rule === 'trigger') {
+      // 트리거를 누르고 기다리는 중에 들어온 첫 코드만 받는다
+      if (now <= fastTriggerArmedUntilRef.current) {
+        fastTriggerArmedUntilRef.current = 0;
+        acceptFastScan(data, normalizedType, now, detectedAt);
+      }
+      return;
+    }
+    if (!shouldAcceptFastScan(rule, fastLastAcceptRef.current, data, now, prevSeenAt)) return;
+    acceptFastScan(data, normalizedType, now, detectedAt);
+  }, [acceptFastScan]);
+
+  // 트리거(볼륨 키·화면 버튼): 지금 비추고 있는 코드를 한 번 읽는다. 아직 안 보이면 잠깐 기다렸다가 처음 보이는 코드를 읽는다
+  const fireFastTrigger = useCallback(() => {
+    const now = Date.now();
+    const seen = fastSeenRef.current;
+    if (seen.code && now - seen.at <= FAST_TRIGGER_RECENT_MS) {
+      fastTriggerArmedUntilRef.current = 0;
+      acceptFastScan(seen.code, seen.type, now, 0);
+    } else {
+      fastTriggerArmedUntilRef.current = now + FAST_TRIGGER_ARM_MS;
+    }
+  }, [acceptFastScan]);
+
+  // 마지막 코드의 수량 정정 (−1, 직접 입력). 이미 보낸 전송은 되돌리지 못한다
+  const adjustFastQuantity = useCallback((delta) => {
+    const last = fastLastAcceptRef.current;
+    if (!last || !delta) return;
+    const session = fastSessionRef.current;
+    const current = session.counts.get(last.code) || 0;
+    const next = Math.max(0, current + delta);
+    const applied = next - current;
+    if (applied === 0) return;
+    if (next === 0) session.counts.delete(last.code);
+    else session.counts.set(last.code, next);
+    session.total = Math.max(0, session.total + applied);
+    if (fastProfileRef.current.saveHistory) {
+      queueFastEntry({ code: last.code, type: last.type, at: Date.now(), delta: applied, scan: false, groupId: last.groupId });
+    }
+    if (next === 0) fastLastAcceptRef.current = null;
+    if (hapticEnabledRef.current) haptics.selection?.();
+    setFastStats((prev) => ({
+      ...prev,
+      lastCode: next === 0 ? null : prev.lastCode,
+      lastQty: next,
+      total: session.total,
+      kinds: session.counts.size,
+    }));
+  }, [queueFastEntry]);
+
+  const setFastQuantity = useCallback((value) => {
+    const last = fastLastAcceptRef.current;
+    if (!last) return;
+    adjustFastQuantity(value - (fastSessionRef.current.counts.get(last.code) || 0));
+  }, [adjustFastQuantity]);
+
+  const cycleFastRepeat = useCallback(() => {
+    const next = FAST_REPEAT_RULES[(FAST_REPEAT_RULES.indexOf(fastRepeatRef.current) + 1) % FAST_REPEAT_RULES.length];
+    fastRepeatRef.current = next;
+    fastTriggerArmedUntilRef.current = 0;
+    setFastRepeat(next);
+    if (hapticEnabledRef.current) haptics.selection?.();
+    AsyncStorage.setItem('fastScanRepeat', next).catch(() => {});
+  }, []);
+
+
   const handleBarCodeScanned = useCallback(
     async (scanResult) => {
+      // 고속 구성 시트가 떠 있는 동안은 아무것도 읽지 않는다
+      if (fastSheetOpenRef.current) return;
+      // 고속 스캔 모드는 아래 처리를 전부 건너뛴다
+      if (fastModeRef.current) {
+        if (isActive && !isNavigatingRef.current) handleFastScan(scanResult);
+        return;
+      }
       const { data, bounds, type, cornerPoints, raw, frameDimensions, errorCorrectionLevel } = scanResult;
       // 오류 정정 레벨은 다음 프레임에 들어올 때가 많다 → 처리 여부와 상관없이 기억해 둔다 (결과 화면이 늦게라도 받는다)
       if (errorCorrectionLevel) setEcLevel(data, errorCorrectionLevel);
@@ -2093,7 +2433,15 @@ function ScannerScreen() {
       if (lastSeenAtRef.current.size > 200) lastSeenAtRef.current.clear();
 
       // 사진 촬영 중이거나 네비게이션 중이거나 이미 처리 중이면 스캔 무시
-      if (!isActive || !canScan || isCapturingPhotoRef.current || isNavigatingRef.current || isProcessingRef.current || routePromptOpenRef.current) return;
+      if (!isActive || !canScan || isNavigatingRef.current || isProcessingRef.current || routePromptOpenRef.current) {
+        // 다른 코드를 처리하는 동안 처음 비친 코드는 "본 적 없음"으로 되돌린다.
+        // 그대로 두면 다음 프레임에 "계속 비추는 중"으로 잡혀, 화면에서 뺐다가 다시 비출 때까지 영영 처리되지 않았다
+        if (!stillInView) {
+          if (previousSeenAt === undefined) lastSeenAtRef.current.delete(data);
+          else lastSeenAtRef.current.set(data, previousSeenAt);
+        }
+        return;
+      }
 
       // 수동 확정 모드: 저장하지 않고 들고 있다가 확정 키/버튼에서 처리한다 (여러 코드 모드는 "결과 보기"가 확정)
       if (scanConfirmModeRef.current === 'manual' && !multiCodeModeEnabledRef.current && confirmBypassRef.current !== data) {
@@ -2445,7 +2793,7 @@ function ScannerScreen() {
             safeTimeout(() => {
               isProcessingRef.current = false;
               setCanScan(true);
-            }, 500);
+            }, TIMEOUT_VALUES.SCAN_REACTIVATE_CONTINUOUS);
             startResetTimer(RESET_DELAYS.NORMAL);
             return;
           } else if (action === 'alert') {
@@ -2519,7 +2867,7 @@ function ScannerScreen() {
         // 히스토리에서 중복 여부 확인 - 중복이면 사진 저장 스킵 (저장 공간 절약)
         const duplicateCheck = await checkDuplicateInHistory(data);
         if (!duplicateCheck.isDuplicate) {
-          photoPromise = capturePhoto().catch(() => null);
+          photoPromise = capturePhoto(multiCodeModeEnabledRef.current ? null : data).catch(() => null);
         }
       }
 
@@ -2610,7 +2958,7 @@ function ScannerScreen() {
             safeTimeout(() => {
               isProcessingRef.current = false;
               setCanScan(true);
-            }, 500);
+            }, TIMEOUT_VALUES.SCAN_REACTIVATE_CONTINUOUS);
             startResetTimer(RESET_DELAYS.NORMAL);
             return;
           }
@@ -2805,17 +3153,29 @@ function ScannerScreen() {
         }
       }, 50);
     },
-    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern, holdPendingScan, runRuleActions, recordStocktake, askCategoryRouting],
+    [isActive, canScan, normalizeBounds, saveHistory, updateHistoryWithPhoto, router, startResetTimer, batchScanEnabled, batchScannedItems, capturePhoto, realtimeSyncEnabled, activeSessionId, winWidth, winHeight, fullScreenScanMode, scanUrlEnabled, activeScanUrl, showToast, playScanBeep, feedback, t, checkDuplicateInHistory, markSessionSaved, currentGroupId, fillMissingEcLevel, buildScanMeta, notifyDiscoveredPattern, holdPendingScan, runRuleActions, recordStocktake, askCategoryRouting, handleFastScan],
   );
 
   const toggleTorch = useCallback(() => setTorchOn((prev) => !prev), []);
 
   // 스캔 화면 아래 모드 알약: 한 개 / 여러 개(여러 코드 인식) / 연속(연속 스캔).
   // 설정 화면의 두 모드 스위치와 같은 키를 같은 방식으로 쓴다(서로 배타, 켜면 URL 연동·실시간 전송·복권 인식은 꺼짐)
-  const currentScanMode = multiCodeModeEnabled ? 'multi' : batchScanEnabled ? 'continuous' : 'single';
+  // 고속은 저장되는 설정이 아니라 화면에 있는 동안만 켜지는 상태다 (아래 세 모드의 저장값은 건드리지 않는다)
+  const baseScanMode = multiCodeModeEnabled ? 'multi' : batchScanEnabled ? 'continuous' : 'single';
+  const currentScanMode = fastMode ? 'fast' : baseScanMode;
   const setScanMode = useCallback(async (mode) => {
     if (mode === currentScanMode) return;
     if (hapticEnabledRef.current) haptics.selection?.();
+    if (mode === 'fast') {
+      // 처음 한 번은 구성 시트부터 (이후엔 바로 시작, 길게 누르면 다시 연다)
+      if (!fastProfileRef.current.sheetSeen) openFastSheet();
+      else changeFastMode(true);
+      return;
+    }
+    if (fastMode) {
+      changeFastMode(false);
+      if (mode === baseScanMode) return;
+    }
     const multi = mode === 'multi';
     const continuous = mode === 'continuous';
     setMultiCodeModeEnabled(multi);
@@ -2839,7 +3199,7 @@ function ScannerScreen() {
       console.error('Save scan mode error:', error);
       feedback.error(t('settings.saveFailed'));
     }
-  }, [currentScanMode, feedback, t]);
+  }, [currentScanMode, baseScanMode, fastMode, changeFastMode, openFastSheet, feedback, t]);
 
   // NFC: 읽은 값을 바코드와 같은 처리 과정으로 넘긴다 (type 'nfc')
   const handleBarCodeScannedRef = useRef(null);
@@ -2891,6 +3251,11 @@ function ScannerScreen() {
 
   // 볼륨 키에 매핑된 동작
   const handleHardwareKeyAction = useCallback((action) => {
+    // 고속 스캔 트리거 방식: 볼륨 키(와 확정 키)는 "한 번 읽기"
+    if (fastModeRef.current && (action === 'fastTrigger' || action === 'confirm')) {
+      if (fastRepeatRef.current === 'trigger') fireFastTrigger();
+      return;
+    }
     switch (action) {
       case 'confirm':
         if (multiCodeModeEnabledRef.current) {
@@ -2921,11 +3286,11 @@ function ScannerScreen() {
       default:
         break;
     }
-  }, [pendingMultiScanData, handleViewMultiResults, commitPendingScan, toggleTorch, lastScannedCode, handleOpenResultWindow, feedback, t]);
+  }, [pendingMultiScanData, handleViewMultiResults, commitPendingScan, toggleTorch, lastScannedCode, handleOpenResultWindow, feedback, t, fireFastTrigger]);
   const handleFrameDumped = useCallback((path) => {
     feedback.info(t('scanner.frameDumped', { path: path.replace(/^.*\/cache\//, 'cache/') }));
   }, [feedback, t]);
-  useHardwareKeys({ keyMap: hardwareKeyMap, onAction: handleHardwareKeyAction });
+  useHardwareKeys({ keyMap: fastMode && fastRepeat === 'trigger' ? FAST_TRIGGER_KEY_MAP : hardwareKeyMap, onAction: handleHardwareKeyAction });
 
   // 수동 확정 안내: 확정 키가 있으면 "볼륨 위 키를 눌러 확정", 없으면 화면 버튼 안내
   const confirmKey = Platform.OS === 'android' ? confirmKeyOf(hardwareKeyMap) : null;
@@ -3173,8 +3538,12 @@ function ScannerScreen() {
         onDetectedBarcodesChange={handleDetectedBarcodesChange}
         onVerifiedBarcodesChange={handleVerifiedBarcodesChange}
         onVisibleHighlightsChange={handleVisibleHighlightsChange}
-        selectCenterBarcode={!multiCodeModeEnabled}
-        showBarcodeValues={(multiCodeModeEnabled && showBarcodeValues) || (!multiCodeModeEnabled && singleCodeShowValue) || (!resultWindowAutoOpen && lastScannedCode)}
+        fastMode={fastMode}
+        fastBarcodeTypes={fastBarcodeTypes}
+        fastStrictConfirm={fastProfile.strictConfirm}
+        onTimingStats={fastMode ? handleFastTiming : undefined}
+        selectCenterBarcode={fastMode || !multiCodeModeEnabled}
+        showBarcodeValues={!fastMode && ((multiCodeModeEnabled && showBarcodeValues) || (!multiCodeModeEnabled && singleCodeShowValue) || (!resultWindowAutoOpen && lastScannedCode))}
         style={StyleSheet.absoluteFillObject}
         showHighlights={true}
         highlightColor={SCAN_THEME.white}
@@ -3185,7 +3554,7 @@ function ScannerScreen() {
         scanRegionDebug={scanRegionDebug}
         scanTimingDebug={scanTimingDebug}
         onFrameDumped={handleFrameDumped}
-        photoEnabled={photoSaveEnabled}
+        photoEnabled={false}
       />
 
       {/* 스캔 영역 제한 표시 (전체면 아무것도 안 그린다) */}
@@ -3385,21 +3754,40 @@ function ScannerScreen() {
       )}
 
       {/* 조준 안내 + 모드 알약 (아래 카드·버튼이 떠 있으면 숨긴다) */}
-      {isActive && !lastScannedCode && !pendingMultiScanData && !(batchScanEnabled && batchScannedItems.length > 0)
-        && !(realtimeSyncEnabled && !activeSessionId) && !(scanConfirmMode === 'manual' && pendingScan) && (
+      {isActive && (fastMode || (!lastScannedCode && !pendingMultiScanData && !(batchScanEnabled && batchScannedItems.length > 0)
+        && !(realtimeSyncEnabled && !activeSessionId) && !(scanConfirmMode === 'manual' && pendingScan))) && (
         <View style={[styles.modeArea, { bottom: tabBarOverlap + 20 }]} pointerEvents="box-none">
-          <Text style={styles.aimHint} maxFontSizeMultiplier={1.3}>{t('scanner.aimHint')}</Text>
+          {fastMode ? (
+            <FastScanHud
+              t={t}
+              stats={fastStats}
+              timing={fastTiming}
+              sendStats={(realtimeSyncEnabled && activeSessionId && fastProfile.realtime) || (scanUrlEnabled && fastProfile.scanUrl) || fastSendStats.pending > 0 || fastSendStats.failed > 0 ? fastSendStats : null}
+              onOpenSettings={openFastSheet}
+              rule={fastRepeat}
+              onCycleRule={cycleFastRepeat}
+              onMinus={() => adjustFastQuantity(-1)}
+              onSetQuantity={setFastQuantity}
+              onReset={resetFastSession}
+              onTrigger={fireFastTrigger}
+            />
+          ) : (
+            <Text style={styles.aimHint} maxFontSizeMultiplier={1.3}>{t('scanner.aimHint')}</Text>
+          )}
           <View style={styles.modePill} accessibilityRole="radiogroup">
             {[
               { id: 'single', label: t('scanner.modeSingle') },
               { id: 'multi', label: t('scanner.modeMulti') },
               { id: 'continuous', label: t('scanner.modeContinuous') },
+              { id: 'fast', label: t('scanner.modeFast') },
             ].map((m) => {
               const on = currentScanMode === m.id;
               return (
                 <TouchableOpacity
                   key={m.id}
                   onPress={() => setScanMode(m.id)}
+                  onLongPress={m.id === 'fast' ? openFastSheet : undefined}
+                  delayLongPress={350}
                   activeOpacity={0.8}
                   accessibilityRole="radio"
                   accessibilityState={{ checked: on }}
@@ -3413,6 +3801,27 @@ function ScannerScreen() {
           </View>
         </View>
       )}
+
+      {/* 고속 모드 구성 시트 (처음 고속을 누를 때, 고속 버튼 길게 누르기, HUD 톱니바퀴) */}
+      <FastScanSheet
+        visible={!!fastSheet}
+        t={t}
+        profile={fastProfile}
+        rule={fastRepeat}
+        currentBarcodeTypes={barcodeTypes}
+        available={fastSheet ? fastSheet.available : { sound: true, haptic: true }}
+        offFeatures={fastSheet ? fastSheet.offFeatures : []}
+        statsStore={fastStatsStore}
+        running={fastMode}
+        onStart={startFastFromSheet}
+        onClose={closeFastSheet}
+        onResetStats={() => {
+          fastStatsStoreRef.current = {};
+          setFastStatsStore({});
+          fastMeasureRef.current = { ...fastMeasureRef.current, samples: [], gaps: [] };
+          AsyncStorage.removeItem('fastScanStats').catch(() => {});
+        }}
+      />
 
       {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
       {realtimeSyncEnabled && !activeSessionId && (

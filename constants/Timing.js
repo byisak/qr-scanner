@@ -37,6 +37,7 @@ export const TIMEOUT_VALUES = {
   TOAST_AUTO_HIDE: 5000,           // 토스트 자동 숨김
   SEND_MESSAGE_HIDE: 1000,         // 전송 메시지 숨김
   SCAN_REACTIVATE: 500,            // 스캔 재활성화 대기
+  SCAN_REACTIVATE_CONTINUOUS: 200, // 연속(배치) 스캔에서 다음 코드를 받기까지의 대기. 같은 코드 재인식은 '계속 비추는 중' 판정이 막는다
 };
 
 // 1D 바코드 타입 목록

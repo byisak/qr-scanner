@@ -27,6 +27,19 @@ const QUALITY_OPTIONS = [
   { key: '0.2', quality: 0.2, label: 'photoSaveSettings.qualityMinimum', desc: 'photoSaveSettings.qualityMinimumDesc', size: '~200KB' },
 ];
 
+// 저장 범위: 화면 전체 / 코드 주변만
+const SCOPE_OPTIONS = [
+  { key: 'full', label: 'photoSaveSettings.scopeFull', desc: 'photoSaveSettings.scopeFullDesc' },
+  { key: 'code', label: 'photoSaveSettings.scopeCode', desc: 'photoSaveSettings.scopeCodeDesc' },
+];
+
+// 코드 주변만 남길 때의 여백 (코드 긴 변 대비 비율)
+const MARGIN_OPTIONS = [
+  { key: '0.15', label: 'photoSaveSettings.marginNarrow', desc: 'photoSaveSettings.marginNarrowDesc' },
+  { key: '0.5', label: 'photoSaveSettings.marginNormal', desc: 'photoSaveSettings.marginNormalDesc' },
+  { key: '1', label: 'photoSaveSettings.marginWide', desc: 'photoSaveSettings.marginWideDesc' },
+];
+
 export default function PhotoSaveSettingsScreen() {
   const router = useRouter();
   const { t, fonts } = useLanguage();
@@ -37,6 +50,8 @@ export default function PhotoSaveSettingsScreen() {
 
   const [photoSaveEnabled, setPhotoSaveEnabled] = useState(true); // 기본값: 켬
   const [selectedQuality, setSelectedQuality] = useState('0.8');
+  const [selectedScope, setSelectedScope] = useState('full');
+  const [selectedMargin, setSelectedMargin] = useState('0.5');
 
   useEffect(() => {
     (async () => {
@@ -48,6 +63,11 @@ export default function PhotoSaveSettingsScreen() {
         if (quality !== null) {
           setSelectedQuality(quality);
         }
+
+        const scope = await AsyncStorage.getItem('photoSaveScope');
+        if (scope === 'code') setSelectedScope('code');
+        const margin = await AsyncStorage.getItem('photoCropMargin');
+        if (MARGIN_OPTIONS.some(o => o.key === margin)) setSelectedMargin(margin);
       } catch (error) {
         console.error('Load photo settings error:', error);
       }
@@ -78,6 +98,65 @@ export default function PhotoSaveSettingsScreen() {
       feedback.error(t('settings.saveFailed'));
     }
   };
+
+  const selectScope = async (key) => {
+    const prev = selectedScope;
+    setSelectedScope(key);
+    try {
+      await AsyncStorage.setItem('photoSaveScope', key);
+    } catch (error) {
+      console.error('Save photo scope settings error:', error);
+      setSelectedScope(prev);
+      feedback.error(t('settings.saveFailed'));
+    }
+  };
+
+  const selectMargin = async (key) => {
+    const prev = selectedMargin;
+    setSelectedMargin(key);
+    try {
+      await AsyncStorage.setItem('photoCropMargin', key);
+    } catch (error) {
+      console.error('Save photo margin settings error:', error);
+      setSelectedMargin(prev);
+      feedback.error(t('settings.saveFailed'));
+    }
+  };
+
+  // 라디오 묶음 (저장 범위 · 여백)
+  const renderRadioGroup = (options, selected, onSelect) => (
+    <View style={[s.group, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      {options.map((option, index) => {
+        const isSelected = selected === option.key;
+        return (
+          <MaterialPressable
+            key={option.key}
+            style={[
+              s.row,
+              s.rowWithDesc,
+              index > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderLight },
+            ]}
+            onPress={() => onSelect(option.key)}
+            activeOpacity={0.7}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isSelected }}
+          >
+            <View style={s.rowText}>
+              <Text style={[s.label, { color: colors.text, fontFamily: fonts.medium }]}>
+                {t(option.label)}
+              </Text>
+              <Text style={[s.desc, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                {t(option.desc)}
+              </Text>
+            </View>
+            <View style={[s.radio, { borderColor: isSelected ? colors.primary : colors.textTertiary }]}>
+              {isSelected && <View style={[s.radioDot, { backgroundColor: colors.primary }]} />}
+            </View>
+          </MaterialPressable>
+        );
+      })}
+    </View>
+  );
 
   // 공통 디자인 규칙: 스위치는 강조색 하나, 꺼짐 트랙은 테두리 톤
   const switchColors = {
@@ -134,6 +213,26 @@ export default function PhotoSaveSettingsScreen() {
         {/* 압축률 선택 (사진 저장 활성화 시에만 표시) */}
         {photoSaveEnabled && (
           <>
+            <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+              {t('photoSaveSettings.scope')}
+            </Text>
+            <Text style={[s.sectionInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('photoSaveSettings.scopeInfo')}
+            </Text>
+            {renderRadioGroup(SCOPE_OPTIONS, selectedScope, selectScope)}
+
+            {selectedScope === 'code' && (
+              <>
+                <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
+                  {t('photoSaveSettings.margin')}
+                </Text>
+                <Text style={[s.sectionInfo, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+                  {t('photoSaveSettings.marginInfo')}
+                </Text>
+                {renderRadioGroup(MARGIN_OPTIONS, selectedMargin, selectMargin)}
+              </>
+            )}
+
             <Text accessibilityRole="header" style={[s.sectionHeader, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
               {t('photoSaveSettings.compressionLevel')}
             </Text>

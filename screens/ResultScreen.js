@@ -238,6 +238,7 @@ export default function ResultScreen() {
   const [memoSaved, setMemoSaved] = useState('');
   const [quantity, setQuantity] = useState(null);
   const [historyItemFound, setHistoryItemFound] = useState(false);
+  const [showAllScanTimes, setShowAllScanTimes] = useState(false);
   useEffect(() => {
     if (!displayText || isGeneratedCode) return undefined;
     let cancelled = false;
@@ -775,12 +776,40 @@ export default function ResultScreen() {
     }
   };
 
-  // 메타 한 줄: 타입 · 스캔 시각 · 그룹 · (N회 스캔) — 값이 없는 항목은 생략
+  // 스캔 기록 카드: 두 번 이상 스캔된 항목. 고속 스캔은 1초에 여러 번 찍히므로 0.1초까지와 앞 스캔과의 간격을 보여 준다
+  const showScanTimes = showDuplicate && allScanTimes.length > 1;
+  // 수량을 세는 항목(또는 기록에서 연 화면)은 여러 번 찍는 게 정상이라 '중복' 경고 배지를 띄우지 않는다
+  const showDuplicateBadge = showDuplicate && fromHistory !== 'true' && quantity === null;
+  const scanTotal = Math.max(count, allScanTimes.length);
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const formatClock = (ts) => {
+    const d = new Date(ts);
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}.${Math.floor(d.getMilliseconds() / 100)}`;
+  };
+  const formatDuration = (ms) => {
+    const sec = Math.max(0, Math.round(ms / 1000));
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return h > 0 ? `${h}:${pad2(m)}:${pad2(sec % 60)}` : `${m}:${pad2(sec % 60)}`;
+  };
+  // 1분 미만은 '+0.5초', 그 이상은 '+7:34'처럼 분:초로
+  const formatGap = (ms) => (ms < 60000
+    ? t('result.scanGap', { seconds: ms < 10000 ? (ms / 1000).toFixed(1) : String(Math.round(ms / 1000)) })
+    : `+${formatDuration(ms)}`);
+  const scanFirst = allScanTimes[0];
+  const scanLast = allScanTimes[allScanTimes.length - 1];
+  const scanSpanMs = showScanTimes ? scanLast - scanFirst : 0;
+  const sameDay = showScanTimes && new Date(scanFirst).toDateString() === new Date(scanLast).toDateString();
+  const visibleScanTimes = showScanTimes
+    ? allScanTimes.slice().reverse().slice(0, showAllScanTimes ? 300 : 5)
+    : [];
+
+  // 메타 한 줄: 타입 · 스캔 시각 · 그룹 · (N회 스캔) — 값이 없는 항목은 생략. 스캔 기록 카드가 있으면 횟수는 거기서
   const metaItems = [
     formatBarcodeType(barcodeType),
     scanTimestamp ? formatDateTime(scanTimestamp) : '',
     groupName,
-    count > 1 ? t('result.scanCountTimes', { count }) : '',
+    count > 1 && !showScanTimes ? t('result.scanCountTimes', { count }) : '',
     typeof location === 'string' && location ? `${t('result.location')} ${location}` : '',
   ].filter(Boolean);
 
@@ -841,7 +870,7 @@ export default function ResultScreen() {
         {/* 메인 데이터 카드 */}
         <View style={[styles.mainCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* 배지 줄: 콘텐츠 종류(왼쪽) · 중복 스캔(오른쪽). 바코드 타입은 메타 줄, EC 레벨은 하단 카드로 */}
-          {((isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT) || showDuplicate) && (
+          {((isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT) || showDuplicateBadge) && (
             <View style={styles.badgeRow}>
               {isQRCode && parsedContent.type !== QR_CONTENT_TYPES.TEXT ? (
                 <View style={[styles.typeBadge, { backgroundColor: colors.primarySoft }]}>
@@ -851,7 +880,7 @@ export default function ResultScreen() {
                   </Text>
                 </View>
               ) : <View />}
-              {showDuplicate && (
+              {showDuplicateBadge && (
                 <View style={[styles.duplicateBadge, { backgroundColor: colors.warningSoft }]}>
                   <Ionicons name="repeat" size={13} color={colors.warning} />
                   <Text style={[styles.typeBadgeText, { color: colors.warning }]}>
@@ -893,7 +922,7 @@ export default function ResultScreen() {
           )}
 
           {/* 스캔 데이터 */}
-          <View style={styles.dataSection}>
+          <View style={[styles.dataSection, !isEditing && displayText && displayText.length <= 80 && styles.dataSectionShort]}>
             {isEditing ? (
               <TextInput
                 style={[styles.dataInput, { color: colors.text, backgroundColor: colors.inputBackground }]}
@@ -904,6 +933,11 @@ export default function ResultScreen() {
                 placeholder={t('result.dataPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
               />
+            ) : displayText && displayText.length <= 80 ? (
+              // 짧은 값은 스크롤 상자 없이 내용 높이만큼만 (빈 공간이 생기지 않게)
+              <Text style={[styles.dataText, styles.dataTextLarge, displayText.length <= 24 && styles.dataTextHuge, { color: colors.text }]} selectable>
+                {displayText}
+              </Text>
             ) : (
               <ScrollView style={styles.dataScrollView} nestedScrollEnabled>
                 {displayText ? (
@@ -1103,19 +1137,49 @@ export default function ResultScreen() {
         )}
 
         {/* 중복 스캔: 배지는 메인 카드에, 여기는 스캔 시각 목록(두 번 이상일 때만) */}
-        {showDuplicate && allScanTimes.length > 1 && (
+        {showScanTimes && (
           <View style={[styles.sideCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.labelHeader}>
-              <Ionicons name="repeat" size={15} color={colors.textSecondary} />
+              <Ionicons name="time-outline" size={15} color={colors.textSecondary} />
               <Text style={[styles.labelTitle, { color: colors.textSecondary, fontFamily: fonts.semiBold }]}>
-                {t('result.duplicateScan')} ({count}{t('result.duplicateCount')})
+                {t('result.scanTimesTitle', { count: String(scanTotal) })}
               </Text>
             </View>
-            {allScanTimes.slice().reverse().slice(0, 5).map((time, index) => (
-              <Text key={index} style={[styles.scanTimeItem, { color: colors.textSecondary }]}>
-                {allScanTimes.length - index}. {formatDateTime(time)}
-              </Text>
-            ))}
+            {/* 요약: 처음 → 마지막 · 걸린 시간 · 평균 간격 */}
+            <Text style={[styles.scanSummary, { color: colors.text, fontFamily: fonts.medium }]}>
+              {formatDateTime(scanFirst)} → {sameDay ? formatDateTime(scanLast).split('  ')[1] : formatDateTime(scanLast)}
+            </Text>
+            <Text style={[styles.scanSummarySub, { color: colors.textSecondary, fontFamily: fonts.regular }]}>
+              {t('result.scanSpan', { duration: formatDuration(scanSpanMs) })}
+              {' · '}
+              {t('result.scanAvgGap', { gap: formatGap(scanSpanMs / (allScanTimes.length - 1)).replace(/^\+/, '') })}
+            </Text>
+            <View style={[styles.scanList, { borderTopColor: colors.border }]}>
+              {visibleScanTimes.map((time, index) => {
+                const prev = allScanTimes[allScanTimes.length - 2 - index];
+                return (
+                  <View key={`${time}-${index}`} style={styles.scanTimeRow}>
+                    <Text style={[styles.scanTimeNo, { color: colors.textTertiary }]}>{scanTotal - index}</Text>
+                    <Text style={[styles.scanTimeItem, { color: colors.text }]}>{formatClock(time)}</Text>
+                    <Text style={[styles.scanTimeGap, { color: colors.textSecondary }]}>
+                      {prev !== undefined ? formatGap(time - prev) : ''}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+            {allScanTimes.length > 5 && (
+              <MaterialPressable
+                style={styles.scanMoreButton}
+                onPress={() => setShowAllScanTimes((v) => !v)}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.labelHint, { color: colors.primaryText, fontFamily: fonts.semiBold }]}>
+                  {showAllScanTimes ? t('result.showLess') : t('result.showAll', { count: String(allScanTimes.length) })}
+                </Text>
+                <Ionicons name={showAllScanTimes ? 'chevron-up' : 'chevron-down'} size={14} color={colors.primaryText} />
+              </MaterialPressable>
+            )}
           </View>
         )}
 
@@ -1437,6 +1501,10 @@ const styles = StyleSheet.create({
     maxHeight: 200,
     marginBottom: 16,
   },
+  dataSectionShort: {
+    minHeight: 0,
+    marginTop: 4,
+  },
   dataScrollView: {
     flex: 1,
   },
@@ -1449,6 +1517,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     lineHeight: 28,
     fontWeight: '500',
+  },
+  dataTextHuge: {
+    fontSize: 30,
+    lineHeight: 38,
+    fontWeight: '600',
   },
   dataInput: {
     fontSize: 16,
@@ -1499,10 +1572,48 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  scanTimeItem: {
+  scanSummary: {
+    fontSize: 14,
+    marginTop: 2,
+    fontVariant: ['tabular-nums'],
+  },
+  scanSummarySub: {
     fontSize: 12,
-    marginVertical: 2,
+    marginTop: 2,
+  },
+  scanList: {
+    marginTop: 10,
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  scanTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    gap: 12,
+  },
+  scanTimeNo: {
+    width: 36,
+    fontSize: 12,
+    textAlign: 'right',
     fontFamily: MONO,
+  },
+  scanTimeItem: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: MONO,
+  },
+  scanTimeGap: {
+    fontSize: 12,
+    fontFamily: MONO,
+  },
+  scanMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: 6,
+    paddingVertical: 6,
   },
   photoCard: {
     borderRadius: RADIUS.group,
