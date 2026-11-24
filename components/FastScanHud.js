@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
 import { SCAN_THEME, SCAN_TEXT } from '../constants/scanTheme';
 
 export default function FastScanHud({
@@ -16,7 +17,11 @@ export default function FastScanHud({
   onReset,
   onTrigger,
   onOpenSettings, // 구성 시트 열기
+  zoom, // 확대 배율 (1 ~ 4)
+  onZoomChange, // (value) => void, 손을 뗄 때 저장
 }) {
+  const [zoomDraft, setZoomDraft] = useState(zoom || 1);
+  useEffect(() => { setZoomDraft(zoom || 1); }, [zoom]);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   useEffect(() => { if (editing) setDraft(String(stats.lastQty || 1)); }, [editing]);
@@ -39,6 +44,27 @@ export default function FastScanHud({
           <Ionicons name="scan" size={22} color="#0B0D10" />
           <Text style={styles.triggerText} maxFontSizeMultiplier={1.2}>{t('fastScan.trigger')}</Text>
         </TouchableOpacity>
+      )}
+
+      {onZoomChange && (
+        <View style={styles.zoomRow}>
+          <Ionicons name="remove" size={16} color={SCAN_TEXT.secondary} />
+          <Slider
+            style={{ flex: 1, height: 32 }}
+            minimumValue={1}
+            maximumValue={4}
+            step={0.1}
+            value={zoomDraft}
+            onValueChange={(v) => { setZoomDraft(v); onZoomChange(v, false); }}
+            onSlidingComplete={(v) => onZoomChange(v, true)}
+            minimumTrackTintColor="#F2F4F7"
+            maximumTrackTintColor="rgba(255,255,255,0.3)"
+            thumbTintColor="#F2F4F7"
+            accessibilityLabel={t('fastScan.zoom')}
+          />
+          <Ionicons name="add" size={16} color={SCAN_TEXT.secondary} />
+          <Text style={styles.zoomText} maxFontSizeMultiplier={1.2}>{zoomDraft.toFixed(1)}×</Text>
+        </View>
       )}
 
       <View style={styles.card}>
@@ -74,6 +100,12 @@ export default function FastScanHud({
           <Text style={styles.meta} maxFontSizeMultiplier={1.2}>
             {t('fastScan.decode', { fps: String(timing.fps), avg: timing.avgMs.toFixed(0), max: timing.maxMs.toFixed(0) })}
             {timing.lagMs > 30 ? ` · ${t('fastScan.frameLag', { ms: String(timing.lagMs) })}` : ''}
+          </Text>
+        )}
+        {timing && Number.isFinite(timing.mlMs) && (
+          <Text style={styles.meta} maxFontSizeMultiplier={1.2}>
+            {t('fastScan.decodeSplit', { ml: timing.mlMs.toFixed(0), extra: (timing.extraMs || 0).toFixed(0) })}
+            {timing.size ? ` · ${timing.size}` : ''}
           </Text>
         )}
 
@@ -147,6 +179,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  zoomRow: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, height: 40, borderRadius: 20, backgroundColor: SCAN_THEME.glassCard },
+  zoomText: { color: SCAN_TEXT.primary, fontSize: 13, fontWeight: '700', minWidth: 38, textAlign: 'right', fontVariant: ['tabular-nums'] },
   code: { flex: 1, color: SCAN_TEXT.primary, fontSize: 17, fontWeight: '600', fontVariant: ['tabular-nums'] },
   dim: { color: SCAN_TEXT.tertiary, fontWeight: '400', fontSize: 14 },
   qty: { minWidth: 52, height: 36, paddingHorizontal: 10, borderRadius: 10, backgroundColor: SCAN_THEME.primary, alignItems: 'center', justifyContent: 'center' },

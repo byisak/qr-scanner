@@ -161,6 +161,8 @@ export default {
 
   // Pantalla de escaneo
   fastScan: {
+    zoom: 'Zoom',
+    realtimeNeedsGroup: 'Envío en tiempo real en pausa: elige un grupo de servidor arriba',
     sheet: {
       title: 'Configurar escaneo rápido',
       subtitle: 'Elige los códigos a leer y las funciones a mantener. Menos es más rápido.',
@@ -221,6 +223,7 @@ export default {
       start: 'Iniciar escaneo rápido',
     },
     decode: 'lectura {{fps}}/s · media {{avg}}ms · máx {{max}}ms',
+    decodeSplit: 'ML Kit {{ml}}ms · lectura extra {{extra}}ms',
     frameLag: 'retraso de fotograma {{ms}}ms',
     ready: 'Escaneo rápido listo · apunta a un código',
     total: 'Total {{total}} · {{kinds}} tipos',
@@ -392,6 +395,23 @@ export default {
 
   // Pantalla de resultado
   result: {
+    lastScan: 'Último escaneo {{time}}',
+    qtyLess: '{{diff}} de {{scans}} escaneos restados',
+    qtyMore: '{{scans}} escaneos + {{diff}} añadidos a mano',
+    summaryFirst: 'Primero',
+    summaryLast: 'Último',
+    summarySpan: 'Duración',
+    durSec: '{{s}} s',
+    durMinSec: '{{m}} min {{s}} s',
+    durMin: '{{m}} min',
+    durHourMin: '{{h}} h {{m}} min',
+    durHour: '{{h}} h',
+    durDay: '{{d}} d {{h}} h',
+    quickRepeat: 'otra vez en {{seconds}} s',
+    quickRepeatNote: 'Se marcan los escaneos repetidos en menos de 1 segundo. Si contaste el mismo artículo dos veces, resta 1 a la cantidad.',
+    dayLabel: '{{d}}/{{m}}',
+    today: 'hoy',
+    yesterday: 'ayer',
     scanTimesTitle: 'Registro · {{count}} veces',
     scanGap: '+{{seconds}} s',
     scanSpan: 'duración {{duration}}',

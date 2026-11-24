@@ -163,6 +163,8 @@ export default {
 
   // 스캔 화면
   fastScan: {
+    zoom: '확대',
+    realtimeNeedsGroup: '실시간 전송 대기: 위에서 서버 전송 그룹을 고르세요',
     sheet: {
       title: '고속 스캔 설정',
       subtitle: '읽을 바코드와 켜 둘 기능을 고르세요. 적게 켤수록 빨라요.',
@@ -223,6 +225,7 @@ export default {
       start: '고속 스캔 시작',
     },
     decode: '판독 초당 {{fps}}회 · 평균 {{avg}}ms · 최대 {{max}}ms',
+    decodeSplit: 'ML Kit {{ml}}ms · 보조 판독 {{extra}}ms',
     frameLag: '프레임 밀림 {{ms}}ms',
     ready: '고속 스캔 준비됨 · 코드를 비추세요',
     total: '합계 {{total}}개 · {{kinds}}종',
@@ -395,6 +398,23 @@ export default {
 
   // 결과 화면
   result: {
+    lastScan: '마지막 스캔 {{time}}',
+    qtyLess: '스캔 {{scans}}회 중 {{diff}}회 차감됨',
+    qtyMore: '스캔 {{scans}}회 + {{diff}}개 직접 추가',
+    summaryFirst: '처음',
+    summaryLast: '마지막',
+    summarySpan: '걸린 시간',
+    durSec: '{{s}}초',
+    durMinSec: '{{m}}분 {{s}}초',
+    durMin: '{{m}}분',
+    durHourMin: '{{h}}시간 {{m}}분',
+    durHour: '{{h}}시간',
+    durDay: '{{d}}일 {{h}}시간',
+    quickRepeat: '{{seconds}}초 만에 다시',
+    quickRepeatNote: '1초 안에 다시 찍힌 스캔은 표시해 둬요. 같은 물건을 두 번 센 것 같으면 수량에서 −1 하세요.',
+    dayLabel: '{{m}}월 {{d}}일',
+    today: '오늘',
+    yesterday: '어제',
     scanTimesTitle: '스캔 기록 · {{count}}회',
     scanGap: '+{{seconds}}초',
     scanSpan: '걸린 시간 {{duration}}',

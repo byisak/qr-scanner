@@ -161,6 +161,8 @@ export default {
 
   // スキャン画面
   fastScan: {
+    zoom: 'ズーム',
+    realtimeNeedsGroup: 'リアルタイム送信待ち: 上でサーバー送信グループを選んでください',
     sheet: {
       title: '高速スキャン設定',
       subtitle: '読み取るバーコードと残す機能を選んでください。少ないほど速くなります。',
@@ -221,6 +223,7 @@ export default {
       start: '高速スキャン開始',
     },
     decode: '読み取り 毎秒{{fps}}回 · 平均 {{avg}}ms · 最大 {{max}}ms',
+    decodeSplit: 'ML Kit {{ml}}ms · 補助読み取り {{extra}}ms',
     frameLag: 'フレーム遅延 {{ms}}ms',
     ready: '高速スキャン準備完了 · コードをかざしてください',
     total: '合計 {{total}}個 · {{kinds}}種',
@@ -392,6 +395,23 @@ export default {
 
   // 結果画面
   result: {
+    lastScan: '最終スキャン {{time}}',
+    qtyLess: 'スキャン{{scans}}回のうち{{diff}}回を差し引き',
+    qtyMore: 'スキャン{{scans}}回 + 手動で{{diff}}個追加',
+    summaryFirst: '最初',
+    summaryLast: '最後',
+    summarySpan: '所要時間',
+    durSec: '{{s}}秒',
+    durMinSec: '{{m}}分{{s}}秒',
+    durMin: '{{m}}分',
+    durHourMin: '{{h}}時間{{m}}分',
+    durHour: '{{h}}時間',
+    durDay: '{{d}}日{{h}}時間',
+    quickRepeat: '{{seconds}}秒で再スキャン',
+    quickRepeatNote: '1秒以内に再びスキャンされたものに印を付けています。同じ物を二重に数えた場合は数量を−1してください。',
+    dayLabel: '{{m}}月{{d}}日',
+    today: '今日',
+    yesterday: '昨日',
     scanTimesTitle: 'スキャン記録 · {{count}}回',
     scanGap: '+{{seconds}}秒',
     scanSpan: '所要時間 {{duration}}',

@@ -55,7 +55,9 @@ const DUPLICATE_NOTICE_COOLDOWN = 2500;
 // 같은 코드가 이 시간 안에 다시 보이면 "계속 비추고 있는 중"으로 본다 (ms).
 // 카메라는 코드가 보이는 동안 매 프레임 인식하므로, 이걸 새 스캔으로 치면 대고 있는 동안
 // 0.8초마다 다시 저장되고 횟수가 부풀었다. 한 번 치웠다가 다시 찍어야 새 스캔이 된다
-const STILL_IN_VIEW_GAP = 1200;
+// 작은 1D처럼 초당 1~2번만 읽히는 코드는 1.2초 사이에 한 번도 안 읽힐 때가 있어, 계속 대고 있는데도 새 스캔으로 쳐서
+// (결과창 자동 열기를 끈 한 개 모드) 삑·중복 진동·코너 흔들림이 반복됐다 → 넉넉하게
+const STILL_IN_VIEW_GAP = 2500;
 
 import { useAuth } from '../contexts/AuthContext';
 import { Colors } from '../constants/Colors';
@@ -101,6 +103,8 @@ import {
   DEFAULT_FAST_PROFILE, parseFastProfile, fastProfileBarcodes, fastStatsKey, summarizeFastSession, mergeFastStats,
 } from '../utils/fastScan';
 
+// 테스트 빌드 진단 표시 (EXPO_PUBLIC_SCAN_DIAG=1로 번들할 때만). 스토어 빌드에는 들어가지 않는다
+const SCAN_DIAG = process.env.EXPO_PUBLIC_SCAN_DIAG === '1';
 const EMPTY_FAST_STATS = { lastCode: null, lastQty: 0, total: 0, kinds: 0, intervalMs: 0, delayMs: -1 };
 // 고속 스캔 트리거 방식: 볼륨 키 둘 다 "한 번 읽기"로 쓴다
 const FAST_TRIGGER_KEY_MAP = { volumeUp: 'fastTrigger', volumeDown: 'fastTrigger' };
@@ -1282,7 +1286,7 @@ function ScannerScreen() {
         prependCapped(historyByGroup, selectedGroupId, record);
       }
       saved = historyByGroup[selectedGroupId][0];
-      });
+      }, { waitForWrite: false });
       triggerSync();
 
       // 중복 여부 반환 (ResultScreen에서 사용)
@@ -2075,6 +2079,8 @@ function ScannerScreen() {
   const fastRepeatRef = useRef(DEFAULT_FAST_REPEAT);
   const [fastStats, setFastStats] = useState(EMPTY_FAST_STATS);
   const [fastSendStats, setFastSendStats] = useState({ pending: 0, failed: 0 });
+  const [diagTiming, setDiagTiming] = useState(null); // 테스트 빌드 진단 (일반 모드)
+  const [fastZoom, setFastZoom] = useState(1); // 고속 모드 확대 배율 (기억한다)
   const [fastTiming, setFastTiming] = useState(null); // { fps, avgMs, maxMs, lagMs } 1초마다 (Android)
   const fastSessionRef = useRef({ counts: new Map(), total: 0 });
   const fastLastAcceptRef = useRef(null); // { code, at, type, groupId }
@@ -2094,7 +2100,9 @@ function ScannerScreen() {
   const fastMeasureRef = useRef({ key: null, samples: [], gaps: [] });
 
   useEffect(() => {
-    AsyncStorage.multiGet(['fastScanRepeat', 'fastScanProfile', 'fastScanStats']).then(([[, repeat], [, profileRaw], [, statsRaw]]) => {
+    AsyncStorage.multiGet(['fastScanRepeat', 'fastScanProfile', 'fastScanStats', 'fastScanZoom']).then(([[, repeat], [, profileRaw], [, statsRaw], [, zoomRaw]]) => {
+      const z = parseFloat(zoomRaw);
+      if (Number.isFinite(z) && z >= 1 && z <= 4) setFastZoom(z);
       const rule = parseFastRepeat(repeat);
       fastRepeatRef.current = rule;
       setFastRepeat(rule);
@@ -3119,7 +3127,7 @@ function ScannerScreen() {
 
           // QR 은 오류 정정 레벨이 다음 프레임에 들어오는 일이 많아 잠깐(최대 0.3초) 기다린다
           if (!detectedEcLevel && /^qr/i.test(normalizedType)) {
-            detectedEcLevel = await waitForEcLevel(data, 300);
+            detectedEcLevel = await waitForEcLevel(data, 150); // 다음 프레임 1~2장만 기다린다 (한 개 모드 결과 화면이 늦게 뜨지 않게)
           }
           // 히스토리 저장을 먼저 시작하고 결과는 빠르게 가져옴
           const historyResult = await saveHistory(data, null, photoUri, normalizedType, detectedEcLevel, scanMeta.decision.targetGroupId, scanMeta.extra);
@@ -3541,7 +3549,9 @@ function ScannerScreen() {
         fastMode={fastMode}
         fastBarcodeTypes={fastBarcodeTypes}
         fastStrictConfirm={fastProfile.strictConfirm}
-        onTimingStats={fastMode ? handleFastTiming : undefined}
+        zoomFactor={fastMode ? fastZoom : undefined}
+        diagTiming={SCAN_DIAG && !fastMode}
+        onTimingStats={fastMode ? handleFastTiming : (SCAN_DIAG ? setDiagTiming : undefined)}
         selectCenterBarcode={fastMode || !multiCodeModeEnabled}
         showBarcodeValues={!fastMode && ((multiCodeModeEnabled && showBarcodeValues) || (!multiCodeModeEnabled && singleCodeShowValue) || (!resultWindowAutoOpen && lastScannedCode))}
         style={StyleSheet.absoluteFillObject}
@@ -3578,10 +3588,11 @@ function ScannerScreen() {
           </BlurView>
         </TouchableOpacity>
 
-        {/* 상태 배지 스택: 위치를 +40씩 손으로 계산하면 연속 스캔 카운터와 겹쳤다 */}
+        {/* 상태 배지 스택: 위치를 +40씩 손으로 계산하면 연속 스캔 카운터와 겹쳤다.
+            고속 모드에서는 고속 구성에서 실제로 켜진 기능만 보여 준다 (수량 누적·실사·위치·연속 스캔은 고속 모드가 쓰지 않는다) */}
         <View style={[styles.statusBadgeStack, { top: batchBadgeTop }]} pointerEvents="box-none">
           {/* 수량 누적 모드 표시 (같은 코드 → 수량 +1이라 모르고 쓰면 헷갈린다) */}
-          {quantityMode && (
+          {!fastMode && quantityMode && (
             <View style={[styles.batchModeBadge, styles.stackedBadge]}>
               <Ionicons name="add-circle" size={16} color={SCAN_THEME.primary} />
               <Text style={styles.batchModeBadgeText} maxFontSizeMultiplier={1.3}>{t('quantity.mode')}</Text>
@@ -3589,7 +3600,7 @@ function ScannerScreen() {
           )}
 
           {/* 진행 중인 재고 실사. 탭하면 실사 화면 */}
-          {stocktakeBadge && (
+          {!fastMode && stocktakeBadge && (
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => router.push({ pathname: '/stocktake-detail', params: { id: stocktakeBadge.id } })}
@@ -3605,7 +3616,7 @@ function ScannerScreen() {
           )}
 
           {/* 규칙으로 지정된 현재 위치. 탭하면 해제 */}
-          {currentLocation && (
+          {!fastMode && currentLocation && (
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={() => clearLocation(true)}
@@ -3622,7 +3633,7 @@ function ScannerScreen() {
           )}
 
           {/* 배치 모드 활성 표시 (연속 스캔이면 카운터를 같이 보여준다) */}
-          {batchScanEnabled && (
+          {!fastMode && batchScanEnabled && (
             <TouchableOpacity
               activeOpacity={0.9}
               onLongPress={showContinuousCounter ? resetContinuousCounter : undefined}
@@ -3640,7 +3651,7 @@ function ScannerScreen() {
           )}
 
           {/* 실시간 서버 전송 표시 */}
-          {realtimeSyncEnabled && activeSessionId && (
+          {realtimeSyncEnabled && activeSessionId && (!fastMode || fastProfile.realtime) && (
             <View style={[styles.realtimeSyncBadge, styles.stackedBadge]}>
               <Ionicons name="cloud-upload" size={16} color={SCAN_THEME.primary} />
               <Text style={styles.realtimeSyncBadgeText} maxFontSizeMultiplier={1.3}>{t('scanner.realtimeSync')}</Text>
@@ -3648,10 +3659,18 @@ function ScannerScreen() {
           )}
 
           {/* 스캔 연동 URL 표시 */}
-          {scanUrlEnabled && (
+          {scanUrlEnabled && (!fastMode || fastProfile.scanUrl) && (
             <View style={[styles.scanUrlBadge, styles.stackedBadge]}>
               <Ionicons name="link" size={16} color="#fff" />
               <Text style={styles.scanUrlBadgeText} maxFontSizeMultiplier={1.3}>{t('settings.useScanUrl')}</Text>
+            </View>
+          )}
+
+          {/* 고속 모드: 실시간 전송을 켜 뒀는데 서버 전송 그룹이 없으면 보내지 못한다 (아래 안내 카드는 현황판과 겹쳐 고속 모드에선 숨김) */}
+          {fastMode && fastProfile.realtime && realtimeSyncEnabled && !activeSessionId && (
+            <View style={[styles.realtimeSyncBadge, styles.stackedBadge]}>
+              <Ionicons name="alert-circle" size={16} color={SCAN_THEME.warning} />
+              <Text style={styles.realtimeSyncBadgeText} maxFontSizeMultiplier={1.3}>{t('fastScan.realtimeNeedsGroup')}</Text>
             </View>
           )}
         </View>
@@ -3677,7 +3696,7 @@ function ScannerScreen() {
       </View>
 
       {/* 배치 스캔 컨트롤 패널 */}
-      {batchScanEnabled && batchScannedItems.length > 0 && (
+      {!fastMode && batchScanEnabled && batchScannedItems.length > 0 && (
         <BatchScanControls
           scannedCount={batchScannedItems.length}
           showScanCounter={showScanCounter}
@@ -3689,7 +3708,7 @@ function ScannerScreen() {
       )}
 
       {/* 연속 스캔 카운터 배지 (배치 모드면 위 배치 배지에 합쳐 보여준다). 길게 누르면 초기화 */}
-      {showContinuousCounter && !batchScanEnabled && (
+      {!fastMode && showContinuousCounter && !batchScanEnabled && (
         <TouchableOpacity
           activeOpacity={0.9}
           onLongPress={resetContinuousCounter}
@@ -3764,6 +3783,12 @@ function ScannerScreen() {
               timing={fastTiming}
               sendStats={(realtimeSyncEnabled && activeSessionId && fastProfile.realtime) || (scanUrlEnabled && fastProfile.scanUrl) || fastSendStats.pending > 0 || fastSendStats.failed > 0 ? fastSendStats : null}
               onOpenSettings={openFastSheet}
+              zoom={fastZoom}
+              onZoomChange={(v, done) => {
+                const z = Math.round(v * 10) / 10;
+                setFastZoom(z);
+                if (done) AsyncStorage.setItem('fastScanZoom', String(z)).catch(() => {});
+              }}
               rule={fastRepeat}
               onCycleRule={cycleFastRepeat}
               onMinus={() => adjustFastQuantity(-1)}
@@ -3772,7 +3797,15 @@ function ScannerScreen() {
               onTrigger={fireFastTrigger}
             />
           ) : (
-            <Text style={styles.aimHint} maxFontSizeMultiplier={1.3}>{t('scanner.aimHint')}</Text>
+            <>
+              {SCAN_DIAG && diagTiming && (
+                <Text style={styles.diagText} maxFontSizeMultiplier={1.1}>
+                  {`판독 ${diagTiming.fps}/s · 평균 ${diagTiming.avgMs.toFixed(0)}ms (ML ${diagTiming.mlMs.toFixed(0)} · 보조 ${diagTiming.extraMs.toFixed(0)})\n`
+                    + `코드 읽힌 프레임 ${diagTiming.hit}/s · JS 도착 ${diagTiming.jsCalls}/s 지연 ${diagTiming.jsDelayMs.toFixed(0)}ms(최대 ${diagTiming.jsDelayMax}) · 밀림 ${diagTiming.lagMs}ms`}
+                </Text>
+              )}
+              <Text style={styles.aimHint} maxFontSizeMultiplier={1.3}>{t('scanner.aimHint')}</Text>
+            </>
           )}
           <View style={styles.modePill} accessibilityRole="radiogroup">
             {[
@@ -3824,7 +3857,7 @@ function ScannerScreen() {
       />
 
       {/* 실시간 서버 전송 안내 메시지 - 글래스모피즘 효과 */}
-      {realtimeSyncEnabled && !activeSessionId && (
+      {!fastMode && realtimeSyncEnabled && !activeSessionId && (
         <View style={[styles.realtimeSyncGuide, { bottom: bottomOffset + 20 }]}>
           <BlurView intensity={80} tint="light" style={styles.realtimeSyncGuideBlur}>
             <Ionicons name="information-circle" size={20} color="rgba(255, 130, 130, 0.95)" />
@@ -4149,7 +4182,7 @@ function ScannerScreen() {
       />
 
       {/* 다중 바코드 감지 시 결과 보기 버튼 */}
-      {multiCodeModeEnabled && pendingMultiScanData && (() => {
+      {!fastMode && multiCodeModeEnabled && pendingMultiScanData && (() => {
         // 유효한 코드만 필터링하여 개수 계산 (결과 페이지와 동일한 필터링)
         const parsedBarcodes = JSON.parse(pendingMultiScanData.barcodes || '[]');
         const validCount = parsedBarcodes.filter(code => {
@@ -4184,7 +4217,7 @@ function ScannerScreen() {
       })()}
 
       {/* 수동 확정: 코드를 들고 있다가 키/버튼으로 저장 (결과 카드가 떠 있으면 그 위에) */}
-      {scanConfirmMode === 'manual' && pendingScan && (
+      {!fastMode && scanConfirmMode === 'manual' && pendingScan && (
         <View style={[styles.resultWindowButtonContainer, { bottom: floatingButtonBottom + ((lastScannedCode && !resultWindowAutoOpen) ? 150 : 0) }]}>
           <BlurView intensity={50} tint="dark" style={styles.resultWindowButtonBlur}>
             <View style={styles.scannedCodeInfo}>
@@ -4208,7 +4241,7 @@ function ScannerScreen() {
       )}
 
       {/* 결과창 자동 열림 비활성화 시 결과 보기 버튼 - 글래스모피즘 효과 */}
-      {lastScannedCode && !resultWindowAutoOpen && (
+      {!fastMode && lastScannedCode && !resultWindowAutoOpen && (
         <View style={[styles.resultWindowButtonContainer, { bottom: floatingButtonBottom }]}>
           {/* tint와 글자색을 같은 테마로 맞춘다. light 고정이면 다크모드에서 밝은 블러 위에 흰 글씨가 됐다 */}
           <BlurView intensity={50} tint="dark" style={styles.resultWindowButtonBlur}>
@@ -4520,6 +4553,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
   },
+  diagText: { color: '#FFE08A', fontSize: 11, textAlign: 'center', backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginBottom: 6, fontVariant: ['tabular-nums'] },
   aimHint: {
     color: SCAN_TEXT.primary,
     fontSize: 14,

@@ -33,7 +33,7 @@ index b076e57..eb105f7 100644
  
    @Nullable
 diff --git a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
-index 54ea5ab..cf43bf5 100644
+index 54ea5ab..1f7a4f9 100644
 --- a/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 +++ b/node_modules/@mgcrea/vision-camera-barcode-scanner/android/src/main/java/com/visioncameracodescanner/CodeScannerProcessorPlugin.java
 @@ -10,16 +10,32 @@ import com.google.mlkit.vision.barcode.BarcodeScanning;
@@ -70,7 +70,7 @@ index 54ea5ab..cf43bf5 100644
  import org.jetbrains.annotations.NotNull;
  import org.jetbrains.annotations.Nullable;
  
-@@ -29,10 +45,74 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -29,10 +45,93 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    private static BarcodeScanner barcodeScanner = null;
    private static int previousBarcodeScannerFormatsBitmap = -1;
  
@@ -100,6 +100,25 @@ index 54ea5ab..cf43bf5 100644
 +  private static final double SLOW_FRAME_MS = 50;
 +  // 고속 모드: 이만큼(초당 30프레임에서 약 0.3초) 연속으로 못 읽었을 때부터 보조 판독을 돌린다
 +  private static final int FAST_FALLBACK_AFTER_FAILED_FRAMES = 10;
++  // 고속 모드: 판독이 프레임 간격(33ms)보다 길어지면 프레임이 줄을 서서 화면보다 늦은 프레임을 판독하게 된다
++  // (현장에서 '프레임 밀림' 700ms 이상 → JS가 그 결과를 오래된 프레임이라 버려 코드를 대도 안 읽혔다).
++  // 이만큼 늦은 프레임은 판독하지 않고 바로 넘겨 줄을 비운다
++  private static final long FAST_STALE_MS = 100;
++  // 일반 모드(한 개·여러 개·연속)도 같은 문제가 있다: 라벨에 1D와 데이터 매트릭스가 같이 있으면 데이터 매트릭스 보조 판독이 계속 돌아
++  // 프레임이 밀리고, JS가 0.7초 넘게 늦은 결과를 버려서 1D가 영영 안 잡혔다 → 일반 모드는 조금 넉넉하게 건너뛴다
++  private static final long NORMAL_STALE_MS = 200;
++  // 고속 모드에서 코드를 못 찾는 동안 보조 판독은 이 프레임 수마다 한 번만, 한 종류씩 돌린다.
++  // (매 프레임 돌리면 평균 판독이 44ms로 프레임 간격 33ms를 넘어 초당 판독이 17회로 떨어졌다)
++  private static final int FAST_FALLBACK_EVERY_N_FRAMES = 3;
++  private long fastFallbackTick = 0;
++  // 고속 모드: 코드를 읽은 뒤 이 시간 동안은 보조 판독을 쉰다. 1D를 겨누는 중에 몇 프레임 놓쳤다고 반전·데이터 매트릭스 판독을 돌리면
++  // 판독이 느려져(현장 56ms, 초당 13회) 오히려 그 1D(Code 93 등)를 다시 잡기 어려웠다
++  private static final long FAST_AIM_GRACE_NS = 1_500_000_000L;
++  private long lastFoundNs = 0;
++  // 확대 판독으로 읽힌 직후엔 기본 판독이 계속 놓칠 가능성이 높다(작은 1D) → 잠깐 동안은 매 프레임 확대 판독을 돌린다
++  private long lastUpscaleHitNs = 0;
++  private long minFrameOffsetNs = Long.MAX_VALUE;
++  private long staleSinceNs = 0;
 +  private double avgFrameMs = 0;
 +  private long callCount = 0;
 +  private List<Object> lastResult = new ArrayList<>();
@@ -145,7 +164,7 @@ index 54ea5ab..cf43bf5 100644
    }
  
    @Nullable
-@@ -40,50 +120,799 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -40,50 +139,883 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
    public Object callback(@NotNull Frame frame,
                           @Nullable Map<String, Object> params) {
  
@@ -201,6 +220,29 @@ index 54ea5ab..cf43bf5 100644
 +
 +    // 구형 기기: 판독이 오래 걸리면 한 프레임씩 건너뛰고 직전 결과를 그대로 돌려준다.
 +    // (빈 목록을 돌려주면 하이라이트가 깜빡인다.) 판독이 밀리면 프레임이 쌓이고 메모리·발열이 커졌다
++    long staleLimitMs = fast ? FAST_STALE_MS : NORMAL_STALE_MS;
++    if (saveFrame == null && !dumpFrame && !debugTiming) {
++      try {
++        long ts = frame.getTimestamp();
++        if (ts > 0) {
++          long nowNs = System.nanoTime();
++          long offset = nowNs - ts;
++          if (offset < minFrameOffsetNs) minFrameOffsetNs = offset;
++          long lagMs = (offset - minFrameOffsetNs) / 1_000_000L;
++          if (lagMs > staleLimitMs) {
++            // 3초 넘게 계속 늦으면 기준이 틀어진 것(카메라 재시작 등)으로 보고 다시 잡는다
++            if (staleSinceNs == 0) staleSinceNs = nowNs;
++            else if (nowNs - staleSinceNs > 3_000_000_000L) { minFrameOffsetNs = offset; staleSinceNs = 0; lagMs = 0; }
++            if (lagMs > staleLimitMs) return new ArrayList<>();
++          } else {
++            staleSinceNs = 0;
++          }
++        }
++      } catch (FrameInvalidError e) {
++        return null;
++      }
++    }
++
 +    callCount++;
 +    if (avgFrameMs > SLOW_FRAME_MS && callCount % 2 == 0 && !debugTiming && !dumpFrame && saveFrame == null) {
 +      return new ArrayList<>(lastResult);
@@ -233,8 +275,39 @@ index 54ea5ab..cf43bf5 100644
 +        retryInverted = frameCount % INVERT_RETRY_EVERY_N_FRAMES_WITH_RESULTS == 0;
 +      }
 +      // 어두운 배경 + 밝은 코드용 반전 재시도. Y 평면만 뒤집은 NV21로 만들어 비용을 줄인다
-+      boolean fastIdle = fast && failedFrameCount < FAST_FALLBACK_AFTER_FAILED_FRAMES;
-+      if (fastIdle) retryInverted = false;
++      if (!barcodes.isEmpty()) lastFoundNs = System.nanoTime();
++      boolean fastIdle = fast && (failedFrameCount < FAST_FALLBACK_AFTER_FAILED_FRAMES
++          || (lastFoundNs != 0 && System.nanoTime() - lastFoundNs < FAST_AIM_GRACE_NS));
++      int formats = getFormatsBitmapFromParams(params);
++      boolean wantsDataMatrix = formats == Barcode.FORMAT_ALL_FORMATS || (formats & Barcode.FORMAT_DATA_MATRIX) != 0;
++      // 고속 모드 보조 판독 차례: -1이면 이번 프레임은 쉼. 0·2 반전, 1 데이터 매트릭스(ZXing), 3 데이터 매트릭스(2배 확대)
++      // 일반 모드도 같은 차례표를 쓴다. 예전엔 반전·데이터 매트릭스 보조가 거의 매 프레임 돌아
++      // 현장(폴드)에서 판독이 초당 1~6회, 평균 60~210ms까지 떨어져 1D가 한참 뒤에야 읽혔다
++      int fastSlot = -1;
++      boolean dmWanted = wantsDataMatrix && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX);
++      if (!fastIdle) {
++        fastFallbackTick++;
++        // 일반 모드는 판독 주기가 초당 15회라 2프레임마다 (고속 모드는 초당 30회라 3프레임마다)
++        int every = fast ? FAST_FALLBACK_EVERY_N_FRAMES : 2;
++        if (fastFallbackTick % every == 0) {
++          fastSlot = (int) ((fastFallbackTick / every) % 4);
++        }
++        if (fast) {
++          // 차례: 0 반전 · 1 확대 판독 · 2 데이터 매트릭스(ZXing, 찾는 중일 때) 아니면 확대 판독 · 3 확대 판독
++          retryInverted = fastSlot == 0;
++        } else {
++          // 일반 모드: 0 반전 · 1 데이터 매트릭스 2배 · 2 데이터 매트릭스 ZXing · 3 데이터 매트릭스 2배.
++          // 데이터 매트릭스를 찾는 중이 아니면 모든 차례를 반전 재시도에 쓴다
++          // 일반 모드: 0 반전 · 1 확대 판독 · 2 데이터 매트릭스 ZXing(찾는 중이 아니면 확대 판독) · 3 확대 판독
++          retryInverted = fastSlot == 0;
++        }
++      } else {
++        retryInverted = false;
++        fastFallbackTick = 0;
++      }
++      boolean stickyUpscale = barcodes.isEmpty() && lastUpscaleHitNs != 0
++          && System.nanoTime() - lastUpscaleHitNs < FAST_AIM_GRACE_NS;
++      if (stickyUpscale) retryInverted = false;
 +      if (retryInverted) {
 +        long t0 = System.nanoTime();
 +        // 짝수로 맞춘다 (NV21 색차 평면 크기)
@@ -256,19 +329,38 @@ index 54ea5ab..cf43bf5 100644
 +
 +      // 데이터 매트릭스를 찾는 중인데 ML Kit가 못 찾았으면 ZXing으로 가운데 영역을 한 번 더 본다.
 +      // 반전 재시도를 한 프레임은 건너뛴다 — 한 프레임에 판독이 셋 겹치면 프리뷰가 끊겼다
-+      int formats = getFormatsBitmapFromParams(params);
-+      boolean wantsDataMatrix = formats == Barcode.FORMAT_ALL_FORMATS || (formats & Barcode.FORMAT_DATA_MATRIX) != 0;
 +      boolean dmMissing = !fastIdle && wantsDataMatrix && !retryInverted && !containsFormat(barcodes, Barcode.FORMAT_DATA_MATRIX);
-+      if (dmMissing && frameCount % DM_UPSCALE_EVERY_N_FRAMES == 0) {
-+        // 0, 16, 32… 프레임은 정상, 8, 24, 40…은 반전
++      boolean doUpscale, doZxing;
++      if (fast) {
++        // 고속 모드의 확대 판독은 데이터 매트릭스만이 아니라 고른 바코드 전부를 본다.
++        // 멀리 있는 1D(Code 93 등)는 막대가 2~3픽셀이라 ML Kit가 못 읽다가 2배로 키우면 읽힌다 (현장에서 화면을 확대하면 바로 읽혔다)
++        doZxing = dmMissing && fastSlot == 2;
++        doUpscale = fastSlot == 1 || fastSlot == 3 || (fastSlot == 2 && !doZxing);
++      } else {
++        // 아무것도 못 읽었으면 고른 바코드 전부를 2배로 다시 본다 (현장: 1배에서 1D가 한 프레임도 안 읽히다가 2배 확대하면 바로 읽힘).
++        // 다른 코드는 읽었고 데이터 매트릭스만 없으면 데이터 매트릭스만 2배로
++        doZxing = dmMissing && fastSlot == 2;
++        doUpscale = barcodes.isEmpty()
++            ? (fastSlot == 1 || fastSlot == 3 || (fastSlot == 2 && !doZxing))
++            : (dmMissing && (fastSlot == 1 || fastSlot == 3));
++      }
++      if (stickyUpscale) { doUpscale = true; doZxing = false; }
++      if (doUpscale) {
++        // 0, 16, 32… 프레임은 정상, 8, 24, 40…은 반전 (고속 모드는 차례마다 번갈아)
 +        long t0 = System.nanoTime();
-+        boolean invert = (frameCount / DM_UPSCALE_EVERY_N_FRAMES) % 2 == 1;
-+        Map<String, Object> dm = detectDataMatrixUpscaled(mediaImage, invert, focusCrop(sensorWidth, sensorHeight, focus, DM_FALLBACK_CROP, DM_FALLBACK_CROP));
++        boolean invert = fast
++            ? (fastFallbackTick / (FAST_FALLBACK_EVERY_N_FRAMES * 4)) % 2 == 1
++            : fastSlot == 3;
++        if ((fast || barcodes.isEmpty()) && !(wantsDataMatrix && fastSlot == 3)) invert = false;
++        Map<String, Object> dm = (fast || barcodes.isEmpty())
++            ? detectUpscaled(mediaImage, invert, focusCrop(sensorWidth, sensorHeight, focus, DM_FALLBACK_CROP, DM_FALLBACK_CROP), scanner, rotation)
++            : detectDataMatrixUpscaled(mediaImage, invert, focusCrop(sensorWidth, sensorHeight, focus, DM_FALLBACK_CROP, DM_FALLBACK_CROP));
 +        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
 +          barcodes.add(dm);
++          if (fast || barcodes.size() == 1) lastUpscaleHitNs = System.nanoTime();
 +        }
 +        tZxing = System.nanoTime() - t0;
-+      } else if (dmMissing && frameCount % DM_FALLBACK_EVERY_N_FRAMES == 0) {
++      } else if (doZxing) {
 +        long t0 = System.nanoTime();
 +        Map<String, Object> dm = decodeDataMatrixWithZxing(mediaImage, focusCrop(sensorWidth, sensorHeight, focus, DM_FALLBACK_CROP, 1.0));
 +        if (dm != null && !containsValue(barcodes, (String) dm.get("rawValue"))) {
@@ -298,7 +390,9 @@ index 54ea5ab..cf43bf5 100644
 +    rememberBoxes(barcodes);
 +
 +    // 고속 모드는 HUD에 판독 시간을 보여 주려고 처리 시간을 같이 보낸다
-+    if (debugTiming || fast || dumpFrame || saveFrame != null) {
++    // timing: 동작은 그대로 두고 처리 시간만 같이 보낸다 (테스트 빌드 진단 표시용)
++    boolean emitTiming = params != null && Boolean.TRUE.equals(params.get("timing"));
++    if (debugTiming || fast || emitTiming || dumpFrame || saveFrame != null) {
 +      Map<String, Object> meta = new java.util.HashMap<>();
 +      meta.put("_meta", Boolean.TRUE);
 +      meta.put("width", sensorWidth);
@@ -840,6 +934,17 @@ index 54ea5ab..cf43bf5 100644
 +  @Nullable
 +  private Map<String, Object> detectDataMatrixUpscaled(Image image, boolean invert, int[] crop)
 +      throws ExecutionException, InterruptedException, java.util.concurrent.TimeoutException {
++    if (dataMatrixScanner == null) {
++      dataMatrixScanner = BarcodeScanning.getClient(
++          new BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_DATA_MATRIX).build());
++    }
++    return detectUpscaled(image, invert, crop, dataMatrixScanner, 0);
++  }
++
++  // 가운데 크롭을 2배로 키워 client로 판독한다 (선형 보간). 결과는 센서 좌표로 되돌린다
++  // rotation: 0이 아니면 ML Kit에 똑바로 세운 방향을 알려 준다 (1D는 막대 방향이 중요) → 결과를 센서 좌표로 되돌린다
++  private Map<String, Object> detectUpscaled(Image image, boolean invert, int[] crop, BarcodeScanner client, int rotation)
++      throws ExecutionException, InterruptedException, java.util.concurrent.TimeoutException {
 +    int width = image.getWidth();
 +    int height = image.getHeight();
 +    int left = crop[0], top = crop[1], side = crop[2];
@@ -877,16 +982,14 @@ index 54ea5ab..cf43bf5 100644
 +    }
 +    java.util.Arrays.fill(nv21, ySize, nv21.length, (byte) 128);
 +
-+    if (dataMatrixScanner == null) {
-+      dataMatrixScanner = BarcodeScanning.getClient(
-+          new BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_DATA_MATRIX).build());
-+    }
-+    InputImage input = InputImage.fromByteArray(nv21, out, out, 0, InputImage.IMAGE_FORMAT_NV21);
-+    List<Barcode> found = awaitMl(dataMatrixScanner.process(input));
++    InputImage input = InputImage.fromByteArray(nv21, out, out, rotation, InputImage.IMAGE_FORMAT_NV21);
++    List<Barcode> found = awaitMl(client.process(input));
 +    for (Barcode barcode : found) {
 +      String raw = barcode.getRawValue();
 +      if (raw == null || raw.isEmpty()) continue;
-+      return scaleThenOffset(BarcodeConverter.convertBarcode(barcode), 0.5, left, top);
++      Map<String, Object> converted = BarcodeConverter.convertBarcode(barcode);
++      if (rotation != 0) converted = toSensorSpace(converted, rotation, out, out);
++      return scaleThenOffset(converted, 0.5, left, top);
 +    }
 +    return null;
 +  }
@@ -958,7 +1061,7 @@ index 54ea5ab..cf43bf5 100644
    private synchronized BarcodeScanner
    getBarcodeScannerClient(@Nullable Map<String, Object> params) {
      int formatsBitmap = getFormatsBitmapFromParams(params);
-@@ -105,15 +934,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
+@@ -105,15 +1037,22 @@ public class CodeScannerProcessorPlugin extends FrameProcessorPlugin {
        return Barcode.FORMAT_ALL_FORMATS;
      Set<Integer> barcodeFormats = new HashSet<>();
      Object barcodeTypesObj = params.get("barcodeTypes");

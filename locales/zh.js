@@ -161,6 +161,8 @@ export default {
 
   // 扫描界面
   fastScan: {
+    zoom: '缩放',
+    realtimeNeedsGroup: '实时发送暂停：请在上方选择服务器发送分组',
     sheet: {
       title: '高速扫描设置',
       subtitle: '选择要识别的条码和要保留的功能。开得越少越快。',
@@ -221,6 +223,7 @@ export default {
       start: '开始高速扫描',
     },
     decode: '识别 每秒 {{fps}} 次 · 平均 {{avg}}ms · 最大 {{max}}ms',
+    decodeSplit: 'ML Kit {{ml}}ms · 辅助识别 {{extra}}ms',
     frameLag: '帧延迟 {{ms}}ms',
     ready: '高速扫描已就绪 · 请对准条码',
     total: '合计 {{total}} 个 · {{kinds}} 种',
@@ -392,6 +395,23 @@ export default {
 
   // 结果界面
   result: {
+    lastScan: '最后扫描 {{time}}',
+    qtyLess: '{{scans}} 次扫描中扣除 {{diff}} 次',
+    qtyMore: '{{scans}} 次扫描 + 手动增加 {{diff}} 个',
+    summaryFirst: '首次',
+    summaryLast: '最后',
+    summarySpan: '用时',
+    durSec: '{{s}}秒',
+    durMinSec: '{{m}}分{{s}}秒',
+    durMin: '{{m}}分',
+    durHourMin: '{{h}}小时{{m}}分',
+    durHour: '{{h}}小时',
+    durDay: '{{d}}天{{h}}小时',
+    quickRepeat: '{{seconds}}秒内再次扫描',
+    quickRepeatNote: '1秒内重复扫描的记录已标出。如同一物品被数了两次，请将数量 −1。',
+    dayLabel: '{{m}}月{{d}}日',
+    today: '今天',
+    yesterday: '昨天',
     scanTimesTitle: '扫描记录 · {{count}} 次',
     scanGap: '+{{seconds}}秒',
     scanSpan: '用时 {{duration}}',

@@ -403,6 +403,8 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
   fastMode = false, // 고속 스캔 모드: 판독 30회/초, 보조 판독·하이라이트·값 표시 생략, 1D 확인 프레임 축소
   fastBarcodeTypes, // 고속 모드에서만 읽을 바코드 종류 (앱 형식, 예: ['code128','qr']). 카메라를 다시 만들지 않고 프레임 옵션으로 바꾼다
   fastStrictConfirm = false, // 고속 모드에서도 1D를 3프레임 확인 (오인식 방지 강화)
+  diagTiming = false, // 테스트 빌드 진단: 일반 모드에서도 판독 통계를 onTimingStats로 보낸다 (동작은 바꾸지 않음)
+  zoomFactor, // 기본 배율(neutralZoom) 대비 확대 배율 (예: 2). 주면 손가락 확대 대신 이 값으로 고정한다 (고속 모드)
   hideHighlightBoxes = false, // 테두리 네모는 숨기고 값 칩만 (단일 모드: 조준 코너가 대신 붙는다)
   onPrimaryHighlightChange, // 대표 코드의 화면 사각형 { x, y, width, height } | null
   photoEnabled = true, // 스캔 사진 저장을 쓸 때만 사진 기능을 켠다 (끄면 카메라 세션이 가벼워진다)
@@ -519,17 +521,19 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     const { fast, targetFps, barcodeTypes: _types, ...rest } = extraOptionsShared.value || {};
     // 카메라는 30fps. 30으로 맞추면 프레임 간격이 조금만 흔들려도 한 장씩 건너뛰어 초당 19회쯤으로 떨어진다
     if (fastMode) { rest.fast = true; rest.targetFps = 60; }
+    if (diagTiming) rest.timing = true;
     // 라이브러리가 extraOptions를 barcodeTypes 뒤에 덮어쓰고, 네이티브는 프레임마다 종류를 읽는다 → 다시 마운트하지 않아도 바뀐다
     if (fastTypesKey) {
       const mapped = fastTypesKey.split(',').map((type) => BARCODE_TYPE_MAP[type]).filter(Boolean);
       if (mapped.length > 0) rest.barcodeTypes = mapped;
     }
     extraOptionsShared.value = Object.keys(rest).length > 0 ? rest : null;
-  }, [fastMode, fastTypesKey]);
+  }, [fastMode, fastTypesKey, diagTiming]);
   const [timingText, setTimingText] = useState('');
   // 1초 평균은 JS 쪽(ref)에서 낸다. worklet 안 공유값 객체로 누적하면 값이 남지 않아 표시가 한 번도 안 떴다
   const timingAccRef = useRef({ n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: 0 });
   const onTimingStatsRef = useRef(onTimingStats);
+  const jsDelayAccRef = useRef({ n: 0, sum: 0, max: 0 });
   useEffect(() => { onTimingStatsRef.current = onTimingStats; }, [onTimingStats]);
   const handleMetaJS = useCallback((m) => {
     const acc = timingAccRef.current;
@@ -539,6 +543,7 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     acc.ml += m.ml; acc.inv += m.inv; acc.zx += m.zx; acc.total += m.total;
     if (m.total > acc.max) acc.max = m.total;
     acc.codes += m.codes; acc.empty += m.empty;
+    if (m.codes > 0) acc.hit = (acc.hit || 0) + 1;
     if (now - acc.since >= 1000) {
       const n = acc.n;
       const fps = Math.round((n * 1000) / (now - acc.since));
@@ -549,7 +554,15 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         (m.focus ? ` | roi ${m.focus}` : '')
       );
       if (onTimingStatsRef.current) {
-        onTimingStatsRef.current({ fps, avgMs: acc.total / n, maxMs: acc.max, lagMs: Math.round(m.lag || 0) });
+        const js = jsDelayAccRef.current;
+        onTimingStatsRef.current({
+          fps, avgMs: acc.total / n, maxMs: acc.max, lagMs: Math.round(m.lag || 0), mlMs: acc.ml / n, extraMs: (acc.inv + acc.zx) / n,
+          size: m.width && m.height ? `${m.width}×${m.height}` : '',
+          hit: acc.hit || 0, // 코드를 하나라도 읽은 프레임 수 (1초)
+          jsCalls: js.n, jsDelayMs: js.n ? js.sum / js.n : 0, jsDelayMax: js.max, // 읽은 결과가 JS에 도착하기까지
+          stale: m.stale || 0,
+        });
+        jsDelayAccRef.current = { n: 0, sum: 0, max: 0 };
       }
       timingAccRef.current = { n: 0, ml: 0, inv: 0, zx: 0, total: 0, max: 0, codes: 0, empty: 0, since: now };
     }
@@ -687,6 +700,11 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
     if (!onCodeScannedRef.current) {
       return;
     }
+    if (barcodeData.detectedAt) {
+      const d = Date.now() - barcodeData.detectedAt;
+      const js = jsDelayAccRef.current;
+      js.n += 1; js.sum += d; if (d > js.max) js.max = d;
+    }
 
     // 바코드 타입 역매핑 (expo-camera 형식으로 변환)
     const normalizedType = BARCODE_TYPE_REVERSE_MAP[barcodeData.type] || barcodeData.type;
@@ -699,10 +717,13 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
       st.type = normalizedType;
       st.count = same ? st.count + 1 : 1;
       st.lastAt = now;
-      // 고속 모드: 체크 디지트가 있는 EAN/UPC는 첫 프레임, 나머지 1D는 2프레임 연속이면 넘긴다
+      // 검사 문자가 꼭 들어가는 코드(EAN/UPC, Code 128, Code 93)는 한 프레임 오독이 드물다.
+      // 고속 모드: 이런 코드는 첫 프레임, 나머지(Code 39·ITF·Codabar)는 2프레임.
+      // 일반 모드: 이런 코드는 첫 프레임, 나머지는 3프레임 (3프레임을 기다리느라 조준 코너가 코드에 붙었다 떨어졌다만 반복하고 늦게 읽혔다)
+      const checksummed = /^(ean-?13|ean-?8|upc-?e|upc-?a|code-?128|code-?93)$/i.test(normalizedType);
       const needed = fastModeRef.current && !fastStrictRef.current
-        ? (/^(ean-?13|ean-?8|upc-?e|upc-?a)$/i.test(normalizedType) ? 1 : 2)
-        : ONE_D_STABLE_FRAMES;
+        ? (checksummed ? 1 : 2)
+        : (checksummed ? 1 : ONE_D_STABLE_FRAMES); // 현장: 작은 Code 93이 초당 1~2번만 읽혀 2프레임을 기다리느라 1~2초 걸렸다
       if (st.count < needed) return;
     }
 
@@ -1186,7 +1207,10 @@ export const NativeQRScanner = forwardRef(function NativeQRScanner({
         exposure={exposure}
         photo={photoEnabled}
         onError={handleCameraError}
-        enableZoomGesture={true}
+        enableZoomGesture={!(typeof zoomFactor === 'number')}
+        {...(typeof zoomFactor === 'number' && device
+          ? { zoom: Math.min(device.maxZoom, Math.max(device.minZoom, (device.neutralZoom || 1) * zoomFactor)) }
+          : {})}
         onTouchEnd={handleTouchEnd}
         {...cameraProps}
         onLayout={(e) => {

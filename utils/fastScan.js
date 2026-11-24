@@ -134,7 +134,7 @@ export function createSendQueue({ send, isPermanent = () => false, onChange = ()
 // 고속 모드 구성(프로필): 읽을 바코드 + 켜 둘 기능. 일반 설정과 따로 저장한다 ('fastScanProfile')
 // ───────────────────────────────────────────────────────────────────────────
 export const FAST_BARCODE_PRESETS = {
-  logistics: ['code128', 'datamatrix', 'qr'],
+  logistics: ['code128', 'code93', 'datamatrix', 'qr'],
   retail: ['ean13', 'ean8', 'upca', 'upce'],
   qr: ['qr'],
 };

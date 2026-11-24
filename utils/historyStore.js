@@ -73,11 +73,14 @@ export async function readHistory() {
  * - false를 돌려주면 저장하지 않는다
  * 돌려주는 값: 저장이 끝난 뒤 mutator의 반환값 (false면 false)
  */
-export async function updateHistory(mutator) {
+export async function updateHistory(mutator, { waitForWrite = true } = {}) {
   const byGroup = await ensureLoaded();
   const result = mutator(byGroup);
   if (result === false) return false;
-  await persist();
+  // waitForWrite: false → 메모리에는 이미 반영됐으니(다른 화면도 이 메모리를 읽는다) 디스크 저장은 기다리지 않는다.
+  // 기록이 크면 JSON 전체를 쓰는 데 수백 ms가 걸려, 한 개 모드에서 삑 소리 뒤 결과 화면이 늦게 떴다
+  if (waitForWrite) await persist();
+  else persist().catch((e) => console.error('History write error:', e));
   return result;
 }
 

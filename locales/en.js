@@ -163,6 +163,8 @@ export default {
 
   // Scanner screen
   fastScan: {
+    zoom: 'Zoom',
+    realtimeNeedsGroup: 'Real-time upload paused: pick a server group above',
     sheet: {
       title: 'Fast scan setup',
       subtitle: 'Pick the barcodes to read and the features to keep. Fewer is faster.',
@@ -223,6 +225,7 @@ export default {
       start: 'Start fast scan',
     },
     decode: 'decode {{fps}}/s · avg {{avg}}ms · max {{max}}ms',
+    decodeSplit: 'ML Kit {{ml}}ms · extra decoding {{extra}}ms',
     frameLag: 'frame lag {{ms}}ms',
     ready: 'Fast scan ready · aim at a code',
     total: 'Total {{total}} · {{kinds}} kinds',
@@ -395,6 +398,23 @@ export default {
 
   // Result screen
   result: {
+    lastScan: 'Last scan {{time}}',
+    qtyLess: '{{diff}} of {{scans}} scans subtracted',
+    qtyMore: '{{scans}} scans + {{diff}} added manually',
+    summaryFirst: 'First',
+    summaryLast: 'Last',
+    summarySpan: 'Duration',
+    durSec: '{{s}}s',
+    durMinSec: '{{m}}m {{s}}s',
+    durMin: '{{m}}m',
+    durHourMin: '{{h}}h {{m}}m',
+    durHour: '{{h}}h',
+    durDay: '{{d}}d {{h}}h',
+    quickRepeat: 'again in {{seconds}}s',
+    quickRepeatNote: 'Scans repeated within 1 second are marked. If the same item was counted twice, use −1 on the quantity.',
+    dayLabel: '{{m}}/{{d}}',
+    today: 'today',
+    yesterday: 'yesterday',
     scanTimesTitle: 'Scan log · {{count}} times',
     scanGap: '+{{seconds}}s',
     scanSpan: 'took {{duration}}',
